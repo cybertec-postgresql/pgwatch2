@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pgwatch2 :: Metrics and preset configs</title>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+<body style="margin: 15px">
+
+<div class="container-fluid">
+
+{% if message %}
+<div class="alert alert-warning alert-dismissible" role="alert">
+  <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+  {{message}}
+</div>
+{% endif %}
+<h2>Preset configs</h2>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <td>Name</td>
+                <td>Description</td>
+                <td>Config JSON</td>
+                <td>Active DBs using config</td>
+                <td>Last modified</td>
+                <td></td>
+                <td></td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in preset_configs: %}
+            <tr>
+                <form action="/metrics" method="post">
+                    <td>{{row['pc_name']|e}}<input type="hidden" name="pc_name" value="{{row['pc_name']}}"></td>
+                    <td><textarea name="pc_description" cols="50">{{row['pc_description']|e}}</textarea></td>
+                    <td><textarea name="pc_config" cols="50">{{row['pc_config']|e}}</textarea></td>
+                    <td><a href="/admin">{{row['active_dbs']}}</a></td>
+                    <td>{{row['pc_last_modified_on']}}</td>
+                    <td><input type="submit" name="save" value="Save"></td>
+                    <td>{% if row['active_dbs'] == '' %}<input type="submit" name="delete" value="Delete">{% endif %}</td>
+                </form>
+            </tr>
+            {% endfor %}
+            <tr>
+                <form action="/metrics" method="post">
+                    <td><input type="text" name="pc_name" value="" size="10"></td>
+                    <td><input type="text" name="pc_description" value=""></td>
+                    <td><textarea name="pc_config" cols="50"></textarea></td>
+                    <td></td>
+                    <td></td>
+                    <td><input type="submit" name="new" value="New"></td>
+                    <td></td>
+                </form>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Active metrics listing</h2>
+    <ul>
+    {% for m in metrics_list: %}
+        <li style="display: inline"><b>{{m['m_name']}}</b> [ver: {{m['versions']}}]</li>
+    {% endfor %}
+    </ul>
+
+</div>
+
+<h2 title="Inactive at the bottom">Metric definitions</h2>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <td>Metric</td>
+                <td>PG version from</td>
+                <td title="NB! 'epoch_ns' column needs to be always present">SQL</td>
+                <td>Is active?</td>
+                <td>Last modified</td>
+                <td></td>
+                <td></td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in metric_definitions: %}
+            <tr>
+                <form action="/metrics" method="post">
+                    <td>
+                        <input type="hidden" name="m_id" value="{{row['m_id']}}">
+                        <input type="text" name="m_name" value="{{row['m_name']|e}}">
+                    </td>
+                    <td><input type="text" name="m_pg_version_from" value="{{row['m_pg_version_from']}}"></td>
+                    <td><textarea name="m_sql" cols="50">{{row['m_sql']}}</textarea></td>
+                    <td><input type="checkbox" name="m_is_active" {% if row['m_is_active'] %}checked{% endif %}></td>
+                    <td>{{row['m_last_modified_on']}}</td>
+                    <td><input type="submit" name="metric_save" value="Save"></td>
+                    <td><input type="submit" name="metric_delete" value="Delete" class="delete"></td>
+                </form>
+            </tr>
+            {% endfor %}
+            <tr>
+                <form action="/metrics" method="post">
+                    <td><input type="text" name="m_name" value=""></td>
+                    <td><input type="text" name="m_pg_version_from" value="9.0"></td>
+                    <td><textarea name="m_sql" cols="50">SELECT (extract(epoch from now()) * 1e9)::int8 as epoch_ns, ...</textarea></td>
+                    <td><input type="checkbox" name="m_is_active" checked></td>
+                    <td></td>
+                    <td><input type="submit" name="metric_new" value="New"></td>
+                    <td></td>
+                </form>
+            </tr>
+        </tbody>
+    </table>
+    <div class="alert alert-info">
+      <strong>NB! </strong>Metric fetching SQL-s always need to have the "epoch_ns" column present. Additionally columns with "tag_" prefix will be
+        turned into indexed tags in InfluxDB (fast access) and also "dbname" (DB unique name) column will always be added by the framework
+    </div>
+</div>
+
+</div>
+
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+<script>
+    $( document ).ready(function() {
+        $(".delete").click(function(e){
+            var r = confirm("Delete?");
+            if (r == false) {
+                e.preventDefault();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

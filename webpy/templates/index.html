@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pgwatch2 :: Overview</title>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  </head>
+
+  <body>
+
+  <nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <!--<a class="navbar-brand" href="/index">PgWatch2</a>-->
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <!--<li class="active"><a href="#">Home<span class="sr-only">(current)</span></a></li>-->
+        <li><a href="/index"><h4>PgWatch2</h4></a></li>
+        <li><a href="http://cybertec.at/en"><img src="http://static.cybertec.at/wp-content/themes/cybertec-optimus/assets/img/logo.png" alt="Cybertec" height="35px"></a></li>
+      </ul>
+      <!--<form class="navbar-form navbar-left">-->
+        <!--<div class="form-group">-->
+          <!--<input type="text" class="form-control" placeholder="Search">-->
+        <!--</div>-->
+        <!--<button type="submit" class="btn btn-default">Submit</button>-->
+      <!--</form>-->
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="#">DBs</a></li>
+        <li><a href="#">|</a></li>
+        <li><a href="#">Metrics</a></li>
+        <li><a href="#">|</a></li>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Logs<span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="/logs/pgwatch2/200" target="_blank">Pgwatch2 [last 200 lines]</a></li>
+            <li><a href="/logs/influxdb/200" target="_blank">InfluxDB [last 200 lines]</a></li>
+            <li><a href="/logs/grafana/200" target="_blank">Grafana [last 200 lines]</a></li>
+            <li><a href="/logs/postgres/200" target="_blank">Postgres [last 200 lines]</a></li>
+            <li><a href="/logs/webui/200" target="_blank">Web UI [last 200 lines]</a></li>
+          </ul>
+        </li>
+        <li><a href="#">|</a></li>
+        <li><a href="/logout">Log out</a></li>
+      </ul>
+    </div><!-- /.navbar-collapse -->
+  </div><!-- /.container-fluid -->
+</nav>
+
+    <div class="container-fluid">
+
+      <div class="row">
+
+        <div class="col-sm-2 sidebar" style="margin-top: 30px">
+          <ul class="nav nav-sidebar">
+            <li class="active"><a href="/index">Overview</a></li>
+            <li><a href="/index?page=statements">pg_stat_statements report</a></li>
+          </ul>
+        </div>
+
+        <div class="col-sm-10 main">
+
+          {% if page == 'index' %}
+          <h2 class="sub-header">DB overview {% if dbname %}for "{{dbname}}"{% endif %}</h2>
+          <form action="/index" method="get">
+          <select name="dbname">
+            <option></option>
+            {% for db in dbnames  %}
+            <option value="{{db}}" {% if db == dbname %}selected{% endif %}>{{db}}</option>
+            {% endfor %}
+          </select>
+          <input type="submit" name="show" value="Show">
+          </form>
+          {% if data %}
+          <div class="table-responsive">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Attribute</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for k, v in data.items()  %}
+                <tr>
+                  <td>{{k}}</td>
+                  <td>{{v}}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+          {% elif page == 'statements' %}
+          {% endif %}
+
+        </div>
+      </div>
+      <!--<div class="row">-->
+        <!--<div id="footer">-->
+        <!--<a href=""><img src="http://static.cybertec.at/wp-content/themes/cybertec-optimus/assets/img/logo.png" alt="Cybertec" height="40px"></a>-->
+        <!--</div>-->
+      <!--</div>-->
+    </div>
+
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+  </body>
+</html>

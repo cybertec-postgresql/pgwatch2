@@ -1,0 +1,5 @@
+cherrypy
+jinja2
+psycopg2
+influxdb
+decorator

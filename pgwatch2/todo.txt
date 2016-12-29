@@ -1,0 +1,15 @@
+* Go code tidying and unit tests
+* dashboards for index/sproc details
+* more metrics
+ - locks
+ - pg_stat_statements (very complex actually)
+ - bloat
+* DDL and stored procedure change tracking (Grafana annotation events)
+* A separate integrated web view listing top problems/hints
+* tables
+ - top rows/scan
+ - top pg_stat_stmt
+ - top sprocs
+ - quantile der indexgrößen (grafik)
+* somekind of whole instance monitoring mode (all DBs) with summarized statistics
+* validate JSON configs from UI before "save"
