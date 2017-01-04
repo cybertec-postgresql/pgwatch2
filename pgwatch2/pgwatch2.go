@@ -556,7 +556,7 @@ var opts struct {
     Host string `short:"h" long:"host" description:"PG config DB host" default:"localhost"`
     Port string `short:"p" long:"port" description:"PG config DB port" default:"5432"`
     Dbname string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2"`
-    User string `short:"u" long:"user" description:"PG config DB host" default:"postgres"`
+    User string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2"`
     Password string `long:"password" description:"PG config DB password"`
     InfluxURL string `long:"iurl" description:"Influx address" default:"http://localhost:8086"`
     InfluxDbname string `long:"idbname" description:"Influx DB name" default:"pgwatch2"`

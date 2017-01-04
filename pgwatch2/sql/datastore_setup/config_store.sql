@@ -1,10 +1,14 @@
-create schema if not exists pgwatch2;
+create schema if not exists pgwatch2 authorization pgwatch2;
 
-create extension if not exists pg_stat_statements SCHEMA public;
+create extension if not exists pg_stat_statements SCHEMA public; -- NB! for demo purposes only, can fail
+
+create extension if not exists plpythonu SCHEMA public; -- NB! for demo purposes only, to enable CPU load gathering
 
 set search_path to pgwatch2, public;
 
 alter database pgwatch2 set search_path to pgwatch2, public;
+
+set role to pgwatch2; -- NB! Role/db create script is in bootstrap/create_db_pgwatch.sql
 
 drop table if exists preset_config cascade;
 
@@ -81,8 +85,9 @@ alter table pgwatch2.monitored_db add constraint preset_or_custom_config check
     ((not (md_preset_config_name is null and md_config is null))
     and not (md_preset_config_name is not null and md_config is not null));
 
+/* for demo purposes only */
 insert into pgwatch2.monitored_db (md_unique_name, md_preset_config_name, md_config, md_hostname, md_port, md_dbname, md_user, md_password)
-    values ('test', 'exhaustive', null, 'localhost', '5432', 'pgwatch2', 'postgres', 'pgwatch2admin');
+    values ('test', 'exhaustive', null, 'localhost', '5432', 'pgwatch2', 'pgwatch2', 'pgwatch2admin');
 
 
 create table pgwatch2.metric (
@@ -97,7 +102,7 @@ create table pgwatch2.metric (
 
 /* backends */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'backends',
 9.0,
@@ -119,7 +124,7 @@ select
 $sql$
 );
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'backends',
 9.6,
@@ -143,7 +148,7 @@ $sql$
 
 /* bgwriter */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'bgwriter',
 9.0,
@@ -167,7 +172,7 @@ $sql$
 
 /* cpu_load */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'cpu_load',
 9.0,
@@ -185,7 +190,7 @@ $sql$
 
 /* db_stats */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'db_stats',
 9.0,
@@ -218,7 +223,7 @@ $sql$
 
 /* index_stats */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'index_stats',
 9.0,
@@ -245,7 +250,7 @@ $sql$
 
 /* kpi */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'kpi',
 9.0,
@@ -290,7 +295,7 @@ $sql$
 
 /* kpi */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'kpi',
 9.6,
@@ -336,7 +341,7 @@ $sql$
 
 /* replication */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'replication',
 9.1,
@@ -354,7 +359,7 @@ $sql$
 
 /* sproc_stats */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'sproc_stats',
 9.0,
@@ -378,7 +383,7 @@ $sql$
 
 /* table_io_stats */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'table_io_stats',
 9.0,
@@ -405,7 +410,7 @@ $sql$
 
 /* table_stats */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'table_stats',
 9.0,
@@ -415,7 +420,7 @@ select
   schemaname::text as tag_schema,
   relname::text as tag_table_name,
   pg_relation_size(relid) as table_size_b,
-  pg_total_relation_size(relid) as total_relation_size_b,
+  pg_total_relation_size(relid) as total_relation_size_b, --TODO add approx as pg_total_relation_size uses locks and can block
   extract(epoch from now() - greatest(last_vacuum, last_autovacuum)) as seconds_since_last_vacuum,
   extract(epoch from now() - greatest(last_analyze, last_autoanalyze)) as seconds_since_last_analyze,
   seq_scan,
@@ -433,13 +438,14 @@ select
 from
   pg_stat_user_tables
 where
-  not schemaname like E'pg\\_temp%';
+  not schemaname like E'pg\\_temp%'
+  and not exists (select 1 from pg_locks where relation = relid and locktype = 'AccessExclusiveLock' and granted);
 $sql$
 );
 
 /* wal */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'wal',
 9.2,
@@ -453,7 +459,7 @@ $sql$
 
 /* stat_statements */
 
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'stat_statements',
 9.2,
@@ -462,7 +468,7 @@ with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     queryid::text as tag_queryid,
-    max(ltrim(regexp_replace(query, E'[ \\t\\n\\r]+' , ' ', 'g'))) as query,
+    max(ltrim(regexp_replace(query, E'[ \\t\\n\\r]+' , ' ', 'g'))) as tag_query,
     sum(s.calls)::int8 as calls,
     sum(s.total_time)::double precision as total_time,
     sum(shared_blks_hit)::int8 as shared_blks_hit,
@@ -471,7 +477,7 @@ with q_data as (
     sum(temp_blks_read)::int8 as temp_blks_read,
     sum(temp_blks_written)::int8 as temp_blks_written
   from
-    public.pg_stat_statements s
+    public.get_stat_statements() s
   where
     calls > 1
     and total_time > 0
@@ -555,7 +561,7 @@ $sql$
 
 
 /* buffercache_by_db */
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'buffercache_by_db',
 9.2,
@@ -575,7 +581,7 @@ $sql$
 );
 
 /* buffercache_by_type */
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'buffercache_by_type',
 9.2,
@@ -596,7 +602,7 @@ $sql$
 
 
 /* pg_stat_ssl */       -- join with backends?
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'pg_stat_ssl',
 9.5,
@@ -618,7 +624,7 @@ $sql$
 
 
 /* pg_stat_database_conflicts */
-insert into metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'pg_stat_database_conflicts',
 9.2,
@@ -637,3 +643,83 @@ WHERE
 $sql$
 );
 
+
+/* locks - counts only */
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'locks',
+9.0,
+$sql$
+WITH q_locks AS (
+  select
+    *
+  from
+    pg_locks
+  where
+    pid != pg_backend_pid()
+    and database = (select oid from pg_database where datname = current_database())
+)
+SELECT
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  locktypes AS tag_locktype,
+  coalesce((select count(*) FROM q_locks WHERE locktype = locktypes), 0) AS count
+FROM
+  unnest('{relation, extend, page, tuple, transactionid, virtualxid, object, userlock, advisory}'::text[]) locktypes;
+$sql$
+);
+
+
+/* blocking_locks - based on https://wiki.postgresql.org/wiki/Lock_dependency_information.
+ not sure if it makes sense though, locks are quite volatile normally */
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'blocking_locks',
+9.2,
+$sql$
+SELECT
+    (extract(epoch from now()) * 1e9)::int8 AS epoch_ns,
+    waiting.locktype           AS tag_waiting_locktype,
+    waiting_stm.usename        AS tag_waiting_user,
+    coalesce(waiting.mode, 'null'::text) AS tag_waiting_mode,
+    coalesce(waiting.relation::regclass::text, 'null') AS tag_waiting_table,
+    waiting_stm.query          AS waiting_query,
+    waiting.pid                AS waiting_pid,
+    other.locktype             AS other_locktype,
+    other.relation::regclass   AS other_table,
+    other_stm.query            AS other_query,
+    other.mode                 AS other_mode,
+    other.pid                  AS other_pid,
+    other_stm.usename          AS other_user
+FROM
+    pg_catalog.pg_locks AS waiting
+JOIN
+    pg_catalog.pg_stat_activity AS waiting_stm
+    ON (
+        waiting_stm.pid = waiting.pid
+    )
+JOIN
+    pg_catalog.pg_locks AS other
+    ON (
+        (
+            waiting."database" = other."database"
+        AND waiting.relation  = other.relation
+        )
+        OR waiting.transactionid = other.transactionid
+    )
+JOIN
+    pg_catalog.pg_stat_activity AS other_stm
+    ON (
+        other_stm.pid = other.pid
+    )
+WHERE
+    NOT waiting.GRANTED
+AND
+    waiting.pid <> other.pid
+AND
+    other.GRANTED
+AND
+    waiting_stm.datname = current_database();
+$sql$
+);

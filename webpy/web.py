@@ -154,7 +154,7 @@ if __name__ == '__main__':
     parser.add_argument('-H', '--host', help='Pgwatch2 Config DB host', default='localhost')
     parser.add_argument('-p', '--port', help='Pgwatch2 Config DB port', default=5432, type=int)
     parser.add_argument('-d', '--dbname', help='Pgwatch2 Config DB name', default='pgwatch2')
-    parser.add_argument('-U', '--username', help='Pgwatch2 Config DB username', default='postgres')
+    parser.add_argument('-U', '--username', help='Pgwatch2 Config DB username', default='pgwatch2')
     parser.add_argument('--password', help='Pgwatch2 Config DB password', default=os.getenv('PGWATCH2_PASSWORD') or 'pgwatch2admin')
     # Influx
     parser.add_argument('--influx-host', help='InfluxDB host', default=os.getenv('PGWATCH2_INFLUX_HOST') or 'localhost')
