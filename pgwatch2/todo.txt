@@ -13,3 +13,4 @@
  - quantile der indexgrößen (grafik)
 * somekind of whole instance monitoring mode (all DBs) with summarized statistics
 * validate JSON configs from UI before "save"
+* do Go build in docker?

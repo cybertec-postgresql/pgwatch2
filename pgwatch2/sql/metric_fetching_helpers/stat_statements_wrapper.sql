@@ -24,7 +24,7 @@ $SQL$;
 BEGIN
   PERFORM 1 from pg_views where viewname = 'pg_stat_statements';
   IF FOUND AND string_to_array( split_part(version(), ' ', 2), '.' )::int[] > ARRAY[9,1] THEN   --parameters normalized only from 9.2
-    EXECUTE format(l_sproc_text, l_current_db);
+    EXECUTE format(l_sproc_text);
     EXECUTE 'REVOKE EXECUTE ON FUNCTION public.get_stat_statements() FROM PUBLIC;';
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_stat_statements() TO pgwatch2';
     EXECUTE 'COMMENT ON FUNCTION public.get_stat_statements() IS ''created for pgwatch2''';

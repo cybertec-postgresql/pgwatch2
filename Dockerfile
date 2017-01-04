@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-RUN apt-get -q update && apt-get -qy install curl wget vim apt-transport-https supervisor postgresql
+RUN apt-get -q update && apt-get -qy install curl wget vim apt-transport-https supervisor postgresql postgresql-plpython-9.5
 
 ### pgwatch2
 #RUN mkdir -p /pgwatch2
@@ -53,6 +53,8 @@ RUN /usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/
 RUN /usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf postgres </pgwatch2/bootstrap/create_db_pgwatch.sql
 RUN /usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf postgres </pgwatch2/bootstrap/create_db_grafana.sql
 RUN /usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf pgwatch2 </pgwatch2/sql/datastore_setup/config_store.sql
+RUN /usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf pgwatch2 </pgwatch2/sql/metric_fetching_helpers/cpu_load_plpythonu.sql
+RUN /usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf pgwatch2 </pgwatch2/sql/metric_fetching_helpers/stat_statements_wrapper.sql
 
 EXPOSE 5432
 

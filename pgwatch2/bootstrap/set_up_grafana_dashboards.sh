@@ -17,7 +17,7 @@ while true ; do
 
 done
 
-psql -f /pgwatch2/bootstrap/grafana_datasource.sql pgwatch2_grafana
-psql -f /pgwatch2/bootstrap/grafana_default_dashboard.sql pgwatch2_grafana
+psql -h /var/run/postgresql -f /pgwatch2/bootstrap/grafana_datasource.sql pgwatch2_grafana
+psql -h /var/run/postgresql -f /pgwatch2/bootstrap/grafana_default_dashboard.sql pgwatch2_grafana
 
 exit 0
