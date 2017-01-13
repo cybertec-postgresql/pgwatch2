@@ -2,6 +2,8 @@ create schema if not exists pgwatch2 authorization pgwatch2;
 
 REVOKE ALL ON SCHEMA public FROM public;
 
+GRANT ALL ON SCHEMA public TO pgwatch2;
+
 create extension if not exists pg_stat_statements; -- NB! for demo purposes only, can fail
 
 create extension if not exists plpythonu; -- NB! for demo purposes only, to enable CPU load gathering

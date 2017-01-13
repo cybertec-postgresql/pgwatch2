@@ -299,19 +299,18 @@ func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
 				retry_queue = append(retry_queue, msg)
 			}
 		default:
-			if len(retry_queue) > 0 {
-				for {
-					log.Info("processing retry_queue. len(retry_queue) =", len(retry_queue))
-					msg:= retry_queue[0]
+            for len(retry_queue) > 0 {
+                log.Info("processing retry_queue. len(retry_queue) =", len(retry_queue))
+                msg:= retry_queue[0]
 
-					err := SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
-					if err != nil {
-						time.Sleep(time.Second*10)
-						break
-					}
-					retry_queue = retry_queue[1:]
-				}
-			}
+                err := SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
+                if err != nil {
+                    time.Sleep(time.Second*10)
+                    break
+                }
+                retry_queue = retry_queue[1:]
+            }
+
 			time.Sleep(time.Millisecond*100)
 		}
 	}
