@@ -30,7 +30,7 @@
                 <td title="NB! Password is stored in plain-text in the database">DB password</td>
                 <td title="No data will be gathered if SSL connection cannot be established">SSL only?</td>
                 <td>Preset config</td>
-                <td title='{"metric":interval,...}'>Custom config</td>
+                <td title='{"metric":interval_seconds,...}'>Custom config</td>
                 <td>Last modified</td>
                 <td>Enabled?</td>
                 <td></td>
@@ -97,6 +97,13 @@
     </table>
 </div>
 
+    <h2>Active metrics listing</h2>
+    <ul>
+    {% for m in metrics_list: %}
+        <li style="display: inline"><b>{{m['m_name']}}</b> [ver: {{m['versions']}}]</li>
+    {% endfor %}
+
+    </ul>
 </div>
 <!-- TODO check for only preset or custom config -->
 

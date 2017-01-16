@@ -76,9 +76,11 @@ class Root:
         data = pgwatch2.get_all_monitored_dbs()
         preset_configs = pgwatch2.get_preset_configs()
         preset_configs_json = json.dumps({c['pc_name']: c['pc_config'] for c in preset_configs})
+        metrics_list = pgwatch2.get_active_metrics_with_versions()
 
         tmpl = env.get_template('dbs.html')
-        return tmpl.render(message=message, data=data, preset_configs=preset_configs, preset_configs_json=preset_configs_json)
+        return tmpl.render(message=message, data=data, preset_configs=preset_configs, preset_configs_json=preset_configs_json,
+                           metrics_list=metrics_list)
 
     @logged_in
     @cherrypy.expose
