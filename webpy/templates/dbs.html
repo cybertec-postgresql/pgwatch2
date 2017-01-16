@@ -56,12 +56,13 @@
                             <option value="{{pc['pc_name']|e}}" {% if pc['pc_name'] == row['md_preset_config_name'] %}selected{% endif %}>{{pc['pc_name']|e}}</option>
                             {% endfor %}
                         </select>
-                        <a href="/preset_configs" title="Show JSON config in a new window" target="_blank">show</a>
+                        <a href="/metrics" title="Show preset configs and metric definitions in a new window" target="_blank">show</a>&nbsp;|&nbsp;
+                        <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
                     <td title='{"metric":interval,...}'><textarea name="md_config" value="{{row['md_config']|e}}" cols="20"></textarea></td>
                     <td>{{row['md_last_modified_on']}}</td>
                     <td><input type="checkbox" name="md_is_enabled" {% if row['md_is_enabled'] %}checked{% endif %}></td>
-                    <td><input type="submit" name="save" value="Save"></td>
+                    <td><input type="submit" class="save" name="save" value="Save"></td>
                     <td><input type="submit" name="delete" value="Delete"></td>
                 </form>
             </tr>
@@ -88,7 +89,7 @@
                     <td title='{"metric":interval,...}'><textarea name="md_config" value="" cols="20"></textarea></td>
                     <td></td>
                     <td><input type="checkbox" name="md_is_enabled" checked></td>
-                    <td><input type="submit" name="new" value="New"></td>
+                    <td><input type="submit" class="new" name="new" value="New"></td>
                     <td></td>
                 </form>
             </tr>
@@ -104,5 +105,29 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
+<script>
+    var preset_configs = {{preset_configs_json}};
+
+    $(document).ready(function(){
+        $(".copy_to_custom").click(function(event){
+            event.preventDefault();
+
+            var preset_config_json = preset_configs[$(this).parent().find("[name='md_preset_config_name']").val()];
+            // alert(preset_config_json);
+            $(this).parent().parent().find("[name='md_config']").val(preset_config_json);
+
+            return false;
+        });
+
+        $(".save").add('.new').click(function(event){
+            var custom_config = $(this).parent().parent().find("[name='md_config']").val();
+            var preset_config = $(this).parent().parent().find("[name='md_preset_config_name']").val();
+            if (custom_config > '' && preset_config > '') {
+                alert('Preset OR custom config needs to be specifief!');
+                return false;
+            }
+        });
+    });
+</script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+import json
 import os
 from argparse import ArgumentParser
 import logging
@@ -74,9 +75,10 @@ class Root:
 
         data = pgwatch2.get_all_monitored_dbs()
         preset_configs = pgwatch2.get_preset_configs()
+        preset_configs_json = json.dumps({c['pc_name']: c['pc_config'] for c in preset_configs})
 
         tmpl = env.get_template('dbs.html')
-        return tmpl.render(message=message, data=data, preset_configs=preset_configs)
+        return tmpl.render(message=message, data=data, preset_configs=preset_configs, preset_configs_json=preset_configs_json)
 
     @logged_in
     @cherrypy.expose
