@@ -232,8 +232,6 @@ def get_deltas_by_column(measurement, dbname, column, start_time, end_time):
     data_last = get_last_values_for_column(measurement, dbname, column, start_time, end_time)
     logging.info("%s rows found for data_last", len(data_last))
 
-    # print(data_first.raw['series'][0])
-    # print(data_last.raw['series'][0])
     if not (data_first and data_last):
         return []
 
@@ -248,8 +246,7 @@ def get_deltas_by_column(measurement, dbname, column, start_time, end_time):
             time_delta_ms = last_val_list[0] - first_dict[q_id][0]
             if val_delta < 0 or time_delta_ms < 0:  # only 1 data point or stats reset
                 continue
-            deltas.append({'queryid': q_id, 'first': first_dict[q_id][1], 'last': last_val_list[1], 'delta': val_delta,
-                                             't1': first_dict[q_id][0], 't2': last_val_list[0], 'nnd_h': val_delta / time_delta_ms * 1000.0 * 3600})    # 1/h
+            deltas.append({'queryid': q_id, 'delta': val_delta})
         else:
             logging.warning('queryid %s not found from first set', q_id)
     return deltas
@@ -271,14 +268,14 @@ def get_first_or_last_row_by_ident_ids(measurement, dbname, ident_column, ids, s
 
 
 def find_top_growth_statements(dbname, sort_column, start_time=(datetime.utcnow() - timedelta(days=1)).isoformat() + 'Z',
-                               end_time=datetime.utcnow().isoformat()+'Z', limit=50):
+                               end_time=datetime.utcnow().isoformat()+'Z', limit=20):
     """start_time/end_time expect UTC date inputs currently!"""
     if sort_column not in STATEMENT_SORT_COLUMNS:
         raise Exception('unknown sort column: ' + sort_column)
     ret = []        # list of dicts with all columns from "stat_statements"
 
     deltas = []     # [{'queryid': ..., 'delta': ...}]
-    if sort_column == 'mean_time':      # special handling
+    if sort_column == 'mean_time':      # special handling. can't use pg_stat_statement.mean_time because it carries history
         total_time_deltas = get_deltas_by_column('stat_statements', dbname, 'total_time', start_time, end_time)
         call_deltas = get_deltas_by_column('stat_statements', dbname, 'calls', start_time, end_time)
         call_deltas_dict = {}
@@ -287,10 +284,8 @@ def find_top_growth_statements(dbname, sort_column, start_time=(datetime.utcnow(
 
         for tt in total_time_deltas:
             if tt['queryid'] in call_deltas_dict and call_deltas_dict[tt['queryid']]['delta'] > 0:    # if "calls" is same means was not called in the period
-                deltas.append({'queryid': tt['queryid'], 'first': tt['first'] / call_deltas_dict[tt['queryid']]['first'],
-                                         'last': tt['last'] / call_deltas_dict[tt['queryid']]['last'],
-                                         'delta': tt['delta'] / call_deltas_dict[tt['queryid']]['delta'],
-                                         'nnd_h': tt['delta'] / call_deltas_dict[tt['queryid']]['delta'] * 1000.0 * 3600})
+                deltas.append({'queryid': tt['queryid'],
+                               'delta': tt['delta'] / call_deltas_dict[tt['queryid']]['delta']})
     else:
         deltas = get_deltas_by_column('stat_statements', dbname, sort_column, start_time, end_time)
 
@@ -307,23 +302,24 @@ def find_top_growth_statements(dbname, sort_column, start_time=(datetime.utcnow(
     oldest_data = get_first_or_last_row_by_ident_ids('stat_statements', dbname, 'queryid', [t['queryid'] for t in top_n], start_time, end_time, 'asc')
     oldest_data_dict = series_to_dict(oldest_data.raw, 'queryid')
 
-    delta_keys = set(STATEMENT_SORT_COLUMNS) - set(['mean_time'])   # mean_time requires different handling
     for q in top_n:
         q_id = q['queryid']
         if q_id in oldest_data_dict and q_id in newest_data_dict:
             d = oldest_data_dict[q_id]
             d['queryid'] = q_id
-
+            # d.pop('mean_time')
+            delta_keys = set(STATEMENT_SORT_COLUMNS) - set(['mean_time'])   # mean_time requires different handling
             for delta_key in delta_keys:
                 if delta_key in newest_data_dict[q_id] and delta_key in oldest_data_dict[q_id]:
                     d[delta_key] = round(newest_data_dict[q_id][delta_key] - oldest_data_dict[q_id][delta_key], 3)
-            if newest_data_dict[q_id]['calls'] - oldest_data_dict[q_id]['calls'] > 0:
-                d['mean_time'] = round((newest_data_dict[q_id]['total_time'] - oldest_data_dict[q_id]['total_time']) / \
-                             (newest_data_dict[q_id]['calls'] - oldest_data_dict[q_id]['calls']), 3)
+            if (newest_data_dict[q_id]['calls'] - oldest_data_dict[q_id]['calls']) > 0:
+                d['mean_time'] = round((newest_data_dict[q_id]['total_time'] - oldest_data_dict[q_id]['total_time']) /
+                                       (newest_data_dict[q_id]['calls'] - oldest_data_dict[q_id]['calls']), 3)
             else:
                 d['mean_time'] = 0
             ret.append(d)
-    return ret
+
+    return sorted(ret, key=lambda x: x[sort_column], reverse=True)
 
 
 if __name__ == '__main__':
@@ -334,4 +330,4 @@ if __name__ == '__main__':
     # print(get_db_overview('test'))
     # data = influx_query('select * from stat_statements where time > now() - 1d group by "queryid" order by time asc limit 1')
     # print(series_to_dict(data.raw, 'queryid'))
-    print (find_top_growth_statements('test', 'shared_blks_read'))
+    print (find_top_growth_statements('test', 'mean_time'))

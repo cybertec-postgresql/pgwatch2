@@ -131,7 +131,7 @@ class Root:
 
     @cherrypy.expose
     def index(self, **params):
-        print(params)
+        logging.debug('params: %s', params)
         page = params.get('page', 'index')
         dbname = params.get('dbname')
         data = []
