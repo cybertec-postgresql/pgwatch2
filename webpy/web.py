@@ -133,21 +133,28 @@ class Root:
     def index(self, **params):
         print(params)
         page = params.get('page', 'index')
-        dbname = None
+        dbname = params.get('dbname')
         data = []
-        default_sort_column = 'total_runtime'
+        sort_column = params.get('sort_column', 'total_time')
+        if sort_column not in pgwatch2_influx.STATEMENT_SORT_COLUMNS:
+            raise Exception('invalid "sort_column": ' + sort_column)
+        utcn = datetime.utcnow()
+        start_time = params.get('start_time', (utcn - timedelta(days=1)).isoformat() + 'Z')
+        end_time = params.get('end_time', (utcn.isoformat() + 'Z'))
+
         dbnames = [x['md_unique_name'] for x in pgwatch2.get_all_monitored_dbs()]
-        if 'show' in params and params['dbname']:
-            dbname = params['dbname']
+        if dbname:
             if page == 'index' and dbname:
                 data = pgwatch2_influx.get_db_overview(dbname)
             elif page == 'statements' and dbname:
-                data = pgwatch2_influx.find_top_growth_statements_all_columns(dbname,
-                            params.get('sort_column', default_sort_column),
-                            params.get('start_time', (datetime.now() - timedelta(days=2)).strftime('%Y-%m-%d')),
-                            params.get('end_time', (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')))
+                data = pgwatch2_influx.find_top_growth_statements(dbname,
+                            sort_column,
+                            start_time,
+                            end_time)
+
         tmpl = env.get_template('index.html')
-        return tmpl.render(dbnames=dbnames, dbname=dbname, page=page, data=data, sort_column=default_sort_column)
+        return tmpl.render(dbnames=dbnames, dbname=dbname, page=page, data=data, sort_column=sort_column,
+                           start_time=start_time, end_time=end_time)
 
 
 if __name__ == '__main__':

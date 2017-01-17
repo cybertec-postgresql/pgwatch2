@@ -31,7 +31,8 @@ def get_all_monitored_dbs():
     sql = """
         select
           *,
-          date_trunc('second', md_last_modified_on) as md_last_modified_on
+          date_trunc('second', md_last_modified_on) as md_last_modified_on,
+          md_config::text
         from
           pgwatch2.monitored_db
         order by

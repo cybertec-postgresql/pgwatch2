@@ -479,11 +479,13 @@ with q_data as (
     sum(shared_blks_read)::int8 as shared_blks_read,
     sum(shared_blks_written)::int8 as shared_blks_written,
     sum(temp_blks_read)::int8 as temp_blks_read,
-    sum(temp_blks_written)::int8 as temp_blks_written
+    sum(temp_blks_written)::int8 as temp_blks_written,
+    sum(blk_read_time)::double precision as blk_read_time,
+    sum(blk_write_time)::double precision as blk_write_time
   from
     public.get_stat_statements() s
   where
-    calls > 1
+    calls > 5
     and total_time > 0
     and dbid = (select oid from pg_database where datname = current_database())
     and not upper(s.query) like any (array['DEALLOCATE%', 'SET %', 'RESET %', 'BEGIN%', 'BEGIN;',

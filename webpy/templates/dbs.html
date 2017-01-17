@@ -29,7 +29,7 @@
                 <td>DB user</td>
                 <td title="NB! Password is stored in plain-text in the database">DB password</td>
                 <td title="No data will be gathered if SSL connection cannot be established">SSL only?</td>
-                <td>Preset config</td>
+                <td title="Preset config OR custom config needs to be specified">Preset config</td>
                 <td title='{"metric":interval_seconds,...}'>Custom config</td>
                 <td>Last modified</td>
                 <td>Enabled?</td>
@@ -59,7 +59,7 @@
                         <a href="/metrics" title="Show preset configs and metric definitions in a new window" target="_blank">show</a>&nbsp;|&nbsp;
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
-                    <td title='{"metric":interval,...}'><textarea name="md_config" value="{{row['md_config']|e}}" cols="20"></textarea></td>
+                    <td title='{"metric":interval,...}'><textarea name="md_config" cols="20">{% if row['md_config'] %} {{row['md_config']}} {% endif %}</textarea></td>
                     <td>{{row['md_last_modified_on']}}</td>
                     <td><input type="checkbox" name="md_is_enabled" {% if row['md_is_enabled'] %}checked{% endif %}></td>
                     <td><input type="submit" class="save" name="save" value="Save"></td>
@@ -84,7 +84,8 @@
                             <option value="{{pc['pc_name']|e}}">{{pc['pc_name']|e}}</option>
                             {% endfor %}
                         </select>
-                        <a href="/preset_configs" title="Show JSON config in a new window" target="_blank">show</a>
+                        <a href="/preset_configs" title="Show JSON config in a new window" target="_blank">show</a>&nbsp;|&nbsp;
+                        <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
                     <td title='{"metric":interval,...}'><textarea name="md_config" value="" cols="20"></textarea></td>
                     <td></td>

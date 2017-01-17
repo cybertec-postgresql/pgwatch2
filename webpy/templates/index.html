@@ -72,37 +72,95 @@
         <div class="col-sm-10 main">
 
           {% if page == 'index' %}
-          <h2 class="sub-header">DB overview {% if dbname %}for "{{dbname}}"{% endif %}</h2>
-          <form action="/index" method="get">
-          <select name="dbname">
-            <option></option>
-            {% for db in dbnames  %}
-            <option value="{{db}}" {% if db == dbname %}selected{% endif %}>{{db}}</option>
-            {% endfor %}
-          </select>
-          <input type="submit" name="show" value="Show">
-          </form>
-          {% if data %}
-          <div class="table-responsive">
-            <table class="table table-striped">
-              <thead>
-                <tr>
-                  <th>Attribute</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for k, v in data.items()  %}
-                <tr>
-                  <td>{{k}}</td>
-                  <td>{{v}}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          {% endif %}
+
+            <h2 class="sub-header">DB overview {% if dbname %}for "{{dbname}}"{% endif %}</h2>
+            <form action="/index" method="get">
+            <select name="dbname">
+              <option></option>
+              {% for db in dbnames  %}
+              <option value="{{db}}" {% if db == dbname %}selected{% endif %}>{{db}}</option>
+              {% endfor %}
+            </select>
+            <input type="submit" name="show" value="Show">
+            </form>
+            {% if data %}
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Attribute</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for k, v in data.items()  %}
+                  <tr>
+                    <td>{{k}}</td>
+                    <td>{{v}}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% endif %}
+
           {% elif page == 'statements' %}
+
+            <h2 class="sub-header">pg_stat_statements Top 50 by {{sort_column}} {% if dbname %}for "{{dbname}}"{% endif %}</h2>
+            <form action="/index" method="get">
+            <input type="hidden" name="page" id="page" value="statements">
+            <input type="hidden" name="sort_column" id="sort_column" value="{{sort_column}}">
+            <select name="dbname">
+              <option></option>
+              {% for db in dbnames  %}
+              <option value="{{db}}" {% if db == dbname %}selected{% endif %}>{{db}}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="start_time" value="{{start_time}}" size="25">
+            <input type="text" name="end_time" value="{{end_time}}" size="25">
+            <input type="submit" name="show" value="Show">
+            </form>
+            {% if data %}
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>queryid</th>
+                    <th>query</th>
+                    <th title="In milliseconds. Click to sort"><a class="sort_column" href="">total_time</a></th>
+                    <th title="In milliseconds. Click to sort"><a class="sort_column" href="">mean_time</a></th>
+                    <th title="Click to sort"><a class="sort_column" href="">calls</a></th>
+                    <th title="Click to sort"><a class="sort_column" href="">shared_blks_hit</a></th>
+                    <th title="Click to sort"><a class="sort_column" href="">shared_blks_read</a></th>
+                    <th title="Click to sort"><a class="sort_column" href="">shared_blks_written</a></th>
+                    <th title="Click to sort"><a class="sort_column" href="">temp_blks_read</a></th>
+                    <th title="Click to sort"><a class="sort_column" href="">temp_blks_written</a></th>
+                    <th title="In milliseconds. Click to sort"><a class="sort_column" href="">blk_read_time</a></th>
+                    <th title="In milliseconds. Click to sort"><a class="sort_column" href="">blk_write_time</a></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for d in data %}
+                  <tr>
+                    <td>{{d['queryid']}}</td>
+                    <td>{{d['query']}}</td>
+                    <td>{{d['total_time']}}</td>
+                    <td>{{d['mean_time']}}</td>
+                    <td>{{d['calls']}}</td>
+                    <td>{{d['shared_blks_hit']}}</td>
+                    <td>{{d['shared_blks_read']}}</td>
+                    <td>{{d['shared_blks_written']}}</td>
+                    <td>{{d['temp_blks_read']}}</td>
+                    <td>{{d['temp_blks_written']}}</td>
+                    <td>{{d['blk_read_time']}}</td>
+                    <td>{{d['blk_write_time']}}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% endif %}
+
           {% endif %}
 
         </div>
@@ -120,5 +178,16 @@
     <!-- Latest compiled and minified JavaScript -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
+    <script>
+      $(document).ready(function(){
+          $(".sort_column").click(function(event){
+              event.preventDefault();
+
+              $('#sort_column').val($(this).html());
+              document.forms[0].submit();
+
+          });
+      });
+    </script>
   </body>
 </html>
