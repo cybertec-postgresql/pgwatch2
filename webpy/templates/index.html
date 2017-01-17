@@ -89,14 +89,18 @@
                 <thead>
                   <tr>
                     <th>Attribute</th>
-                    <th>Value</th>
+                    <th>Last 7d avg</th>
+                    <th>Last 24h avg</th>
+                    <th>Last 1h avg</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for k, v in data.items()  %}
+                  {% for k, values in data.items()  %}
                   <tr>
-                    <td>{{k}}</td>
-                    <td>{{v}}</td>
+                      <td>{{k}}</td>
+                      <td>{{values[0]}}</td>
+                      <td>{{values[1]}}</td>
+                      <td>{{values[2]}}</td>
                   </tr>
                   {% endfor %}
                 </tbody>
