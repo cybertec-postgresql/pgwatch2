@@ -230,8 +230,8 @@ func SendToInflux(dbname, measurement string, data [](map[string]interface{})) e
 	err = c.Write(bp)
 	t_diff := time.Now().Sub(t1)
 	if err == nil {
-		log.Info(fmt.Sprintf("wrote %d/%d rows to Influx for \"%s\".\"%s\" in %d us", rows_batched, len(data),
-			dbname, measurement, int64(t_diff.Nanoseconds()) / 1e3))
+		log.Info(fmt.Sprintf("wrote %d/%d rows to Influx for [%s:%s] in %dus", rows_batched, len(data),
+			dbname, measurement, t_diff.Nanoseconds() / 1000))
 	}
 	return err
 }
@@ -395,11 +395,14 @@ func MetricsFetcher(query_ch <-chan MetricFetchMessage, storage_ch chan <- Metri
 			sql := GetSQLForMetricPGVersion(msg.MetricName, db_pg_version)
 			//log.Debug("SQL", sql)
 
+			t1 := time.Now().UnixNano()
 			data, err := DBExecReadByDbUniqueName(msg.DBUniqueName, sql)
+			t2 := time.Now().UnixNano()
 			if err != nil {
 				log.Error("failed to fetch metrics for ", msg.DBUniqueName, msg.MetricName, err)
 				break
 			}
+			log.Info(fmt.Sprintf("fetched %d rows for [%s:%s] in %dus", len(data), msg.DBUniqueName, msg.MetricName, (t2 - t1) / 1000))
 			if len(data) > 0 {
 				storage_ch <- MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data}
 			}
