@@ -14,6 +14,7 @@ import pgwatch2
 from jinja2 import Environment, FileSystemLoader
 
 env = Environment(loader=FileSystemLoader(os.path.join(str(Path(__file__).parent), 'templates')))
+args = None
 
 
 @decorator
@@ -154,7 +155,7 @@ class Root:
 
         tmpl = env.get_template('index.html')
         return tmpl.render(dbnames=dbnames, dbname=dbname, page=page, data=data, sort_column=sort_column,
-                           start_time=start_time, end_time=end_time)
+                           start_time=start_time, end_time=end_time, grafana_baseurl=args.grafana_baseurl)
 
 
 if __name__ == '__main__':
@@ -174,8 +175,12 @@ if __name__ == '__main__':
     parser.add_argument('--influx-password', help='InfluxDB password', default=os.getenv('PGWATCH2_INFLUX_PASSWORD') or 'root')
     parser.add_argument('--influx-database', help='InfluxDB database', default=os.getenv('PGWATCH2_INFLUX_DATABASE') or 'pgwatch2')
     parser.add_argument('--influx-ssl', action='store_true', help='Use SSL for InfluxDB', default=os.getenv('PGWATCH2_INFLUX_SSL') or False)
+    # Grafana
+    parser.add_argument('--grafana_baseurl', help='For linking to Grafana "Query details" dahsboard', default='http://0.0.0.0:3001')
 
+    global args
     args = parser.parse_args()
+
     logging.basicConfig(format='%(asctime)s %(levelname)s %(process)d %(message)s',
                         level=(logging.DEBUG if int(args.verbose) >= 2 else (logging.INFO if int(args.verbose) == 1 else logging.ERROR)))
     logging.debug(args)

@@ -83,70 +83,74 @@ def get_db_overview(dbname):
         SELECT non_negative_derivative(mean("xact_commit"), 1s) + non_negative_derivative(mean("xact_rollback"), 1s)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['tps'] = exec_for_time_pairs(tps, dbname, time_pairs)
+    data['TPS'] = exec_for_time_pairs(tps, dbname, time_pairs)
 
     wal = """SELECT derivative(mean("xlog_location_b"), 1h)
         FROM "wal" WHERE "dbname" = '{}' AND time > now() - {} GROUP BY time({}) fill(none)"""
-    data['wal_bytes_1h'] = exec_for_time_pairs(wal, dbname, time_pairs)
+    data['WAL Bytes (1h avg.)'] = exec_for_time_pairs(wal, dbname, time_pairs)
 
     sb_ratio = """
         SELECT (non_negative_derivative(mean("blks_hit")) / (non_negative_derivative(mean("blks_hit")) + non_negative_derivative(mean("blks_read")))) * 100
          FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['sb_ratio'] = exec_for_time_pairs(sb_ratio, dbname, time_pairs)
+    data['Shared Buffers Hit Ratio'] = exec_for_time_pairs(sb_ratio, dbname, time_pairs)
 
     rb_ratio = """
         SELECT (non_negative_derivative(mean("xact_rollback")) / (non_negative_derivative(mean("xact_rollback")) + non_negative_derivative(mean("xact_commit")))) * 100
          FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['rollback_ratio'] = exec_for_time_pairs(rb_ratio, dbname, time_pairs)
+    data['Rollback Ratio'] = exec_for_time_pairs(rb_ratio, dbname, time_pairs)
 
 
     tup_inserted = """
         SELECT non_negative_derivative(mean("tup_inserted"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['tup_inserted_1h'] = exec_for_time_pairs(tup_inserted, dbname, time_pairs)
+    data['Tuples Inserted (1h avg.)'] = exec_for_time_pairs(tup_inserted, dbname, time_pairs)
 
 
     tup_updated = """
         SELECT non_negative_derivative(mean("tup_updated"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['tup_updated_1h'] = exec_for_time_pairs(tup_updated, dbname, time_pairs)
+    data['Tuples Updated (1h avg.)'] = exec_for_time_pairs(tup_updated, dbname, time_pairs)
 
     tup_deleted = """
         SELECT non_negative_derivative(mean("tup_deleted"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['tup_deleted_1h'] = exec_for_time_pairs(tup_deleted, dbname, time_pairs)
+    data['Tuples Deleted (1h avg.)'] = exec_for_time_pairs(tup_deleted, dbname, time_pairs)
 
 
     size_b = """
         SELECT derivative(mean("size_b"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['size_bytes_1h'] = exec_for_time_pairs(size_b, dbname, time_pairs)
+    data['DB size change in bytes (1h avg.)'] = exec_for_time_pairs(size_b, dbname, time_pairs)
 
     temp_bytes_1h = """
         SELECT derivative(mean("temp_bytes"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['temp_bytes_1h'] = exec_for_time_pairs(temp_bytes_1h, dbname, time_pairs)
+    data['Temporary Bytes (1h avg.)'] = exec_for_time_pairs(temp_bytes_1h, dbname, time_pairs)
 
     blk_read_time_1h = """
         SELECT non_negative_derivative(mean("blk_read_time"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['blk_read_time_ms_1h'] = exec_for_time_pairs(blk_read_time_1h, dbname, time_pairs)
+    data['Block Read Time (ms/1h)'] = exec_for_time_pairs(blk_read_time_1h, dbname, time_pairs)
 
     blk_write_time_1h = """
         SELECT non_negative_derivative(mean("blk_write_time"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['blk_write_time_ms_1h'] = exec_for_time_pairs(blk_write_time_1h, dbname, time_pairs)
+    data['Block Write Time (ms/1h)'] = exec_for_time_pairs(blk_write_time_1h, dbname, time_pairs)
 
-    return data
+    return sorted(data.items(), key=lambda x: x[0])
+
+
+def get_top_n_tables(dbname, n=3):      # TODO
+    data = {}
 
     # 3 biggest tables by growth
     size_b = """
@@ -165,64 +169,7 @@ def get_db_overview(dbname):
     # top 3 by IUD
     # top rows/scan
     # top sprocs
-    # avg. backends
-
-    return data
-
-
-# def find_top_growth_series(measurement, column, start_time, end_time, tags=None):
-def find_top_growth_statements(column, start_time, end_time=''):
-    first = {}
-    non_negative_derivative = []  # (queryid, "column" derivative for 1h) [non-negative only]
-    iql_first = "select first({}), queryid from stat_statements where time > '{}' {} group by queryid"
-    iql_last = "select last({}), queryid from stat_statements where time > '{}' {} group by queryid"   # join to a single query?
-    if end_time:
-        end_time = "and time < '{}'".format(end_time)
-    data_first = influx_query(iql_first.format(column, start_time, end_time), {'epoch': 'ms'})
-    data_last = influx_query(iql_last.format(column, start_time, end_time), {'epoch': 'ms'})
-
-    for f in data_first.raw['series']:
-        # print(f)
-        first[f['tags']['queryid']] = f['values'][0]    # [1481646061039, 9.65, '1112409937']
-
-    for l in data_last.raw['series']:
-        last_val = l['values'][0]   # [1481646061039, 9.65, '1112409937']
-        q_id = last_val[2]
-        if q_id in first:
-            val_delta = last_val[1] - first[q_id][1]
-            if val_delta <= 0:
-                continue
-            time_delta_ms = last_val[0] - first[q_id][0]
-            non_negative_derivative.append((q_id, (val_delta / time_delta_ms * 1000.0 * 3600)))    # ms/s
-        else:
-            print(q_id, 'not found from first')
-    # print(data_last)
-    if not non_negative_derivative:
-        return []
-
-    non_negative_derivative.sort(key=lambda x: x[1], reverse=True)
-    top_n = non_negative_derivative[:20]
-    iql_query_text = 'select "queryid", first("query") from stat_statements where time > \'{}\' {} and ('.format(start_time, end_time)
-    is_first = True
-    for q in top_n:
-        if is_first:
-            iql_query_text += '"queryid" = \'{}\''.format(q[0])
-            is_first = False
-        else:
-            iql_query_text += ' or "queryid" = \'{}\''.format(q[0])
-
-    iql_query_text += ') group by time(30d), "queryid" fill(none)'
-    query_texts = influx_query(iql_query_text)
-    # print(query_texts.raw)
-    for q in query_texts.raw['series']:
-        i = 0
-        while i < len(top_n):
-            if top_n[i][0] == q['values'][0][1]:
-                top_n[i] = (top_n[i][0], top_n[i][1], q['values'][0][2])    # (queryid, non_negative_derivative, query)
-                break
-            i += 1
-
-    return top_n
+    return sorted(data.items(), key=lambda x: x[0])
 
 
 def get_first_values_for_column(measurement, dbname, column, start_time, end_time):

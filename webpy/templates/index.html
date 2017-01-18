@@ -95,9 +95,9 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {% for k, values in data.items()  %}
+                  {% for key, values in data  %}
                   <tr>
-                      <td>{{k}}</td>
+                      <td>{{key}}</td>
                       <td>{{values[0]}}</td>
                       <td>{{values[1]}}</td>
                       <td>{{values[2]}}</td>
@@ -129,8 +129,8 @@
               <table class="table table-striped">
                 <thead>
                   <tr>
-                    <th>queryid</th>
-                    <th>query</th>
+                    <th title="Click to view in Grafana">queryid</th>
+                    <th title="In normalized form (spaces removed etc)">query</th>
                     <th title="In milliseconds. Click to sort"><a class="sort_column" href="">total_time</a></th>
                     <th title="In milliseconds. Click to sort"><a class="sort_column" href="">mean_time</a></th>
                     <th title="Click to sort"><a class="sort_column" href="">calls</a></th>
@@ -146,7 +146,7 @@
                 <tbody>
                   {% for d in data %}
                   <tr>
-                    <td>{{d['queryid']}}</td>
+                    <td><a href="{{grafana_baseurl}}/dashboard/db/single-query-details?var-queryid={{d['queryid']}}">{{d['queryid']}}</td>
                     <td>{{d['query']}}</td>
                     <td>{{d['total_time']}}</td>
                     <td>{{d['mean_time']}}</td>

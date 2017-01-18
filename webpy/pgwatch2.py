@@ -23,7 +23,7 @@ def get_last_log_lines(service='pgwatch2', lines=200):
         return []
     log_file = log_files[len(log_files)-1]
     logging.debug('extracting last %s lines from %s', lines, log_file)
-    with open(log_file) as f:
+    with open(log_file, 'rb') as f:
         return f.readlines()[-lines:]
 
 
