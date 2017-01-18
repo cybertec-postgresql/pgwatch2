@@ -24,7 +24,8 @@ RUN cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini
 EXPOSE 3000
 
 ###  Influxdb [https://influxdb.com/download/index.html] # taking the latest "stable" by default
-RUN wget -q -O - Gsq https://api.github.com/repos/influxdb/influxdb/tags | grep -Eo '[0-9\.]+' | head -1 > influx_ver.txt
+RUN wget -q -O - Gsq https://api.github.com/repos/influxdb/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | head -1 > influx_ver.txt
+RUN echo "downloading InfluxDB ver:" && cat influx_ver.txt
 RUN wget -q -O - "https://dl.influxdata.com/influxdb/releases/influxdb_$(cat influx_ver.txt)_amd64.deb" > influxdb_amd64.deb
 RUN dpkg -i influxdb_amd64.deb
 
