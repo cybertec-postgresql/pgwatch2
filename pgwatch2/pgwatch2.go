@@ -1,22 +1,22 @@
 package main
 
 import (
-	"fmt"
-	_ "time"
-	_ "github.com/lib/pq"
-	_ "io/ioutil"
-	"strings"
-	"time"
-	"github.com/op/go-logging"
-	"github.com/jmoiron/sqlx"
-	"github.com/influxdata/influxdb/client/v2"
 	"encoding/json"
-	"sync"
-	"sort"
-	"github.com/jessevdk/go-flags"
-	"os"
 	"errors"
+	"fmt"
+	"github.com/influxdata/influxdb/client/v2"
+	"github.com/jessevdk/go-flags"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
+	"github.com/op/go-logging"
+	_ "io/ioutil"
+	"os"
+	"sort"
 	"strconv"
+	"strings"
+	"sync"
+	"time"
+	_ "time"
 )
 
 type MonitoredDatabase struct {
@@ -27,34 +27,34 @@ type MonitoredDatabase struct {
 	User         string
 	Password     string
 	Metrics      map[string]int
-	}
+}
 
 type ControlMessage struct {
-	Action		string	// START, STOP, PAUSE
-	Config		map[string]interface{}
-	}
+	Action string // START, STOP, PAUSE
+	Config map[string]interface{}
+}
 
 type MetricFetchMessage struct {
 	DBUniqueName string
 	MetricName   string
-	}
-
-type MetricStoreMessage struct {
-	DBUniqueName	 string
-	MetricName	string
-	Data		[](map[string]interface{})
 }
 
-const EPOCH_COLUMN_NAME string = "epoch_ns"	// this column (epoch in nanoseconds) is expected in every metric query
+type MetricStoreMessage struct {
+	DBUniqueName string
+	MetricName   string
+	Data         [](map[string]interface{})
+}
+
+const EPOCH_COLUMN_NAME string = "epoch_ns" // this column (epoch in nanoseconds) is expected in every metric query
 
 var configDb *sqlx.DB
 var log = logging.MustGetLogger("main")
 var metric_def_map map[string]map[float64]string
 var metric_def_map_lock = sync.RWMutex{}
-var host_metric_interval_map = make(map[string]float64)	// [db1_metric] = 30
+var host_metric_interval_map = make(map[string]float64) // [db1_metric] = 30
 var db_pg_version_map = make(map[string]float64)
 var db_pg_version_map_lock = sync.RWMutex{}
-var InfluxDefaultRetentionPolicyDuration string = "90d"	// 90 days of monitoring data will be kept around. adjust if needed
+var InfluxDefaultRetentionPolicyDuration string = "90d" // 90 days of monitoring data will be kept around. adjust if needed
 var monitored_db_cache map[string]map[string]interface{}
 var monitored_db_cache_lock sync.RWMutex
 
@@ -76,7 +76,7 @@ func GetPostgresDBConnection(host, port, dbname, user, password string) (*sqlx.D
 func InitAndTestConfigStoreConnection(host, port, dbname, user, password string) {
 	var err error
 
-	configDb, err = GetPostgresDBConnection(host, port, dbname, user, password)	// configDb is used by the main thread only
+	configDb, err = GetPostgresDBConnection(host, port, dbname, user, password) // configDb is used by the main thread only
 	if err != nil {
 		log.Fatal("could not open configDb connection! exit.")
 	}
@@ -147,7 +147,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 	if err != nil {
 		log.Error(err)
 	} else {
-		UpdateMonitoredDBCache(data)	// cache used by workers
+		UpdateMonitoredDBCache(data) // cache used by workers
 	}
 	return data, err
 }
@@ -158,8 +158,8 @@ func SendToInflux(dbname, measurement string, data [](map[string]interface{})) e
 	}
 	log.Debug("SendToInflux data[0] of ", len(data), ":", data[0])
 	ts_warning_printed := false
-	retry:
-	retries := 1	// 1 retry
+retry:
+	retries := 1 // 1 retry
 
 	c, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr:     opts.InfluxURL,
@@ -171,7 +171,7 @@ func SendToInflux(dbname, measurement string, data [](map[string]interface{})) e
 		log.Error("Error connecting to Influx: ", err)
 		if retries > 0 {
 			retries--
-			time.Sleep(time.Millisecond*200)
+			time.Sleep(time.Millisecond * 200)
 			goto retry
 		}
 		return err
@@ -195,7 +195,7 @@ func SendToInflux(dbname, measurement string, data [](map[string]interface{})) e
 
 		for k, v := range dr {
 			if v == nil {
-				continue	// not storing NULLs
+				continue // not storing NULLs
 			}
 			if k == EPOCH_COLUMN_NAME {
 				epoch_ns = v.(int64)
@@ -208,7 +208,7 @@ func SendToInflux(dbname, measurement string, data [](map[string]interface{})) e
 		}
 
 		if epoch_ns == 0 {
-			if !ts_warning_printed  {
+			if !ts_warning_printed {
 				log.Warning("No timestamp_ns found, server time will be used. measurement:", measurement)
 				ts_warning_printed = true
 			}
@@ -231,7 +231,7 @@ func SendToInflux(dbname, measurement string, data [](map[string]interface{})) e
 	t_diff := time.Now().Sub(t1)
 	if err == nil {
 		log.Info(fmt.Sprintf("wrote %d/%d rows to Influx for [%s:%s] in %dus", rows_batched, len(data),
-			dbname, measurement, t_diff.Nanoseconds() / 1000))
+			dbname, measurement, t_diff.Nanoseconds()/1000))
 	}
 	return err
 }
@@ -244,16 +244,16 @@ func GetMonitoredDatabaseByUniqueName(name string) (MonitoredDatabase, error) {
 		return MonitoredDatabase{}, errors.New("md_unique_name not found")
 	}
 	md := MonitoredDatabase{
-		Host: monitored_db_cache[name]["md_hostname"].(string),
-		Port: monitored_db_cache[name]["md_port"].(string),
-		DBName: monitored_db_cache[name]["md_dbname"].(string),
-		User: monitored_db_cache[name]["md_user"].(string),
+		Host:     monitored_db_cache[name]["md_hostname"].(string),
+		Port:     monitored_db_cache[name]["md_port"].(string),
+		DBName:   monitored_db_cache[name]["md_dbname"].(string),
+		User:     monitored_db_cache[name]["md_user"].(string),
 		Password: monitored_db_cache[name]["md_password"].(string),
 	}
 	return md, nil
 }
 
-func UpdateMonitoredDBCache(data [](map[string]interface{})) (error) {
+func UpdateMonitoredDBCache(data [](map[string]interface{})) error {
 	if data == nil || len(data) == 0 {
 		return nil
 	}
@@ -282,14 +282,13 @@ func DoGatherData(metric_sql string, dbUnique string) ([]map[string]interface{},
 	return data, nil
 }
 
-
 // TODO batching of mutiple datasets
 func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
 	retry_queue := make([]MetricStoreMessage, 0)
 
 	for {
 		select {
-		case msg:= <- storage_ch:
+		case msg := <-storage_ch:
 			log.Debug("got store msg", msg)
 
 			err := SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
@@ -299,23 +298,22 @@ func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
 				retry_queue = append(retry_queue, msg)
 			}
 		default:
-            for len(retry_queue) > 0 {
-                log.Info("processing retry_queue. len(retry_queue) =", len(retry_queue))
-                msg:= retry_queue[0]
+			for len(retry_queue) > 0 {
+				log.Info("processing retry_queue. len(retry_queue) =", len(retry_queue))
+				msg := retry_queue[0]
 
-                err := SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
-                if err != nil {
-                    time.Sleep(time.Second*10)
-                    break
-                }
-                retry_queue = retry_queue[1:]
-            }
+				err := SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
+				if err != nil {
+					time.Sleep(time.Second * 10)
+					break
+				}
+				retry_queue = retry_queue[1:]
+			}
 
-			time.Sleep(time.Millisecond*100)
+			time.Sleep(time.Millisecond * 100)
 		}
 	}
 }
-
 
 // TODO cache for 5min
 func DBGetPGVersion(dbUnique string) (float64, error) {
@@ -378,11 +376,11 @@ func GetSQLForMetricPGVersion(metric string, pgVer float64) string {
 	return metric_def_map[metric][best_ver]
 }
 
-func MetricsFetcher(query_ch <-chan MetricFetchMessage, storage_ch chan <- MetricStoreMessage) {
+func MetricsFetcher(query_ch <-chan MetricFetchMessage, storage_ch chan<- MetricStoreMessage) {
 	// TODO somekind of pool to enforce max_concurrent_per_db
 	for {
 		select {
-		case msg:= <- query_ch:
+		case msg := <-query_ch:
 			log.Debug("got fetch msg", msg)
 
 			// DB version lookup
@@ -402,7 +400,7 @@ func MetricsFetcher(query_ch <-chan MetricFetchMessage, storage_ch chan <- Metri
 				log.Error("failed to fetch metrics for ", msg.DBUniqueName, msg.MetricName, err)
 				break
 			}
-			log.Info(fmt.Sprintf("fetched %d rows for [%s:%s] in %dus", len(data), msg.DBUniqueName, msg.MetricName, (t2 - t1) / 1000))
+			log.Info(fmt.Sprintf("fetched %d rows for [%s:%s] in %dus", len(data), msg.DBUniqueName, msg.MetricName, (t2-t1)/1000))
 			if len(data) > 0 {
 				storage_ch <- MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data}
 			}
@@ -428,7 +426,7 @@ func MetricGathererLoop(dbUniqueName string, metricName string, config_map map[s
 			if msg.Action == "START" {
 				config = msg.Config
 				interval = config[metricName].(float64)
-				ticker = time.NewTicker(time.Second*time.Duration(interval))
+				ticker = time.NewTicker(time.Second * time.Duration(interval))
 				if !running {
 					running = true
 					log.Info("started MetricGathererLoop for ", dbUniqueName, metricName, " interval:", interval)
@@ -487,19 +485,19 @@ func jsonTextToMap(jsonText string) map[string]interface{} {
 
 // queryDB convenience function to query the database
 func queryDB(clnt client.Client, cmd string) (res []client.Result, err error) {
-    q := client.Query{
-        Command:  cmd,
-        Database: opts.InfluxDbname,
-    }
-    if response, err := clnt.Query(q); err == nil {
-        if response.Error() != nil {
-            return res, response.Error()
-        }
-        res = response.Results
-    } else {
-        return res, err
-    }
-    return res, nil
+	q := client.Query{
+		Command:  cmd,
+		Database: opts.InfluxDbname,
+	}
+	if response, err := clnt.Query(q); err == nil {
+		if response.Error() != nil {
+			return res, response.Error()
+		}
+		res = response.Results
+	} else {
+		return res, err
+	}
+	return res, nil
 }
 
 func InitAndTestInfluxConnection(InfluxURL, InfluxDbname string) error {
@@ -518,11 +516,11 @@ func InitAndTestInfluxConnection(InfluxURL, InfluxDbname string) error {
 
 	res, err := queryDB(c, "SHOW DATABASES")
 	retries := 3
-	retry:
+retry:
 	if err != nil {
 		if retries > 0 {
 			log.Error("SHOW DATABASES failed, retrying in 5s (max 3x)...", err)
-			time.Sleep(time.Second*5)
+			time.Sleep(time.Second * 5)
 			retries = retries - 1
 			goto retry
 		} else {
@@ -551,21 +549,20 @@ func InitAndTestInfluxConnection(InfluxURL, InfluxDbname string) error {
 }
 
 var opts struct {
-    // Slice of bool will append 'true' each time the option
-    // is encountered (can be set multiple times, like -vvv)
-    Verbose []bool `short:"v" long:"verbose" description:"Show verbose debug information"`
-    File string `short:"f" long:"file" description:"Sqlite3 config DB file"`
-    Host string `short:"h" long:"host" description:"PG config DB host" default:"localhost"`
-    Port string `short:"p" long:"port" description:"PG config DB port" default:"5432"`
-    Dbname string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2"`
-    User string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2"`
-    Password string `long:"password" description:"PG config DB password"`
-    InfluxURL string `long:"iurl" description:"Influx address" default:"http://localhost:8086"`
-    InfluxDbname string `long:"idbname" description:"Influx DB name" default:"pgwatch2"`
-    InfluxUser string `long:"iuser" description:"Influx user" default:"root"`
-    InfluxPassword string `long:"ipassword" description:"Influx password" default:"root"`
+	// Slice of bool will append 'true' each time the option
+	// is encountered (can be set multiple times, like -vvv)
+	Verbose        []bool `short:"v" long:"verbose" description:"Show verbose debug information"`
+	File           string `short:"f" long:"file" description:"Sqlite3 config DB file"`
+	Host           string `short:"h" long:"host" description:"PG config DB host" default:"localhost"`
+	Port           string `short:"p" long:"port" description:"PG config DB port" default:"5432"`
+	Dbname         string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2"`
+	User           string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2"`
+	Password       string `long:"password" description:"PG config DB password"`
+	InfluxURL      string `long:"iurl" description:"Influx address" default:"http://localhost:8086"`
+	InfluxDbname   string `long:"idbname" description:"Influx DB name" default:"pgwatch2"`
+	InfluxUser     string `long:"iuser" description:"Influx user" default:"root"`
+	InfluxPassword string `long:"ipassword" description:"Influx password" default:"root"`
 }
-
 
 func main() {
 
@@ -588,7 +585,7 @@ func main() {
 	if opts.File != "" {
 		fmt.Println("Sqlite3 not yet supported")
 		return
-	} else {	// make sure all PG params are there
+	} else { // make sure all PG params are there
 		if opts.User == "" {
 			opts.User = os.Getenv("USER")
 		}
@@ -606,7 +603,7 @@ func main() {
 	}
 	log.Info("InfluxDB connection OK")
 
-	control_channels := make(map[string](chan ControlMessage))		// [db1+metric1]=chan
+	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
 	query_ch := make(chan MetricFetchMessage, 1000)
 	persist_ch := make(chan MetricStoreMessage, 1000)
 
@@ -619,8 +616,8 @@ func main() {
 	first_loop := true
 	var last_metrics_refresh_time int64
 
-	for {	//main loop
-		if time.Now().Unix() - last_metrics_refresh_time > 30 {
+	for { //main loop
+		if time.Now().Unix()-last_metrics_refresh_time > 30 {
 			log.Info("updating metrics definitons from ConfigDB...")
 			UpdateMetricDefinitionMapFromPostgres()
 			last_metrics_refresh_time = time.Now().Unix()
@@ -636,7 +633,7 @@ func main() {
 			}
 		}
 		if first_loop {
-			first_loop = false        // only used for failing when 1st config reading fails
+			first_loop = false // only used for failing when 1st config reading fails
 		}
 
 		log.Info("nr. of active hosts:", len(monitored_dbs))
@@ -666,8 +663,8 @@ func main() {
 				} else if !metric_def_ok && ch_ok {
 					// metric definition files were recently removed
 					log.Warning("shutting down metric", metric, "for", host["md_unique_name"])
-					control_channels[db_metric] <- ControlMessage{Action:"STOP"}
-					time.Sleep(time.Second * 1)        // enough?
+					control_channels[db_metric] <- ControlMessage{Action: "STOP"}
+					time.Sleep(time.Second * 1) // enough?
 					delete(control_channels, db_metric)
 				} else if !metric_def_ok {
 					log.Warning(fmt.Sprintf("metric definiton \"%s\" not found for \"%s\"", metric, host["md_unique_name"]))
@@ -675,7 +672,7 @@ func main() {
 					// check if interval has changed
 					if host_metric_interval_map[db_metric] != interval {
 						log.Warning("sending interval update for", host["md_unique_name"], metric)
-						control_channels[db_metric] <- ControlMessage{Action:"START", Config: host_config}
+						control_channels[db_metric] <- ControlMessage{Action: "START", Config: host_config}
 					}
 				}
 			}
@@ -683,7 +680,7 @@ func main() {
 
 		// loop over existing channels and stop workers if DB or metric removed from config
 		log.Info("checking if any workers need to be shut down...")
-		next_chan:
+	next_chan:
 		for db_metric := range control_channels {
 			splits := strings.Split(db_metric, ":")
 			db := splits[0]
@@ -702,7 +699,7 @@ func main() {
 			}
 
 			log.Warning("shutting down gatherer for ", db, ":", metric)
-			control_channels[db_metric] <- ControlMessage{Action:"STOP"}
+			control_channels[db_metric] <- ControlMessage{Action: "STOP"}
 			time.Sleep(time.Second * 1)
 			delete(control_channels, db_metric)
 			log.Debug("channel deleted for", db_metric)
@@ -710,7 +707,7 @@ func main() {
 		}
 
 		log.Debug("main sleeping 60s...")
-		time.Sleep(time.Second*60)
+		time.Sleep(time.Second * 60)
 	}
 
 }
