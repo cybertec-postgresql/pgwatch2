@@ -549,7 +549,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
               ],
               "measurement": "db_stats",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(mean(\"tup_deleted\"), 1h) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT non_negative_derivative(mean(\"tup_deleted\"), 1h) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval) fill(0)",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -593,7 +593,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
                 }
               ],
               "policy": "default",
-              "query": "SELECT non_negative_derivative(mean(\"tup_updated\"), 1h) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT non_negative_derivative(mean(\"tup_updated\"), 1h) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval) fill(0)",
               "rawQuery": true,
               "refId": "B",
               "resultFormat": "time_series",
@@ -631,7 +631,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
                 }
               ],
               "policy": "default",
-              "query": "SELECT non_negative_derivative(mean(\"tup_inserted\"), 1h) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT non_negative_derivative(mean(\"tup_inserted\"), 1h) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval) fill(0)",
               "rawQuery": true,
               "refId": "C",
               "resultFormat": "time_series",
@@ -751,7 +751,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
               "label": null,
               "logBase": 10,
               "max": null,
-              "min": null,
+              "min": 0,
               "show": true
             },
             {
@@ -1873,11 +1873,11 @@ values (0, 'single-query-details', 'Single query details', 1, now(), now(), 1, 1
           },
           "yaxes": [
             {
-              "format": "short",
+              "format": "ms",
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": null,
+              "min": "0",
               "show": true
             },
             {
@@ -2123,11 +2123,11 @@ values (0, 'single-query-details', 'Single query details', 1, now(), now(), 1, 1
           },
           "yaxes": [
             {
-              "format": "short",
+              "format": "ms",
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": null,
+              "min": "0",
               "show": true
             },
             {
@@ -2254,7 +2254,7 @@ values (0, 'single-query-details', 'Single query details', 1, now(), now(), 1, 1
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": null,
+              "min": 0,
               "show": true
             },
             {
@@ -2440,7 +2440,7 @@ values (0, 'single-query-details', 'Single query details', 1, now(), now(), 1, 1
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": null,
+              "min": "0",
               "show": true
             },
             {
@@ -2622,11 +2622,11 @@ values (0, 'single-query-details', 'Single query details', 1, now(), now(), 1, 1
           },
           "yaxes": [
             {
-              "format": "short",
+              "format": "ms",
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": null,
+              "min": "0",
               "show": true
             },
             {
@@ -2657,8 +2657,8 @@ values (0, 'single-query-details', 'Single query details', 1, now(), now(), 1, 1
         "allValue": null,
         "current": {
           "tags": [],
-          "text": "2584015616",
-          "value": "2584015616"
+          "text": "",
+          "value": ""
         },
         "datasource": "Influx",
         "hide": 0,
