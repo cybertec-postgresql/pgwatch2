@@ -59,6 +59,8 @@ var db_pg_version_map_lock = sync.RWMutex{}
 var InfluxDefaultRetentionPolicyDuration string = "90d" // 90 days of monitoring data will be kept around. adjust if needed
 var monitored_db_cache map[string]map[string]interface{}
 var monitored_db_cache_lock sync.RWMutex
+var metric_fetching_channels = make(map[string](chan MetricFetchMessage)) // [db1unique]=chan
+var metric_fetching_channels_lock = sync.RWMutex{}
 
 func GetPostgresDBConnection(host, port, dbname, user, password string) (*sqlx.DB, error) {
 	var err error
@@ -124,7 +126,7 @@ func DBExecReadByDbUniqueName(dbUnique string, sql string, args ...interface{}) 
 	if err != nil {
 		return nil, err
 	}
-	conn, err := GetPostgresDBConnection(md.Host, md.Port, md.DBName, md.User, md.Password)
+	conn, err := GetPostgresDBConnection(md.Host, md.Port, md.DBName, md.User, md.Password)	// TODO pooling
 	if err != nil {
 		return nil, err
 	}
@@ -273,17 +275,6 @@ func UpdateMonitoredDBCache(data [](map[string]interface{})) error {
 	return nil
 }
 
-// TODO conn_cache .. max 2 conns per DB
-// https://golang.org/pkg/sync/#Cond
-func DoGatherData(metric_sql string, dbUnique string) ([]map[string]interface{}, error) {
-	data, err := DBExecReadByDbUniqueName(dbUnique, metric_sql)
-	if err != nil {
-		log.Error("DoGatherData failed", err)
-		return nil, err
-	}
-	return data, nil
-}
-
 // TODO batching of mutiple datasets
 func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
 	retry_queue := make([]MetricStoreMessage, 0)
@@ -378,18 +369,15 @@ func GetSQLForMetricPGVersion(metric string, pgVer float64) string {
 	return metric_def_map[metric][best_ver]
 }
 
-func MetricsFetcher(query_ch <-chan MetricFetchMessage, storage_ch chan<- MetricStoreMessage) {
-	// TODO somekind of pool to enforce max_concurrent_per_db
+func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- MetricStoreMessage) {
 	for {
 		select {
-		case msg := <-query_ch:
-			log.Debug("got fetch msg", msg)
-
+		case msg := <-fetch_msg:
 			// DB version lookup
 			db_pg_version, err := DBGetPGVersion(msg.DBUniqueName)
 			if err != nil {
 				log.Error("failed to fetch pg version for ", msg.DBUniqueName, msg.MetricName, err)
-				break
+				continue
 			}
 
 			sql := GetSQLForMetricPGVersion(msg.MetricName, db_pg_version)
@@ -400,18 +388,28 @@ func MetricsFetcher(query_ch <-chan MetricFetchMessage, storage_ch chan<- Metric
 			t2 := time.Now().UnixNano()
 			if err != nil {
 				log.Error("failed to fetch metrics for ", msg.DBUniqueName, msg.MetricName, err)
-				break
-			}
-			log.Info(fmt.Sprintf("fetched %d rows for [%s:%s] in %dus", len(data), msg.DBUniqueName, msg.MetricName, (t2-t1)/1000))
-			if len(data) > 0 {
-				storage_ch <- MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data}
+			} else {
+				log.Info(fmt.Sprintf("fetched %d rows for [%s:%s] in %dus", len(data), msg.DBUniqueName, msg.MetricName, (t2-t1)/1000))
+				if len(data) > 0 {
+					storage_ch <- MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data}
+				}
 			}
 		}
+
 	}
 }
 
+func ForwardQueryMessageToDBUniqueFetcher(msg MetricFetchMessage) {
+	// Currently only 1 fetcher per DB but option to configure more parallel connections would be handy
+	log.Debug("got MetricFetchMessage:", msg)
+	metric_fetching_channels_lock.RLock()
+	q_ch, _ := metric_fetching_channels[msg.DBUniqueName]
+	metric_fetching_channels_lock.RUnlock()
+	q_ch <- msg
+}
+
 // ControlMessage notifies of shutdown + interval change
-func MetricGathererLoop(dbUniqueName string, metricName string, config_map map[string]interface{}, control_ch <-chan ControlMessage, query_ch chan<- MetricFetchMessage) {
+func MetricGathererLoop(dbUniqueName string, metricName string, config_map map[string]interface{}, control_ch <-chan ControlMessage) {
 	config := config_map
 	interval := config[metricName].(float64)
 	running := true
@@ -419,7 +417,7 @@ func MetricGathererLoop(dbUniqueName string, metricName string, config_map map[s
 
 	for {
 		if running {
-			query_ch <- MetricFetchMessage{DBUniqueName: dbUniqueName, MetricName: metricName}
+			ForwardQueryMessageToDBUniqueFetcher(MetricFetchMessage{DBUniqueName: dbUniqueName, MetricName: metricName})
 		}
 
 		select {
@@ -606,14 +604,10 @@ func main() {
 	log.Info("InfluxDB connection OK")
 
 	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
-	query_ch := make(chan MetricFetchMessage, 1000)
 	persist_ch := make(chan MetricStoreMessage, 1000)
 
 	log.Info("starting InfluxPersister...")
 	go InfluxPersister(persist_ch)
-
-	log.Info("starting MetricsFetcher...")
-	go MetricsFetcher(query_ch, persist_ch)
 
 	first_loop := true
 	var last_metrics_refresh_time int64
@@ -644,6 +638,18 @@ func main() {
 			log.Info("processing database", host["md_unique_name"], "config:", host["md_config"])
 
 			host_config := jsonTextToMap(host["md_config"].(string))
+			db_unique := host["md_unique_name"].(string)
+
+			// make sure query channel for every DBUnique exists. means also max 1 concurrent query for 1 DB
+			metric_fetching_channels_lock.RLock()
+			_, exists := metric_fetching_channels[db_unique]
+			metric_fetching_channels_lock.RUnlock()
+			if !exists {
+				metric_fetching_channels_lock.Lock()
+				metric_fetching_channels[db_unique] = make(chan MetricFetchMessage, 100)
+				go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch)	// close message?
+				metric_fetching_channels_lock.Unlock()
+			}
 
 			for metric := range host_config {
 				interval := host_config[metric].(float64)
@@ -652,15 +658,15 @@ func main() {
 				_, metric_def_ok := metric_def_map[metric]
 				metric_def_map_lock.RUnlock()
 
-				var db_metric string = host["md_unique_name"].(string) + ":" + metric
+				var db_metric string = db_unique + ":" + metric
 				_, ch_ok := control_channels[db_metric]
 
-				if metric_def_ok && !ch_ok {
+				if metric_def_ok && !ch_ok {	// initialize a new per db/per metric control channel
 					if interval > 0 {
 						host_metric_interval_map[db_metric] = interval
-						log.Info("starting gatherer for ", host["md_unique_name"], metric)
+						log.Info("starting gatherer for ", db_unique, metric)
 						control_channels[db_metric] = make(chan ControlMessage, 1)
-						go MetricGathererLoop(host["md_unique_name"].(string), metric, host_config, control_channels[db_metric], query_ch)
+						go MetricGathererLoop(db_unique, metric, host_config, control_channels[db_metric])
 					}
 				} else if !metric_def_ok && ch_ok {
 					// metric definition files were recently removed
@@ -669,11 +675,11 @@ func main() {
 					time.Sleep(time.Second * 1) // enough?
 					delete(control_channels, db_metric)
 				} else if !metric_def_ok {
-					log.Warning(fmt.Sprintf("metric definiton \"%s\" not found for \"%s\"", metric, host["md_unique_name"]))
+					log.Warning(fmt.Sprintf("metric definiton \"%s\" not found for \"%s\"", metric, db_unique))
 				} else {
 					// check if interval has changed
 					if host_metric_interval_map[db_metric] != interval {
-						log.Warning("sending interval update for", host["md_unique_name"], metric)
+						log.Warning("sending interval update for", db_unique, metric)
 						control_channels[db_metric] <- ControlMessage{Action: "START", Config: host_config}
 					}
 				}
