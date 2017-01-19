@@ -46,6 +46,8 @@ type MetricStoreMessage struct {
 }
 
 const EPOCH_COLUMN_NAME string = "epoch_ns" // this column (epoch in nanoseconds) is expected in every metric query
+const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
+const ACTIVE_SERVERS_REFRESH_TIME int64 = 60 // min time before checking for new/changed databases under monitoring i.e. main loop time
 
 var configDb *sqlx.DB
 var log = logging.MustGetLogger("main")
@@ -617,7 +619,7 @@ func main() {
 	var last_metrics_refresh_time int64
 
 	for { //main loop
-		if time.Now().Unix()-last_metrics_refresh_time > 30 {
+		if time.Now().Unix()-last_metrics_refresh_time > METRIC_DEFINITION_REFRESH_TIME {
 			log.Info("updating metrics definitons from ConfigDB...")
 			UpdateMetricDefinitionMapFromPostgres()
 			last_metrics_refresh_time = time.Now().Unix()
@@ -628,7 +630,7 @@ func main() {
 				log.Fatal("could not fetch active hosts - check config!", err)
 			} else {
 				log.Error("could not fetch active hosts:", err)
-				time.Sleep(time.Second * 30)
+				time.Sleep(time.Second * time.Duration(ACTIVE_SERVERS_REFRESH_TIME))
 				continue
 			}
 		}
@@ -706,8 +708,8 @@ func main() {
 
 		}
 
-		log.Debug("main sleeping 60s...")
-		time.Sleep(time.Second * 60)
+		log.Debug(fmt.Sprintf("main sleeping %ds...", ACTIVE_SERVERS_REFRESH_TIME))
+		time.Sleep(time.Second * time.Duration(ACTIVE_SERVERS_REFRESH_TIME))
 	}
 
 }
