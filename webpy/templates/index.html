@@ -120,8 +120,8 @@
               <option value="{{db}}" {% if db == dbname %}selected{% endif %}>{{db}}</option>
               {% endfor %}
             </select>
-            <input type="text" name="start_time" value="{{start_time}}" size="25">
-            <input type="text" name="end_time" value="{{end_time}}" size="25">
+            <input type="text" name="start_time" value="{{start_time}}" size="25" title="Time has to be in ISO-8601 format (UTC)">
+            <input type="text" name="end_time" value="{{end_time}}" size="25" title="Time has to be in ISO-8601 format (UTC)">
             <input type="submit" name="show" value="Show">
             </form>
             {% if data %}

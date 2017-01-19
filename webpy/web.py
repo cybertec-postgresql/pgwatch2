@@ -163,31 +163,31 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--config', help='Config ini file', default='web.conf')
     parser.add_argument('-v', '--verbose', help='Chat level. none(default)|-v|-vv [$VERBOSE=[0|1|2]]', action='count', default=(os.getenv('VERBOSE') or 0))
     # Postgres
-    parser.add_argument('-H', '--host', help='Pgwatch2 Config DB host', default='localhost')
-    parser.add_argument('-p', '--port', help='Pgwatch2 Config DB port', default=5432, type=int)
-    parser.add_argument('-d', '--dbname', help='Pgwatch2 Config DB name', default='pgwatch2')
-    parser.add_argument('-U', '--username', help='Pgwatch2 Config DB username', default='pgwatch2')
-    parser.add_argument('--password', help='Pgwatch2 Config DB password', default=os.getenv('PGWATCH2_PASSWORD') or 'pgwatch2admin')
+    parser.add_argument('-H', '--host', help='Pgwatch2 Config DB host', default=(os.getenv('PW2_PGHOST') or 'localhost'))
+    parser.add_argument('-p', '--port', help='Pgwatch2 Config DB port', default=(os.getenv('PW2_PGPORT') or 5432), type=int)
+    parser.add_argument('-d', '--database', help='Pgwatch2 Config DB name', default=(os.getenv('PW2_PGDATABASE') or 'pgwatch2'))
+    parser.add_argument('-U', '--user', help='Pgwatch2 Config DB username', default=(os.getenv('PW2_PGUSER') or 'pgwatch2'))
+    parser.add_argument('--password', help='Pgwatch2 Config DB password', default=(os.getenv('PW2_PGPASSWORD') or 'pgwatch2admin'))
+    parser.add_argument('--require-ssl', help='Pgwatch2 Config DB SSL connection only', default=(os.getenv('PW2_SLL') or False))    # TODO add check
     # Influx
-    parser.add_argument('--influx-host', help='InfluxDB host', default=os.getenv('PGWATCH2_INFLUX_HOST') or 'localhost')
-    parser.add_argument('--influx-port', help='InfluxDB port', default=os.getenv('PGWATCH2_INFLUX_PORT') or '8086')
-    parser.add_argument('--influx-username', help='InfluxDB username', default=os.getenv('PGWATCH2_INFLUX_USERNAME') or 'root')
-    parser.add_argument('--influx-password', help='InfluxDB password', default=os.getenv('PGWATCH2_INFLUX_PASSWORD') or 'root')
-    parser.add_argument('--influx-database', help='InfluxDB database', default=os.getenv('PGWATCH2_INFLUX_DATABASE') or 'pgwatch2')
-    parser.add_argument('--influx-ssl', action='store_true', help='Use SSL for InfluxDB', default=os.getenv('PGWATCH2_INFLUX_SSL') or False)
+    parser.add_argument('--influx-host', help='InfluxDB host', default=(os.getenv('PW2_IHOST') or 'localhost'))
+    parser.add_argument('--influx-port', help='InfluxDB port', default=(os.getenv('PW2_IPORT') or '8086'))
+    parser.add_argument('--influx-user', help='InfluxDB username', default=(os.getenv('PW2_IUSER') or 'root'))
+    parser.add_argument('--influx-password', help='InfluxDB password', default=(os.getenv('PW2_IPASSWORD') or 'root'))
+    parser.add_argument('--influx-database', help='InfluxDB database', default=(os.getenv('PW2_IDATABASE') or 'pgwatch2'))
+    parser.add_argument('--influx-require-ssl', action='store_true', help='Use SSL for InfluxDB', default=(os.getenv('PW2_ISSL') or False))
     # Grafana
-    parser.add_argument('--grafana_baseurl', help='For linking to Grafana "Query details" dahsboard', default='http://0.0.0.0:3001')
+    parser.add_argument('--grafana_baseurl', help='For linking to Grafana "Query details" dashboard', default='http://0.0.0.0:3000')
 
-    global args
     args = parser.parse_args()
 
     logging.basicConfig(format='%(asctime)s %(levelname)s %(process)d %(message)s',
                         level=(logging.DEBUG if int(args.verbose) >= 2 else (logging.INFO if int(args.verbose) == 1 else logging.ERROR)))
     logging.debug(args)
 
-    datadb.setConnectionString(args.host, args.port, args.dbname, args.username, args.password)
-    pgwatch2_influx.influx_set_connection_params(args.influx_host, args.influx_port, args.influx_username,
-                                                           args.influx_password, args.influx_database, args.influx_ssl)
+    datadb.setConnectionString(args.host, args.port, args.database, args.user, args.password)
+    pgwatch2_influx.influx_set_connection_params(args.influx_host, args.influx_port, args.influx_user,
+                                                           args.influx_password, args.influx_database, args.influx_require_ssl)
 
     # cherrypy.config.update('web.conf')
     cherrypy.quickstart(Root(), '/', args.config)
