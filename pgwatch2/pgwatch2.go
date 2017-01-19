@@ -45,9 +45,9 @@ type MetricStoreMessage struct {
 	Data         [](map[string]interface{})
 }
 
-const EPOCH_COLUMN_NAME string = "epoch_ns" // this column (epoch in nanoseconds) is expected in every metric query
+const EPOCH_COLUMN_NAME string = "epoch_ns"      // this column (epoch in nanoseconds) is expected in every metric query
 const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
-const ACTIVE_SERVERS_REFRESH_TIME int64 = 60 // min time before checking for new/changed databases under monitoring i.e. main loop time
+const ACTIVE_SERVERS_REFRESH_TIME int64 = 60     // min time before checking for new/changed databases under monitoring i.e. main loop time
 
 var configDb *sqlx.DB
 var log = logging.MustGetLogger("main")
@@ -126,7 +126,7 @@ func DBExecReadByDbUniqueName(dbUnique string, sql string, args ...interface{}) 
 	if err != nil {
 		return nil, err
 	}
-	conn, err := GetPostgresDBConnection(md.Host, md.Port, md.DBName, md.User, md.Password)	// TODO pooling
+	conn, err := GetPostgresDBConnection(md.Host, md.Port, md.DBName, md.User, md.Password) // TODO pooling
 	if err != nil {
 		return nil, err
 	}
@@ -647,7 +647,7 @@ func main() {
 			if !exists {
 				metric_fetching_channels_lock.Lock()
 				metric_fetching_channels[db_unique] = make(chan MetricFetchMessage, 100)
-				go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch)	// close message?
+				go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch) // close message?
 				metric_fetching_channels_lock.Unlock()
 			}
 
@@ -661,7 +661,7 @@ func main() {
 				var db_metric string = db_unique + ":" + metric
 				_, ch_ok := control_channels[db_metric]
 
-				if metric_def_ok && !ch_ok {	// initialize a new per db/per metric control channel
+				if metric_def_ok && !ch_ok { // initialize a new per db/per metric control channel
 					if interval > 0 {
 						host_metric_interval_map[db_metric] = interval
 						log.Info("starting gatherer for ", db_unique, metric)
