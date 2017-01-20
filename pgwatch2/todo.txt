@@ -1,16 +1,17 @@
-* Go code tidying and unit tests
-* dashboards for index/sproc details
+* Additional dashboards
+ - index/sproc details
+ - top rows/scan
 * more metrics
- - locks
- - pg_stat_statements (very complex actually)
  - bloat
 * DDL and stored procedure change tracking (Grafana annotation events)
-* A separate integrated web view listing top problems/hints
-* tables
- - top rows/scan
- - top pg_stat_stmt
- - top sprocs
+* Web view
+ - top problems/hints
  - quantile der indexgrößen (grafik)
+ - validate JSON configs from UI before "save"
+ - top sprocs
 * somekind of whole instance monitoring mode (all DBs) with summarized statistics
-* validate JSON configs from UI before "save"
-* do Go build in docker?
+* Go daemon
+ - code tidying and unit tests
+ - do Go build inside docker?
+ - connection pooling
+ - declaring per metric statement_timeout
