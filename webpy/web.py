@@ -14,13 +14,14 @@ import pgwatch2
 from jinja2 import Environment, FileSystemLoader
 
 env = Environment(loader=FileSystemLoader(os.path.join(str(Path(__file__).parent), 'templates')))
-args = None
+cmd_args = None
 
 
 @decorator
 def logged_in(f: callable, *args, **kwargs):
-    if not cherrypy.request.app.config['pgwatch2']['anonymous_access'] and not cherrypy.session.get('logged_in'):
-        raise cherrypy.HTTPRedirect('/login')
+    if cmd_args.no_anonymous_access:
+        if not cherrypy.session.get('logged_in'):
+            raise cherrypy.HTTPRedirect('/login')
     return f(*args, **kwargs)
 
 
@@ -33,12 +34,12 @@ class Root:
         user = params.get('user', '')
         password = params.get('password', '')
 
-        if cherrypy.request.app.config['pgwatch2']['anonymous_access'] == True:
+        if not cmd_args.no_anonymous_access:
             raise cherrypy.HTTPRedirect('/index')
+
         if submit:
             if user and password:
-                if user == cherrypy.request.app.config['pgwatch2']['admin_user'] \
-                        and password == cherrypy.request.app.config['pgwatch2']['admin_password']:
+                if user == cmd_args.admin_user and password == cmd_args.admin_password:
                     cherrypy.session['logged_in'] = True    # default, in-memory sessions
                     cherrypy.session['login_time'] = time.time()
                     raise cherrypy.HTTPRedirect('/index')
@@ -53,12 +54,12 @@ class Root:
     def logout(self, **params):
         if 'logged_in' in cherrypy.session:
             del cherrypy.session['logged_in']
-        raise cherrypy.HTTPRedirect('/login')
+        raise cherrypy.HTTPRedirect('/index')
 
     @logged_in
     @cherrypy.expose
     def dbs(self, **params):
-        print(params)
+        logging.debug(params)
         message = ''
         if True:
             try:
@@ -86,7 +87,7 @@ class Root:
     @logged_in
     @cherrypy.expose
     def metrics(self, **params):
-        print(params)
+        logging.debug(params)
         message = ''
         if True:
             try:
@@ -155,13 +156,20 @@ class Root:
 
         tmpl = env.get_template('index.html')
         return tmpl.render(dbnames=dbnames, dbname=dbname, page=page, data=data, sort_column=sort_column,
-                           start_time=start_time, end_time=end_time, grafana_baseurl=args.grafana_baseurl)
+                           start_time=start_time, end_time=end_time, grafana_baseurl=cmd_args.grafana_baseurl)
 
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='pgwatch2 Web UI')
-    parser.add_argument('-c', '--config', help='Config ini file', default='web.conf')
+    # Webserver
+    parser.add_argument('--socket-host', help='Webserver Listen Address', default=(os.getenv('PW2_WEBHOST') or '0.0.0.0'))
+    parser.add_argument('--socket-port', help='Webserver Listen Port', default=(os.getenv('PW2_WEBPORT') or 8080), type=int)
+    # PgWatch2
     parser.add_argument('-v', '--verbose', help='Chat level. none(default)|-v|-vv [$VERBOSE=[0|1|2]]', action='count', default=(os.getenv('VERBOSE') or 0))
+    parser.add_argument('--no-anonymous-access', help='If set no login required to configure monitoring/metrics',
+                        action='store_true', default=(os.getenv('PW2_WEBNOANONYMOUS') or False))
+    parser.add_argument('--admin-user', help='Username for login', default=(os.getenv('PW2_WEBUSER') or 'admin'))
+    parser.add_argument('--admin-password', help='Password for login to read and configure monitoring', default=(os.getenv('PW2_WEBPASSWORD') or 'pgwatch2admin'))
     # Postgres
     parser.add_argument('-H', '--host', help='Pgwatch2 Config DB host', default=(os.getenv('PW2_PGHOST') or 'localhost'))
     parser.add_argument('-p', '--port', help='Pgwatch2 Config DB port', default=(os.getenv('PW2_PGPORT') or 5432), type=int)
@@ -179,15 +187,18 @@ if __name__ == '__main__':
     # Grafana
     parser.add_argument('--grafana_baseurl', help='For linking to Grafana "Query details" dashboard', default='http://0.0.0.0:3000')
 
-    args = parser.parse_args()
+    cmd_args = parser.parse_args()
 
     logging.basicConfig(format='%(asctime)s %(levelname)s %(process)d %(message)s',
-                        level=(logging.DEBUG if int(args.verbose) >= 2 else (logging.INFO if int(args.verbose) == 1 else logging.ERROR)))
-    logging.debug(args)
+                        level=(logging.DEBUG if int(cmd_args.verbose) >= 2 else (logging.INFO if int(cmd_args.verbose) == 1 else logging.ERROR)))
+    logging.debug(cmd_args)
 
-    datadb.setConnectionString(args.host, args.port, args.database, args.user, args.password)
-    pgwatch2_influx.influx_set_connection_params(args.influx_host, args.influx_port, args.influx_user,
-                                                           args.influx_password, args.influx_database, args.influx_require_ssl)
+    datadb.setConnectionString(cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password)
+    pgwatch2_influx.influx_set_connection_params(cmd_args.influx_host, cmd_args.influx_port, cmd_args.influx_user,
+                                                           cmd_args.influx_password, cmd_args.influx_database, cmd_args.influx_require_ssl)
 
-    # cherrypy.config.update('web.conf')
-    cherrypy.quickstart(Root(), '/', args.config)
+    config = {
+        'global': {'server.socket_host': cmd_args.socket_host, 'server.socket_port': cmd_args.socket_port},
+        '/': {'tools.sessions.on': True},
+    }
+    cherrypy.quickstart(Root(), config=config)
