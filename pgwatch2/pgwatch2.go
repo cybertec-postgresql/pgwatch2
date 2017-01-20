@@ -48,6 +48,7 @@ type MetricStoreMessage struct {
 const EPOCH_COLUMN_NAME string = "epoch_ns"      // this column (epoch in nanoseconds) is expected in every metric query
 const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
 const ACTIVE_SERVERS_REFRESH_TIME int64 = 60     // min time before checking for new/changed databases under monitoring i.e. main loop time
+const STATEMENT_TIMEOUT string = "5s"            // Postgres timeout for metrics fetching queries
 
 var configDb *sqlx.DB
 var log = logging.MustGetLogger("main")
@@ -132,6 +133,8 @@ func DBExecReadByDbUniqueName(dbUnique string, sql string, args ...interface{}) 
 	}
 	defer conn.Close()
 
+	DBExecRead(conn, fmt.Sprintf("SET statement_timeout TO '%s'"), STATEMENT_TIMEOUT)
+
 	return DBExecRead(conn, sql, args...)
 }
 
@@ -198,7 +201,7 @@ retry:
 		tags["dbname"] = dbname
 
 		for k, v := range dr {
-			if v == nil {
+			if v == nil || v == "" {
 				continue // not storing NULLs
 			}
 			if k == EPOCH_COLUMN_NAME {
