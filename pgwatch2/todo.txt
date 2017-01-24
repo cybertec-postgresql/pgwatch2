@@ -15,3 +15,4 @@
  - do Go build inside docker?
  - connection pooling
  - declaring per metric statement_timeout
+ - configurable retention period and changing it?
