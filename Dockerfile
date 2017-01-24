@@ -35,11 +35,12 @@ RUN sed -i 's/\# store-enabled = true/store-enabled = false/' /etc/influxdb/infl
 RUN sed -i 's/\# \[http\]/\[http\]/' /etc/influxdb/influxdb.conf
 RUN sed -i '0,/\# log-enabled = true/{s/\# log-enabled = true/log-enabled = false/}' /etc/influxdb/influxdb.conf
 # FYI admin UI  Deprecated as of 1.1.0
-RUN echo "[admin]" >> /etc/influxdb/influxdb.conf
-RUN echo "enabled = true" >> /etc/influxdb/influxdb.conf
+RUN sed -Ei 's/^(\[admin\])/\1\n  enabled=true/' /etc/influxdb/influxdb.conf
 
 EXPOSE 8083
 EXPOSE 8086
+# port for taking Influx backups
+EXPOSE 8088
 
 
 ### Postgres (ver 9.5) config tuning
