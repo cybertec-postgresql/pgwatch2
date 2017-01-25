@@ -133,7 +133,7 @@ func DBExecReadByDbUniqueName(dbUnique string, sql string, args ...interface{}) 
 	}
 	defer conn.Close()
 
-	DBExecRead(conn, fmt.Sprintf("SET statement_timeout TO '%s'"), STATEMENT_TIMEOUT)
+	DBExecRead(conn, fmt.Sprintf("SET statement_timeout TO '%s'", STATEMENT_TIMEOUT))
 
 	return DBExecRead(conn, sql, args...)
 }

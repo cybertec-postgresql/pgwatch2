@@ -24,6 +24,43 @@ create table pgwatch2.preset_config (
     pc_last_modified_on timestamptz not null default now()
 );
 
+drop table if exists pgwatch2.monitored_db;
+
+create table pgwatch2.monitored_db (
+    md_id serial not null primary key,
+    md_unique_name text not null,
+    md_hostname text not null,
+    md_port text not null default 5432,
+    md_dbname text not null,
+    md_user text not null,
+    md_password text,
+    md_preset_config_name text references pgwatch2.preset_config(pc_name) default 'basic',
+    md_config jsonb,
+    md_is_enabled boolean not null default 't',
+    md_ssl_only boolean not null default 'f',   -- gather data only over SSL
+    md_last_modified_on timestamptz not null default now(),
+    UNIQUE (md_unique_name),
+    CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':')
+);
+
+create unique index on monitored_db(md_hostname, md_port, md_dbname);
+
+alter table pgwatch2.monitored_db add constraint preset_or_custom_config check
+    ((not (md_preset_config_name is null and md_config is null))
+    and not (md_preset_config_name is not null and md_config is not null));
+
+
+create table pgwatch2.metric (
+    m_id                serial primary key,
+    m_name              text not null,
+    m_pg_version_from   float not null,
+    m_sql               text not null,
+    m_is_active         boolean not null default 't',
+    m_last_modified_on  timestamptz not null default now(),
+    unique (m_name, m_pg_version_from)
+);
+
+
 insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     values ('minimal', 'single "Key Performance Indicators" query for fast cluster/db overview',
     '{
@@ -59,48 +96,8 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "table_io_stats": 60,
     "table_stats": 60,
     "wal": 60
-    }'),
-    ('all', 'special setting. all defined (and active) metrics will be gathered. NB! too small intervals could lead to lag',
-    '{"all": 60}'
-    );  /* TODO */
+    }');
 
-drop table if exists pgwatch2.monitored_db;
-
-create table pgwatch2.monitored_db (
-    md_id serial not null primary key,
-    md_unique_name text not null,
-    md_hostname text not null,
-    md_port text not null default 5432,
-    md_dbname text not null,
-    md_user text not null,
-    md_password text,
-    md_preset_config_name text references pgwatch2.preset_config(pc_name) default 'basic',
-    md_config jsonb,
-    md_is_enabled boolean not null default 't',
-    md_ssl_only boolean not null default 'f',   -- gather data only over SSL
-    md_last_modified_on timestamptz not null default now(),
-    UNIQUE (md_unique_name),
-    CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':')
-);
-
-create unique index on monitored_db(md_hostname, md_port, md_dbname);
-
-alter table pgwatch2.monitored_db add constraint preset_or_custom_config check
-    ((not (md_preset_config_name is null and md_config is null))
-    and not (md_preset_config_name is not null and md_config is not null));
-
-/* for demo purposes only */
+/* one host for demo purposes, so that "docker run" could immediately show some graphs */
 insert into pgwatch2.monitored_db (md_unique_name, md_preset_config_name, md_config, md_hostname, md_port, md_dbname, md_user, md_password)
     values ('test', 'exhaustive', null, 'localhost', '5432', 'pgwatch2', 'pgwatch2', 'pgwatch2admin');
-
-
-create table pgwatch2.metric (
-    m_id                serial primary key,
-    m_name              text not null,
-    m_pg_version_from   float not null,
-    m_sql               text not null,
-    m_is_active         boolean not null default 't',
-    m_last_modified_on  timestamptz not null default now(),
-    unique (m_name, m_pg_version_from)
-);
-

@@ -1,18 +1,17 @@
 * Additional dashboards
  - index/sproc details
  - top rows/scan
-* more metrics
- - bloat
 * DDL and stored procedure change tracking (Grafana annotation events)
 * Web view
  - top problems/hints
+ - top biggest tables/indexes treemap
  - quantile der indexgrößen (grafik)
  - validate JSON configs from UI before "save"
  - top sprocs
+ - changing retention period?
 * somekind of whole instance monitoring mode (all DBs) with summarized statistics
 * Go daemon
  - code tidying and unit tests
  - do Go build inside docker?
  - connection pooling
  - declaring per metric statement_timeout
- - configurable retention period and changing it?
