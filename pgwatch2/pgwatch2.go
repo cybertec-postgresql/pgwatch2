@@ -300,13 +300,18 @@ func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
 
 				err := SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
 				if err != nil {
-					time.Sleep(time.Second * 10)
-					break
+					if strings.Contains(err.Error(), "unable to parse") {
+						log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
+							msg.DBUniqueName, msg.MetricName, msg.Data))
+					} else {
+						time.Sleep(time.Second * 10) // Influx most probably gone, retry later
+						break
+					}
 				}
 				retry_queue = retry_queue[1:]
 			}
 
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * 10)
 		}
 	}
 }
