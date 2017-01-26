@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 import os
 from argparse import ArgumentParser
@@ -197,8 +199,10 @@ if __name__ == '__main__':
     pgwatch2_influx.influx_set_connection_params(cmd_args.influx_host, cmd_args.influx_port, cmd_args.influx_user,
                                                            cmd_args.influx_password, cmd_args.influx_database, cmd_args.influx_require_ssl)
 
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     config = {
         'global': {'server.socket_host': cmd_args.socket_host, 'server.socket_port': cmd_args.socket_port},
+        '/static': {'tools.staticdir.root': current_dir, 'tools.staticdir.dir': 'static', 'tools.staticdir.on': True, 'tools.sessions.on': False},
         '/': {'tools.sessions.on': True},
     }
     cherrypy.quickstart(Root(), config=config)
