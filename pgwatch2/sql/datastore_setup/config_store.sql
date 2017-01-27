@@ -39,11 +39,13 @@ create table pgwatch2.monitored_db (
     md_is_enabled boolean not null default 't',
     md_ssl_only boolean not null default 'f',   -- gather data only over SSL
     md_last_modified_on timestamptz not null default now(),
+    md_statement_timeout_seconds int not null default 5,   -- metrics queries will be canceled after so many seconds
     UNIQUE (md_unique_name),
     CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':')
 );
 
-create unique index on monitored_db(md_hostname, md_port, md_dbname);
+create unique index on monitored_db(md_hostname, md_port, md_dbname, md_is_enabled); -- prevent multiple active workers for the same db
+
 
 alter table pgwatch2.monitored_db add constraint preset_or_custom_config check
     ((not (md_preset_config_name is null and md_config is null))

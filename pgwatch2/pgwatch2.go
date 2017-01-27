@@ -27,6 +27,7 @@ type MonitoredDatabase struct {
 	User         string
 	Password     string
 	Metrics      map[string]int
+	StmtTimeout  int64
 }
 
 type ControlMessage struct {
@@ -48,7 +49,6 @@ type MetricStoreMessage struct {
 const EPOCH_COLUMN_NAME string = "epoch_ns"      // this column (epoch in nanoseconds) is expected in every metric query
 const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
 const ACTIVE_SERVERS_REFRESH_TIME int64 = 60     // min time before checking for new/changed databases under monitoring i.e. main loop time
-const STATEMENT_TIMEOUT string = "5s"            // Postgres timeout for metrics fetching queries
 
 var configDb *sqlx.DB
 var log = logging.MustGetLogger("main")
@@ -133,7 +133,7 @@ func DBExecReadByDbUniqueName(dbUnique string, sql string, args ...interface{}) 
 	}
 	defer conn.Close()
 
-	DBExecRead(conn, fmt.Sprintf("SET statement_timeout TO '%s'", STATEMENT_TIMEOUT))
+	DBExecRead(conn, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
 
 	return DBExecRead(conn, sql, args...)
 }
@@ -142,7 +142,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 	sql := `
 		select
 		  md_unique_name, md_hostname, md_port, md_dbname, md_user, coalesce(md_password, '') as md_password,
-		  coalesce(pc_config, md_config)::text as md_config, now()
+		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds
 		from
 		  pgwatch2.monitored_db
 	          left join
@@ -256,6 +256,7 @@ func GetMonitoredDatabaseByUniqueName(name string) (MonitoredDatabase, error) {
 		DBName:   monitored_db_cache[name]["md_dbname"].(string),
 		User:     monitored_db_cache[name]["md_user"].(string),
 		Password: monitored_db_cache[name]["md_password"].(string),
+		StmtTimeout: monitored_db_cache[name]["md_statement_timeout_seconds"].(int64),
 	}
 	return md, nil
 }
