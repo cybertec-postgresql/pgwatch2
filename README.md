@@ -72,3 +72,6 @@ into the docker container under /var/logs/supervisor/
   - SSL connections support for safe over-the-internet monitoring
   - Optional authentication for the Web UI and Grafana (by default freely accessible!)
 * Backup script (take_backup.sh) provided for taking snapshots of the whole setup
+
+# Screenshot of the "DB overview" dashboard
+!["DB overview" dashboard](https://github.com/cybertec-postgresql/pgwatch2/raw/master/screenshots/overview.png)
