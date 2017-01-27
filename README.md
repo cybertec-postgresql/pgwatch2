@@ -1,5 +1,6 @@
 # pgwatch2
-PostgreSQL metrics monitor/dashboard
+
+Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution
 
 # Installing
 
@@ -10,8 +11,8 @@ docker pull cybertec/pgwatch2
 # run the image, exposing Grafana on port 3000 and administrative web UI on 8080
 docker run -d -p 3000:3000 8080:8080 --name pw2 cybertec/pgwatch2
 ```
-After a minute you could open a browser at 0.0.0.0:3000 and start looking at metrics and defining your own dashboards. 
-With some configuration also alerting is possible via Grafana.  
+After some minutes you could open the ["db-overview"](http://0.0.0.0:3000/dashboard/db/db-overview) dashboard and start
+looking at metrics. For defining your own dashboards you need to log in as admin (admin/pgwatch2admin).
 
 
 For more advanced usecases or for easier problemsolving you can decide to expose all services
@@ -22,18 +23,26 @@ docker run -d -p 3000:3000 -p 5432:5432 -p 8083:8083 -p 8086:8086 -p 8080:8080 -
 
 For building the image yourself one needs currently also Go as the metrics gathering daemon is written in it.
 ```
-./builds.sh
+./build.sh
 docker run -d -p 3000:3000 -p 8080:8080 --name pw2 $HASH_FROM_PREV_STEP
 ```
+
+# Features
+
+* Easy extensibility by defining metrics in pure SQL (thus they could also be from business domain)
+* Non-invasive setup, no extensions nor superuser rights required for the base functionality
+* DB level configuration of metrics/intervals
+* Intuitive metrics presentation using the [Grafana](http://grafana.org/) dashboarding engine
+* Optional alerting (Email, Slack, PagerDuty) provided by Grafana
 
 
 # Components
 
 * pgwatch2 metrics gathering daemon written in Go
 * A PostgreSQL database for holding the configuration about which databases and metrics to gather 
-* InfluxDB Time Series Database for storing metrics (exposing 3 ports)
-* Grafana for dashboarding (a set of predefined dashboards is provided)
-* A Web UI for administering the monitored DBs and showing custom metric overviews
+* [InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/) Time Series Database for storing metrics
+* [Grafana](http://grafana.org/) for dashboarding (point-and-click, a set of predefined dashboards is provided)
+* A Web UI for administering the monitored DBs and metrics and for showing some custom metric overviews
 
 # Usage 
 
@@ -47,7 +56,19 @@ like "minimal", "basic" or "exhaustive" (monitored_db.preset_config table) or a 
 The queries should always include a "epoch_ns" column and "tag_" prefix can be used for columns that should be tags
 (thus indexed) in InfluxDB.
 * a list of available metrics together with some instructions is also visible from the "Documentation" dashboard
+* some predefine metrics (cpu_load, stat_statements) require installing helper functions (look into "pgwatch2/sql" folder) on monitored DBs 
 * for effective graphing you want to familiarize yourself with basic InfluxQL and the non_negative_derivative() function
-which is very handy as Postgres statistics are mostly evergrowing counters. Documentation [here](https://docs.influxdata.com/influxdb/v1.2/query_language/functions/#non-negative-derivative).
-* logs for components are visible under http://0.0.0.0:8080/logs/[pgwatch2|postgres|webui|influxdb|grafana] or by logging
-into the docker container under /var/logs/supervisor/.
+which is very handy as Postgres statistics are mostly evergrowing counters. Documentation [here](https://docs.influxdata.com/influxdb/latest/query_language/functions/#non-negative-derivative).
+* for troubleshooting, logs for the components are visible under http://0.0.0.0:8080/logs/[pgwatch2|postgres|webui|influxdb|grafana] or by logging
+into the docker container under /var/logs/supervisor/
+
+
+# Technical details
+
+* Dynamic management of monitored databases, metrics and their intervals - no need to restart/redeploy
+* Safety
+  - only one concurrent query per monitored database is allowed so side-effects shoud be minimal
+  - configurable statement timeouts
+  - SSL connections support for safe over-the-internet monitoring
+  - Optional authentication for the Web UI and Grafana (by default freely accessible!)
+* Backup script (take_backup.sh) provided for taking snapshots of the whole setup

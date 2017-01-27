@@ -927,7 +927,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
               "hide": false,
               "measurement": "db_stats",
               "policy": "default",
-              "query": "SELECT ( non_negative_derivative(mean(\"blks_hit\")) / (non_negative_derivative(mean(\"blks_hit\")) + non_negative_derivative(mean(\"blks_read\")))) * 100 FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT ( non_negative_derivative(mean(\"blks_hit\")) / (non_negative_derivative(mean(\"blks_hit\")) + non_negative_derivative(mean(\"blks_read\")))) * 100 FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($interval) fill(none)",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -966,7 +966,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
               ],
               "hide": false,
               "policy": "default",
-              "query": "SELECT (non_negative_derivative(mean(\"xact_rollback\")) / (non_negative_derivative(mean(\"xact_commit\")) + non_negative_derivative(mean(\"xact_rollback\"))) * 100) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT (non_negative_derivative(mean(\"xact_rollback\")) / (non_negative_derivative(mean(\"xact_commit\")) + non_negative_derivative(mean(\"xact_rollback\"))) * 100) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($interval) fill(none)",
               "rawQuery": true,
               "refId": "B",
               "resultFormat": "time_series",
@@ -1128,7 +1128,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
                 },
                 {
                   "params": [
-                    "null"
+                    "none"
                   ],
                   "type": "fill"
                 }
@@ -1171,7 +1171,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
                 }
               ],
               "policy": "default",
-              "query": "SELECT non_negative_derivative(mean(\"temp_bytes\")) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT non_negative_derivative(mean(\"temp_bytes\")) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($interval) fill(none)",
               "rawQuery": true,
               "refId": "C",
               "resultFormat": "time_series",
@@ -1215,7 +1215,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": "0",
+              "min": null,
               "show": true
             },
             {
@@ -1223,7 +1223,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": "0",
+              "min": null,
               "show": true
             }
           ]
@@ -1392,7 +1392,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": "0",
+              "min": null,
               "show": true
             },
             {
@@ -1400,7 +1400,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": "0",
+              "min": null,
               "show": true
             }
           ]
@@ -1439,13 +1439,13 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
           "fill": 1,
           "id": 11,
           "legend": {
-            "avg": false,
+            "avg": true,
             "current": false,
             "max": false,
             "min": false,
             "show": true,
             "total": false,
-            "values": false
+            "values": true
           },
           "lines": true,
           "linewidth": 2,
@@ -1571,7 +1571,7 @@ values (0, 'db-overview', 'DB overview', 1, now(), now(), 1, 1, 0,
             },
             {
               "format": "ms",
-              "label": null,
+              "label": "",
               "logBase": 1,
               "max": null,
               "min": null,
