@@ -26,6 +26,7 @@ type MonitoredDatabase struct {
 	DBName       string
 	User         string
 	Password     string
+	SslMode      string
 	Metrics      map[string]int
 	StmtTimeout  int64
 }
@@ -63,14 +64,14 @@ var monitored_db_cache_lock sync.RWMutex
 var metric_fetching_channels = make(map[string](chan MetricFetchMessage)) // [db1unique]=chan
 var metric_fetching_channels_lock = sync.RWMutex{}
 
-func GetPostgresDBConnection(host, port, dbname, user, password string) (*sqlx.DB, error) {
+func GetPostgresDBConnection(host, port, dbname, user, password, sslmode string) (*sqlx.DB, error) {
 	var err error
 	var db *sqlx.DB
 
 	log.Debug("Connecting to: ", host, port, dbname, user, password)
 
-	db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname=%s sslmode=disable user=%s password=%s",
-		host, port, dbname, user, password))
+	db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s user=%s password=%s",
+		host, port, dbname, sslmode, user, password))
 
 	if err != nil {
 		log.Error("could not open configDb connection", err)
@@ -81,7 +82,7 @@ func GetPostgresDBConnection(host, port, dbname, user, password string) (*sqlx.D
 func InitAndTestConfigStoreConnection(host, port, dbname, user, password string) {
 	var err error
 
-	configDb, err = GetPostgresDBConnection(host, port, dbname, user, password) // configDb is used by the main thread only
+	configDb, err = GetPostgresDBConnection(host, port, dbname, user, password, "disable") // configDb is used by the main thread only
 	if err != nil {
 		log.Fatal("could not open configDb connection! exit.")
 	}
@@ -127,7 +128,7 @@ func DBExecReadByDbUniqueName(dbUnique string, sql string, args ...interface{}) 
 	if err != nil {
 		return nil, err
 	}
-	conn, err := GetPostgresDBConnection(md.Host, md.Port, md.DBName, md.User, md.Password) // TODO pooling
+	conn, err := GetPostgresDBConnection(md.Host, md.Port, md.DBName, md.User, md.Password, md.SslMode) // TODO pooling
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +143,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 	sql := `
 		select
 		  md_unique_name, md_hostname, md_port, md_dbname, md_user, coalesce(md_password, '') as md_password,
-		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds
+		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode
 		from
 		  pgwatch2.monitored_db
 	          left join
@@ -256,6 +257,7 @@ func GetMonitoredDatabaseByUniqueName(name string) (MonitoredDatabase, error) {
 		DBName:   monitored_db_cache[name]["md_dbname"].(string),
 		User:     monitored_db_cache[name]["md_user"].(string),
 		Password: monitored_db_cache[name]["md_password"].(string),
+		SslMode: monitored_db_cache[name]["md_sslmode"].(string),
 		StmtTimeout: monitored_db_cache[name]["md_statement_timeout_seconds"].(int64),
 	}
 	return md, nil
@@ -654,6 +656,11 @@ func main() {
 			_, exists := metric_fetching_channels[db_unique]
 			metric_fetching_channels_lock.RUnlock()
 			if !exists {
+				_, err := DBExecReadByDbUniqueName(db_unique, "select 1")	// test connectivity
+				if err != nil {
+					log.Error(fmt.Sprintf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err))
+					continue
+				}
 				metric_fetching_channels_lock.Lock()
 				metric_fetching_channels[db_unique] = make(chan MetricFetchMessage, 100)
 				go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch) // close message?
