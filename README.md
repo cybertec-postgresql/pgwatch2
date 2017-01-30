@@ -9,7 +9,7 @@ Software is packaged as Docker so getting started should be easy
 # fetch the latest Docker image
 docker pull cybertec/pgwatch2 
 # run the image, exposing Grafana on port 3000 and administrative web UI on 8080
-docker run -d -p 3000:3000 8080:8080 --name pw2 cybertec/pgwatch2
+docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2
 ```
 After some minutes you could open the ["db-overview"](http://0.0.0.0:3000/dashboard/db/db-overview) dashboard and start
 looking at metrics. For defining your own dashboards you need to log in as admin (admin/pgwatch2admin).
