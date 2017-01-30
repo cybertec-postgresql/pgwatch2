@@ -113,6 +113,7 @@ def update_monitored_db(params):
           md_is_enabled = %(md_is_enabled)s,
           md_preset_config_name = %(md_preset_config_name)s,
           md_config = %(md_config)s,
+          md_statement_timeout_seconds = %(md_statement_timeout_seconds)s,
           md_last_modified_on = now()
         where
           md_id = %(md_id)s
@@ -128,10 +129,10 @@ def insert_monitored_db(params):
     sql = """
         insert into
           pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password,
-          md_ssl_only, md_is_enabled, md_preset_config_name, md_config)
+          md_ssl_only, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds)
         values
           (%(md_unique_name)s, %(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s, %(md_password)s,
-          %(md_ssl_only)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s)
+          %(md_ssl_only)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s, %(md_statement_timeout_seconds)s)
         returning
           md_id
     """

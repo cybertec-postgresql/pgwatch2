@@ -78,7 +78,7 @@
             {% for row in preset_configs: %}
             <tr>
                 <form action="/metrics" method="post">
-                    <td>{{row['pc_name']|e}}<input type="hidden" name="pc_name" value="{{row['pc_name']}}"></td>
+                    <td id="{{row['pc_name']|e}}">{{row['pc_name']|e}}<input type="hidden" name="pc_name" value="{{row['pc_name']}}"></td>
                     <td><textarea name="pc_description" cols="50">{{row['pc_description']|e}}</textarea></td>
                     <td><textarea name="pc_config" cols="50">{{row['pc_config']|e}}</textarea></td>
                     <td><a href="/admin">{{row['active_dbs']}}</a></td>

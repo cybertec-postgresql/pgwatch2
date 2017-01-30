@@ -71,6 +71,7 @@
                 <td title="No data will be gathered if SSL connection cannot be established">SSL only?</td>
                 <td title="Preset config OR custom config needs to be specified">Preset config</td>
                 <td title='{"metric":interval_seconds,...}'>Custom config</td>
+                <td title='In seconds. Should stay low for critical DBs'>Statement timeout [seconds]</td>
                 <td>Last modified</td>
                 <td>Enabled?</td>
                 <td></td>
@@ -96,10 +97,11 @@
                             <option value="{{pc['pc_name']|e}}" {% if pc['pc_name'] == row['md_preset_config_name'] %}selected{% endif %}>{{pc['pc_name']|e}}</option>
                             {% endfor %}
                         </select>
-                        <a href="/metrics" title="Show preset configs and metric definitions in a new window" target="_blank">show</a>&nbsp;|&nbsp;
+                        <a class="show_metrics" href="/metrics" title="Show preset configs and metric definitions in a new window" target="_blank">show</a>&nbsp;|&nbsp;
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
                     <td title='{"metric":interval,...}'><textarea name="md_config" cols="20">{% if row['md_config'] %} {{row['md_config']}} {% endif %}</textarea></td>
+                    <td><input type="text" name="md_statement_timeout_seconds" value="{{row['md_statement_timeout_seconds']}}" size="3"></td>
                     <td>{{row['md_last_modified_on']}}</td>
                     <td><input type="checkbox" name="md_is_enabled" {% if row['md_is_enabled'] %}checked{% endif %}></td>
                     <td><input type="submit" class="save" name="save" value="Save"></td>
@@ -124,10 +126,11 @@
                             <option value="{{pc['pc_name']|e}}">{{pc['pc_name']|e}}</option>
                             {% endfor %}
                         </select>
-                        <a href="/preset_configs" title="Show JSON config in a new window" target="_blank">show</a>&nbsp;|&nbsp;
+                        <a class="show_metrics" href="/metrics" title="Show JSON config in a new window" target="_blank">show</a>&nbsp;|&nbsp;
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
                     <td title='{"metric":interval,...}'><textarea name="md_config" value="" cols="20"></textarea></td>
+                    <td><input type="text" name="md_statement_timeout_seconds" size="3" value="5"></td>
                     <td></td>
                     <td><input type="checkbox" name="md_is_enabled" checked></td>
                     <td><input type="submit" class="new" name="new" value="New"></td>
@@ -163,8 +166,12 @@
             var preset_config_json = preset_configs[$(this).parent().find("[name='md_preset_config_name']").val()];
             // alert(preset_config_json);
             $(this).parent().parent().find("[name='md_config']").val(preset_config_json);
-
+            $(this).parent().find("select").val("");
             return false;
+        });
+
+        $(".show_metrics").click(function(event){
+            $(this).attr('href', $(this).attr('href') + '#' + $(this).parent().find("select").val());
         });
 
         $(".save").add('.new').click(function(event){

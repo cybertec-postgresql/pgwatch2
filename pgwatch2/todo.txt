@@ -9,6 +9,7 @@
  - validate JSON configs from UI before "save"
  - top sprocs
  - changing retention period?
+ - HTTPS
 * somekind of whole instance monitoring mode (all DBs) with summarized statistics
 * Go daemon
  - code tidying and unit tests
