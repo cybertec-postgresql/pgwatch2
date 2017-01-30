@@ -109,7 +109,7 @@ def update_monitored_db(params):
           md_dbname = %(md_dbname)s,
           md_user = %(md_user)s,
           md_password = %(md_password)s,
-          md_ssl_only = %(md_ssl_only)s,
+          md_sslmode = %(md_sslmode)s,
           md_is_enabled = %(md_is_enabled)s,
           md_preset_config_name = %(md_preset_config_name)s,
           md_config = %(md_config)s,
@@ -118,7 +118,7 @@ def update_monitored_db(params):
         where
           md_id = %(md_id)s
     """
-    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_ssl_only'])
+    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode'])
     cherrypy_empty_text_to_nulls(params, ['md_preset_config_name', 'md_config'])
     ret, err = datadb.execute(sql, params)
     if err:
@@ -129,14 +129,14 @@ def insert_monitored_db(params):
     sql = """
         insert into
           pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password,
-          md_ssl_only, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds)
+          md_sslmode, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds)
         values
           (%(md_unique_name)s, %(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s, %(md_password)s,
-          %(md_ssl_only)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s, %(md_statement_timeout_seconds)s)
+          %(md_sslmode)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s, %(md_statement_timeout_seconds)s)
         returning
           md_id
     """
-    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_ssl_only'])
+    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode'])
     cherrypy_empty_text_to_nulls(params, ['md_preset_config_name', 'md_config'])
     ret, err = datadb.execute(sql, params)
     if err:
