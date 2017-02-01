@@ -228,7 +228,7 @@ retry:
 		pt, err := client.NewPoint(measurement, tags, fields, epoch_time)
 
 		if err != nil {
-			log.Fatal("NewPoint failed:", err)
+			log.Error("NewPoint failed:", err)
 		}
 
 		bp.AddPoint(pt)
@@ -252,12 +252,12 @@ func GetMonitoredDatabaseByUniqueName(name string) (MonitoredDatabase, error) {
 		return MonitoredDatabase{}, errors.New("md_unique_name not found")
 	}
 	md := MonitoredDatabase{
-		Host:     monitored_db_cache[name]["md_hostname"].(string),
-		Port:     monitored_db_cache[name]["md_port"].(string),
-		DBName:   monitored_db_cache[name]["md_dbname"].(string),
-		User:     monitored_db_cache[name]["md_user"].(string),
-		Password: monitored_db_cache[name]["md_password"].(string),
-		SslMode: monitored_db_cache[name]["md_sslmode"].(string),
+		Host:        monitored_db_cache[name]["md_hostname"].(string),
+		Port:        monitored_db_cache[name]["md_port"].(string),
+		DBName:      monitored_db_cache[name]["md_dbname"].(string),
+		User:        monitored_db_cache[name]["md_user"].(string),
+		Password:    monitored_db_cache[name]["md_password"].(string),
+		SslMode:     monitored_db_cache[name]["md_sslmode"].(string),
 		StmtTimeout: monitored_db_cache[name]["md_statement_timeout_seconds"].(int64),
 	}
 	return md, nil
@@ -656,7 +656,7 @@ func main() {
 			_, exists := metric_fetching_channels[db_unique]
 			metric_fetching_channels_lock.RUnlock()
 			if !exists {
-				_, err := DBExecReadByDbUniqueName(db_unique, "select 1")	// test connectivity
+				_, err := DBExecReadByDbUniqueName(db_unique, "select 1") // test connectivity
 				if err != nil {
 					log.Error(fmt.Sprintf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err))
 					continue
