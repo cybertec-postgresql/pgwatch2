@@ -229,6 +229,7 @@ retry:
 
 		if err != nil {
 			log.Error("NewPoint failed:", err)
+			continue
 		}
 
 		bp.AddPoint(pt)
