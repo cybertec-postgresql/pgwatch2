@@ -6,7 +6,7 @@ values (
 9.0,
 $sql$
 with sa_snapshot as (
-  select * from pg_stat_activity where pid != pg_backend_pid() and not query like 'autovacuum:%'
+  select * from pg_stat_activity where pid != pg_backend_pid() and not query like 'autovacuum:%' and datname = current_database()
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -28,7 +28,7 @@ values (
 9.6,
 $sql$
 with sa_snapshot as (
-  select * from pg_stat_activity where pid != pg_backend_pid() and not query like 'autovacuum:%'
+  select * from pg_stat_activity where pid != pg_backend_pid() and not query like 'autovacuum:%' and datname = current_database()
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
