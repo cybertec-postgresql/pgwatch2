@@ -12,6 +12,8 @@ select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot) as total,
   (select count(*) from sa_snapshot where state = 'active') as active,
+  (select count(*) from sa_snapshot where state = 'idle') as idle,
+  (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
   (select count(*) from sa_snapshot where waiting) as waiting,
   (select extract(epoch from (now() - backend_start))::int
     from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
@@ -34,6 +36,8 @@ select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot) as total,
   (select count(*) from sa_snapshot where state = 'active') as active,
+  (select count(*) from sa_snapshot where state = 'idle') as idle,
+  (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
   (select count(*) from sa_snapshot where wait_event_type is not null) as waiting,
   (select extract(epoch from (now() - backend_start))::int
     from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
