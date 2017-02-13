@@ -61,6 +61,30 @@ which is very handy as Postgres statistics are mostly evergrowing counters. Docu
 * for troubleshooting, logs for the components are visible under http://127.0.0.1:8080/logs/[pgwatch2|postgres|webui|influxdb|grafana] or by logging
 into the docker container under /var/logs/supervisor/
 
+# Steps to configure your database for monitoring
+
+* As a base requirement you'll need a login user (non-superuser suggested) for connecting to your server and fetching metrics queries
+```
+create role pgwatch2 with login password 'secret';
+```
+* Additionally for extra insights ("Stat statements" dashboard and CPU load) it's also recommended to install the pg_stat_statement
+extension and the PL/Python language. The latter one though is usually disabled by DB-as-a-service providers for security reasons.
+
+```
+# add pg_stat_statements to your postgresql.conf and restart the server
+shared_preload_libraries = 'pg_stat_statements'
+```
+After restarting the server install the extensions as superuser
+```
+CREATE EXTENSION pg_stat_statements;
+CREATE EXTENSION plpythonu;
+```
+
+Now also install the wrapper functions (under superuser role) for enabling "Stat statement" and CPU load info fetching for non-superusers
+```
+psql -h mydb.com -U superuser -f pgwatch2/sql/metrics_fetching_helpers/stat_statements_wrapper.sql mydb
+psql -h mydb.com -U superuser -f pgwatch2/sql/metrics_fetching_helpers/cpu_load_plpythonu.sql mydb
+```
 
 # Technical details
 
