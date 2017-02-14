@@ -41,6 +41,7 @@
             <li><a href="/logs/grafana/200" target="_blank">Grafana [last 200 lines]</a></li>
             <li><a href="/logs/postgres/200" target="_blank">Postgres [last 200 lines]</a></li>
             <li><a href="/logs/webui/200" target="_blank">Web UI [last 200 lines]</a></li>
+            <li><a href="/versions" target="_blank">Component versions</a></li>
           </ul>
         </li>
         <li><a href="#">|</a></li>
@@ -112,8 +113,8 @@
               <option value="{{db}}" {% if db == dbname %}selected{% endif %}>{{db}}</option>
               {% endfor %}
             </select>
-            <input type="text" name="start_time" value="{{start_time}}" size="25" title="Time has to be in ISO-8601 format (UTC)">
-            <input type="text" name="end_time" value="{{end_time}}" size="25" title="Time has to be in ISO-8601 format (UTC)">
+            <input type="text" name="start_time" value="{{start_time}}" size="28" title="Time has to be in ISO-8601 format (UTC)">
+            <input type="text" name="end_time" value="{{end_time}}" size="28" title="Time has to be in ISO-8601 format (UTC)">
             <input type="submit" name="show" value="Show">
             </form>
             {% if data %}

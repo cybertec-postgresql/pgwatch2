@@ -11,6 +11,7 @@ import time
 import datadb
 import pgwatch2_influx
 from decorator import decorator
+import subprocess
 
 import pgwatch2
 from jinja2 import Environment, FileSystemLoader
@@ -25,6 +26,11 @@ def logged_in(f: callable, *args, **kwargs):
         if not cherrypy.session.get('logged_in'):
             raise cherrypy.HTTPRedirect('/login')
     return f(*args, **kwargs)
+
+
+def exec_cmd(args):
+    p = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return p.stdout.decode('utf-8'), p.stderr.decode('utf-8')
 
 
 class Root:
@@ -132,6 +138,21 @@ class Root:
 
         cherrypy.response.headers['Content-Type'] = 'text/plain'
         return log_lines
+
+    @logged_in
+    @cherrypy.expose
+    def versions(self):   # gives info on what's running inside docker
+        ret = {}
+        out, err = exec_cmd(['grafana-server', '-v'])
+        ret['grafana'] = out.strip() + ('err: ' + err if len(err) > 3 else '')
+        out, err = exec_cmd(['influxd', 'version'])
+        ret['influxdb'] = out.strip() + ('err: ' + err if len(err) > 3 else '')
+        out, err = exec_cmd(['cat', '/pgwatch2/build_git_version.txt'])
+        ret['pgwatch2_git_version'] = out.strip() + ('err: ' + err if len(err) > 3 else '')
+        data, err = datadb.execute('select version()')
+        ret['postgres'] = data[0]['version'] if not err else err
+        cherrypy.response.headers['Content-Type'] = 'text/plain'
+        return json.dumps(ret)
 
     @cherrypy.expose
     def index(self, **params):

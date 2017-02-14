@@ -71,5 +71,7 @@ RUN pip3 install -r /pgwatch2/webpy/requirements.txt
 
 EXPOSE 8080
 
+COPY build_git_version.txt /pgwatch2/build_git_version.txt
+
 CMD ["/usr/bin/supervisord"]
 

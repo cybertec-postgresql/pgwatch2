@@ -5,5 +5,7 @@ pushd pgwatch2
 go build pgwatch2.go
 popd
 
+git rev-parse HEAD > build_git_version.txt
+
 docker build .
 
