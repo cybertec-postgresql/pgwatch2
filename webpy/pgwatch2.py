@@ -108,7 +108,7 @@ def update_monitored_db(params):
           md_port = %(md_port)s,
           md_dbname = %(md_dbname)s,
           md_user = %(md_user)s,
-          md_password = %(md_password)s,
+          md_password = case when %(md_password)s = '***' then md_password else %(md_password)s end,
           md_sslmode = %(md_sslmode)s,
           md_is_enabled = %(md_is_enabled)s,
           md_preset_config_name = %(md_preset_config_name)s,

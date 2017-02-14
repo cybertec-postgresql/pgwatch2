@@ -60,7 +60,7 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <td>Id</td>
+                <td>ID</td>
                 <td title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data)">Unique name</td>
                 <td>DB host</td>
                 <td>DB port</td>
@@ -82,12 +82,12 @@
             <tr>
                 <form action="/dbs" method="post">
                     <td>{{row['md_id']}}<input type="hidden" name="md_id" value="{{row['md_id']}}"></td>
-                    <td>{{row['md_unique_name']|e}}</td>
+                    <td><input type="hidden" name="md_unique_name" value="{{row['md_unique_name']|e}}">{{row['md_unique_name']|e}}</td>
                     <td><input type="text" name="md_hostname" value="{{row['md_hostname']|e}}"></td>
                     <td><input type="text" name="md_port" value="{{row['md_port']|e}}" size="5"></td>
                     <td><input type="text" name="md_dbname" value="{{row['md_dbname']|e}}" size="15"></td>
                     <td><input type="text" name="md_user" value="{{row['md_user']|e}}" size="15"></td>
-                    <td><input type="text" name="md_password" value="***" size="15"></td>
+                    <td><input type="password" name="md_password" value="***" size="15" title="if left to default ***, password will not be changed"></td>
                     <td>
                         <select name="md_sslmode">
                             <option value="disable" {% if row['md_sslmode'] == "disable" %}selected{% endif %}>disable</option>
@@ -122,7 +122,7 @@
                     <td><input type="text" name="md_port" value="5432" size="5"></td>
                     <td><input type="text" name="md_dbname" value="" size="15"></td>
                     <td><input type="text" name="md_user" value="" size="15"></td>
-                    <td><input type="text" name="md_password" value="" size="15"></td>
+                    <td><input type="password" name="md_password" value="" size="15"></td>
                     <td>
                         <select name="md_sslmode">
                             <option value="disable">disable</option>

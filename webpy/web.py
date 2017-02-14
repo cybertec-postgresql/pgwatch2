@@ -63,7 +63,7 @@ class Root:
     def dbs(self, **params):
         logging.debug(params)
         message = ''
-        if True:
+        if params:
             try:
                 if params.get('save'):
                     pgwatch2.update_monitored_db(params)
