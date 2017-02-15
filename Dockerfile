@@ -2,14 +2,7 @@ FROM ubuntu:16.04
 
 RUN apt-get -q update && apt-get -qy install curl wget vim apt-transport-https supervisor postgresql postgresql-plpython-9.5
 
-### pgwatch2
-#RUN mkdir -p /pgwatch2
-#WORKDIR /pgwatch2
-#
 ADD pgwatch2 /pgwatch2
-ADD grafana_dashboards /pgwatch2/grafana_dashboards
-RUN rm /pgwatch2/pgwatch2.go
-
 
 ### Set up supervisord [https://docs.docker.com/engine/admin/using_supervisord/]
 RUN mkdir -p /var/log/supervisor
@@ -72,7 +65,8 @@ RUN pip3 install -r /pgwatch2/webpy/requirements.txt
 
 EXPOSE 8080
 
+ADD grafana_dashboards /pgwatch2/grafana_dashboards
+
 COPY build_git_version.txt /pgwatch2/build_git_version.txt
 
 CMD ["/usr/bin/supervisord"]
-

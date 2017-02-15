@@ -5,7 +5,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "hideControls": false,
+  "hideControls": true,
   "id": 2,
   "links": [],
   "rows": [
@@ -1310,16 +1310,245 @@
       "height": 250,
       "panels": [
         {
-          "content": "Brought to you by: <a href=\"http://cybertec.at/en\"><img src=\"http://static.cybertec.at/wp-content/themes/cybertec-optimus/assets/img/logo.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
-          "editable": true,
-          "error": false,
-          "id": 7,
+          "aliasColors": {},
+          "bars": false,
+          "datasource": null,
+          "decimals": 1,
+          "description": "pg_stat_activity info",
+          "fill": 1,
+          "id": 12,
+          "interval": ">60s",
+          "legend": {
+            "avg": true,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
           "links": [],
-          "mode": "html",
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
           "span": 6,
-          "title": "",
-          "transparent": true,
-          "type": "text"
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "alias": "idle",
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "$interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "0"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "measurement": "backends",
+              "policy": "default",
+              "query": "SELECT mean(\"idle\") FROM \"backends\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval) fill(none)",
+              "rawQuery": true,
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "idle"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "mean"
+                  }
+                ]
+              ],
+              "tags": [
+                {
+                  "key": "dbname",
+                  "operator": "=~",
+                  "value": "/^$dbname$/"
+                }
+              ]
+            },
+            {
+              "alias": "idle in transaction",
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "$interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "none"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "measurement": "backends",
+              "policy": "default",
+              "refId": "B",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "idleintransaction"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "mean"
+                  }
+                ]
+              ],
+              "tags": [
+                {
+                  "key": "dbname",
+                  "operator": "=~",
+                  "value": "/^$dbname$/"
+                }
+              ]
+            },
+            {
+              "alias": "waiting",
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "$interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "none"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "measurement": "backends",
+              "policy": "default",
+              "refId": "C",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "waiting"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "mean"
+                  }
+                ]
+              ],
+              "tags": [
+                {
+                  "key": "dbname",
+                  "operator": "=~",
+                  "value": "/^$dbname$/"
+                }
+              ]
+            },
+            {
+              "alias": "active",
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "$interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "none"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "measurement": "backends",
+              "policy": "default",
+              "refId": "D",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "active"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "mean"
+                  }
+                ]
+              ],
+              "tags": [
+                {
+                  "key": "dbname",
+                  "operator": "=~",
+                  "value": "/^$dbname$/"
+                }
+              ]
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Sessions",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ]
         },
         {
           "aliasColors": {
@@ -1470,6 +1699,30 @@
               "show": true
             }
           ]
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
+      "showTitle": false,
+      "title": "Dashboard Row",
+      "titleSize": "h6"
+    },
+    {
+      "collapse": false,
+      "height": 250,
+      "panels": [
+        {
+          "content": "Brought to you by: <a href=\"http://cybertec.at/en\"><img src=\"http://static.cybertec.at/wp-content/themes/cybertec-optimus/assets/img/logo.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+          "editable": true,
+          "error": false,
+          "id": 7,
+          "links": [],
+          "mode": "html",
+          "span": 6,
+          "title": "",
+          "transparent": true,
+          "type": "text"
         }
       ],
       "repeat": null,

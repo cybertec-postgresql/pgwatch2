@@ -920,7 +920,7 @@
           "text": "1158811168",
           "value": "1158811168"
         },
-        "datasource": "Influx",
+        "datasource": null,
         "hide": 0,
         "includeAll": false,
         "label": null,

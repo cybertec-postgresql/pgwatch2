@@ -905,7 +905,7 @@
           "text": "test",
           "value": "test"
         },
-        "datasource": "Influx",
+        "datasource": null,
         "hide": 0,
         "includeAll": false,
         "label": null,
@@ -923,7 +923,7 @@
         "useTags": false
       },
       {
-        "datasource": "Influx",
+        "datasource": null,
         "filters": [],
         "hide": 0,
         "label": "User filters",

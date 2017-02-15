@@ -16,7 +16,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "Influx",
+          "datasource": null,
           "editable": true,
           "error": false,
           "fill": 1,
@@ -137,7 +137,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "Influx",
+          "datasource": null,
           "editable": true,
           "error": false,
           "fill": 1,
@@ -258,7 +258,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "Influx",
+          "datasource": null,
           "editable": true,
           "error": false,
           "fill": 1,
@@ -420,7 +420,7 @@
           "text": "test",
           "value": "test"
         },
-        "datasource": "Influx",
+        "datasource": null,
         "hide": 0,
         "includeAll": false,
         "label": null,
