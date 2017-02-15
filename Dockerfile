@@ -7,6 +7,7 @@ RUN apt-get -q update && apt-get -qy install curl wget vim apt-transport-https s
 #WORKDIR /pgwatch2
 #
 ADD pgwatch2 /pgwatch2
+ADD grafana_dashboards /pgwatch2/grafana_dashboards
 RUN rm /pgwatch2/pgwatch2.go
 
 

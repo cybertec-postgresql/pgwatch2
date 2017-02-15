@@ -2629,7 +2629,7 @@ values (1, 'table-details', 'Table details', 1, now(), now(), 1, 1, 0,
 
 
 insert into dashboard (version, slug, title, org_id, created, updated, updated_by, created_by, gnet_id, data)
-values (0, 'statement-details', 'Stat_statements overview', 1, now(), now(), 1, 1, 0,
+values (0, 'statement-details', 'Stat statements overview', 1, now(), now(), 1, 1, 0,
 '
 {
   "annotations": {
