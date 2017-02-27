@@ -90,6 +90,12 @@
                   "key": "dbname",
                   "operator": "=~",
                   "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
                 }
               ]
             },
@@ -135,6 +141,12 @@
                   "key": "dbname",
                   "operator": "=~",
                   "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
                 }
               ]
             },
@@ -180,6 +192,12 @@
                   "key": "dbname",
                   "operator": "=~",
                   "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
                 }
               ]
             }
@@ -311,6 +329,12 @@
                   "key": "dbname",
                   "operator": "=~",
                   "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
                 }
               ]
             },
@@ -333,7 +357,7 @@
               ],
               "measurement": "table_stats",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(mean(\"idx_scan\"), 1m) FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT non_negative_derivative(mean(\"idx_scan\"), 1m) FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_name\" =~ /^$table_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
               "rawQuery": false,
               "refId": "B",
               "resultFormat": "time_series",
@@ -362,6 +386,12 @@
                   "key": "dbname",
                   "operator": "=~",
                   "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
                 }
               ]
             }
@@ -490,6 +520,12 @@
                   "key": "dbname",
                   "operator": "=~",
                   "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
                 }
               ]
             },
@@ -539,6 +575,12 @@
                   "key": "dbname",
                   "operator": "=~",
                   "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
                 }
               ]
             },
@@ -588,6 +630,12 @@
                   "key": "dbname",
                   "operator": "=~",
                   "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
                 }
               ]
             },
@@ -637,6 +685,12 @@
                   "key": "dbname",
                   "operator": "=~",
                   "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
                 }
               ]
             }
@@ -741,7 +795,7 @@
               ],
               "measurement": "table_io_stats",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(mean(\"heap_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"heap_blks_hit\"), 10s) + non_negative_derivative(mean(\"heap_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT non_negative_derivative(mean(\"heap_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"heap_blks_hit\"), 10s) + non_negative_derivative(mean(\"heap_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_name\" =~ /^$table_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -770,6 +824,12 @@
                   "key": "dbname",
                   "operator": "=~",
                   "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
                 }
               ]
             },
@@ -792,7 +852,7 @@
               ],
               "measurement": "table_io_stats",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(mean(\"idx_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"idx_blks_hit\"), 10s) + non_negative_derivative(mean(\"idx_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT non_negative_derivative(mean(\"idx_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"idx_blks_hit\"), 10s) + non_negative_derivative(mean(\"idx_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_name\" =~ /^$table_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
               "rawQuery": true,
               "refId": "B",
               "resultFormat": "time_series",
@@ -821,6 +881,12 @@
                   "key": "dbname",
                   "operator": "=~",
                   "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
                 }
               ]
             }
@@ -915,7 +981,7 @@
         "query": "SHOW TAG VALUES FROM \"table_stats\" WITH KEY = \"dbname\"",
         "refresh": 1,
         "regex": "",
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": null,
         "tags": [],
         "tagsQuery": null,
@@ -923,12 +989,29 @@
         "useTags": false
       },
       {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "tags": [],
+          "text": "",
+          "value": ""
+        },
         "datasource": null,
-        "filters": [],
         "hide": 0,
-        "label": "User filters",
-        "name": "custom_filter",
-        "type": "adhoc"
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "table_name",
+        "options": [],
+        "query": "SHOW TAG VALUES FROM \"table_stats\" WITH KEY = \"table_name\" WHERE dbname = '$dbname'",
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
