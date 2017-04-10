@@ -86,6 +86,9 @@ psql -h mydb.com -U superuser -f pgwatch2/sql/metrics_fetching_helpers/stat_stat
 psql -h mydb.com -U superuser -f pgwatch2/sql/metrics_fetching_helpers/cpu_load_plpythonu.sql mydb
 ```
 
+# Screenshot of the "DB overview" dashboard
+!["DB overview" dashboard](https://github.com/cybertec-postgresql/pgwatch2/raw/master/screenshots/overview.png)
+
 # Technical details
 
 * Dynamic management of monitored databases, metrics and their intervals - no need to restart/redeploy
@@ -97,5 +100,68 @@ psql -h mydb.com -U superuser -f pgwatch2/sql/metrics_fetching_helpers/cpu_load_
 * Backup script (take_backup.sh) provided for taking snapshots of the whole setup. To make it easier (run outside the container)
 one should to expose ports 5432 (Postgres) and 8088 (InfluxDB backup protocol) at least for the loopback address.
 
-# Screenshot of the "DB overview" dashboard
-!["DB overview" dashboard](https://github.com/cybertec-postgresql/pgwatch2/raw/master/screenshots/overview.png)
+Ports exposed by the Docker image:
+
+* 5432 - Postgres configuration DB
+* 8080 - Management Web UI (monitored hosts, metrics, metrics configurations)
+* 3000 - Grafana dashboarding
+* 8083 - InfluxDB Query UI
+* 8086 - InfluxDB API
+* 8088 - InfluxDB Backup port
+
+# The Web UI
+
+For easy configuration changes (adding databases to monitoring, adding metrics) there is a small Python Web application bundled, making use of the CherryPy Web-framework. For mass changes one could technically also log into the configuration database and change the tables in the “pgwatch2” schema directly. Besides the configuration options the two other useful features would be the possibility to look at the logs of the single components and at the “Stat Statements Overview” page, which will e.g. enable finding out the query with the slowest average runtime for a time period.
+
+Exposed ports – 8080
+
+# Adding metrics
+
+Metric definitions – metrics are named SQL queries that can return pretty much everything you find 
+useful and which can have different query text versions for different target PostgreSQL versions. 
+Correct version of the metric definition will be chosen automatically by regularly connecting to the 
+target database and checking the version. For defining metrics definitions you should adhere to a 
+couple of basic concepts though:
+
+* Every metric query should have an “epoch_ns” (nanoseconds since epoch, default InfluxDB timestamp 
+precision) column to record the metrics reading time. If the column is not there, things will still 
+work though as gathering server’s timestamp will be used, you’ll just lose some milliseconds 
+(assuming intra-datacenter monitoring) of precision.
+* Queries can only return text, integer, boolean or floating point (a.k.a. double precision) data.
+* Columns can be optionally “tagged” by prefixing them with “tag_”. By doing this, the column data 
+will be indexed by the InfluxDB giving following advantages:
+  * Sophisticated auto-discovery support for indexed keys/values, when building charts with Grafana.
+  * Faster InfluxDB queries for queries on those columns.
+  * Less disk space used for repeating values. Thus when you’re for example returning some longish 
+  and repetitive status strings (possible with Singlestat or Table panels) that you’ll be looking 
+  up by some ID column, it might still make sense to prefix the column with “tag_” to reduce disks 
+  space.
+
+# Updating to a newer Docker version
+
+pgwatch2 code part doesn't need too much maintenance itself (most issues seem to be related to dashboards that users 
+can actually change themselves) but the main components that pgwatch2 relies on (Grafana, InfluxDB) 
+are pretty active and get useful features and fixes quite regularly, thus we'll also try to push new 'latest' images, 
+so it would make sense to check for updates time to time on [Docker Hub](https://hub.docker.com/r/cybertec/pgwatch2/tags/). 
+NB! You could also choose to build your own image any time and the build scripts will download the latest components for you.
+
+If possible (e.g. previously gathered metrics are not important and there are no user added dashboard/graphs) 
+then the easiest way to get the latest Docker image would be just to stop the old one and doing 'docker pull/run' 
+again as described in beginning of the README.  
+
+If using a custom setup, switching out single components should be quite easy, just follow the component provider's  
+instructions. Migrating data from the current Docker container to a newer version of the pgwatch2 Docker 
+image on the other hand needs quite some steps currently. See the take_backup.sh script 
+[here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/take_backup.sh) for more details.
+
+Basically there are two options – first, go into the Docker container (e.g. docker exec -it ps2 /bin/bash) 
+and just update the component yourself – i.e. download the latest Grafana .deb package and install it with “dpkg -i …”. 
+This is actually the simplest way. The other way would be to fetch the latest pgwatch2 image, which already has the 
+latest version of components, using “docker pull” and then restore the data (InfluxDB + Postgres) from a backup of old 
+setup. For restoring one needs to go inside the Docker container again but by following the steps described in 
+take_backup.sh it shouldn't be a real problem.
+
+A tip: to make the restore process easier it would already make sense to mount the host folder with the backups in it on the 
+new container with “-v ~/pgwatch2_backups:/pgwatch2_backups” when starting the Docker image. Otherwise one needs to set 
+up SSH or use something like S3 for example. Also note that ports 5432 and 8088 need to be exposed to take backups 
+outside of Docker.
