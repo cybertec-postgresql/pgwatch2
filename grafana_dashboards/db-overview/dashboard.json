@@ -1123,7 +1123,7 @@
         {
           "aliasColors": {
             "DB Size": "#2F575E",
-            "WAL ratio": "#0A50A1"
+            "WAL rate": "#0A50A1"
           },
           "bars": false,
           "datasource": null,
@@ -1154,7 +1154,7 @@
           "renderer": "flot",
           "seriesOverrides": [
             {
-              "alias": "WAL ratio (bytes/h)",
+              "alias": "WAL rate (bytes/h)",
               "yaxis": 2
             },
             {
@@ -1167,7 +1167,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "alias": "WAL ratio",
+              "alias": "WAL rate",
               "dsType": "influxdb",
               "groupBy": [
                 {
@@ -1264,7 +1264,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "WAL write ratio + DB size",
+          "title": "WAL rate + DB size",
           "tooltip": {
             "msResolution": false,
             "shared": true,
