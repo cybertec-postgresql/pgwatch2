@@ -47,7 +47,7 @@ docker run -d -p 3000:3000 -p 8080:8080 --name pw2 $HASH_FROM_PREV_STEP
 
 * by default the "pgwatch2" configuration database running inside Docker is being monitored so that you can immediately see
   some graphs, but you should add new databases by opening the "admin interface" at 127.0.0.1:8080/dbs or logging into the
-  Postgres config DB and inserting into "pgwatch2.monitored_db" table (db - pgwatch2 , default user/pw - postgres/pgwatch2admin)
+  Postgres config DB and inserting into "pgwatch2.monitored_db" table (db - pgwatch2 , default user/pw - pgwatch2/pgwatch2admin)
 * one can create new Grafana dashboards (and change settings, create users, alerts, ...) after logging in as "admin" (admin/pgwatch2admin)
 * metrics (and their intervals) that are to be gathered can be customized for every database by using a preset config
 like "minimal", "basic" or "exhaustive" (monitored_db.preset_config table) or a custom JSON config.
@@ -68,7 +68,7 @@ into the docker container under /var/logs/supervisor/
 create role pgwatch2 with login password 'secret';
 ```
 * Additionally for extra insights ("Stat statements" dashboard and CPU load) it's also recommended to install the pg_stat_statement
-extension and the PL/Python language. The latter one though is usually disabled by DB-as-a-service providers for security reasons.
+extension (Postgres 9.3+ needed to be useful for pgwatch2) and the PL/Python language. The latter one though is usually disabled by DB-as-a-service providers for security reasons.
 
 ```
 # add pg_stat_statements to your postgresql.conf and restart the server
