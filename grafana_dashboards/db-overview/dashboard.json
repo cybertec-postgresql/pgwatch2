@@ -1027,6 +1027,8 @@
               ],
               "measurement": "db_stats",
               "policy": "default",
+              "query": "SELECT mean(\"numbackends\") FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval) fill(none)",
+              "rawQuery": true,
               "refId": "B",
               "resultFormat": "time_series",
               "select": [
