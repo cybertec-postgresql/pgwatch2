@@ -68,7 +68,7 @@ into the docker container under /var/logs/supervisor/
 create role pgwatch2 with login password 'secret';
 ```
 * Additionally for extra insights ("Stat statements" dashboard and CPU load) it's also recommended to install the pg_stat_statement
-extension (Postgres 9.3+ needed to be useful for pgwatch2) and the PL/Python language. The latter one though is usually disabled by DB-as-a-service providers for security reasons.
+extension (Postgres 9.4+ needed to be useful for pgwatch2) and the PL/Python language. The latter one though is usually disabled by DB-as-a-service providers for security reasons.
 
 ```
 # add pg_stat_statements to your postgresql.conf and restart the server
