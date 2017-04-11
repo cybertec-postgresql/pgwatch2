@@ -111,9 +111,7 @@ Ports exposed by the Docker image:
 
 # The Web UI
 
-For easy configuration changes (adding databases to monitoring, adding metrics) there is a small Python Web application bundled, making use of the CherryPy Web-framework. For mass changes one could technically also log into the configuration database and change the tables in the “pgwatch2” schema directly. Besides the configuration options the two other useful features would be the possibility to look at the logs of the single components and at the “Stat Statements Overview” page, which will e.g. enable finding out the query with the slowest average runtime for a time period.
-
-Exposed ports – 8080
+For easy configuration changes (adding databases to monitoring, adding metrics) there is a small Python Web application bundled (exposed on Docker port 8080), making use of the CherryPy Web-framework. For mass changes one could technically also log into the configuration database and change the tables in the “pgwatch2” schema directly. Besides the configuration options the two other useful features would be the possibility to look at the logs of the single components and at the “Stat Statements Overview” page, which will e.g. enable finding out the query with the slowest average runtime for a time period.
 
 # Adding metrics
 
