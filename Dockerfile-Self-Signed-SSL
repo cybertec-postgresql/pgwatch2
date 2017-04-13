@@ -14,7 +14,7 @@ RUN curl https://packagecloud.io/gpg.key | apt-key add -
 RUN echo "deb https://packagecloud.io/grafana/stable/debian/ jessie main" >> /etc/apt/sources.list
 RUN apt-get -q update && apt-get -qy install grafana
 RUN cp /pgwatch2/bootstrap/grafana_custom_config_ssl.ini /etc/grafana/grafana.ini
-RUN openssl req -x509 -newkey rsa:4096 -keyout /etc/grafana/key.pem -out /etc/grafana/cert.pem -days 365 -nodes -sha256 -subj '/CN=pw2'
+RUN openssl req -x509 -newkey rsa:4096 -keyout /etc/grafana/key.pem -out /etc/grafana/cert.pem -days 3650 -nodes -sha256 -subj '/CN=pw2'
 EXPOSE 3000
 
 ###  Influxdb [https://influxdb.com/download/index.html] # taking the latest "stable" by default
