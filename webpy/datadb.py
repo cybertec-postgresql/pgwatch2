@@ -32,7 +32,8 @@ def execute(sql, params=None, statement_timeout=None):
         conn = getDataConnection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         if statement_timeout:
-            cur.execute("SET statement_timeout TO '{}'".format(statement_timeout))
+            cur.execute("SET statement_timeout TO '{}'".format(
+                statement_timeout))
         cur.execute(sql, params)
         if cur.statusmessage.startswith('SELECT') or cur.description:
             result = cur.fetchall()

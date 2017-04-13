@@ -16,12 +16,13 @@ def get_last_log_lines(service='pgwatch2', lines=200):
     if service not in SERVICES:
         raise Exception('service needs to be one of: ' + SERVICES.keys())
 
-    glob_expression = os.path.join(SERVICES[service]['log_root'], SERVICES[service]['glob'])
+    glob_expression = os.path.join(
+        SERVICES[service]['log_root'], SERVICES[service]['glob'])
     log_files = glob.glob(glob_expression)
     if not log_files:
         logging.error('no logfile found for glob %s', glob_expression)
         return []
-    log_file = log_files[len(log_files)-1]
+    log_file = log_files[len(log_files) - 1]
     logging.debug('extracting last %s lines from %s', lines, log_file)
     with open(log_file, 'rb') as f:
         return f.readlines()[-lines:]
@@ -119,7 +120,8 @@ def update_monitored_db(params):
           md_id = %(md_id)s
     """
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode'])
-    cherrypy_empty_text_to_nulls(params, ['md_preset_config_name', 'md_config'])
+    cherrypy_empty_text_to_nulls(
+        params, ['md_preset_config_name', 'md_config'])
     ret, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to update "monitored_db": ' + err)
@@ -137,7 +139,8 @@ def insert_monitored_db(params):
           md_id
     """
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode'])
-    cherrypy_empty_text_to_nulls(params, ['md_preset_config_name', 'md_config'])
+    cherrypy_empty_text_to_nulls(
+        params, ['md_preset_config_name', 'md_config'])
     ret, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to insert into "monitored_db": ' + err)

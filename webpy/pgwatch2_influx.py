@@ -54,7 +54,8 @@ def series_to_dict(influx_raw_data, tag_name):
     ret = {}
     for series in influx_raw_data['series']:
         if tag_name in series.get('tags', {}):
-            ret[series.get('tags')[tag_name]] = dict(zip(series['columns'], series['values'][0]))
+            ret[series.get('tags')[tag_name]] = dict(
+                zip(series['columns'], series['values'][0]))
     return ret
 
 
@@ -93,7 +94,8 @@ def get_db_overview(dbname):
         SELECT (non_negative_derivative(mean("blks_hit")) / (non_negative_derivative(mean("blks_hit")) + non_negative_derivative(mean("blks_read")))) * 100
          FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['Shared Buffers Hit Ratio'] = exec_for_time_pairs(sb_ratio, dbname, time_pairs)
+    data['Shared Buffers Hit Ratio'] = exec_for_time_pairs(
+        sb_ratio, dbname, time_pairs)
 
     rb_ratio = """
         SELECT (non_negative_derivative(mean("xact_rollback")) / (non_negative_derivative(mean("xact_rollback")) + non_negative_derivative(mean("xact_commit")))) * 100
@@ -101,50 +103,54 @@ def get_db_overview(dbname):
     """
     data['Rollback Ratio'] = exec_for_time_pairs(rb_ratio, dbname, time_pairs)
 
-
     tup_inserted = """
         SELECT non_negative_derivative(mean("tup_inserted"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['Tuples Inserted (1h avg.)'] = exec_for_time_pairs(tup_inserted, dbname, time_pairs)
-
+    data['Tuples Inserted (1h avg.)'] = exec_for_time_pairs(
+        tup_inserted, dbname, time_pairs)
 
     tup_updated = """
         SELECT non_negative_derivative(mean("tup_updated"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['Tuples Updated (1h avg.)'] = exec_for_time_pairs(tup_updated, dbname, time_pairs)
+    data['Tuples Updated (1h avg.)'] = exec_for_time_pairs(
+        tup_updated, dbname, time_pairs)
 
     tup_deleted = """
         SELECT non_negative_derivative(mean("tup_deleted"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['Tuples Deleted (1h avg.)'] = exec_for_time_pairs(tup_deleted, dbname, time_pairs)
-
+    data['Tuples Deleted (1h avg.)'] = exec_for_time_pairs(
+        tup_deleted, dbname, time_pairs)
 
     size_b = """
         SELECT derivative(mean("size_b"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['DB size change in bytes (1h avg.)'] = exec_for_time_pairs(size_b, dbname, time_pairs)
+    data['DB size change in bytes (1h avg.)'] = exec_for_time_pairs(
+        size_b, dbname, time_pairs)
 
     temp_bytes_1h = """
         SELECT derivative(mean("temp_bytes"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['Temporary Bytes (1h avg.)'] = exec_for_time_pairs(temp_bytes_1h, dbname, time_pairs)
+    data['Temporary Bytes (1h avg.)'] = exec_for_time_pairs(
+        temp_bytes_1h, dbname, time_pairs)
 
     blk_read_time_1h = """
         SELECT non_negative_derivative(mean("blk_read_time"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['Block Read Time (ms/1h)'] = exec_for_time_pairs(blk_read_time_1h, dbname, time_pairs)
+    data['Block Read Time (ms/1h)'] = exec_for_time_pairs(
+        blk_read_time_1h, dbname, time_pairs)
 
     blk_write_time_1h = """
         SELECT non_negative_derivative(mean("blk_write_time"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['Block Write Time (ms/1h)'] = exec_for_time_pairs(blk_write_time_1h, dbname, time_pairs)
+    data['Block Write Time (ms/1h)'] = exec_for_time_pairs(
+        blk_write_time_1h, dbname, time_pairs)
 
     return sorted(data.items(), key=lambda x: x[0])
 
@@ -161,8 +167,9 @@ def get_top_n_tables(dbname, n=3):      # TODO
     if res.raw:
         print(res.raw)
         for s in res.raw['series']:
-            sizes.append((s['tags']['schema'] + '.' + s['tags']['table_name'], s['values'][0][1]))
-    sizes.sort(key=lambda x:x[1], reverse=True)
+            sizes.append((s['tags']['schema'] + '.' + s['tags']
+                          ['table_name'], s['values'][0][1]))
+    sizes.sort(key=lambda x: x[1], reverse=True)
     data['top_tables_by_size'] = sizes[:3]
 
     # top 3 by growth
@@ -174,7 +181,8 @@ def get_top_n_tables(dbname, n=3):      # TODO
 
 def get_first_values_for_column(measurement, dbname, column, start_time, end_time):
     iql_first_fmt = """select first("{}"), queryid from {} where dbname = '{}' and time > '{}' and time < '{}' group by queryid"""
-    iql_first = iql_first_fmt.format(column, measurement, dbname, start_time, end_time)
+    iql_first = iql_first_fmt.format(
+        column, measurement, dbname, start_time, end_time)
     # print(iql_first)
     data_first = influx_query(iql_first, {'epoch': 'ms'})
     return data_first
@@ -182,7 +190,8 @@ def get_first_values_for_column(measurement, dbname, column, start_time, end_tim
 
 def get_last_values_for_column(measurement, dbname, column, start_time, end_time):
     iql_first_fmt = """select last("{}"), queryid from {} where dbname = '{}' and time > '{}' and time < '{}' group by queryid"""
-    iql_first = iql_first_fmt.format(column, measurement, dbname, start_time, end_time)
+    iql_first = iql_first_fmt.format(
+        column, measurement, dbname, start_time, end_time)
     # print(iql_first)
     data_first = influx_query(iql_first, {'epoch': 'ms'})
     return data_first
@@ -192,16 +201,19 @@ def get_deltas_by_column(measurement, dbname, column, start_time, end_time):
     first_dict = {}
     deltas = []  # (queryid, "column" derivative for 1h) [non-negative only]
 
-    data_first = get_first_values_for_column(measurement, dbname, column, start_time, end_time)
+    data_first = get_first_values_for_column(
+        measurement, dbname, column, start_time, end_time)
     logging.info("%s rows found for data_first", len(data_first))
-    data_last = get_last_values_for_column(measurement, dbname, column, start_time, end_time)
+    data_last = get_last_values_for_column(
+        measurement, dbname, column, start_time, end_time)
     logging.info("%s rows found for data_last", len(data_last))
 
     if not (data_first and data_last):
         return []
 
     for f in data_first.raw['series']:
-        first_dict[f['tags']['queryid']] = f['values'][0]    # [1481646061039, 9.65, '1112409937']
+        # [1481646061039, 9.65, '1112409937']
+        first_dict[f['tags']['queryid']] = f['values'][0]
 
     for l in data_last.raw['series']:
         last_val_list = l['values'][0]   # [1481646061039, 9.65, '1112409937']
@@ -218,7 +230,8 @@ def get_deltas_by_column(measurement, dbname, column, start_time, end_time):
 
 
 def get_first_or_last_row_by_ident_ids(measurement, dbname, ident_column, ids, start_time, end_time, direction='asc'):
-    iql_query_text = """select * from {} where dbname = '{}' and time > '{}' and time < '{}' and (""".format(measurement, dbname, start_time, end_time)
+    iql_query_text = """select * from {} where dbname = '{}' and time > '{}' and time < '{}' and (""".format(
+        measurement, dbname, start_time, end_time)
     is_first = True
     for id in ids:
         if is_first:
@@ -227,13 +240,15 @@ def get_first_or_last_row_by_ident_ids(measurement, dbname, ident_column, ids, s
         else:
             iql_query_text += """ or "{}" = '{}'""".format(ident_column, id)
 
-    iql_query_text_latest = iql_query_text + ') group by "{}" order by time {} limit 1'.format(ident_column, direction)
+    iql_query_text_latest = iql_query_text + \
+        ') group by "{}" order by time {} limit 1'.format(
+            ident_column, direction)
     # print(iql_query_text_latest)
     return influx_query(iql_query_text_latest)
 
 
 def find_top_growth_statements(dbname, sort_column, start_time=(datetime.utcnow() - timedelta(days=1)).isoformat() + 'Z',
-                               end_time=datetime.utcnow().isoformat()+'Z', limit=20):
+                               end_time=datetime.utcnow().isoformat() + 'Z', limit=20):
     """start_time/end_time expect UTC date inputs currently!"""
     if sort_column not in STATEMENT_SORT_COLUMNS:
         raise Exception('unknown sort column: ' + sort_column)
@@ -241,30 +256,37 @@ def find_top_growth_statements(dbname, sort_column, start_time=(datetime.utcnow(
 
     deltas = []     # [{'queryid': ..., 'delta': ...}]
     if sort_column == 'mean_time':      # special handling. can't use pg_stat_statement.mean_time because it carries history
-        total_time_deltas = get_deltas_by_column('stat_statements', dbname, 'total_time', start_time, end_time)
-        call_deltas = get_deltas_by_column('stat_statements', dbname, 'calls', start_time, end_time)
+        total_time_deltas = get_deltas_by_column(
+            'stat_statements', dbname, 'total_time', start_time, end_time)
+        call_deltas = get_deltas_by_column(
+            'stat_statements', dbname, 'calls', start_time, end_time)
         call_deltas_dict = {}
         for c in call_deltas:
             call_deltas_dict[c['queryid']] = c
 
         for tt in total_time_deltas:
-            if tt['queryid'] in call_deltas_dict and call_deltas_dict[tt['queryid']]['delta'] > 0:    # if "calls" is same means was not called in the period
+            # if "calls" is same means was not called in the period
+            if tt['queryid'] in call_deltas_dict and call_deltas_dict[tt['queryid']]['delta'] > 0:
                 deltas.append({'queryid': tt['queryid'],
                                'delta': tt['delta'] / call_deltas_dict[tt['queryid']]['delta']})
     else:
-        deltas = get_deltas_by_column('stat_statements', dbname, sort_column, start_time, end_time)
+        deltas = get_deltas_by_column(
+            'stat_statements', dbname, sort_column, start_time, end_time)
 
     if not deltas:
-        logging.warning('could not find any stat_statement data for period (%s, %s)', start_time, end_time)
+        logging.warning(
+            'could not find any stat_statement data for period (%s, %s)', start_time, end_time)
         return []
 
     deltas.sort(key=lambda x: x['delta'], reverse=True)
     top_n = deltas[:limit]
 
-    newest_data = get_first_or_last_row_by_ident_ids('stat_statements', dbname, 'queryid', [t['queryid'] for t in top_n], start_time, end_time, 'desc')
+    newest_data = get_first_or_last_row_by_ident_ids('stat_statements', dbname, 'queryid', [
+                                                     t['queryid'] for t in top_n], start_time, end_time, 'desc')
     newest_data_dict = series_to_dict(newest_data.raw, 'queryid')
 
-    oldest_data = get_first_or_last_row_by_ident_ids('stat_statements', dbname, 'queryid', [t['queryid'] for t in top_n], start_time, end_time, 'asc')
+    oldest_data = get_first_or_last_row_by_ident_ids('stat_statements', dbname, 'queryid', [
+                                                     t['queryid'] for t in top_n], start_time, end_time, 'asc')
     oldest_data_dict = series_to_dict(oldest_data.raw, 'queryid')
 
     for q in top_n:
@@ -273,10 +295,12 @@ def find_top_growth_statements(dbname, sort_column, start_time=(datetime.utcnow(
             d = oldest_data_dict[q_id]
             d['queryid'] = q_id
             # d.pop('mean_time')
-            delta_keys = set(STATEMENT_SORT_COLUMNS) - set(['mean_time'])   # mean_time requires different handling
+            # mean_time requires different handling
+            delta_keys = set(STATEMENT_SORT_COLUMNS) - set(['mean_time'])
             for delta_key in delta_keys:
                 if delta_key in newest_data_dict[q_id] and delta_key in oldest_data_dict[q_id]:
-                    d[delta_key] = round(newest_data_dict[q_id][delta_key] - oldest_data_dict[q_id][delta_key], 3)
+                    d[delta_key] = round(
+                        newest_data_dict[q_id][delta_key] - oldest_data_dict[q_id][delta_key], 3)
             if (newest_data_dict[q_id]['calls'] - oldest_data_dict[q_id]['calls']) > 0:
                 d['mean_time'] = round((newest_data_dict[q_id]['total_time'] - oldest_data_dict[q_id]['total_time']) /
                                        (newest_data_dict[q_id]['calls'] - oldest_data_dict[q_id]['calls']), 3)
@@ -288,7 +312,8 @@ def find_top_growth_statements(dbname, sort_column, start_time=(datetime.utcnow(
 
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(asctime)s %(levelname)s %(process)d %(message)s', level=logging.DEBUG)
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)s %(process)d %(message)s', level=logging.DEBUG)
 
     # print(find_top_growth_statements('calls', '2016-12-13 06:00:00', '2016-12-14'))
     # print(get_active_dbnames())

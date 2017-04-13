@@ -27,5 +27,5 @@ def makePrettyCounter(count):
 
 
 if __name__ == '__main__':
-    print(makePrettySize(2.2*1e9))
-    print(makePrettyCounter(2.2*1e9))
+    print(makePrettySize(2.2 * 1e9))
+    print(makePrettyCounter(2.2 * 1e9))

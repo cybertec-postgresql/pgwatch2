@@ -16,7 +16,8 @@ import subprocess
 import pgwatch2
 from jinja2 import Environment, FileSystemLoader
 
-env = Environment(loader=FileSystemLoader(os.path.join(str(Path(__file__).parent), 'templates')))
+env = Environment(loader=FileSystemLoader(
+    os.path.join(str(Path(__file__).parent), 'templates')))
 cmd_args = None
 
 
@@ -48,7 +49,8 @@ class Root:
         if submit:
             if user and password:
                 if user == cmd_args.admin_user and password == cmd_args.admin_password:
-                    cherrypy.session['logged_in'] = True    # default, in-memory sessions
+                    # default, in-memory sessions
+                    cherrypy.session['logged_in'] = True
                     cherrypy.session['login_time'] = time.time()
                     raise cherrypy.HTTPRedirect('/index')
                 else:
@@ -79,13 +81,15 @@ class Root:
                     message = 'New entry with ID {} added!'.format(id)
                 elif params.get('delete'):
                     pgwatch2.delete_monitored_db(params)
-                    message = 'Entry with ID {} ("{}") deleted!'.format(params['md_id'], params['md_unique_name'])
+                    message = 'Entry with ID {} ("{}") deleted!'.format(
+                        params['md_id'], params['md_unique_name'])
             except Exception as e:
                 message = 'ERROR: ' + str(e)
 
         data = pgwatch2.get_all_monitored_dbs()
         preset_configs = pgwatch2.get_preset_configs()
-        preset_configs_json = json.dumps({c['pc_name']: c['pc_config'] for c in preset_configs})
+        preset_configs_json = json.dumps(
+            {c['pc_name']: c['pc_config'] for c in preset_configs})
         metrics_list = pgwatch2.get_active_metrics_with_versions()
 
         tmpl = env.get_template('dbs.html')
@@ -132,7 +136,8 @@ class Root:
     @cherrypy.expose
     def logs(self, service='pgwatch2', lines=200):
         if service not in pgwatch2.SERVICES:
-            raise Exception('service needs to be one of: ' + str(pgwatch2.SERVICES.keys()))
+            raise Exception('service needs to be one of: ' +
+                            str(pgwatch2.SERVICES.keys()))
 
         log_lines = pgwatch2.get_last_log_lines(service, int(lines))
 
@@ -148,7 +153,8 @@ class Root:
         out, err = exec_cmd(['influxd', 'version'])
         ret['influxdb'] = out.strip() + ('err: ' + err if len(err) > 3 else '')
         out, err = exec_cmd(['cat', '/pgwatch2/build_git_version.txt'])
-        ret['pgwatch2_git_version'] = out.strip() + ('err: ' + err if len(err) > 3 else '')
+        ret['pgwatch2_git_version'] = out.strip(
+        ) + ('err: ' + err if len(err) > 3 else '')
         data, err = datadb.execute('select version()')
         ret['postgres'] = data[0]['version'] if not err else err
         cherrypy.response.headers['Content-Type'] = 'text/plain'
@@ -164,18 +170,20 @@ class Root:
         if sort_column not in pgwatch2_influx.STATEMENT_SORT_COLUMNS:
             raise Exception('invalid "sort_column": ' + sort_column)
         utcn = datetime.utcnow()
-        start_time = params.get('start_time', (utcn - timedelta(days=1)).isoformat() + 'Z')
+        start_time = params.get(
+            'start_time', (utcn - timedelta(days=1)).isoformat() + 'Z')
         end_time = params.get('end_time', (utcn.isoformat() + 'Z'))
 
-        dbnames = [x['md_unique_name'] for x in pgwatch2.get_all_monitored_dbs()]
+        dbnames = [x['md_unique_name']
+                   for x in pgwatch2.get_all_monitored_dbs()]
         if dbname:
             if page == 'index' and dbname:
                 data = pgwatch2_influx.get_db_overview(dbname)
             elif page == 'statements' and dbname:
                 data = pgwatch2_influx.find_top_growth_statements(dbname,
-                            sort_column,
-                            start_time,
-                            end_time)
+                                                                  sort_column,
+                                                                  start_time,
+                                                                  end_time)
 
         tmpl = env.get_template('index.html')
         return tmpl.render(dbnames=dbnames, dbname=dbname, page=page, data=data, sort_column=sort_column,
@@ -185,30 +193,48 @@ class Root:
 if __name__ == '__main__':
     parser = ArgumentParser(description='pgwatch2 Web UI')
     # Webserver
-    parser.add_argument('--socket-host', help='Webserver Listen Address', default=(os.getenv('PW2_WEBHOST') or '0.0.0.0'))
-    parser.add_argument('--socket-port', help='Webserver Listen Port', default=(os.getenv('PW2_WEBPORT') or 8080), type=int)
+    parser.add_argument('--socket-host', help='Webserver Listen Address',
+                        default=(os.getenv('PW2_WEBHOST') or '0.0.0.0'))
+    parser.add_argument('--socket-port', help='Webserver Listen Port',
+                        default=(os.getenv('PW2_WEBPORT') or 8080), type=int)
     # PgWatch2
-    parser.add_argument('-v', '--verbose', help='Chat level. none(default)|-v|-vv [$VERBOSE=[0|1|2]]', action='count', default=(os.getenv('VERBOSE') or 0))
+    parser.add_argument(
+        '-v', '--verbose', help='Chat level. none(default)|-v|-vv [$VERBOSE=[0|1|2]]', action='count', default=(os.getenv('VERBOSE') or 0))
     parser.add_argument('--no-anonymous-access', help='If set no login required to configure monitoring/metrics',
                         action='store_true', default=(os.getenv('PW2_WEBNOANONYMOUS') or False))
-    parser.add_argument('--admin-user', help='Username for login', default=(os.getenv('PW2_WEBUSER') or 'admin'))
-    parser.add_argument('--admin-password', help='Password for login to read and configure monitoring', default=(os.getenv('PW2_WEBPASSWORD') or 'pgwatch2admin'))
+    parser.add_argument('--admin-user', help='Username for login',
+                        default=(os.getenv('PW2_WEBUSER') or 'admin'))
+    parser.add_argument('--admin-password', help='Password for login to read and configure monitoring',
+                        default=(os.getenv('PW2_WEBPASSWORD') or 'pgwatch2admin'))
     # Postgres
-    parser.add_argument('-H', '--host', help='Pgwatch2 Config DB host', default=(os.getenv('PW2_PGHOST') or 'localhost'))
-    parser.add_argument('-p', '--port', help='Pgwatch2 Config DB port', default=(os.getenv('PW2_PGPORT') or 5432), type=int)
-    parser.add_argument('-d', '--database', help='Pgwatch2 Config DB name', default=(os.getenv('PW2_PGDATABASE') or 'pgwatch2'))
-    parser.add_argument('-U', '--user', help='Pgwatch2 Config DB username', default=(os.getenv('PW2_PGUSER') or 'pgwatch2'))
-    parser.add_argument('--password', help='Pgwatch2 Config DB password', default=(os.getenv('PW2_PGPASSWORD') or 'pgwatch2admin'))
-    parser.add_argument('--require-ssl', help='Pgwatch2 Config DB SSL connection only', default=(os.getenv('PW2_SLL') or False))    # TODO add check
+    parser.add_argument('-H', '--host', help='Pgwatch2 Config DB host',
+                        default=(os.getenv('PW2_PGHOST') or 'localhost'))
+    parser.add_argument('-p', '--port', help='Pgwatch2 Config DB port',
+                        default=(os.getenv('PW2_PGPORT') or 5432), type=int)
+    parser.add_argument('-d', '--database', help='Pgwatch2 Config DB name',
+                        default=(os.getenv('PW2_PGDATABASE') or 'pgwatch2'))
+    parser.add_argument('-U', '--user', help='Pgwatch2 Config DB username',
+                        default=(os.getenv('PW2_PGUSER') or 'pgwatch2'))
+    parser.add_argument('--password', help='Pgwatch2 Config DB password',
+                        default=(os.getenv('PW2_PGPASSWORD') or 'pgwatch2admin'))
+    parser.add_argument('--require-ssl', help='Pgwatch2 Config DB SSL connection only',
+                        default=(os.getenv('PW2_SLL') or False))    # TODO add check
     # Influx
-    parser.add_argument('--influx-host', help='InfluxDB host', default=(os.getenv('PW2_IHOST') or 'localhost'))
-    parser.add_argument('--influx-port', help='InfluxDB port', default=(os.getenv('PW2_IPORT') or '8086'))
-    parser.add_argument('--influx-user', help='InfluxDB username', default=(os.getenv('PW2_IUSER') or 'root'))
-    parser.add_argument('--influx-password', help='InfluxDB password', default=(os.getenv('PW2_IPASSWORD') or 'root'))
-    parser.add_argument('--influx-database', help='InfluxDB database', default=(os.getenv('PW2_IDATABASE') or 'pgwatch2'))
-    parser.add_argument('--influx-require-ssl', action='store_true', help='Use SSL for InfluxDB', default=(os.getenv('PW2_ISSL') or False))
+    parser.add_argument('--influx-host', help='InfluxDB host',
+                        default=(os.getenv('PW2_IHOST') or 'localhost'))
+    parser.add_argument('--influx-port', help='InfluxDB port',
+                        default=(os.getenv('PW2_IPORT') or '8086'))
+    parser.add_argument('--influx-user', help='InfluxDB username',
+                        default=(os.getenv('PW2_IUSER') or 'root'))
+    parser.add_argument('--influx-password', help='InfluxDB password',
+                        default=(os.getenv('PW2_IPASSWORD') or 'root'))
+    parser.add_argument('--influx-database', help='InfluxDB database',
+                        default=(os.getenv('PW2_IDATABASE') or 'pgwatch2'))
+    parser.add_argument('--influx-require-ssl', action='store_true',
+                        help='Use SSL for InfluxDB', default=(os.getenv('PW2_ISSL') or False))
     # Grafana
-    parser.add_argument('--grafana_baseurl', help='For linking to Grafana "Query details" dashboard', default='http://0.0.0.0:3000')
+    parser.add_argument(
+        '--grafana_baseurl', help='For linking to Grafana "Query details" dashboard', default='http://0.0.0.0:3000')
 
     cmd_args = parser.parse_args()
 
@@ -216,9 +242,10 @@ if __name__ == '__main__':
                         level=(logging.DEBUG if int(cmd_args.verbose) >= 2 else (logging.INFO if int(cmd_args.verbose) == 1 else logging.ERROR)))
     logging.debug(cmd_args)
 
-    datadb.setConnectionString(cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password)
+    datadb.setConnectionString(
+        cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password)
     pgwatch2_influx.influx_set_connection_params(cmd_args.influx_host, cmd_args.influx_port, cmd_args.influx_user,
-                                                           cmd_args.influx_password, cmd_args.influx_database, cmd_args.influx_require_ssl)
+                                                 cmd_args.influx_password, cmd_args.influx_database, cmd_args.influx_require_ssl)
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     config = {
