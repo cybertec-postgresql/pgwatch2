@@ -17,3 +17,4 @@
  - connection pooling
  - declaring per metric statement_timeout
 * Init scripts for common distros to autostart Docker on reboot (https://docs.docker.com/engine/admin/host_integration/)
+* lighter Docker image: https://github.com/phusion/baseimage-docker

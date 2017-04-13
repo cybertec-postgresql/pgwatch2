@@ -8,6 +8,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/marpaia/graphite-golang"
 	"github.com/op/go-logging"
 	_ "io/ioutil"
 	"os"
@@ -50,8 +51,10 @@ type MetricStoreMessage struct {
 const EPOCH_COLUMN_NAME string = "epoch_ns"      // this column (epoch in nanoseconds) is expected in every metric query
 const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
 const ACTIVE_SERVERS_REFRESH_TIME int64 = 60     // min time before checking for new/changed databases under monitoring i.e. main loop time
+const GRAPHITE_METRICS_PREFIX string = "pgwatch2"
 
 var configDb *sqlx.DB
+var graphiteConnection *graphite.Graphite
 var log = logging.MustGetLogger("main")
 var metric_def_map map[string]map[float64]string
 var metric_def_map_lock = sync.RWMutex{}
@@ -245,6 +248,88 @@ retry:
 	return err
 }
 
+func InitGraphiteConnection(host string, port int) {
+	var err error
+	log.Debug("Connecting to Graphite...")
+	graphiteConnection, err = graphite.NewGraphite(host, port)
+	if err != nil {
+		log.Fatal("could not connect to Graphite:", err)
+	}
+	log.Debug("OK")
+}
+
+func SendToGraphite(dbname, measurement string, data [](map[string]interface{})) error {
+	if data == nil || len(data) == 0 {
+		log.Warning("No data passed to SendToGraphite call")
+		return nil
+	}
+	log.Debug(fmt.Sprintf("Writing %d rows to Graphite", len(data)))
+
+	metric_base_prefix := GRAPHITE_METRICS_PREFIX + "." + measurement + "." + dbname + "."
+	metrics := make([]graphite.Metric, 0, len(data)*len(data[0]))
+
+	for _, dr := range data {
+		var epoch_s int64
+
+		// we loop over columns the first time just to find the timestamp
+		for k, v := range dr {
+			if v == nil || v == "" {
+				continue // not storing NULLs
+			} else if k == EPOCH_COLUMN_NAME {
+				epoch_s = v.(int64) / 1e9
+				break
+			}
+		}
+
+		if epoch_s == 0 {
+			log.Warning("No timestamp_ns found, server time will be used. measurement:", measurement)
+			epoch_s = time.Now().Unix()
+		}
+
+		for k, v := range dr {
+			if v == nil || v == "" {
+				continue // not storing NULLs
+			}
+			if k == EPOCH_COLUMN_NAME {
+				continue
+			} else {
+				var metric graphite.Metric
+				if strings.HasPrefix(k, "tag_") { // ignore tags for Graphite
+					metric.Name = metric_base_prefix + k[4:]
+				} else {
+					metric.Name = metric_base_prefix + k
+				}
+				switch t := v.(type) {
+				case int:
+					metric.Value = fmt.Sprintf("%d", v)
+				case int32:
+					metric.Value = fmt.Sprintf("%d", v)
+				case int64:
+					metric.Value = fmt.Sprintf("%d", v)
+				case float64:
+					metric.Value = fmt.Sprintf("%f", v)
+				default:
+					log.Warning("Invalid type for column:", k, "value:", v, "type:", t)
+					continue
+				}
+				metric.Timestamp = epoch_s
+				metrics = append(metrics, metric)
+			}
+		}
+	} // dr
+
+	log.Debug("Sending", len(metrics), "metric points to Graphite...")
+	t1 := time.Now().UnixNano()
+	err := graphiteConnection.SendMetrics(metrics)
+	t2 := time.Now().UnixNano()
+	if err != nil {
+		log.Error("could not send metric to Graphite:", err)
+	}
+	log.Debug("Sent in ", (t2-t1)/1000, "us")
+
+	return err
+}
+
 func GetMonitoredDatabaseByUniqueName(name string) (MonitoredDatabase, error) {
 	monitored_db_cache_lock.RLock()
 	defer monitored_db_cache_lock.RUnlock()
@@ -303,6 +388,43 @@ func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
 				msg := retry_queue[0]
 
 				err := SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
+				if err != nil {
+					if strings.Contains(err.Error(), "unable to parse") {
+						log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
+							msg.DBUniqueName, msg.MetricName, msg.Data))
+					} else {
+						time.Sleep(time.Second * 10) // Influx most probably gone, retry later
+						break
+					}
+				}
+				retry_queue = retry_queue[1:]
+			}
+
+			time.Sleep(time.Millisecond * 10)
+		}
+	}
+}
+
+func GraphitePersister(storage_ch <-chan MetricStoreMessage) {
+	retry_queue := make([]MetricStoreMessage, 0)
+
+	for {
+		select {
+		case msg := <-storage_ch:
+			log.Debug("got store msg", msg)
+
+			err := SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
+			if err != nil {
+				// TODO back up to disk when too many failures
+				log.Error(err)
+				retry_queue = append(retry_queue, msg)
+			}
+		default:
+			for len(retry_queue) > 0 {
+				log.Info("processing retry_queue. len(retry_queue) =", len(retry_queue))
+				msg := retry_queue[0]
+
+				err := SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
 				if err != nil {
 					if strings.Contains(err.Error(), "unable to parse") {
 						log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
@@ -570,10 +692,13 @@ var opts struct {
 	Dbname         string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2"`
 	User           string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2"`
 	Password       string `long:"password" description:"PG config DB password"`
+	Datastore      string `long:"datastore" description:"[influx|graphite]" default:"influx"`
 	InfluxURL      string `long:"iurl" description:"Influx address" default:"http://localhost:8086"`
 	InfluxDbname   string `long:"idbname" description:"Influx DB name" default:"pgwatch2"`
 	InfluxUser     string `long:"iuser" description:"Influx user" default:"root"`
 	InfluxPassword string `long:"ipassword" description:"Influx password" default:"root"`
+	GraphiteHost   string `long:"graphite-host" description:"Graphite host"`
+	GraphitePort   string `long:"graphite-port" description:"Graphite port"`
 }
 
 func main() {
@@ -609,17 +734,27 @@ func main() {
 
 	InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password)
 
-	err = InitAndTestInfluxConnection(opts.InfluxURL, opts.InfluxDbname)
-	if err != nil {
-		log.Fatal("Could not initialize InfluxDB", err)
-	}
-	log.Info("InfluxDB connection OK")
-
 	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
 	persist_ch := make(chan MetricStoreMessage, 1000)
 
-	log.Info("starting InfluxPersister...")
-	go InfluxPersister(persist_ch)
+	if opts.Datastore == "graphite" {
+		if opts.GraphiteHost == "" || opts.GraphitePort == "" {
+			log.Fatal("--graphite-host/port needed!")
+		}
+		graphite_port, _ := strconv.ParseInt(opts.GraphitePort, 10, 64)
+		InitGraphiteConnection(opts.GraphiteHost, int(graphite_port))
+		log.Info("starting GraphitePersister...")
+		go GraphitePersister(persist_ch)
+	} else {
+		err = InitAndTestInfluxConnection(opts.InfluxURL, opts.InfluxDbname)
+		if err != nil {
+			log.Fatal("Could not initialize InfluxDB", err)
+		}
+		log.Info("InfluxDB connection OK")
+
+		log.Info("starting InfluxPersister...")
+		go InfluxPersister(persist_ch)
+	}
 
 	first_loop := true
 	var last_metrics_refresh_time int64
