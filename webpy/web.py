@@ -197,6 +197,15 @@ if __name__ == '__main__':
                         default=(os.getenv('PW2_WEBHOST') or '0.0.0.0'))
     parser.add_argument('--socket-port', help='Webserver Listen Port',
                         default=(os.getenv('PW2_WEBPORT') or 8080), type=int)
+    parser.add_argument('--ssl', help='Enable Webserver SSL (Self-signed Cert)', action='store_true',
+                        default=(os.getenv('PW2_WEBSSL') or False))
+    parser.add_argument('--ssl-cert', help='Path to SSL certificate',
+                        default=(os.getenv('PW2_WEBCERT')))
+    parser.add_argument('--ssl-key', help='Path to SSL private key',
+                        default=(os.getenv('PW2_WEBKEY')))
+    parser.add_argument('--ssl-certificate-chain', help='Path to certificate chain file',
+                        default=(os.getenv('PW2_WEBCERTCHAIN')))
+
     # PgWatch2
     parser.add_argument(
         '-v', '--verbose', help='Chat level. none(default)|-v|-vv [$VERBOSE=[0|1|2]]', action='count', default=(os.getenv('VERBOSE') or 0))
@@ -217,8 +226,8 @@ if __name__ == '__main__':
                         default=(os.getenv('PW2_PGUSER') or 'pgwatch2'))
     parser.add_argument('--password', help='Pgwatch2 Config DB password',
                         default=(os.getenv('PW2_PGPASSWORD') or 'pgwatch2admin'))
-    parser.add_argument('--require-ssl', help='Pgwatch2 Config DB SSL connection only',
-                        default=(os.getenv('PW2_SLL') or False))    # TODO add check
+    parser.add_argument('--pg-require-ssl', help='Pgwatch2 Config DB SSL connection only', action='store_true',
+                        default=(os.getenv('PW2_PGSSL') or False))    # TODO add check
     # Influx
     parser.add_argument('--influx-host', help='InfluxDB host',
                         default=(os.getenv('PW2_IHOST') or 'localhost'))
@@ -253,4 +262,13 @@ if __name__ == '__main__':
         '/static': {'tools.staticdir.root': current_dir, 'tools.staticdir.dir': 'static', 'tools.staticdir.on': True, 'tools.sessions.on': False},
         '/': {'tools.sessions.on': True},
     }
+    if cmd_args.ssl:
+        if not cmd_args.ssl_cert or not cmd_args.ssl_key:
+            raise Exception('--ssl-cert and --ssl-cert needed with --ssl!')
+        config['global']['server.ssl_module'] = 'builtin'
+        config['global']['server.ssl_certificate'] = cmd_args.ssl_cert
+        config['global']['server.ssl_private_key'] = cmd_args.ssl_key
+        if cmd_args.ssl_certificate_chain:
+            config['global']['server.ssl_certificate_chain'] = cmd_args.ssl_certificate_chain
+
     cherrypy.quickstart(Root(), config=config)

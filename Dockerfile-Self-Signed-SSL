@@ -6,7 +6,7 @@ ADD pgwatch2 /pgwatch2
 
 ### Set up supervisord [https://docs.docker.com/engine/admin/using_supervisord/]
 RUN mkdir -p /var/log/supervisor
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY supervisord_ssl.conf /etc/supervisor/conf.d/supervisord.conf
 RUN chmod +x /pgwatch2/bootstrap/set_up_grafana_dashboards.sh
 
 ### Install Grafana [http://grafana.org/]
@@ -14,7 +14,6 @@ RUN curl https://packagecloud.io/gpg.key | apt-key add -
 RUN echo "deb https://packagecloud.io/grafana/stable/debian/ jessie main" >> /etc/apt/sources.list
 RUN apt-get -q update && apt-get -qy install grafana
 RUN cp /pgwatch2/bootstrap/grafana_custom_config_ssl.ini /etc/grafana/grafana.ini
-RUN openssl req -x509 -newkey rsa:4096 -keyout /etc/grafana/key.pem -out /etc/grafana/cert.pem -days 3650 -nodes -sha256 -subj '/CN=pw2'
 EXPOSE 3000
 
 ###  Influxdb [https://influxdb.com/download/index.html] # taking the latest "stable" by default
@@ -68,5 +67,8 @@ EXPOSE 8080
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
 
 COPY build_git_version.txt /pgwatch2/build_git_version.txt
+
+# Self-signed SSL cert for Grafana and Web UI
+RUN openssl req -x509 -newkey rsa:4096 -keyout /pgwatch2/ssl_key.pem -out /pgwatch2/ssl_cert.pem -days 3650 -nodes -sha256 -subj '/CN=pw2'
 
 CMD ["/usr/bin/supervisord"]
