@@ -197,12 +197,12 @@ if __name__ == '__main__':
                         default=(os.getenv('PW2_WEBHOST') or '0.0.0.0'))
     parser.add_argument('--socket-port', help='Webserver Listen Port',
                         default=(os.getenv('PW2_WEBPORT') or 8080), type=int)
-    parser.add_argument('--ssl', help='Enable Webserver SSL (Self-signed Cert)', action='store_true',
+    parser.add_argument('--ssl', help='Enable Webserver SSL (Self-signed Cert)',
                         default=(os.getenv('PW2_WEBSSL') or False))
     parser.add_argument('--ssl-cert', help='Path to SSL certificate',
-                        default=(os.getenv('PW2_WEBCERT')))
+                        default=(os.getenv('PW2_WEBCERT') or '/pgwatch2/ssl_cert.pem'))
     parser.add_argument('--ssl-key', help='Path to SSL private key',
-                        default=(os.getenv('PW2_WEBKEY')))
+                        default=(os.getenv('PW2_WEBKEY') or '/pgwatch2/ssl_key.pem'))
     parser.add_argument('--ssl-certificate-chain', help='Path to certificate chain file',
                         default=(os.getenv('PW2_WEBCERTCHAIN')))
 
