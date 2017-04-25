@@ -935,6 +935,145 @@
       "title": "Dashboard Row",
       "titleSize": "h6"
     },
+{
+      "collapse": false,
+      "height": 175,
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": null,
+          "description": "Info on indexes >1MB only",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "height": "175",
+          "id": 5,
+          "legend": {
+            "alignAsTable": false,
+            "avg": true,
+            "current": false,
+            "hideEmpty": false,
+            "hideZero": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "span": 12,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "alias": "$tag_index_name",
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "auto"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "index_name"
+                  ],
+                  "type": "tag"
+                },
+                {
+                  "params": [
+                    "none"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "measurement": "index_stats",
+              "policy": "default",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "idx_scan"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "mean"
+                  },
+                  {
+                    "params": [
+                      "1h"
+                    ],
+                    "type": "non_negative_derivative"
+                  }
+                ]
+              ],
+              "tags": [
+                {
+                  "key": "table_name",
+                  "operator": "=~",
+                  "value": "/^$table_name$/"
+                }
+              ]
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Index Scans per index (1h rate)",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 10,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
+      "showTitle": false,
+      "title": "Dashboard Row",
+      "titleSize": "h6"
+    },
     {
       "collapse": false,
       "height": "150",
@@ -943,7 +1082,7 @@
           "content": "Brought to you by: <a href=\"http://cybertec.at/en\"><img src=\"http://static.cybertec.at/wp-content/themes/cybertec-optimus/assets/img/logo.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
           "editable": true,
           "error": false,
-          "id": 5,
+          "id": 6,
           "links": [],
           "mode": "html",
           "span": 12,
