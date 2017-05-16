@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-RUN apt-get -q update && apt-get -qy install curl wget vim apt-transport-https supervisor postgresql postgresql-plpython-9.5
+RUN apt-get -q update && apt-get -qy install curl wget vim apt-transport-https supervisor postgresql postgresql-plpython-9.5 git
 
 ADD pgwatch2 /pgwatch2
 
@@ -65,8 +65,17 @@ RUN pip3 install -r /pgwatch2/webpy/requirements.txt
 
 EXPOSE 8080
 
+# Install Go and compile the gatherer
+RUN wget -q https://storage.googleapis.com/golang/go1.8.1.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.8.1.linux-amd64.tar.gz \
+    && rm go1.8.1.linux-amd64.tar.gz \
+    && export PATH=$PATH:/usr/local/go/bin \
+    && echo 'export PATH=$PATH:/usr/local/go/bin' >> /root/.bashrc
+RUN cd /pgwatch2 && bash build_gatherer.sh
+
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
 
+# build_git_version.txt will be generated when running
 COPY build_git_version.txt /pgwatch2/build_git_version.txt
 
 CMD ["/usr/bin/supervisord"]
