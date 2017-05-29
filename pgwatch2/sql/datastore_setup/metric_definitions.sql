@@ -464,6 +464,21 @@ select * from (
 $sql$
 );
 
+/* stat_statements_calls - enables to show QPS queries per second. "calls" works without the above wrapper also */
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'stat_statements_calls',
+9.2,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  sum(calls) as calls
+from
+  public.pg_stat_statements
+$sql$
+);
+
 
 /* buffercache_by_db */
 insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
