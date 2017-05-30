@@ -1,5 +1,4 @@
 * Additional dashboards
- - index/sproc details
  - top rows/scan
 * DDL and stored procedure change tracking (Grafana annotation events)
 * Web view
@@ -9,12 +8,13 @@
  - validate JSON configs from UI before "save"
  - top sprocs
  - changing retention period?
- - HTTPS
+ - integrate SQL parser (sqlparse) with links to tables
 * somekind of whole instance monitoring mode (all DBs) with summarized statistics
 * Go daemon
  - code tidying and unit tests
- - do Go build inside docker?
  - connection pooling
  - declaring per metric statement_timeout
 * Init scripts for common distros to autostart Docker on reboot (https://docs.docker.com/engine/admin/host_integration/)
 * lighter Docker image: https://github.com/phusion/baseimage-docker
+* non-superuser dashboard (no cpu load etc)
+* arch rewrite

@@ -99,7 +99,8 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "stat_statements": 60,
     "table_io_stats": 60,
     "table_stats": 60,
-    "wal": 60
+    "wal": 60,
+    "change_events": 300
     }');
 
 /* one host for demo purposes, so that "docker run" could immediately show some graphs */
