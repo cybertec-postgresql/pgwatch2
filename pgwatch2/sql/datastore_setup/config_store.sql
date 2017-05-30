@@ -34,6 +34,7 @@ create table pgwatch2.monitored_db (
     md_dbname text not null,
     md_user text not null,
     md_password text,
+    md_is_superuser boolean not null default false,
     md_sslmode text not null default 'disable',  -- set to 'require' for to force SSL
     md_preset_config_name text references pgwatch2.preset_config(pc_name) default 'basic',
     md_config jsonb,
@@ -58,7 +59,9 @@ create table pgwatch2.metric (
     m_name              text not null,
     m_pg_version_from   float not null,
     m_sql               text not null,
+    m_comment           text,
     m_is_active         boolean not null default 't',
+    m_is_helper         boolean not null default 'f',
     m_last_modified_on  timestamptz not null default now(),
     unique (m_name, m_pg_version_from)
 );

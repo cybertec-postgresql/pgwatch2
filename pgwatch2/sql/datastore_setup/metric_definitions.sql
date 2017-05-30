@@ -670,7 +670,7 @@ $sql$
 );
 
 
-/* approx. bloat - needs pgstattuple extension! */
+/* approx. bloat - needs pgstattuple extension! superuser only by default! */
 insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'table_bloat_approx_stattuple',
@@ -785,4 +785,62 @@ from
 where
   c.relnamespace not in (select oid from pg_namespace where nspname like any(array[E'pg\\_%', 'information_schema']));
 $sql$
+);
+
+
+/* Stored procedure needed for CPU load - needs plpythonu! */
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
+values (
+'get_load_average',
+9.0,
+$sql$
+BEGIN;
+
+DROP TYPE IF EXISTS public.load_average CASCADE;
+
+CREATE TYPE public.load_average AS ( load_1min real, load_5min real, load_15min real );
+
+CREATE OR REPLACE FUNCTION public.get_load_average() RETURNS public.load_average AS
+$$
+from os import getloadavg
+return getloadavg()
+$$ LANGUAGE plpythonu VOLATILE SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.get_load_average() TO public;
+
+COMMENT ON FUNCTION public.get_load_average() is 'created for pgwatch2';
+
+COMMIT;
+$sql$,
+'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
+true
+);
+
+/* Stored procedure needed for fetching stat_statements data - needs pg_stat_statements extension enabled on the machine! */
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
+values (
+'get_stat_statements',
+9.0,
+$sql$
+DO $OUTER$
+DECLARE
+  l_sproc_text text := $_SQL_$
+CREATE OR REPLACE FUNCTION public.get_stat_statements() RETURNS SETOF pg_stat_statements AS
+$$
+  select s.* from pg_stat_statements s join pg_database d on d.oid = s.dbid and d.datname = current_database()
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+$_SQL_$;
+BEGIN
+  PERFORM 1 from pg_views where viewname = 'pg_stat_statements';
+  IF FOUND AND string_to_array( split_part(version(), ' ', 2), '.' )::int[] > ARRAY[9,1] THEN   --parameters normalized only from 9.2
+    EXECUTE format(l_sproc_text);
+    EXECUTE 'REVOKE EXECUTE ON FUNCTION public.get_stat_statements() FROM PUBLIC;';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_stat_statements() TO pgwatch2';
+    EXECUTE 'COMMENT ON FUNCTION public.get_stat_statements() IS ''created for pgwatch2''';
+  END IF;
+END;
+$OUTER$;
+$sql$,
+'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
+true
 );

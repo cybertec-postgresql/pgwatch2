@@ -74,7 +74,8 @@ def get_active_metrics_with_versions():
 def get_all_metrics():
     sql = """
         select
-          m_id, m_name, m_pg_version_from, m_sql, m_is_active, date_trunc('second', m_last_modified_on) as m_last_modified_on
+          m_id, m_name, m_pg_version_from, m_sql, coalesce(m_comment, '') as m_comment, m_is_active, m_is_helper, 
+          date_trunc('second', m_last_modified_on) as m_last_modified_on
         from
           pgwatch2.metric
         order by
@@ -110,6 +111,7 @@ def update_monitored_db(params):
           md_dbname = %(md_dbname)s,
           md_user = %(md_user)s,
           md_password = case when %(md_password)s = '***' then md_password else %(md_password)s end,
+          md_is_superuser = %(md_is_superuser)s,
           md_sslmode = %(md_sslmode)s,
           md_is_enabled = %(md_is_enabled)s,
           md_preset_config_name = %(md_preset_config_name)s,
@@ -119,7 +121,7 @@ def update_monitored_db(params):
         where
           md_id = %(md_id)s
     """
-    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode'])
+    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
     cherrypy_empty_text_to_nulls(
         params, ['md_preset_config_name', 'md_config'])
     ret, err = datadb.execute(sql, params)
@@ -130,15 +132,15 @@ def update_monitored_db(params):
 def insert_monitored_db(params):
     sql = """
         insert into
-          pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password,
+          pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password, md_is_superuser,
           md_sslmode, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds)
         values
-          (%(md_unique_name)s, %(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s, %(md_password)s,
+          (%(md_unique_name)s, %(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s, %(md_password)s, %(md_is_superuser)s,
           %(md_sslmode)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s, %(md_statement_timeout_seconds)s)
         returning
           md_id
     """
-    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode'])
+    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
     cherrypy_empty_text_to_nulls(
         params, ['md_preset_config_name', 'md_config'])
     ret, err = datadb.execute(sql, params)
@@ -203,12 +205,14 @@ def update_metric(params):
           m_name = %(m_name)s,
           m_pg_version_from = %(m_pg_version_from)s,
           m_sql = %(m_sql)s,
+          m_comment = %(m_comment)s,
           m_is_active = %(m_is_active)s,
+          m_is_helper = %(m_is_helper)s,
           m_last_modified_on = now()
         where
           m_id = %(m_id)s
     """
-    cherrypy_checkboxes_to_bool(params, ['m_is_active'])
+    cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper'])
     ret, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to update "metric": ' + err)
@@ -217,12 +221,12 @@ def update_metric(params):
 def insert_metric(params):
     sql = """
         insert into
-          pgwatch2.metric (m_name, m_pg_version_from, m_sql, m_is_active)
+          pgwatch2.metric (m_name, m_pg_version_from, m_sql, m_comment, m_is_active, m_is_helper)
         values
-          (%(m_name)s, %(m_pg_version_from)s, %(m_sql)s, %(m_is_active)s)
+          (%(m_name)s, %(m_pg_version_from)s, %(m_sql)s, %(m_comment)s, %(m_is_active)s, %(m_is_helper)s)
         returning m_id
     """
-    cherrypy_checkboxes_to_bool(params, ['m_is_active'])
+    cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper'])
     ret, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to insert into "metric": ' + err)

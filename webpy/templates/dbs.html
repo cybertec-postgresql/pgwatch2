@@ -68,6 +68,7 @@
                 <td>DB dbname</td>
                 <td>DB user</td>
                 <td title="NB! Password is stored in plain-text in the database">DB password</td>
+                <td title="NB! If checked pgwatch daemon will automatically try to create the CPU load monitoring and stat_statements helper">Is superuser?</td>
                 <td title="libpq 'sslmode' parameter. If 'require' or 'verify-full' then no metrics will be gathered if safe connection cannot be established">SSL Mode</td>
                 <td title="Preset config OR custom config needs to be specified">Preset config</td>
                 <td title='{"metric":interval_seconds,...}'>Custom config</td>
@@ -89,6 +90,7 @@
                     <td><input type="text" name="md_dbname" value="{{row['md_dbname']|e}}" size="15"></td>
                     <td><input type="text" name="md_user" value="{{row['md_user']|e}}" size="15"></td>
                     <td><input type="password" name="md_password" value="***" size="15" title="if left to default ***, password will not be changed"></td>
+                    <td><input type="checkbox" name="md_is_superuser" {% if row['md_is_superuser'] %}checked{% endif %}></td>
                     <td>
                         <select name="md_sslmode">
                             <option value="disable" {% if row['md_sslmode'] == "disable" %}selected{% endif %}>disable</option>
@@ -124,6 +126,7 @@
                     <td><input type="text" name="md_dbname" value="" size="15"></td>
                     <td><input type="text" name="md_user" value="" size="15"></td>
                     <td><input type="password" name="md_password" value="" size="15"></td>
+                    <td><input type="checkbox" name="md_is_superuser"></td>
                     <td>
                         <select name="md_sslmode">
                             <option value="disable">disable</option>

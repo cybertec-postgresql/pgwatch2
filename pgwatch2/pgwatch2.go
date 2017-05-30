@@ -152,7 +152,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 	sql := `
 		select
 		  md_unique_name, md_hostname, md_port, md_dbname, md_user, coalesce(md_password, '') as md_password,
-		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode
+		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode, md_is_superuser
 		from
 		  pgwatch2.monitored_db
 	          left join
@@ -985,6 +985,58 @@ retry:
 	return nil
 }
 
+func DoesFunctionExists(dbUnique, functionName string) bool {
+	log.Debug("Checking for function existance", dbUnique, functionName)
+	sql := fmt.Sprintf("select 1 from pg_proc join pg_namespace n on pronamespace = n.oid where proname = '%s' and n.nspname = 'public'", functionName)
+	data, err := DBExecReadByDbUniqueName(dbUnique, sql)
+	if err != nil {
+		log.Error("Failed to check for function existance", dbUnique, functionName, err)
+		return false
+	}
+	if len(data) > 0 {
+		log.Debug(fmt.Sprintf("Function %s exists on %s", functionName, dbUnique))
+		return true
+	}
+	return false
+}
+
+// Called once on daemon startup to try to create "metric fething helper" functions automatically
+func TryCreateMetricsFetchingHelpers(dbUnique string) {
+	db_pg_version, err := DBGetPGVersion(dbUnique)
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to fetch pg version for \"%s\": %s", dbUnique, err))
+		return
+	}
+
+	sql_helpers := "select distinct m_name from metric where m_is_active and m_is_helper" // m_name is a helper function name
+	data, err := DBExecRead(configDb, sql_helpers)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	for _, row := range data {
+		metric := row["m_name"].(string)
+
+		if !DoesFunctionExists(dbUnique, metric) {
+
+			log.Debug("Trying to create metric fetching helpers for", dbUnique, metric)
+			sql := GetSQLForMetricPGVersion(metric, db_pg_version)
+			if sql > "" {
+				_, err := DBExecReadByDbUniqueName(dbUnique, sql)
+				if err != nil {
+					log.Warning("Failed to create a metric fetching helper for", dbUnique, metric)
+					log.Warning(err)
+				} else {
+					log.Debug("Successfully created metric fetching helper for", dbUnique, metric)
+				}
+			} else {
+				log.Warning("Could not find query text for", dbUnique, metric)
+			}
+		}
+	}
+}
+
 var opts struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
@@ -1099,6 +1151,9 @@ func main() {
 				if err != nil {
 					log.Error(fmt.Sprintf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err))
 					continue
+				}
+				if host["md_is_superuser"].(bool) {
+					TryCreateMetricsFetchingHelpers(db_unique)
 				}
 				metric_fetching_channels_lock.Lock()
 				metric_fetching_channels[db_unique] = make(chan MetricFetchMessage, 100)

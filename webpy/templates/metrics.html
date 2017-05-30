@@ -120,7 +120,9 @@
                 <td>Metric</td>
                 <td>PG version from</td>
                 <td title="NB! 'epoch_ns' column needs to be always present">SQL</td>
+                <td>Comment</td>
                 <td>Is active?</td>
+                <td title="Code for metric fetching helpers. Not to be used for normal metrics gathering">Is helper?</td>
                 <td>Last modified</td>
                 <td></td>
                 <td></td>
@@ -136,7 +138,9 @@
                     </td>
                     <td><input type="text" name="m_pg_version_from" value="{{row['m_pg_version_from']}}"></td>
                     <td><textarea name="m_sql" cols="50">{{row['m_sql']}}</textarea></td>
+                    <td><input type="text" name="m_comment" value="{{row['m_comment']}}"></td>
                     <td><input type="checkbox" name="m_is_active" {% if row['m_is_active'] %}checked{% endif %}></td>
+                    <td><input type="checkbox" name="m_is_helper" {% if row['m_is_helper'] %}checked{% endif %}></td>
                     <td>{{row['m_last_modified_on']}}</td>
                     <td><input type="submit" name="metric_save" value="Save"></td>
                     <td><input type="submit" name="metric_delete" value="Delete" class="delete"></td>
@@ -148,7 +152,9 @@
                     <td><input type="text" name="m_name" value=""></td>
                     <td><input type="text" name="m_pg_version_from" value="9.0"></td>
                     <td><textarea name="m_sql" cols="50">SELECT (extract(epoch from now()) * 1e9)::int8 as epoch_ns, ...</textarea></td>
+                    <td><input type="text" name="m_comment" value=""></td>
                     <td><input type="checkbox" name="m_is_active" checked></td>
+                    <td><input type="checkbox" name="m_is_helper"></td>
                     <td></td>
                     <td><input type="submit" name="metric_new" value="New"></td>
                     <td></td>
