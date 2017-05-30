@@ -694,6 +694,57 @@ where
 $sql$
 );
 
+/* Stored procedure needed for fetching stat_statements data - needs pg_stat_statements extension enabled on the machine!
+ NB! approx_free_percent is just an average. more exact way would be to calculate a weighed average in Go
+*/
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_is_helper)
+values (
+'get_table_bloat_approx',
+9.5,
+$sql$
+BEGIN;
+
+CREATE EXTENSION IF NOT EXISTS pgstattuple WITH SCHEMA PUBLIC;
+
+CREATE OR REPLACE FUNCTION public.get_table_bloat_approx(OUT approx_free_percent double precision, OUT approx_free_space double precision) AS
+$$
+    select
+      avg(approx_free_percent)::double precision as approx_free_percent,
+      sum(approx_free_space)::double precision as approx_free_space
+    from
+      pg_class c
+      join
+      pg_namespace n on n.oid = c.relnamespace
+      join lateral public.pgstattuple_approx(c.oid) on true
+    where
+      relkind in ('r', 'm')
+      and c.relpages >= 100 -- >800KB
+      and not n.nspname like any (array[E'pg\\_%', 'information_schema']);
+$$ LANGUAGE sql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.get_table_bloat_approx() TO public;
+COMMENT ON FUNCTION public.get_table_bloat_approx() is 'created for pgwatch2';
+
+COMMIT;
+$sql$,
+true
+);
+
+/* approx. bloat summary */
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'table_bloat_approx_summary',
+9.5,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  approx_free_percent,
+  approx_free_space as approx_free_space_b
+from
+  public.get_table_bloat_approx()
+$sql$
+);
+
 /* "parent" setting for all of the below "*_hashes" metrics. only this parent "change_events" metric should be used in configs! */
 insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (

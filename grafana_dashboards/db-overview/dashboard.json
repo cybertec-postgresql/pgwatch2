@@ -70,6 +70,7 @@
             "lineColor": "rgb(31, 120, 193)",
             "show": true
           },
+          "tableColumn": "",
           "targets": [
             {
               "alias": "TPS",
@@ -181,6 +182,7 @@
             "lineColor": "rgb(31, 120, 193)",
             "show": true
           },
+          "tableColumn": "",
           "targets": [
             {
               "alias": "QPS",
@@ -292,6 +294,7 @@
             "lineColor": "rgb(31, 120, 193)",
             "show": true
           },
+          "tableColumn": "",
           "targets": [
             {
               "alias": "avg_query_runtime_per_db",
@@ -397,13 +400,14 @@
               "to": "null"
             }
           ],
-          "span": 3,
+          "span": 2,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": true,
             "lineColor": "rgb(31, 120, 193)",
             "show": true
           },
+          "tableColumn": "",
           "targets": [
             {
               "alias": "db_size_change_last_hour",
@@ -422,6 +426,7 @@
                   "type": "fill"
                 }
               ],
+              "orderByTime": "ASC",
               "policy": "default",
               "query": "SELECT last(\"size_b\")  - first(\"size_b\") FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h) fill(none)",
               "rawQuery": true,
@@ -447,7 +452,129 @@
           "thresholds": "",
           "timeFrom": "6h",
           "timeShift": null,
-          "title": "DB size change last 1h",
+          "title": "DB size ch. 1h",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "current"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": null,
+          "decimals": null,
+          "description": "Based on pgstattuple_approx, for tables >800KB",
+          "editable": true,
+          "error": false,
+          "format": "bytes",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "height": "150",
+          "id": 13,
+          "interval": null,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": " ",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "span": 2,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": true,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "tableColumn": "",
+          "targets": [
+            {
+              "alias": "Bloat size",
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "$interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "none"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "measurement": "table_bloat_approx_summary",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "query": "SELECT \"load_5\"  FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h) fill(none)",
+              "rawQuery": false,
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "approx_free_space_b"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "mean"
+                  }
+                ]
+              ],
+              "tags": [
+                {
+                  "key": "dbname",
+                  "operator": "=~",
+                  "value": "/^$dbname$/"
+                }
+              ]
+            }
+          ],
+          "thresholds": "",
+          "timeFrom": "6h",
+          "timeShift": null,
+          "title": "Approx Bloat",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -510,13 +637,14 @@
               "to": "null"
             }
           ],
-          "span": 3,
+          "span": 2,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": true,
             "lineColor": "rgb(31, 120, 193)",
             "show": true
           },
+          "tableColumn": "",
           "targets": [
             {
               "alias": "load_5",
@@ -536,6 +664,7 @@
                 }
               ],
               "measurement": "cpu_load",
+              "orderByTime": "ASC",
               "policy": "default",
               "query": "SELECT \"load_5\"  FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h) fill(none)",
               "rawQuery": false,
@@ -594,6 +723,8 @@
         {
           "aliasColors": {},
           "bars": false,
+          "dashLength": 10,
+          "dashes": false,
           "datasource": null,
           "description": "IO time info requires track_io_timing=on",
           "editable": true,
@@ -637,6 +768,7 @@
               "yaxis": 2
             }
           ],
+          "spaceLength": 10,
           "span": 6,
           "stack": false,
           "steppedLine": false,
@@ -851,6 +983,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -880,6 +1013,8 @@
             "TX rollback ratio": "#890F02"
           },
           "bars": false,
+          "dashLength": 10,
+          "dashes": false,
           "datasource": null,
           "decimals": 1,
           "editable": true,
@@ -906,6 +1041,7 @@
           "points": false,
           "renderer": "flot",
           "seriesOverrides": [],
+          "spaceLength": 10,
           "span": 6,
           "stack": false,
           "steppedLine": false,
@@ -1002,6 +1138,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -1044,6 +1181,8 @@
             "Deadlocks (1h rate)": "#BF1B00"
           },
           "bars": false,
+          "dashLength": 10,
+          "dashes": false,
           "datasource": null,
           "editable": true,
           "error": false,
@@ -1077,6 +1216,7 @@
               "yaxis": 2
             }
           ],
+          "spaceLength": 10,
           "span": 6,
           "stack": false,
           "steppedLine": false,
@@ -1209,6 +1349,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -1239,6 +1380,8 @@
             "WAL rate": "#0A50A1"
           },
           "bars": false,
+          "dashLength": 10,
+          "dashes": false,
           "datasource": null,
           "decimals": 1,
           "editable": true,
@@ -1275,6 +1418,7 @@
               "yaxis": 2
             }
           ],
+          "spaceLength": 10,
           "span": 6,
           "stack": false,
           "steppedLine": false,
@@ -1386,6 +1530,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -1425,6 +1570,8 @@
         {
           "aliasColors": {},
           "bars": false,
+          "dashLength": 10,
+          "dashes": false,
           "datasource": null,
           "decimals": 1,
           "description": "pg_stat_activity info",
@@ -1449,6 +1596,7 @@
           "points": false,
           "renderer": "flot",
           "seriesOverrides": [],
+          "spaceLength": 10,
           "span": 6,
           "stack": true,
           "steppedLine": false,
@@ -1639,6 +1787,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -1668,6 +1817,8 @@
             "load_5": "#BA43A9"
           },
           "bars": false,
+          "dashLength": 10,
+          "dashes": false,
           "datasource": null,
           "description": "Requires according \"metric fetching helpers\" on the monitored server",
           "fill": 1,
@@ -1695,6 +1846,7 @@
               "yaxis": 2
             }
           ],
+          "spaceLength": 10,
           "span": 6,
           "stack": false,
           "steppedLine": false,
@@ -1789,6 +1941,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
