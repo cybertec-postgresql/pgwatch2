@@ -454,7 +454,7 @@ func DBGetPGVersion(dbUnique string) (float64, error) {
 	var ok bool
 	sql := `
 		select (regexp_matches(
-			regexp_replace(current_setting('server_version'), '[a-z]', '', 'g'),
+			regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'),
 			E'\\d+\\.?\\d+?')
 			)[1]::double precision as ver;
 	`

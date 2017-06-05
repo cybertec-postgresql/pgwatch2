@@ -100,6 +100,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "replication": 60,
     "sproc_stats": 60,
     "stat_statements": 60,
+    "stat_statements_calls": 60,
     "table_io_stats": 60,
     "table_stats": 60,
     "wal": 60,
