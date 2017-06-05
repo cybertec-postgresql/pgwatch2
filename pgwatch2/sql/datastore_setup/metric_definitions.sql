@@ -272,8 +272,6 @@ SELECT
   schemaname::text AS tag_schema,
   funcname::text  AS tag_function_name,
   p.oid as tag_oid, -- for overloaded funcs
-  -- TODO compose a siganture and insert annotations when change detected
-  --md5(tag_schema||tag_function_name||coalesce(select array_to_string(array(select format_type(t,null) from unnest(coalesce(proallargtypes, proargtypes::oid[])) tt (t)),',')), '')  || coalesce(array_to_string(proargmodes, ','), '')) AS func_signature_md5,
   calls as sp_calls,
   self_time,
   total_time
@@ -689,8 +687,9 @@ from
 where
   relkind in ('r', 'm')
   and n.oid = c.relnamespace
-  and c.relpages >= 1280 -- tables > 10mb
-  and not n.nspname like any (array[E'pg\\_%', 'information_schema']);
+  and c.relpages >= 128 -- tables > 1mb
+  and not n.nspname like any (array[E'pg\\_%', 'information_schema'])
+  having sum(approx_free_space)::double precision > 0
 $sql$
 );
 
@@ -718,8 +717,9 @@ $$
       join lateral public.pgstattuple_approx(c.oid) on true
     where
       relkind in ('r', 'm')
-      and c.relpages >= 100 -- >800KB
-      and not n.nspname like any (array[E'pg\\_%', 'information_schema']);
+      and c.relpages >= 128 -- tables >1mb
+      and not n.nspname like any (array[E'pg\\_%', 'information_schema'])
+      having sum(approx_free_space)::double precision > 0
 $$ LANGUAGE sql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.get_table_bloat_approx() TO public;
@@ -847,6 +847,8 @@ values (
 $sql$
 BEGIN;
 
+CREATE EXTENSION IF NOT EXISTS plpythonu;
+
 DROP TYPE IF EXISTS public.load_average CASCADE;
 
 CREATE TYPE public.load_average AS ( load_1min real, load_5min real, load_15min real );
@@ -873,6 +875,8 @@ values (
 'get_stat_statements',
 9.0,
 $sql$
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
 DO $OUTER$
 DECLARE
   l_sproc_text text := $_SQL_$
@@ -882,11 +886,13 @@ $$
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 $_SQL_$;
 BEGIN
-  PERFORM 1 from pg_views where viewname = 'pg_stat_statements';
-  IF FOUND AND string_to_array( split_part(version(), ' ', 2), '.' )::int[] > ARRAY[9,1] THEN   --parameters normalized only from 9.2
+  IF (regexp_matches(
+  		regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'),
+        E'\\d+\\.?\\d+?')
+      )[1]::double precision > 9.1 THEN   --parameters normalized only from 9.2
     EXECUTE format(l_sproc_text);
     EXECUTE 'REVOKE EXECUTE ON FUNCTION public.get_stat_statements() FROM PUBLIC;';
-    EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_stat_statements() TO pgwatch2';
+    --EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_stat_statements() TO pgwatch2';
     EXECUTE 'COMMENT ON FUNCTION public.get_stat_statements() IS ''created for pgwatch2''';
   END IF;
 END;

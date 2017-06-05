@@ -77,7 +77,7 @@ func GetPostgresDBConnection(host, port, dbname, user, password, sslmode string)
 	var err error
 	var db *sqlx.DB
 
-	log.Debug("Connecting to: ", host, port, dbname, user, password)
+	//log.Debug("Connecting to: ", host, port, dbname, user, password)
 
 	db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s user=%s password=%s",
 		host, port, dbname, sslmode, user, password))
@@ -170,7 +170,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 }
 
 func SendToInflux(dbname, measurement string, data [](map[string]interface{})) error {
-	if data == nil {
+	if data == nil || len(data) == 0 {
 		return nil
 	}
 	log.Debug("SendToInflux data[0] of ", len(data), ":", data[0])
@@ -380,7 +380,7 @@ func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
 	for {
 		select {
 		case msg := <-storage_ch:
-			log.Debug("got store msg", msg)
+			//log.Debug("got store msg", msg)
 
 			err := SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
 			if err != nil {
