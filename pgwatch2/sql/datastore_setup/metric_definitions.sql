@@ -765,7 +765,6 @@ where
   and n.oid = c.relnamespace
   and c.relpages >= 128 -- tables > 1mb
   and not n.nspname like any (array[E'pg\\_%', 'information_schema'])
-  having sum(approx_free_space)::double precision > 0
 $sql$
 );
 
@@ -818,6 +817,8 @@ select
   approx_free_space as approx_free_space_b
 from
   public.get_table_bloat_approx()
+where
+  approx_free_space > 0
 $sql$
 );
 

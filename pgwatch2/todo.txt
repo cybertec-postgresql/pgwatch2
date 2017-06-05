@@ -1,6 +1,5 @@
 * Additional dashboards
  - top rows/scan
-* DDL and stored procedure change tracking (Grafana annotation events)
 * Web view
  - top problems/hints
  - top biggest tables/indexes treemap
