@@ -25,7 +25,12 @@ cmd_args = None
 def logged_in(f: callable, *args, **kwargs):
     if cmd_args.no_anonymous_access:
         if not cherrypy.session.get('logged_in'):
-            raise cherrypy.HTTPRedirect('/login')
+            url = cherrypy.url()    # http://0.0.0.0:8080/dbs
+            splits = url.split('/') # ['https:', '', '0.0.0.0:8080', 'dbs']
+            if len(splits) > 3 and splits[3] in ['dbs', 'metrics', 'logs']:
+                raise cherrypy.HTTPRedirect('/login' + ('?returl=/' + '/'.join(splits[3:])))
+            else:
+                raise cherrypy.HTTPRedirect('/login')
     return f(*args, **kwargs)
 
 
@@ -38,10 +43,12 @@ class Root:
 
     @cherrypy.expose
     def login(self, **params):
+        print(params)
         message = ''
         submit = params.get('submit', False)
         user = params.get('user', '')
         password = params.get('password', '')
+        returl = params.get('returl')
 
         if not cmd_args.no_anonymous_access:
             raise cherrypy.HTTPRedirect('/index')
@@ -52,13 +59,13 @@ class Root:
                     # default, in-memory sessions
                     cherrypy.session['logged_in'] = True
                     cherrypy.session['login_time'] = time.time()
-                    raise cherrypy.HTTPRedirect('/index')
+                    raise cherrypy.HTTPRedirect(returl if returl else '/index')
                 else:
                     message = 'Wrong username and/or password!'
             else:
                 message = 'Username and password needed!'
         tmpl = env.get_template('login.html')
-        return tmpl.render(message=message, user=user)
+        return tmpl.render(message=message, user=user, returl=returl)
 
     @cherrypy.expose
     def logout(self, **params):

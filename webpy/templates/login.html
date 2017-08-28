@@ -9,7 +9,7 @@
 <body style="margin: 15px">
     <div class="container">
 
-      <form class="form-signin" target="/login" method="post">
+      <form class="form-signin" action="/login" method="post">
         <h2 class="form-signin-heading">Please sign in</h2>
         <label for="user" class="sr-only">Username</label>
         <input type="text" id="user" name="user" class="form-control" placeholder="User" required autofocus>
@@ -20,6 +20,7 @@
             <input type="checkbox" value="remember-me"> Remember me
           </label>
         </div>
+        <input type="hidden" name="returl" value="{% if returl %}{{returl}}{% endif %}">
         <button class="btn btn-lg btn-primary btn-block" type="submit" name="submit" value="submit">Sign in</button>
       </form>
         {{message}}
