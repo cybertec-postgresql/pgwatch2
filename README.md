@@ -160,6 +160,6 @@ setup. For restoring one needs to go inside the Docker container again but by fo
 take_backup.sh it shouldn't be a real problem.
 
 A tip: to make the restore process easier it would already make sense to mount the host folder with the backups in it on the 
-new container with “-v ~/pgwatch2_backups:/pgwatch2_backups” when starting the Docker image. Otherwise one needs to set 
+new container with “-v ~/pgwatch2_backups:/pgwatch2_backups:rw,z” when starting the Docker image. Otherwise one needs to set
 up SSH or use something like S3 for example. Also note that ports 5432 and 8088 need to be exposed to take backups 
 outside of Docker.

@@ -55,7 +55,8 @@ echo "done!"
 # 1. make sure you have successful backups from old Docker container for all components from above
 # 2. stop the old container
 # 3. launch the new docker container with specifying a shared volume to access the backup easily (you could also set up ssh etc)
-#       docker run ... -v ~/pgwatch2_backups:/pgwatch2_backups ...
+#       docker run ... -v ~/pgwatch2_backups:/pgwatch2_backups:rw,z ...
+#       nb! when having problems accessing the share with SELinux see Github issue #22 for potential relief.
 # 4. connect to the Postgres DB and rename "pgwatch2" and "pgwatch2_grafana" databases to "*_original" for example and
 # recreate them (could also just drop and recreate, but just in case...)
 # 5. restore both Postgres DB dumps
