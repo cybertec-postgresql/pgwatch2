@@ -4,10 +4,14 @@ NAME=$1
 BACKUP_FOLDER=pgwatch2_backup_$NAME
 
 # change these as needed!
-PGPORT=5433
-PGDATABASE=pgwatch2
+PGHOST=127.0.0.1
+PGPORT=5434
 PGUSER=pgwatch2
 PGPASSWORD=pgwatch2admin
+PGWATCHDATABASE=pgwatch2
+GRAFANADATABASE=pgwatch2_grafana
+INFLUXHOST=0.0.0.0
+INFLUXPORT=8088
 
 if [ -z $1 ] ; then
     echo "usage: ./take_backup.sh NAME"
@@ -26,16 +30,17 @@ fi
 
 
 echo "backing up Postgres config store DB..."
-pg_dump -p $PGPORT -U $PGUSER -n pgwatch2 $PGDATABASE > pgwatch2_config.sql
+pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -n pgwatch2 $PGWATCHDATABASE > pgwatch2_config.sql
 
 
 echo "backing up Grafana config DB..."
-pg_dump -p $PGPORT -U $PGUSER -n pgwatch2 $PGDATABASE > grafana_config.sql
+pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -n public $GRAFANADATABASE > grafana_config.sql
 
 
 echo "backing up InfluxDB pgwatch2 DB into folder influxdb_backup_$NAME..."
-# NB! you need to have same version locally or log into the docker image
-influxd backup -database pgwatch2 -host 0.0.0.0:8088 influxdb_backup
+# NB! you need to have same version locally or log into the docker image, remote version can be determined e.g. with:
+# influx -host $INFLUXHOST -port $INFLUXPORT -execute "show DIAGNOSTICS" | grep -Eo '^master\s+[a-z0-9]+\s+[0-9\.]+$' | grep -Eo '[0-9\.]+$'
+influxd backup -database pgwatch2 -host ${INFLUXHOST}:${INFLUXPORT} influxdb_backup
 
 echo "done!"
 
