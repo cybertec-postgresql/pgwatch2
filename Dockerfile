@@ -61,7 +61,7 @@ USER root
 
 # Web UI
 ADD webpy /pgwatch2/webpy
-RUN apt-get -qy install python3-pip postgresql-server-dev-9.5
+RUN apt-get -q update && apt-get -qy install python3-pip
 RUN pip3 install -r /pgwatch2/webpy/requirements.txt
 
 EXPOSE 8080
