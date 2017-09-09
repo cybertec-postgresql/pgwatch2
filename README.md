@@ -16,7 +16,7 @@ looking at metrics. For defining your own dashboards you need to log in as admin
 For more advanced usecases or for easier problemsolving you can decide to expose all services
 ```
 # run with all ports exposed
-docker run -d -p 3000:3000 -p 5432:5432 -p 8083:8083 -p 8086:8086 -p 8080:8080 -p 8088:8088 --name pw2 cybertec/pgwatch2
+docker run -d -p 3000:3000 -p 5432:5432 -p 8086:8086 -p 8080:8080 -p 8088:8088 --name pw2 cybertec/pgwatch2
 ```
 NB! For production usage make sure you also specify listening IPs explicitly (-p IP:host_port:container_port), by default Docker uses 0.0.0.0 (all network devices).
 
@@ -105,7 +105,6 @@ Ports exposed by the Docker image:
 * 5432 - Postgres configuration DB
 * 8080 - Management Web UI (monitored hosts, metrics, metrics configurations)
 * 3000 - Grafana dashboarding
-* 8083 - InfluxDB Query UI
 * 8086 - InfluxDB API
 * 8088 - InfluxDB Backup port
 
