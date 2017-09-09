@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-RUN apt-get -q update && apt-get -qy install curl wget vim apt-transport-https supervisor postgresql postgresql-plpython-9.5 git
+RUN apt-get -q update && apt-get -qy install curl wget vim apt-transport-https supervisor postgresql postgresql-plpython-9.5 git libfontconfig
 
 ADD pgwatch2 /pgwatch2
 
@@ -10,9 +10,8 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN chmod +x /pgwatch2/bootstrap/set_up_grafana_dashboards.sh
 
 ### Install Grafana [http://grafana.org/]
-RUN curl https://packagecloud.io/gpg.key | apt-key add -
-RUN echo "deb https://packagecloud.io/grafana/stable/debian/ jessie main" >> /etc/apt/sources.list
-RUN apt-get -q update && apt-get -qy install grafana
+RUN wget -q -O grafana.deb https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_4.4.3_amd64.deb
+RUN dpkg -i grafana.deb
 RUN cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini
 
 EXPOSE 3000
