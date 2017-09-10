@@ -2,7 +2,7 @@ import glob
 import logging
 import os
 import datadb
-
+import pgwatch2_influx
 
 SERVICES = {'pgwatch2': {'log_root': '/var/log/supervisor/', 'glob': 'pgwatch2-stderr*'},
             'influxdb': {'log_root': '/var/log/supervisor/', 'glob': 'influxdb-stderr*'},
@@ -150,12 +150,24 @@ def insert_monitored_db(params):
 
 
 def delete_monitored_db(params):
+    # delete influxdb data if any
+    iql_all_measurements = "show measurements"
+    resp = pgwatch2_influx.influx_query(iql_all_measurements, {'epoch': 'ms'})
+    if resp:
+      all_measurements = []
+      for m in resp.raw['series'][0]['values']:  # [['measurment1'],[..]]
+          all_measurements.append(m[0])
+      iql_drop = "drop series from {} where dbname = '{}'".format(','.join(all_measurements), params['md_unique_name'])
+      resp = pgwatch2_influx.influx_query(iql_drop , {'epoch': 'ms'})
+    # delete in config db
     sql = """
         delete from pgwatch2.monitored_db where md_id = %(md_id)s
     """
     ret, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to delete from "monitored_db": ' + err)
+
+
 
 
 def update_preset_config(params):

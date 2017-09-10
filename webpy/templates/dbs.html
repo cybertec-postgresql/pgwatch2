@@ -85,11 +85,11 @@
                 <form action="/dbs" method="post">
                     <td>{{row['md_id']}}<input type="hidden" name="md_id" value="{{row['md_id']}}"></td>
                     <td><input type="hidden" name="md_unique_name" value="{{row['md_unique_name']|e}}">{{row['md_unique_name']|e}}</td>
-                    <td><input type="text" name="md_hostname" value="{{row['md_hostname']|e}}"></td>
+                    <td><input type="text" name="md_hostname" value="{{row['md_hostname']|e}}" size="12"></td>
                     <td><input type="text" name="md_port" value="{{row['md_port']|e}}" size="5"></td>
-                    <td><input type="text" name="md_dbname" value="{{row['md_dbname']|e}}" size="15"></td>
-                    <td><input type="text" name="md_user" value="{{row['md_user']|e}}" size="15"></td>
-                    <td><input type="password" name="md_password" value="***" size="15" title="if left to default ***, password will not be changed"></td>
+                    <td><input type="text" name="md_dbname" value="{{row['md_dbname']|e}}" size="12"></td>
+                    <td><input type="text" name="md_user" value="{{row['md_user']|e}}" size="8"></td>
+                    <td><input type="password" name="md_password" value="***" size="8" title="if left to default ***, password will not be changed"></td>
                     <td><input type="checkbox" name="md_is_superuser" {% if row['md_is_superuser'] %}checked{% endif %}></td>
                     <td>
                         <select name="md_sslmode">
@@ -108,12 +108,12 @@
                         <a class="show_metrics" href="/metrics" title="Show preset configs and metric definitions in a new window" target="_blank">show</a>&nbsp;|&nbsp;
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
-                    <td title='{"metric":interval,...}'><textarea name="md_config" cols="20">{% if row['md_config'] %} {{row['md_config']}} {% endif %}</textarea></td>
-                    <td><input type="text" name="md_statement_timeout_seconds" value="{{row['md_statement_timeout_seconds']}}" size="3"></td>
+                    <td title='{"metric":interval,...}'><textarea name="md_config" cols="15">{% if row['md_config'] %} {{row['md_config']}} {% endif %}</textarea></td>
+                    <td><input type="text" name="md_statement_timeout_seconds" value="{{row['md_statement_timeout_seconds']}}" size="2"></td>
                     <td>{{row['md_last_modified_on']}}</td>
                     <td><input type="checkbox" name="md_is_enabled" {% if row['md_is_enabled'] %}checked{% endif %}></td>
                     <td><input type="submit" class="save" name="save" value="Save"></td>
-                    <td><input type="submit" name="delete" value="Delete"></td>
+                    <td><input type="submit" class="delete" name="delete" value="Delete"></td>
                 </form>
             </tr>
             {% endfor %}
@@ -121,11 +121,11 @@
                 <form action="/dbs" method="post">
                     <td></td>
                     <td><input type="text" name="md_unique_name" value="" size="10" title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data)"></td>
-                    <td><input type="text" name="md_hostname" value=""></td>
+                    <td><input type="text" name="md_hostname" value="" size="12"></td>
                     <td><input type="text" name="md_port" value="5432" size="5"></td>
-                    <td><input type="text" name="md_dbname" value="" size="15"></td>
-                    <td><input type="text" name="md_user" value="" size="15"></td>
-                    <td><input type="password" name="md_password" value="" size="15"></td>
+                    <td><input type="text" name="md_dbname" value="" size="12"></td>
+                    <td><input type="text" name="md_user" value="" size="8"></td>
+                    <td><input type="password" name="md_password" value="" size="8"></td>
                     <td><input type="checkbox" name="md_is_superuser"></td>
                     <td>
                         <select name="md_sslmode">
@@ -144,8 +144,8 @@
                         <a class="show_metrics" href="/metrics" title="Show JSON config in a new window" target="_blank">show</a>&nbsp;|&nbsp;
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
-                    <td title='{"metric":interval,...}'><textarea name="md_config" value="" cols="20"></textarea></td>
-                    <td><input type="text" name="md_statement_timeout_seconds" size="3" value="5"></td>
+                    <td title='{"metric":interval,...}'><textarea name="md_config" value="" cols="15"></textarea></td>
+                    <td><input type="text" name="md_statement_timeout_seconds" size="2" value="5"></td>
                     <td></td>
                     <td><input type="checkbox" name="md_is_enabled" checked></td>
                     <td><input type="submit" class="new" name="new" value="New"></td>
@@ -185,6 +185,10 @@
 
         $(".show_metrics").click(function(event){
             $(this).attr('href', $(this).attr('href') + '#' + $(this).parent().find("select").val());
+        });
+
+        $(".delete").click(function(event){
+            return confirm('Deleting a DB deletes also all gathered metrics data. Proceed?')
         });
 
         $(".save").add('.new').click(function(event){
