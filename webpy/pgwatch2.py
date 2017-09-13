@@ -130,7 +130,7 @@ def update_monitored_db(params):
 
 
 def insert_monitored_db(params):
-    sql = """
+    sql_insert_new_db = """
         insert into
           pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password, md_is_superuser,
           md_sslmode, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds)
@@ -143,10 +143,39 @@ def insert_monitored_db(params):
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
     cherrypy_empty_text_to_nulls(
         params, ['md_preset_config_name', 'md_config'])
-    ret, err = datadb.execute(sql, params)
-    if err:
-        raise Exception('Failed to insert into "monitored_db": ' + err)
-    return ret[0]['md_id']
+
+    if not params['md_dbname']:     # add all DBs found
+        # get all active non-template DBs from the entered host
+        active_dbs_on_host, err = datadb.execute("select datname from pg_database where not datistemplate and datallowconn", params)
+        if err:
+            raise Exception("Could not read active DBs from specified host!")
+        active_dbs_on_host = [x['datname'] for x in active_dbs_on_host]
+
+        # "subtract" DBs that are already monitored
+        currently_monitored_dbs, err = datadb.execute("select md_dbname from pgwatch2.monitored_db where "
+                                                      " (md_hostname, md_port) = (%(md_hostname)s, %(md_port)s)", params)
+        if err:
+            raise Exception("Could not read currently active DBs from config DB!")
+        currently_monitored_dbs = [x['md_dbname'] for x in currently_monitored_dbs]
+
+        params_copy = params.copy()
+        dbs_to_add = set(active_dbs_on_host) - set(currently_monitored_dbs)
+        for db_to_add in dbs_to_add:
+            params_copy['md_unique_name'] = '{}-{}'.format(params['md_unique_name'], db_to_add)
+            params_copy['md_dbname'] = db_to_add
+            ret, err = datadb.execute(sql_insert_new_db, params_copy)
+            if err:
+                raise Exception('Failed to insert into "monitored_db": ' + err)
+        if currently_monitored_dbs:
+            return 'Warning! Some DBs not added as already under monitoring: ' + ', '.join(currently_monitored_dbs)
+        else:
+            return '{} DBs added: {}'.format(len(db_to_add), ', '.join(dbs_to_add))
+
+    else:   # only 1 DB
+        ret, err = datadb.execute(sql_insert_new_db, params)
+        if err:
+            raise Exception('Failed to insert into "monitored_db": ' + err)
+        return 'Host with ID {} added!'.format(ret[0]['md_id'])
 
 
 def delete_monitored_db(params):

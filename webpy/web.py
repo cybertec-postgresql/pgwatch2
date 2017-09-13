@@ -84,8 +84,8 @@ class Root:
                     pgwatch2.update_monitored_db(params)
                     message = 'Updated!'
                 elif params.get('new'):
-                    id = pgwatch2.insert_monitored_db(params)
-                    message = 'New entry with ID {} added!'.format(id)
+                    msg = pgwatch2.insert_monitored_db(params)
+                    message = msg
                 elif params.get('delete'):
                     pgwatch2.delete_monitored_db(params)
                     message = 'Entry with ID {} ("{}") deleted!'.format(
