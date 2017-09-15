@@ -1055,7 +1055,7 @@ type Options struct {
 	Password       string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
 	Datastore      string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
 	InfluxHost     string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
-	InfluxPort     string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IHOST"`
+	InfluxPort     string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
 	InfluxDbname   string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
 	InfluxUser     string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
 	InfluxPassword string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
