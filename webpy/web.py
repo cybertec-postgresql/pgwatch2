@@ -250,7 +250,7 @@ if __name__ == '__main__':
                         help='Use SSL for InfluxDB', default=(os.getenv('PW2_ISSL') or False))
     # Grafana
     parser.add_argument(
-        '--grafana_baseurl', help='For linking to Grafana "Query details" dashboard', default='http://0.0.0.0:3000')
+        '--grafana_baseurl', help='For linking to Grafana "Query details" dashboard', default=(os.getenv('PW2_GRAFANA_BASEURL') or 'http://0.0.0.0:3000'))
 
     cmd_args = parser.parse_args()
 

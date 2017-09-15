@@ -11,6 +11,7 @@ docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2
 ```
 After some minutes you could open the ["db-overview"](http://127.0.0.1:3000/dashboard/db/db-overview) dashboard and start
 looking at metrics. For defining your own dashboards you need to log in as admin (admin/pgwatch2admin).
+NB! If you don't want to add the "test" database (the pgwatch2 configuration db) for monitoring set the NOTESTDB=1 env parameter when launching the image.
 
 
 For more advanced usecases or for easier problemsolving you can decide to expose all services
@@ -20,11 +21,11 @@ docker run -d -p 3000:3000 -p 5432:5432 -p 8086:8086 -p 8080:8080 -p 8088:8088 -
 ```
 NB! For production usage make sure you also specify listening IPs explicitly (-p IP:host_port:container_port), by default Docker uses 0.0.0.0 (all network devices).
 
-For building the image yourself one needs currently also Go as the metrics gathering daemon is written in it.
+For custom options, more security, or specific component versions one could easily build the image themselves, just Docker needed:
 ```
-./build.sh
-docker run -d -p 3000:3000 -p 8080:8080 --name pw2 $HASH_FROM_PREV_STEP
+docker build .
 ```
+
 
 # Features
 
@@ -42,6 +43,32 @@ docker run -d -p 3000:3000 -p 8080:8080 --name pw2 $HASH_FROM_PREV_STEP
 * [InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/) Time Series Database for storing metrics
 * [Grafana](http://grafana.org/) for dashboarding (point-and-click, a set of predefined dashboards is provided)
 * A Web UI for administering the monitored DBs and metrics and for showing some custom metric overviews
+
+NB! All component can be also used separately, thus you can descide to make use of an already existing installation of Postgres, 
+Grafana or InfluxDB and run the pgwatch2 image for example only with the metrics gatherer and the configuration Web UI.
+These external installations must be accessible from within the Docker though.
+
+### To use an existing Postgres DB
+
+Create a new pgwatch2 DB, preferrably also an accroding role who owns it. Then roll out the schema (pgwatch2/sql/datastore_setup/config_store.sql)
+and set the following parameters when running the image: PW2_PGHOST, PW2_PGPORT, PW2_PGDATABASE, PW2_PGUSER, PW2_PGPASSWORD, PW2_PGSSL (optional).
+
+### To use an existing Grafana installation
+
+Load the pgwatch2 dashboards from *grafana_dashboard* folder if needed (one can totally define their own) and set the following paramater: PW2_GRAFANA_BASEURL.
+This parameter only provides correct links to Grafana dashboards from the Web UI. Grafana is the most loosely coupled component for pgwatch2
+and basically doesn't have to be used at all. One can make use of the gathered metrics directly over the Influx (or Graphite) API-s.
+
+### To use an existing InfluxDB installation
+
+Set the following env variables: PW2_IHOST, PW2_IPORT, PW2_IDATABASE, PW2_IUSER, PW2_IPASSWORD, PW2_ISSL (optional)
+
+### To use an existing Graphite installation
+
+One can also store the metrics in Graphite instead of InfluxDB (no predefined pgwatch2 dashboards for Graphite though).
+Following parameters needs to be set then: PW2_DATASTORE=graphite, PW2_GRAPHITEHOST, PW2_GRAPHITEPORT
+
+
 
 # Usage 
 

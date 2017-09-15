@@ -72,6 +72,7 @@ var monitored_db_cache map[string]map[string]interface{}
 var monitored_db_cache_lock sync.RWMutex
 var metric_fetching_channels = make(map[string](chan MetricFetchMessage)) // [db1unique]=chan
 var metric_fetching_channels_lock = sync.RWMutex{}
+var InfluxConnectStr string
 
 func GetPostgresDBConnection(host, port, dbname, user, password, sslmode string) (*sqlx.DB, error) {
 	var err error
@@ -179,7 +180,7 @@ retry:
 	retries := 1 // 1 retry
 
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     opts.InfluxURL,
+		Addr:     InfluxConnectStr,
 		Username: opts.InfluxUser,
 		Password: opts.InfluxPassword,
 	})
@@ -937,14 +938,20 @@ func queryDB(clnt client.Client, cmd string) (res []client.Result, err error) {
 	return res, nil
 }
 
-func InitAndTestInfluxConnection(InfluxURL, InfluxDbname string) error {
-	log.Info(fmt.Sprintf("Testing Influx connection to URL: %s, DB: %s", InfluxURL, InfluxDbname))
+func InitAndTestInfluxConnection(InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword string, InfluxSSL bool ) error {
+	log.Info(fmt.Sprintf("Testing Influx connection to host: %s, port: %s, DB: %s", InfluxHost, InfluxPort, InfluxDbname))
+
+	if InfluxSSL {
+		InfluxConnectStr = fmt.Sprintf("https://%s:%s", InfluxHost, InfluxPort)
+	} else {
+		InfluxConnectStr = fmt.Sprintf("http://%s:%s", InfluxHost, InfluxPort)
+	}
 
 	// Make client
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     opts.InfluxURL,
-		Username: opts.InfluxUser,
-		Password: opts.InfluxPassword,
+		Addr:     InfluxConnectStr,
+		Username: InfluxUser,
+		Password: InfluxPassword,
 	})
 
 	if err != nil {
@@ -1037,30 +1044,34 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) {
 	}
 }
 
-var opts struct {
+type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
 	Verbose        []bool `short:"v" long:"verbose" description:"Show verbose debug information"`
-	File           string `short:"f" long:"file" description:"Sqlite3 config DB file"`
-	Host           string `short:"h" long:"host" description:"PG config DB host" default:"localhost"`
-	Port           string `short:"p" long:"port" description:"PG config DB port" default:"5432"`
-	Dbname         string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2"`
-	User           string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2"`
-	Password       string `long:"password" description:"PG config DB password"`
-	Datastore      string `long:"datastore" description:"[influx|graphite]" default:"influx"`
-	InfluxURL      string `long:"iurl" description:"Influx address" default:"http://localhost:8086"`
-	InfluxDbname   string `long:"idbname" description:"Influx DB name" default:"pgwatch2"`
-	InfluxUser     string `long:"iuser" description:"Influx user" default:"root"`
-	InfluxPassword string `long:"ipassword" description:"Influx password" default:"root"`
-	GraphiteHost   string `long:"graphite-host" description:"Graphite host"`
-	GraphitePort   string `long:"graphite-port" description:"Graphite port"`
+	Host           string `long:"host" description:"PG config DB host" env:"PW2_PGHOST" required:"true"`
+	Port           string `short:"p" long:"port" description:"PG config DB port" default:"5432" env:"PW2_PGPORT"`
+	Dbname         string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
+	User           string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2" env:"PW2_PGUSER"`
+	Password       string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
+	Datastore      string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
+	InfluxHost     string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
+	InfluxPort     string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IHOST"`
+	InfluxDbname   string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
+	InfluxUser     string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
+	InfluxPassword string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
+	InfluxSSL      bool   `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
+	GraphiteHost   string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
+	GraphitePort   string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
+	//File           string `short:"f" long:"file" description:"Sqlite3 config DB file"`
 }
 
-func main() {
+var opts Options
 
-	_, err := flags.Parse(&opts)
-	if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
-		os.Exit(0)
+func main() {
+	parser := flags.NewParser(&opts, flags.Default)
+
+	if _, err := parser.Parse(); err != nil {
+		return
 	}
 
 	if len(opts.Verbose) >= 2 {
@@ -1074,18 +1085,15 @@ func main() {
 
 	log.Debug("opts", opts)
 
-	if opts.File != "" {
-		fmt.Println("Sqlite3 not yet supported")
-		return
-	} else { // make sure all PG params are there
-		if opts.User == "" {
-			opts.User = os.Getenv("USER")
-		}
-		if opts.Host == "" || opts.Port == "" || opts.Dbname == "" || opts.User == "" {
-			fmt.Println("Check config DB parameters")
-			return
-		}
+	// make sure all PG params are there
+	if opts.User == "" {
+		opts.User = os.Getenv("USER")
 	}
+	if opts.Host == "" || opts.Port == "" || opts.Dbname == "" || opts.User == "" {
+		fmt.Println("Check config DB parameters")
+		return
+	}
+
 
 	InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password)
 
@@ -1101,7 +1109,8 @@ func main() {
 		log.Info("starting GraphitePersister...")
 		go GraphitePersister(persist_ch)
 	} else {
-		err = InitAndTestInfluxConnection(opts.InfluxURL, opts.InfluxDbname)
+		err := InitAndTestInfluxConnection(opts.InfluxHost, opts.InfluxPort, opts.InfluxDbname, opts.InfluxUser,
+			opts.InfluxPassword, opts.InfluxSSL)
 		if err != nil {
 			log.Fatal("Could not initialize InfluxDB", err)
 		}
