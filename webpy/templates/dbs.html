@@ -66,7 +66,7 @@
                 <td title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data)">Unique name</td>
                 <td>DB host</td>
                 <td>DB port</td>
-                <td title="NB! If left empty all DBs from the cluster will be added, prefixed with the 'Unique name'">DB dbname</td>
+                <td title="NB! If left empty all DBs from the cluster will be added, prefixed with the 'Unique name'">DB dbname <span class="glyphicon glyphicon-info-sign" title="NB! If left empty all DBs from the cluster will be added, prefixed with the 'Unique name'"></span></td>
                 <td>DB user</td>
                 <td title="NB! Password is stored in plain-text in the database">DB password</td>
                 <td title="NB! If checked pgwatch daemon will automatically try to create the CPU load monitoring and stat_statements helper">Is superuser?</td>
@@ -106,6 +106,7 @@
                             <option value="{{pc['pc_name']|e}}" {% if pc['pc_name'] == row['md_preset_config_name'] %}selected{% endif %}>{{pc['pc_name']|e}}</option>
                             {% endfor %}
                         </select>
+                        <br />
                         <a class="show_metrics" href="/metrics" title="Show preset configs and metric definitions in a new window" target="_blank">show</a>&nbsp;|&nbsp;
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
@@ -142,6 +143,7 @@
                             <option value="{{pc['pc_name']|e}}">{{pc['pc_name']|e}}</option>
                             {% endfor %}
                         </select>
+                        <br />
                         <a class="show_metrics" href="/metrics" title="Show JSON config in a new window" target="_blank">show</a>&nbsp;|&nbsp;
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
