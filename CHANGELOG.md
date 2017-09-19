@@ -7,6 +7,19 @@ or a specific version
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
 
+## v1.2.0
+
+* Deletion of InfluxDB data from the Web UI now possible
+* Adding of all databases from a host now possible when leaving "DB name" empty
+* All components (Grafana, Postgres, InfluxDB/Graphite) made externally pluggable i.e. you can use your
+existing setups. See README for details
+* Fixed login page (no new window)
+* Not exposing port 8083 anymore as InfluxDB UI was deprecated
+* Better validations and tooltips for the monitored hosts ("/dbs") page in Web UI
+* An env. flag not to create the "test" database when launching a pgwatch2 container (-e NOTESTDB=1)
+* InfluxDB 1.3.5 - lots of bugfixes and perf improvements
+* Grafana 4.5.1 - query inspection, better query builders and data tables
+
 ## v1.1.0
 
 * Support for Graphite as metric storing database
