@@ -39,10 +39,37 @@ def influx_query(influxql, params=None):
 def get_active_dbnames():
     iql = '''SHOW TAG VALUES WITH KEY = "dbname"'''
     res = influx_query(iql)
-    dbnames = []
-    for r in res.raw.get('series', []):
-        dbnames.append(r['values'][0][1])
-    return sorted(dbnames)
+    dbnames = set()
+    for s in res.raw.get('series', []):
+        for db in s['values']:
+            dbnames.add(db[1])
+    return sorted(list(dbnames))
+
+
+def delete_influx_data_single(db_unique):
+    """delete all existing influxdb series for a given dbname"""
+    # find all measurements
+    iql_all_measurements = "show measurements"
+    resp = influx_query(iql_all_measurements, {'epoch': 'ms'})
+    if resp:
+        all_measurements = []
+        for m in resp.raw['series'][0]['values']:  # [['measurment1'],[..]]
+            all_measurements.append(m[0])
+        all_measurements_str = '"' + '","'.join(all_measurements) + '"'     # add double quotes to measurement names
+        iql_drop = """drop series from {} where "dbname" = '{}'""".format(all_measurements_str, db_unique)
+        logging.debug("dropping Influx series for DB: %s (%s)", db_unique, iql_drop)
+        influx_query(iql_drop , {'epoch': 'ms'})
+
+
+def delete_influx_data_all(db_uniques_active_pg):
+    """delete all existing influxdb series that don't match given active dbname-s"""
+    influx_dbnames = get_active_dbnames()
+    logging.info('found influx metric data for db-s: %s', influx_dbnames)
+    dbs_to_drop = set(influx_dbnames) - set(db_uniques_active_pg)
+    logging.info('dropping metrics from all series for db-s: %s', dbs_to_drop)
+    for dbname in dbs_to_drop:
+        delete_influx_data_single(dbname)
+    return dbs_to_drop
 
 
 def series_to_dict(influx_raw_data, tag_name):

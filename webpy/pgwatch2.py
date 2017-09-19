@@ -42,6 +42,23 @@ def get_all_monitored_dbs():
     return datadb.execute(sql)[0]
 
 
+def get_active_db_uniques():
+    sql = """
+        select
+          md_unique_name
+        from
+          pgwatch2.monitored_db
+        where
+          md_is_enabled
+        order by
+          1
+    """
+    ret, err = datadb.execute(sql)
+    if ret:
+        return [x['md_unique_name'] for x in ret]
+    return []
+
+
 def get_preset_configs():
     sql = """
         select
@@ -161,7 +178,7 @@ def insert_monitored_db(params):
         params_copy = params.copy()
         dbs_to_add = set(active_dbs_on_host) - set(currently_monitored_dbs)
         for db_to_add in dbs_to_add:
-            params_copy['md_unique_name'] = '{}-{}'.format(params['md_unique_name'], db_to_add)
+            params_copy['md_unique_name'] = '{}_{}'.format(params['md_unique_name'], db_to_add)
             params_copy['md_dbname'] = db_to_add
             ret, err = datadb.execute(sql_insert_new_db, params_copy)
             if err:
@@ -169,7 +186,7 @@ def insert_monitored_db(params):
         if currently_monitored_dbs:
             return 'Warning! Some DBs not added as already under monitoring: ' + ', '.join(currently_monitored_dbs)
         else:
-            return '{} DBs added: {}'.format(len(db_to_add), ', '.join(dbs_to_add))
+            return '{} DBs added: {}'.format(len(dbs_to_add), ', '.join(dbs_to_add))
 
     else:   # only 1 DB
         ret, err = datadb.execute(sql_insert_new_db, params)
@@ -179,15 +196,6 @@ def insert_monitored_db(params):
 
 
 def delete_monitored_db(params):
-    # delete influxdb data if any
-    iql_all_measurements = "show measurements"
-    resp = pgwatch2_influx.influx_query(iql_all_measurements, {'epoch': 'ms'})
-    if resp:
-      all_measurements = []
-      for m in resp.raw['series'][0]['values']:  # [['measurment1'],[..]]
-          all_measurements.append(m[0])
-      iql_drop = "drop series from {} where dbname = '{}'".format(','.join(all_measurements), params['md_unique_name'])
-      resp = pgwatch2_influx.influx_query(iql_drop , {'epoch': 'ms'})
     # delete in config db
     sql = """
         delete from pgwatch2.monitored_db where md_id = %(md_id)s

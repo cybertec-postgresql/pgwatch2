@@ -90,6 +90,16 @@ class Root:
                     pgwatch2.delete_monitored_db(params)
                     message = 'Entry with ID {} ("{}") deleted!'.format(
                         params['md_id'], params['md_unique_name'])
+                elif params.get('influx_delete_single'):
+                    if not params['influx_single_unique_name']:
+                        raise Exception('No "Unique Name" provided!')
+                    pgwatch2_influx.delete_influx_data_single(params['influx_single_unique_name'])
+                    message = 'InfluxDB data for "{}" deleted!'.format(params['influx_single_unique_name'])
+                elif params.get('influx_delete_all'):
+                    active_dbs = pgwatch2.get_active_db_uniques()
+                    print('active_dbs', active_dbs)
+                    deleted_dbnames = pgwatch2_influx.delete_influx_data_all(active_dbs)
+                    message = 'InfluxDB data deleted for: {}'.format(','.join(deleted_dbnames))
             except Exception as e:
                 message = 'ERROR: ' + str(e)
 
@@ -98,10 +108,11 @@ class Root:
         preset_configs_json = json.dumps(
             {c['pc_name']: c['pc_config'] for c in preset_configs})
         metrics_list = pgwatch2.get_active_metrics_with_versions()
+        influx_active_dbnames = pgwatch2_influx.get_active_dbnames()
 
         tmpl = env.get_template('dbs.html')
         return tmpl.render(message=message, data=data, preset_configs=preset_configs, preset_configs_json=preset_configs_json,
-                           metrics_list=metrics_list)
+                           metrics_list=metrics_list, influx_active_dbnames=influx_active_dbnames)
 
     @logged_in
     @cherrypy.expose
