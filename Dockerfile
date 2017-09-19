@@ -15,7 +15,7 @@ RUN wget -q https://storage.googleapis.com/golang/go1.8.1.linux-amd64.tar.gz \
 ###
 ### Install Grafana [http://grafana.org/]
 ###
-RUN wget -q -O grafana.deb https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_4.4.3_amd64.deb && dpkg -i grafana.deb
+RUN wget -q -O grafana.deb https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_4.5.1_amd64.deb && dpkg -i grafana.deb
 
 ###
 ###  Influxdb [https://influxdb.com/download/index.html]
