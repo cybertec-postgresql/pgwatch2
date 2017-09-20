@@ -7,20 +7,24 @@ or a specific version
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
 
-## v1.2.0
+## v1.2.0 [2017-09-19]
 
 * Deletion of InfluxDB data from the Web UI now possible
 * Adding of all databases from a host now possible when leaving "DB name" empty
-* All components (Grafana, Postgres, InfluxDB/Graphite) made externally pluggable i.e. you can use your
-existing setups. See README for details
-* Fixed login page (no new window)
-* Not exposing port 8083 anymore as InfluxDB UI was deprecated
+* All components (Grafana, Postgres, InfluxDB/Graphite) made externally pluggable e.g. you can use your
+existing InfluxDB to store and access metrics. See README for details
+* Fixed login page (no new window popup)
+* Not exposing port 8083 anymore as InfluxDB UI was deprecated. Use Chronograf for ad hoc queries from now on
 * Better validations and tooltips for the monitored hosts ("/dbs") page in Web UI
 * An env. flag not to create the "test" database when launching a pgwatch2 container (-e NOTESTDB=1)
+* Make config store DB (Postgres) UTF-8 encoded to avoid problems with non-ascii Grafana dashboard names
+* Faster Docker builds when developing, more static parts come first now
+* Filtering additionally also on "dbname" besides "queryid" for the "Single query" dashboard
+* Corrections and better documentation for the backup/restore script
 * InfluxDB 1.3.5 - lots of bugfixes and perf improvements
 * Grafana 4.5.1 - query inspection, better query builders and data tables
 
-## v1.1.0
+## v1.1.0 [2017-06-05]
 
 * Support for Graphite as metric storing database
 * SSL support for Grafana and the Web UI
@@ -34,8 +38,12 @@ existing setups. See README for details
 * Building the Go daemon with Docker now
 * Grafana 4.3.0 - histograms and heatmaps now possible
 
-## v1.0.5
+## v1.0.5 [2017-04-10]
 
 * Couple of smaller "Overview" dashboard corrections
 * InfluxDB update from 1.2.0 to 1.2.2
 * Grafana update from 4.1.2 to 4.2.0
+
+## v1.0.0 [2017-01-30]
+
+* Initial release
