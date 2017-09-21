@@ -74,7 +74,8 @@ Following parameters needs to be set then: PW2_DATASTORE=graphite, PW2_GRAPHITEH
 
 * by default the "pgwatch2" configuration database running inside Docker is being monitored so that you can immediately see
   some graphs, but you should add new databases by opening the "admin interface" at 127.0.0.1:8080/dbs or logging into the
-  Postgres config DB and inserting into "pgwatch2.monitored_db" table (db - pgwatch2 , default user/pw - pgwatch2/pgwatch2admin)
+  Postgres config DB and inserting into "pgwatch2.monitored_db" table (db - pgwatch2 , default user/pw - pgwatch2/pgwatch2admin).
+  Note that it can take up to 2min before you see any metrics for newly inserted databases.
 * one can create new Grafana dashboards (and change settings, create users, alerts, ...) after logging in as "admin" (admin/pgwatch2admin)
 * metrics (and their intervals) that are to be gathered can be customized for every database by using a preset config
 like "minimal", "basic" or "exhaustive" (monitored_db.preset_config table) or a custom JSON config.
