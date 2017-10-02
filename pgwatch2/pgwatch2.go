@@ -10,6 +10,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/marpaia/graphite-golang"
 	"github.com/op/go-logging"
+	"github.com/shopspring/decimal"
 	_ "io/ioutil"
 	"os"
 	"sort"
@@ -62,10 +63,10 @@ const GRAPHITE_METRICS_PREFIX string = "pgwatch2"
 var configDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
 var log = logging.MustGetLogger("main")
-var metric_def_map map[string]map[float64]string
+var metric_def_map map[string]map[decimal.Decimal]string
 var metric_def_map_lock = sync.RWMutex{}
 var host_metric_interval_map = make(map[string]float64) // [db1_metric] = 30
-var db_pg_version_map = make(map[string]float64)
+var db_pg_version_map = make(map[string]decimal.Decimal)
 var db_pg_version_map_lock = sync.RWMutex{}
 var InfluxDefaultRetentionPolicyDuration string = "90d" // 90 days of monitoring data will be kept around. adjust if needed
 var monitored_db_cache map[string]map[string]interface{}
@@ -450,14 +451,14 @@ func GraphitePersister(storage_ch <-chan MetricStoreMessage) {
 }
 
 // TODO cache for 5min
-func DBGetPGVersion(dbUnique string) (float64, error) {
-	var ver float64
+func DBGetPGVersion(dbUnique string) (decimal.Decimal, error) {
+	var ver decimal.Decimal
 	var ok bool
 	sql := `
 		select (regexp_matches(
 			regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'),
 			E'\\d+\\.?\\d+?')
-			)[1]::double precision as ver;
+			)[1]::text as ver;
 	`
 
 	db_pg_version_map_lock.RLock()
@@ -471,8 +472,8 @@ func DBGetPGVersion(dbUnique string) (float64, error) {
 			log.Error("DBGetPGVersion failed", err)
 			return ver, err
 		}
-		ver = data[0]["ver"].(float64)
-		log.Info(fmt.Sprintf("%s is on version %s", dbUnique, strconv.FormatFloat(ver, 'f', 1, 64)))
+		ver, _ = decimal.NewFromString(data[0]["ver"].(string))
+		log.Info(fmt.Sprintf("%s is on version %s", dbUnique, ver))
 
 		db_pg_version_map_lock.Lock()
 		db_pg_version_map[dbUnique] = ver
@@ -481,9 +482,15 @@ func DBGetPGVersion(dbUnique string) (float64, error) {
 	return ver, nil
 }
 
+// Need to define a sort interface as Go doesn't have support for Numeric/Decimal
+type Decimal []decimal.Decimal
+func (a Decimal) Len() int           { return len(a) }
+func (a Decimal) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a Decimal) Less(i, j int) bool { return a[i].LessThan(a[j]) }
+
 // assumes upwards compatibility for versions
-func GetSQLForMetricPGVersion(metric string, pgVer float64) string {
-	var keys []float64
+func GetSQLForMetricPGVersion(metric string, pgVer decimal.Decimal) string {
+	var keys []decimal.Decimal
 
 	metric_def_map_lock.RLock()
 	defer metric_def_map_lock.RUnlock()
@@ -498,22 +505,22 @@ func GetSQLForMetricPGVersion(metric string, pgVer float64) string {
 		keys = append(keys, k)
 	}
 
-	sort.Float64s(keys)
+	sort.Sort(Decimal(keys))
 
-	var best_ver float64
+	var best_ver decimal.Decimal
 	for _, ver := range keys {
-		if pgVer >= ver {
+		if pgVer.GreaterThanOrEqual(ver) {
 			best_ver = ver
 		}
 	}
 
-	if best_ver == 0 {
+	if best_ver.IntPart() == 0 {
 		return ""
 	}
 	return metric_def_map[metric][best_ver]
 }
 
-func DetectSprocChanges(dbUnique string, db_pg_version float64, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -583,7 +590,7 @@ func DetectSprocChanges(dbUnique string, db_pg_version float64, storage_ch chan<
 	return change_counts
 }
 
-func DetectTableChanges(dbUnique string, db_pg_version float64, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -651,7 +658,7 @@ func DetectTableChanges(dbUnique string, db_pg_version float64, storage_ch chan<
 	return change_counts
 }
 
-func DetectIndexChanges(dbUnique string, db_pg_version float64, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -719,7 +726,7 @@ func DetectIndexChanges(dbUnique string, db_pg_version float64, storage_ch chan<
 	return change_counts
 }
 
-func DetectConfigurationChanges(dbUnique string, db_pg_version float64, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -768,7 +775,7 @@ func DetectConfigurationChanges(dbUnique string, db_pg_version float64, storage_
 	return change_counts
 }
 
-func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version float64, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) {
+func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) {
 	sproc_counts := DetectSprocChanges(dbUnique, db_pg_version, storage_ch, host_state) // TODO some of Detect*() code could be unified...
 	table_counts := DetectTableChanges(dbUnique, db_pg_version, storage_ch, host_state)
 	index_counts := DetectIndexChanges(dbUnique, db_pg_version, storage_ch, host_state)
@@ -884,8 +891,8 @@ func MetricGathererLoop(dbUniqueName string, metricName string, config_map map[s
 }
 
 func UpdateMetricDefinitionMapFromPostgres() {
-	metric_def_map_new := make(map[string]map[float64]string)
-	sql := "select m_name, m_pg_version_from, m_sql from pgwatch2.metric where m_is_active"
+	metric_def_map_new := make(map[string]map[decimal.Decimal]string)
+	sql := "select m_name, m_pg_version_from::text, m_sql from pgwatch2.metric where m_is_active"
 	data, err := DBExecRead(configDb, sql)
 	if err != nil {
 		log.Error(err)
@@ -900,9 +907,10 @@ func UpdateMetricDefinitionMapFromPostgres() {
 	for _, row := range data {
 		_, ok := metric_def_map_new[row["m_name"].(string)]
 		if !ok {
-			metric_def_map_new[row["m_name"].(string)] = make(map[float64]string)
+			metric_def_map_new[row["m_name"].(string)] = make(map[decimal.Decimal]string)
 		}
-		metric_def_map_new[row["m_name"].(string)][row["m_pg_version_from"].(float64)] = row["m_sql"].(string)
+		d, _ := decimal.NewFromString(row["m_pg_version_from"].(string))
+		metric_def_map_new[row["m_name"].(string)][d] = row["m_sql"].(string)
 	}
 
 	metric_def_map_lock.Lock()

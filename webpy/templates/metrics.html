@@ -81,7 +81,7 @@
                     <td id="{{row['pc_name']|e}}">{{row['pc_name']|e}}<input type="hidden" name="pc_name" value="{{row['pc_name']}}"></td>
                     <td><textarea name="pc_description" cols="50">{{row['pc_description']|e}}</textarea></td>
                     <td><textarea name="pc_config" cols="50">{{row['pc_config']|e}}</textarea></td>
-                    <td><a href="/admin">{{row['active_dbs']}}</a></td>
+                    <td><a href="/dbs">{{row['active_dbs']}}</a></td>
                     <td>{{row['pc_last_modified_on']}}</td>
                     <td><input type="submit" name="save" value="Save"></td>
                     <td>{% if row['active_dbs'] == '' %}<input type="submit" name="delete" value="Delete">{% endif %}</td>

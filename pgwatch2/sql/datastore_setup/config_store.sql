@@ -57,7 +57,7 @@ alter table pgwatch2.monitored_db add constraint preset_or_custom_config check
 create table pgwatch2.metric (
     m_id                serial primary key,
     m_name              text not null,
-    m_pg_version_from   float not null,
+    m_pg_version_from   numeric not null,
     m_sql               text not null,
     m_comment           text,
     m_is_active         boolean not null default 't',
