@@ -6,6 +6,11 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.2.1 [2017-10-17]
+
+* Fix for "max key length exceeded" errors. Stored query texts limited to 65000 chars.
+* InfluxDB 1.3.6
+* Grafana 4.5.2
 
 ## v1.2.0 [2017-09-19]
 

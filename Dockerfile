@@ -18,7 +18,7 @@ RUN wget -q https://storage.googleapis.com/golang/go1.8.1.linux-amd64.tar.gz \
 ###
 ### Install Grafana [http://grafana.org/]
 ###
-RUN wget -q -O grafana.deb https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_4.5.1_amd64.deb && dpkg -i grafana.deb && rm grafana.deb
+RUN wget -q -O grafana.deb https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_4.5.2_amd64.deb && dpkg -i grafana.deb && rm grafana.deb
 
 ###
 ###  Influxdb [https://influxdb.com/download/index.html]
@@ -26,7 +26,7 @@ RUN wget -q -O grafana.deb https://s3-us-west-2.amazonaws.com/grafana-releases/r
 
 # use following to get lastest version nr:
 # curl curl -so- https://api.github.com/repositories/13124802/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | head -1 | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | head -1
-RUN wget -q -O - "https://dl.influxdata.com/influxdb/releases/influxdb_1.3.5_amd64.deb" > influxdb_amd64.deb && dpkg -i influxdb_amd64.deb && rm influxdb_amd64.deb
+RUN wget -q -O - "https://dl.influxdata.com/influxdb/releases/influxdb_1.3.6_amd64.deb" > influxdb_amd64.deb && dpkg -i influxdb_amd64.deb && rm influxdb_amd64.deb
 
 
 ###
