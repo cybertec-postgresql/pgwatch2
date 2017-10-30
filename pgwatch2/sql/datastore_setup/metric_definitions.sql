@@ -684,7 +684,7 @@ SELECT
   lockmodes AS tag_lockmode,
   coalesce((select count(*) FROM q_locks WHERE mode = lockmodes), 0) AS count
 FROM
-  unnest('{AccessShareLock, ExclusiveLock, RowShareLock, RowExclusiveLock, ShareLock, ShareRowExclusiveLock,  AccessExclusiveLock}'::text[]) lockmodes;
+  unnest('{AccessShareLock, ExclusiveLock, RowShareLock, RowExclusiveLock, ShareLock, ShareRowExclusiveLock,  AccessExclusiveLock, ShareUpdateExclusiveLock}'::text[]) lockmodes;
 $sql$
 );
 
