@@ -587,9 +587,9 @@ values (
 'buffercache_by_db',
 9.2,
 $sql$
-select
+SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  SELECT datname,
+  datname,
   count(*) * 8192
 FROM
   pg_buffercache AS b,
@@ -597,7 +597,7 @@ FROM
 WHERE
   d.oid = b.reldatabase
 GROUP BY
-  1;
+  datname;
 $sql$
 );
 
@@ -607,17 +607,23 @@ values (
 'buffercache_by_type',
 9.2,
 $sql$
-select
+SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-    SELECT       CASE WHEN relkind = 'r' THEN 'Table'   -- TODO all relkinds covered?
-                 WHEN relkind = 'i' THEN 'Index'
-                 WHEN relkind = 't' THEN 'Toast'
-                 WHEN relkind = 'm' THEN 'Materialized view'
-                 ELSE 'Other' END,
-            count(*) * 8192
-    FROM    pg_buffercache AS b, pg_class AS d
-    WHERE   d.oid = b.relfilenode
-    GROUP BY 1;
+  CASE
+    WHEN relkind = 'r' THEN 'Table'   -- TODO all relkinds covered?
+    WHEN relkind = 'i' THEN 'Index'
+    WHEN relkind = 't' THEN 'Toast'
+    WHEN relkind = 'm' THEN 'Materialized view'
+    ELSE 'Other'
+  END,
+  count(*) * 8192
+FROM
+  pg_buffercache AS b,
+  pg_class AS d
+WHERE
+  d.oid = b.relfilenode
+GROUP BY 
+  relkind;
 $sql$
 );
 
