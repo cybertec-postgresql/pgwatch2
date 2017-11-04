@@ -484,6 +484,7 @@ func DBGetPGVersion(dbUnique string) (decimal.Decimal, error) {
 
 // Need to define a sort interface as Go doesn't have support for Numeric/Decimal
 type Decimal []decimal.Decimal
+
 func (a Decimal) Len() int           { return len(a) }
 func (a Decimal) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Decimal) Less(i, j int) bool { return a[i].LessThan(a[j]) }
@@ -561,6 +562,7 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 			}
 			// detect deletes
 			if !first_run && len(host_state["sproc_hashes"]) != len(data) {
+				deleted_sprocs := make([]string, 0)
 				// turn resultset to map => [oid]=true for faster checks
 				current_oid_map := make(map[string]bool)
 				for _, dr := range data {
@@ -575,11 +577,18 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 						influx_entry["event"] = "drop"
 						influx_entry["tag_sproc"] = splits[0]
 						influx_entry["tag_oid"] = splits[1]
-						influx_entry["epoch_ns"] = data[0]["epoch_ns"]
+						if len(data) > 0 {
+							influx_entry["epoch_ns"] = data[0]["epoch_ns"]
+						} else {
+							influx_entry["epoch_ns"] = time.Now().UnixNano()
+						}
 						detected_changes = append(detected_changes, influx_entry)
-						delete(host_state["sproc_hashes"], sproc_ident)
+						deleted_sprocs = append(deleted_sprocs, sproc_ident)
 						change_counts.Dropped += 1
 					}
+				}
+				for _, deleted_sproc := range deleted_sprocs {
+					delete(host_state["sproc_hashes"], deleted_sproc)
 				}
 			}
 			if len(detected_changes) > 0 {
@@ -631,6 +640,7 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 			}
 			// detect deletes
 			if !first_run && len(host_state["table_hashes"]) != len(data) {
+				deleted_tables := make([]string, 0)
 				// turn resultset to map => [table]=true for faster checks
 				current_table_map := make(map[string]bool)
 				for _, dr := range data {
@@ -643,11 +653,18 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 						influx_entry := make(map[string]interface{})
 						influx_entry["event"] = "drop"
 						influx_entry["tag_table"] = table
-						influx_entry["epoch_ns"] = data[0]["epoch_ns"]
+						if len(data) > 0 {
+							influx_entry["epoch_ns"] = data[0]["epoch_ns"]
+						} else {
+							influx_entry["epoch_ns"] = time.Now().UnixNano()
+						}
 						detected_changes = append(detected_changes, influx_entry)
-						delete(host_state["table_hashes"], table)
+						deleted_tables = append(deleted_tables, table)
 						change_counts.Dropped += 1
 					}
+				}
+				for _, deleted_table := range deleted_tables {
+					delete(host_state["table_hashes"], deleted_table)
 				}
 			}
 			if len(detected_changes) > 0 {
@@ -699,23 +716,31 @@ func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 			}
 			// detect deletes
 			if !first_run && len(host_state["index_hashes"]) != len(data) {
+				deleted_indexes := make([]string, 0)
 				// turn resultset to map => [table]=true for faster checks
 				current_index_map := make(map[string]bool)
 				for _, dr := range data {
 					current_index_map[dr["tag_index"].(string)] = true
 				}
-				for index, _ := range host_state["index_hashes"] {
-					_, ok := current_index_map[index]
+				for index_name, _ := range host_state["index_hashes"] {
+					_, ok := current_index_map[index_name]
 					if !ok {
-						log.Warning("detected drop of index:", index)
+						log.Warning("detected drop of index_name:", index_name)
 						influx_entry := make(map[string]interface{})
 						influx_entry["event"] = "drop"
-						influx_entry["tag_index"] = index
-						influx_entry["epoch_ns"] = data[0]["epoch_ns"]
+						influx_entry["tag_index"] = index_name
+						if len(data) > 0 {
+							influx_entry["epoch_ns"] = data[0]["epoch_ns"]
+						} else {
+							influx_entry["epoch_ns"] = time.Now().UnixNano()
+						}
 						detected_changes = append(detected_changes, influx_entry)
-						delete(host_state["index_hashes"], index)
+						deleted_indexes = append(deleted_indexes, index_name)
 						change_counts.Dropped += 1
 					}
+				}
+				for _, deleted_index := range deleted_indexes {
+					delete(host_state["index_hashes"], deleted_index)
 				}
 			}
 			if len(detected_changes) > 0 {
@@ -946,7 +971,7 @@ func queryDB(clnt client.Client, cmd string) (res []client.Result, err error) {
 	return res, nil
 }
 
-func InitAndTestInfluxConnection(InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword string, InfluxSSL bool ) error {
+func InitAndTestInfluxConnection(InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword string, InfluxSSL bool) error {
 	log.Info(fmt.Sprintf("Testing Influx connection to host: %s, port: %s, DB: %s", InfluxHost, InfluxPort, InfluxDbname))
 
 	if InfluxSSL {
@@ -1101,7 +1126,6 @@ func main() {
 		fmt.Println("Check config DB parameters")
 		return
 	}
-
 
 	InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password)
 
