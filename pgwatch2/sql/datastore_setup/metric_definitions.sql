@@ -472,7 +472,7 @@ with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     queryid::text as tag_queryid,
-    max(ltrim(regexp_replace(query, E'[ \\t\\n\\r]+' , ' ', 'g')))::varchar(65000) as tag_query,
+    max(ltrim(regexp_replace(query, E'[ \\t\\n\\r]+' , ' ', 'g')))::varchar(16000) as tag_query,
     sum(s.calls)::int8 as calls,
     sum(s.total_time)::double precision as total_time,
     sum(shared_blks_hit)::int8 as shared_blks_hit,
