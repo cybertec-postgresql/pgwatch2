@@ -123,7 +123,7 @@ psql -h mydb.com -U superuser -f pgwatch2/sql/metrics_fetching_helpers/cpu_load_
 * Safety
   - only one concurrent query per monitored database is allowed so side-effects shoud be minimal
   - configurable statement timeouts
-  - SSL connections support for safe over-the-internet monitoring
+  - SSL connections support for safe over-the-internet monitoring (use "-e PW2_WEBSSL=1 -e PW2_GRAFANASSL=1" when launching Docker)
   - Optional authentication for the Web UI and Grafana (by default freely accessible!)
 * Backup script (take_backup.sh) provided for taking snapshots of the whole setup. To make it easier (run outside the container)
 one should to expose ports 5432 (Postgres) and 8088 (InfluxDB backup protocol) at least for the loopback address.
