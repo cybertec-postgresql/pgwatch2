@@ -36,7 +36,7 @@
       "height": 250,
       "panels": [
         {
-          "content": "Brought to you by: <a href=\"http://cybertec.at/en\"><img src=\"http://static.cybertec.at/wp-content/themes/cybertec-optimus/assets/img/logo.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+          "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2017/11/Cybertec_Logo_2017_300px_slogan_trans.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
           "editable": true,
           "error": false,
           "id": 2,
