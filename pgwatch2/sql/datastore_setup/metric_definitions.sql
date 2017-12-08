@@ -6,7 +6,7 @@ values (
 9.0,
 $sql$
 with sa_snapshot as (
-  select * from pg_stat_activity where pid != pg_backend_pid() and not query like 'autovacuum:%' and datname = current_database()
+  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%' and datname = current_database()
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -30,7 +30,7 @@ values (
 9.6,
 $sql$
 with sa_snapshot as (
-  select * from pg_stat_activity where pid != pg_backend_pid() and not query like 'autovacuum:%' and datname = current_database()
+  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%' and datname = current_database()
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -54,7 +54,7 @@ values (
 10,
 $sql$
 with sa_snapshot as (
-  select * from pg_stat_activity
+  select * from get_stat_activity()
   where pid != pg_backend_pid()
   and datname = current_database()
   and backend_type = 'client backend'
@@ -191,7 +191,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM pg_stat_activity WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -236,7 +236,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM pg_stat_activity WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -281,7 +281,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM pg_stat_activity WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -643,7 +643,7 @@ SELECT
   count(*)
 FROM
   pg_stat_ssl AS s,
-  pg_stat_activity AS a
+  get_stat_activity() AS a
 WHERE
   a.pid = s.pid
   AND a.datname = current_database()
@@ -750,7 +750,7 @@ SELECT
 FROM
     pg_catalog.pg_locks AS waiting
 JOIN
-    pg_catalog.pg_stat_activity AS waiting_stm
+    public.get_stat_activity() AS waiting_stm
     ON (
         waiting_stm.pid = waiting.pid
     )
@@ -764,7 +764,7 @@ JOIN
         OR waiting.transactionid = other.transactionid
     )
 JOIN
-    pg_catalog.pg_stat_activity AS other_stm
+    public.get_stat_activity() AS other_stm
     ON (
         other_stm.pid = other.pid
     )
@@ -1010,6 +1010,28 @@ BEGIN
   END IF;
 END;
 $OUTER$;
+$sql$,
+'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
+true
+);
+
+/* Stored procedure wrapper for pg_stat_activity - needed for non-superuser to view session state */
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
+values (
+'get_stat_activity',
+9.0,
+$sql$
+BEGIN;
+
+CREATE OR REPLACE FUNCTION public.get_stat_activity() RETURNS SETOF pg_stat_activity AS
+$$
+  select * from pg_stat_activity
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+
+REVOKE EXECUTE ON FUNCTION public.get_stat_activity() FROM PUBLIC;
+COMMENT ON FUNCTION public.get_stat_activity() IS ''created for pgwatch2'';
+
+COMMIT;
 $sql$,
 'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
 true
