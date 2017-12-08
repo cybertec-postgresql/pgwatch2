@@ -95,6 +95,11 @@ into the docker container under /var/logs/supervisor/
 ```
 create role pgwatch2 with login password 'secret';
 ```
+* Define the helper function to enable the monitoring of sessions, blocking locks, etc by the `pgwatch2` login defined above, if using a superuser login (not recommended) you can skip this step, just ensure that you check the `Is superuser?` check box when configuring Databases
+```
+psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/stat_activity_wrapper.sql mydb
+```
+
 * Additionally for extra insights ("Stat statements" dashboard and CPU load) it's also recommended to install the pg_stat_statement
 extension (Postgres 9.4+ needed to be useful for pgwatch2) and the PL/Python language. The latter one though is usually disabled by DB-as-a-service providers for security reasons.
 
@@ -110,8 +115,8 @@ CREATE EXTENSION plpythonu;
 
 Now also install the wrapper functions (under superuser role) for enabling "Stat statement" and CPU load info fetching for non-superusers
 ```
-psql -h mydb.com -U superuser -f pgwatch2/sql/metrics_fetching_helpers/stat_statements_wrapper.sql mydb
-psql -h mydb.com -U superuser -f pgwatch2/sql/metrics_fetching_helpers/cpu_load_plpythonu.sql mydb
+psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/stat_statements_wrapper.sql mydb
+psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/cpu_load_plpythonu.sql mydb
 ```
 
 # Screenshot of the "DB overview" dashboard
