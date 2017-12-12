@@ -184,7 +184,7 @@ instructions. Migrating data from the current Docker container to a newer versio
 image on the other hand needs quite some steps currently. See the take_backup.sh script 
 [here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/take_backup.sh) for more details.
 
-Basically there are two options – first, go into the Docker container (e.g. docker exec -it ps2 /bin/bash) 
+Basically there are two options – first, go into the Docker container (e.g. docker exec -it pw2 /bin/bash)
 and just update the component yourself – i.e. download the latest Grafana .deb package and install it with “dpkg -i …”. 
 This is actually the simplest way. The other way would be to fetch the latest pgwatch2 image, which already has the 
 latest version of components, using “docker pull” and then restore the data (InfluxDB + Postgres) from a backup of old 
