@@ -4,7 +4,7 @@
   },
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 2,
+  "graphTooltip": 0,
   "hideControls": false,
   "id": 3,
   "links": [],
@@ -67,7 +67,7 @@
               ],
               "measurement": "table_stats",
               "policy": "default",
-              "query": "SELECT mean(\"total_relation_size_b\") FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_name\" =~ /^$table_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT mean(\"total_relation_size_b\") FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
               "rawQuery": false,
               "refId": "A",
               "resultFormat": "time_series",
@@ -93,9 +93,9 @@
                 },
                 {
                   "condition": "AND",
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             },
@@ -118,7 +118,7 @@
               ],
               "measurement": "table_stats",
               "policy": "default",
-              "query": "SELECT mean(\"total_relation_size_b\") FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_name\" =~ /^$table_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT mean(\"total_relation_size_b\") FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
               "rawQuery": false,
               "refId": "B",
               "resultFormat": "time_series",
@@ -144,9 +144,9 @@
                 },
                 {
                   "condition": "AND",
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             },
@@ -169,7 +169,7 @@
               ],
               "measurement": "index_stats",
               "policy": "default",
-              "query": "SELECT mean(\"total_relation_size_b\") FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_name\" =~ /^$table_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT mean(\"total_relation_size_b\") FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
               "rawQuery": false,
               "refId": "C",
               "resultFormat": "time_series",
@@ -178,6 +178,58 @@
                   {
                     "params": [
                       "index_size_b"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "sum"
+                  }
+                ]
+              ],
+              "tags": [
+                {
+                  "key": "dbname",
+                  "operator": "=~",
+                  "value": "/^$dbname$/"
+                },
+                {
+                  "condition": "AND",
+                  "key": "table_full_name",
+                  "operator": "=~",
+                  "value": "/^$table_full_name$/"
+                }
+              ]
+            },
+            {
+              "alias": "toast_size",
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "$interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "null"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "measurement": "table_stats",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "query": "SELECT mean(\"total_relation_size_b\") FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "rawQuery": false,
+              "refId": "D",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "toast_size_b"
                     ],
                     "type": "field"
                   },
@@ -195,9 +247,9 @@
                 },
                 {
                   "condition": "AND",
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             }
@@ -257,18 +309,19 @@
           },
           "bars": false,
           "datasource": null,
+          "decimals": 1,
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 2,
           "legend": {
-            "avg": false,
+            "avg": true,
             "current": false,
             "max": false,
             "min": false,
             "show": true,
             "total": false,
-            "values": false
+            "values": true
           },
           "lines": true,
           "linewidth": 1,
@@ -318,7 +371,7 @@
                   },
                   {
                     "params": [
-                      "1h"
+                      "1m"
                     ],
                     "type": "non_negative_derivative"
                   }
@@ -332,9 +385,9 @@
                 },
                 {
                   "condition": "AND",
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             },
@@ -357,7 +410,7 @@
               ],
               "measurement": "table_stats",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(mean(\"idx_scan\"), 1m) FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_name\" =~ /^$table_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT non_negative_derivative(mean(\"idx_scan\"), 1m) FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
               "rawQuery": false,
               "refId": "B",
               "resultFormat": "time_series",
@@ -375,7 +428,7 @@
                   },
                   {
                     "params": [
-                      "1h"
+                      "1m"
                     ],
                     "type": "non_negative_derivative"
                   }
@@ -389,9 +442,9 @@
                 },
                 {
                   "condition": "AND",
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             }
@@ -399,7 +452,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Scans (1h rate)",
+          "title": "Scans (1m rate log.)",
           "tooltip": {
             "msResolution": false,
             "shared": true,
@@ -415,11 +468,12 @@
           },
           "yaxes": [
             {
+              "decimals": 1,
               "format": "short",
               "label": null,
               "logBase": 10,
               "max": null,
-              "min": null,
+              "min": "0",
               "show": true
             },
             {
@@ -453,13 +507,13 @@
           "fill": 1,
           "id": 3,
           "legend": {
-            "avg": false,
+            "avg": true,
             "current": false,
             "max": false,
             "min": false,
             "show": true,
             "total": false,
-            "values": false
+            "values": true
           },
           "lines": true,
           "linewidth": 1,
@@ -509,7 +563,7 @@
                   },
                   {
                     "params": [
-                      "1h"
+                      "1m"
                     ],
                     "type": "non_negative_derivative"
                   }
@@ -523,9 +577,9 @@
                 },
                 {
                   "condition": "AND",
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             },
@@ -564,7 +618,7 @@
                   },
                   {
                     "params": [
-                      "1h"
+                      "1m"
                     ],
                     "type": "non_negative_derivative"
                   }
@@ -578,9 +632,9 @@
                 },
                 {
                   "condition": "AND",
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             },
@@ -619,7 +673,7 @@
                   },
                   {
                     "params": [
-                      "1h"
+                      "1m"
                     ],
                     "type": "non_negative_derivative"
                   }
@@ -633,9 +687,9 @@
                 },
                 {
                   "condition": "AND",
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             },
@@ -674,7 +728,7 @@
                   },
                   {
                     "params": [
-                      "1h"
+                      "1m"
                     ],
                     "type": "non_negative_derivative"
                   }
@@ -688,9 +742,9 @@
                 },
                 {
                   "condition": "AND",
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             }
@@ -698,7 +752,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "IUD (1h rate)",
+          "title": "IUD (1m rate log.)",
           "tooltip": {
             "msResolution": false,
             "shared": true,
@@ -747,6 +801,7 @@
           "aliasColors": {},
           "bars": false,
           "datasource": null,
+          "decimals": 1,
           "editable": true,
           "error": false,
           "fill": 1,
@@ -795,7 +850,7 @@
               ],
               "measurement": "table_io_stats",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(mean(\"heap_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"heap_blks_hit\"), 10s) + non_negative_derivative(mean(\"heap_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_name\" =~ /^$table_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT non_negative_derivative(mean(\"heap_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"heap_blks_hit\"), 10s) + non_negative_derivative(mean(\"heap_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",
@@ -827,9 +882,9 @@
                 },
                 {
                   "condition": "AND",
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             },
@@ -852,7 +907,7 @@
               ],
               "measurement": "table_io_stats",
               "policy": "default",
-              "query": "SELECT non_negative_derivative(mean(\"idx_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"idx_blks_hit\"), 10s) + non_negative_derivative(mean(\"idx_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_name\" =~ /^$table_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+              "query": "SELECT non_negative_derivative(mean(\"idx_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"idx_blks_hit\"), 10s) + non_negative_derivative(mean(\"idx_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
               "rawQuery": true,
               "refId": "B",
               "resultFormat": "time_series",
@@ -884,9 +939,9 @@
                 },
                 {
                   "condition": "AND",
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             }
@@ -910,6 +965,7 @@
           },
           "yaxes": [
             {
+              "decimals": 1,
               "format": "short",
               "label": null,
               "logBase": 1,
@@ -935,7 +991,7 @@
       "title": "Dashboard Row",
       "titleSize": "h6"
     },
-{
+    {
       "collapse": false,
       "height": 175,
       "panels": [
@@ -943,7 +999,7 @@
           "aliasColors": {},
           "bars": false,
           "datasource": null,
-          "description": "Info on indexes >1MB only",
+          "description": "",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -1015,7 +1071,7 @@
                   },
                   {
                     "params": [
-                      "1h"
+                      "1m"
                     ],
                     "type": "non_negative_derivative"
                   }
@@ -1023,9 +1079,9 @@
               ],
               "tags": [
                 {
-                  "key": "table_name",
+                  "key": "table_full_name",
                   "operator": "=~",
-                  "value": "/^$table_name$/"
+                  "value": "/^$table_full_name$/"
                 }
               ]
             }
@@ -1033,7 +1089,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Index Scans per index (1h rate)",
+          "title": "Index Scans per index (1m rate log.)",
           "tooltip": {
             "msResolution": false,
             "shared": true,
@@ -1140,9 +1196,9 @@
         "includeAll": false,
         "label": null,
         "multi": false,
-        "name": "table_name",
+        "name": "table_full_name",
         "options": [],
-        "query": "SHOW TAG VALUES FROM \"table_stats\" WITH KEY = \"table_name\" WHERE dbname = '$dbname'",
+        "query": "SHOW TAG VALUES FROM \"table_stats\" WITH KEY = \"table_full_name\" WHERE dbname = '$dbname'",
         "refresh": 1,
         "regex": "",
         "sort": 1,

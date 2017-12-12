@@ -162,6 +162,7 @@ SELECT
   schemaname::text as tag_schema,
   indexrelname::text as tag_index_name,
   relname::text as tag_table_name,
+  quote_ident(schemaname)||'.'||quote_ident(relname) as tag_table_full_name,
   coalesce(idx_scan, 0) as idx_scan,
   coalesce(idx_tup_read, 0) as idx_tup_read,
   coalesce(idx_tup_fetch, 0) as idx_tup_fetch,
@@ -169,8 +170,7 @@ SELECT
 FROM
   pg_stat_user_indexes
 WHERE
-  pg_relation_size(indexrelid) > 1e6    -- >1MB
-  AND NOT schemaname like E'pg\\_temp%'
+  NOT schemaname like E'pg\\_temp%'
 ORDER BY
   schemaname, relname, indexrelname;
 $sql$
@@ -383,6 +383,7 @@ SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   schemaname::text as tag_schema,
   relname::text as tag_table_name,
+  quote_ident(schemaname)||'.'||quote_ident(relname) as tag_table_full_name,
   heap_blks_read,
   heap_blks_hit,
   idx_blks_read,
@@ -413,6 +414,7 @@ select
   quote_ident(schemaname)||'.'||quote_ident(relname) as tag_table_full_name,
   pg_relation_size(relid) as table_size_b,
   pg_total_relation_size(relid) as total_relation_size_b,
+  pg_relation_size((select reltoastrelid from pg_class where oid = ut.relid)) as toast_size_b,
   extract(epoch from now() - greatest(last_vacuum, last_autovacuum)) as seconds_since_last_vacuum,
   extract(epoch from now() - greatest(last_analyze, last_autoanalyze)) as seconds_since_last_analyze,
   seq_scan,
@@ -428,7 +430,7 @@ select
   analyze_count,
   autoanalyze_count
 from
-  pg_stat_user_tables
+  pg_stat_user_tables ut
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
   not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted);
