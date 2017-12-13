@@ -949,7 +949,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Shared Buffers hit  rates",
+          "title": "Shared Buffers hit rates",
           "tooltip": {
             "msResolution": false,
             "shared": true,
@@ -969,7 +969,7 @@
               "format": "short",
               "label": null,
               "logBase": 1,
-              "max": null,
+              "max": "100",
               "min": null,
               "show": true
             },

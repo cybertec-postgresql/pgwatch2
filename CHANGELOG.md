@@ -6,6 +6,16 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.2.3 [2017-12-13]
+
+* Fix for Web UI/Grafana HTTPS mode (outgoing links/logos are now also HTTPS)
+* Fix for Docker image Go gatherer - config DB env parameters (PW2_PG*) are now fully respected
+* Improvement - table_stats metric skips now over exclusively locked tables
+* Improvement - various "Table details" dashboard adjustments (e.g. TOAST/index size info) and according table_stats/index_stats
+ metric adjustments (new full_table_name tag used for searching to counter duplicate table names)
+* InfluxDB 1.4.2
+* Grafana 4.6.2
+
 ## v1.2.2 [2017-11-05]
 
 * Fix for "panic: runtime error: index out of range" when last table/sproc/index of DB was deleted
