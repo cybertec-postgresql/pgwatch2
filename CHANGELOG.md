@@ -10,6 +10,8 @@ or a specific version
 
 * Fix for Web UI/Grafana HTTPS mode (outgoing links/logos are now also HTTPS)
 * Fix for Docker image Go gatherer - config DB env parameters (PW2_PG*) are now fully respected
+* Fix for the "backend" metric - some fields were "null" when using non-superuser. Now there's a
+ wrapper - thanks @jimgolfgti!
 * Improvement - table_stats metric skips now over exclusively locked tables
 * Improvement - various "Table details" dashboard adjustments (e.g. TOAST/index size info) and according table_stats/index_stats
  metric adjustments (new full_table_name tag used for searching to counter duplicate table names)
