@@ -11,7 +11,7 @@ docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2
 ```
 After some minutes you could open the ["db-overview"](http://127.0.0.1:3000/dashboard/db/db-overview) dashboard and start
 looking at metrics. For defining your own dashboards you need to log in as admin (admin/pgwatch2admin).
-NB! If you don't want to add the "test" database (the pgwatch2 configuration db) for monitoring set the NOTESTDB=1 env parameter when launching the image.
+NB! If you don't want to add the "test" database (the pgwatch2 configuration db) for monitoring set the NOTESTDB=1 env parameter when launching the image. For production setups also "--restart unless-stopped" (or custom startup scripts) is highly recommended.
 
 
 For more advanced usecases or for easier problemsolving you can decide to expose all services
