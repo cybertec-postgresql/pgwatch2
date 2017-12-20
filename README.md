@@ -44,9 +44,10 @@ docker build .
 * [Grafana](http://grafana.org/) for dashboarding (point-and-click, a set of predefined dashboards is provided)
 * A Web UI for administering the monitored DBs and metrics and for showing some custom metric overviews
 
-NB! All component can be also used separately, thus you can descide to make use of an already existing installation of Postgres, 
+NB! All component can be also used separately, thus you can decide to make use of an already existing installation of Postgres,
 Grafana or InfluxDB and run the pgwatch2 image for example only with the metrics gatherer and the configuration Web UI.
-These external installations must be accessible from within the Docker though.
+These external installations must be accessible from within the Docker though. For info on installation without Docker
+at all see end of README.
 
 ### To use an existing Postgres DB
 
@@ -195,3 +196,137 @@ A tip: to make the restore process easier it would already make sense to mount t
 new container with “-v ~/pgwatch2_backups:/pgwatch2_backups:rw,z” when starting the Docker image. Otherwise one needs to set
 up SSH or use something like S3 for example. Also note that ports 5432 and 8088 need to be exposed to take backups 
 outside of Docker.
+
+# Installing without Docker
+
+All examples assuming Ubuntu.
+
+1. Install Postgres and create DB-s/roles for pgwatch2/Grafana
+    
+    ```
+    sudo apt install postgresql
+    ```
+    Default port: 5432
+    
+    1.1. Create an User and a DB to hold Grafana config
+    ```
+    psql -c "create user pgwatch2_grafana password 'xyz'"
+    psql -c "create database pgwatch2_grafana owner pgwatch2_grafana"
+    ```
+    
+    1.2. Create an User and a DB to hold pgwatch2 config
+    
+    ```
+    psql -c "create user pgwatch2 password 'xyz'"
+    psql -c "create database pgwatch2 owner pgwatch2"
+    ```
+    
+    1.3 Roll out the pgwatch2 schema (will holds connection strings of DB-s to be monitored + metric definitions)
+    
+    ```
+    psql -f pgwatch2/sql/datastore_setup/config_store.sql pgwatch2
+    psql -f pgwatch2/sql/datastore_setup/metric_definitions.sql pgwatch2
+    ```
+2. Install InfluxDB
+    
+    ```
+    INFLUX_LATEST=$(curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1)
+    wget https://dl.influxdata.com/influxdb/releases/influxdb_${INFLUX_LATEST}_amd64.deb
+    sudo dpkg -i influxdb_${INFLUX_LATEST}_amd64.deb
+    ```
+    Take a look/edit the Influx config at /etc/influxdb/influxdb.conf and it's recommend to create also a separate limited
+    login user e.g. "pgwatch2" to be used by the metrics gathering daemon to store metrics. See [here](https://docs.influxdata.com/influxdb/latest/administration/config/)
+    on configuring InfluxDB and [here](https://docs.influxdata.com/influxdb/latest/query_language/authentication_and_authorization/#user-types-and-privileges)
+    for creating new users.
+    
+    Default port for the API: 8086
+
+3. Install Grafana
+    
+    ```
+    GRAFANA_LATEST=$(curl -so- https://api.github.com/repos/grafana/grafana/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1)
+    wget https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_${GRAFANA_LATEST}_amd64.deb
+    sudo dpkg -i grafana_${GRAFANA_LATEST}_amd64.deb
+    ```
+    Default port: 3000
+    
+    2.1. Configure Grafana config to use our pgwatch2_grafana DB
+    
+    Place something like below in the "[database]" section of /etc/grafana/grafana.ini
+    
+    ```
+    [database]
+    type = postgres
+    host = my-postgres-db:5432
+    name = pgwatch2_grafana
+    user = pgwatch2_grafana
+    password = xyz
+    ```
+    
+    Taking a look at [server], [security] and [auth*] sections is also recommended.
+    
+    2.2. Set up the Influx datasource as default
+    
+    Use the Grafana UI (Admin -> Data sources) or adjust and execute the "pgwatch2/bootstrap/grafana_datasource.sql"
+    
+    2.3. Add pgwatch2 predefined dashboards to Grafana
+    
+    This could be done by importing the JSON-s from the "grafana_dashboards" folder manually (Import Dashboard from the Grafana
+    top menu) or via the Docker bootstrap script (pgwatch2/bootstrap/set_up_grafana_dashboards.sh). Script needs some adjustment
+    for connect data and file paths though and also the "grafana_datasource.sql" part should be commented out if already
+    executed in the previous step.
+    
+4. Install Python 3 and start the Web UI
+    
+    NB! The Web UI is not strictly required but makes life a lot easier. Technically it would be fine also to manage connection
+    strings of the monitored DB-s directly in the "pgwatch2.monitored_db" table and add/adjust metrics in the "pgwatch2.metric" table,
+    and "preset configs" in the "pgwatch2.preset_config" table.
+    
+    ```
+    # first we need Python 3 and "pip" - the Python package manager
+    sudo apt install python3 python3-pip
+    sudo pip3 install -U -r webpy/requirements.txt 
+    ```
+    
+    4.1. Start the Web UI
+    ```
+    cd webpy
+    python3 web.py
+    ```
+    Default port for the Web UI: 8080
+    
+    4.2. Configure DB-s to monitor from "/dbs" page
+    
+    NB! To get most out of your metrics some wrappers/extensions are required on the DB-s under monitoring.
+    See section [Steps to configure your database for monitoring](https://github.com/cybertec-postgresql/pgwatch2#steps-to-configure-your-database-for-monitoring) on
+    setup information.
+    
+5. Install Go and compile the gatherer
+    
+    Check for the latest Go version from https://golang.org/dl/
+    
+    ```
+    # install Go
+    wget https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz
+    tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
+    
+    # compile the gatherer daemon
+    cd pgwatch2
+    ./build_gatherer.sh
+    # an executable named "pgwatch2" should be generated ...
+    ```
+    
+      5.1. Run the gatherer
+    
+    ```
+    ./pgwatch2 --host=my-postgres-db --user=pgwatch2 --password=xyz  \
+        --ihost=my-influx-db --iuser=pgwatch2 --ipassword=xyz
+    
+    # for all starting options run "./pgwatch2 --help"
+    ```
+
+    Congrats! Now the metrics should start flowing in and after some minutes one should already see some graphs in Grafana.
+
+6. Make sure to hatch up some "init scripts" so that the pgwatch2 daemon and the Web UI would be started automatically
+when the system reboots. For externally packaged components (Grafana, Influx, Postgres) it should be the case already.
