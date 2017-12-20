@@ -1029,7 +1029,8 @@ $$
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 REVOKE EXECUTE ON FUNCTION public.get_stat_activity() FROM PUBLIC;
-COMMENT ON FUNCTION public.get_stat_activity() IS ''created for pgwatch2'';
+--GRANT EXECUTE ON FUNCTION public.get_stat_activity() TO pgwatch2;
+COMMENT ON FUNCTION public.get_stat_activity() IS 'created for pgwatch2';
 
 COMMIT;
 $sql$,
