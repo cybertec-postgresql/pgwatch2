@@ -2,12 +2,12 @@ import glob
 import logging
 import os
 import datadb
-import pgwatch2_influx
+
 
 SERVICES = {'pgwatch2': {'log_root': '/var/log/supervisor/', 'glob': 'pgwatch2-stderr*'},
             'influxdb': {'log_root': '/var/log/supervisor/', 'glob': 'influxdb-stderr*'},
             'grafana': {'log_root': '/var/log/grafana/', 'glob': 'grafana.log'},
-            'postgres': {'log_root': '/var/log/postgresql/', 'glob': 'postgresql-*-main.log'},
+            'postgres': {'log_root': '/var/log/postgresql/', 'glob': 'postgresql-*.csv'},
             'webui': {'log_root': '/var/log/supervisor/', 'glob': 'webpy-stderr*'},
             }
 
@@ -22,7 +22,8 @@ def get_last_log_lines(service='pgwatch2', lines=200):
     if not log_files:
         logging.error('no logfile found for glob %s', glob_expression)
         return []
-    log_file = log_files[len(log_files) - 1]
+    log_files.sort(key=os.path.getmtime)
+    log_file = log_files[-1]
     logging.debug('extracting last %s lines from %s', lines, log_file)
     with open(log_file, 'rb') as f:
         return f.readlines()[-lines:]

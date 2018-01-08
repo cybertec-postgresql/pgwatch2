@@ -218,9 +218,9 @@ if __name__ == '__main__':
     parser.add_argument('--ssl', help='Enable Webserver SSL (Self-signed Cert)',
                         default=(os.getenv('PW2_WEBSSL') or False))
     parser.add_argument('--ssl-cert', help='Path to SSL certificate',
-                        default=(os.getenv('PW2_WEBCERT') or '/pgwatch2/ssl_cert.pem'))
+                        default=(os.getenv('PW2_WEBCERT') or '/pgwatch2/self-signed-ssl.pem'))
     parser.add_argument('--ssl-key', help='Path to SSL private key',
-                        default=(os.getenv('PW2_WEBKEY') or '/pgwatch2/ssl_key.pem'))
+                        default=(os.getenv('PW2_WEBKEY') or '/pgwatch2/self-signed-ssl.key'))
     parser.add_argument('--ssl-certificate-chain', help='Path to certificate chain file',
                         default=(os.getenv('PW2_WEBCERTCHAIN')))
 

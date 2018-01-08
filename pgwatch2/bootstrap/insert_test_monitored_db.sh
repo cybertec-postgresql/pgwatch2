@@ -6,16 +6,16 @@ export PGUSER=postgres
 
 if [ -z "$NOTESTDB" ] ; then
 
-if [ ! -f test_db_installed_marker ] ; then
+if [ ! -f /pgwatch2/test_db_installed_marker ] ; then
 
 while true ; do
 
   # It will take some time for Postgres to start
   sleep 1
 
-  DB_OK=$(pg_isready -q)
+  $(pg_isready -q)
 
-  if [[ "$DB_OK" -ne 0 ]] ; then
+  if [[ "$?" -ne 0 ]] ; then
     continue
   else
     break
@@ -35,7 +35,7 @@ HERE
 psql -c "$SQL" pgwatch2
 
 if [ $? -eq 0 ] ; then
- touch test_db_installed_marker
+ touch /pgwatch2/test_db_installed_marker
 fi
 
 fi
