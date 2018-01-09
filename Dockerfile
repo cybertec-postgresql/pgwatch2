@@ -74,6 +74,14 @@ EXPOSE 8086
 # InfluxDB backup port
 EXPOSE 8088
 
+### Volumes for easier updating to newer to newer pgwatch2 containers
+### NB! Backwards compatibility is not 100% guaranteed (e.g. InfluxDB has changed index storage format) so a backup
+### using traditional means is still recommended before updating - see "Updating to a newer Docker version" from README
+
+VOLUME /var/lib/postgresql
+VOLUME /var/lib/influxdb
+VOLUME /var/lib/grafana
+
 ###
 ### OpenShift compatibility - run all using an unprivileged user:
 ### https://docs.openshift.org/latest/creating_images/guidelines.html#openshift-specific-guidelines
