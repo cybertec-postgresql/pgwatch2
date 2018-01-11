@@ -25,7 +25,7 @@ def getDataConnection(autocommit=True):
     return conn
 
 
-def execute(sql, params=None, statement_timeout=None):
+def execute(sql, params=None, statement_timeout=None, quiet=False):
     result = []
     conn = None
     try:
@@ -40,8 +40,11 @@ def execute(sql, params=None, statement_timeout=None):
         else:
             result = [{'rows_affected': str(cur.rowcount)}]
     except Exception as e:
-        logging.exception('failed to execute "{}" on datastore'.format(sql))
-        return result, str(e)
+        if quiet:
+            logging.exception('failed to execute "{}" on datastore'.format(sql))
+            return result, str(e)
+        else:
+            raise
     finally:
         if conn:
             try:

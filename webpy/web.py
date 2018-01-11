@@ -10,6 +10,8 @@ import cherrypy
 import time
 import datadb
 import pgwatch2_influx
+import psycopg2
+import requests
 from decorator import decorator
 import subprocess
 
@@ -43,7 +45,6 @@ class Root:
 
     @cherrypy.expose
     def login(self, **params):
-        print(params)
         message = ''
         submit = params.get('submit', False)
         user = params.get('user', '')
@@ -77,77 +78,97 @@ class Root:
     @cherrypy.expose
     def dbs(self, **params):
         logging.debug(params)
-        message = ''
+        messages = []
+        data = []
+        preset_configs = []
+        metrics_list = []
+        influx_active_dbnames = []
+        preset_configs_json = {}
+
         if params:
             try:
                 if params.get('save'):
                     pgwatch2.update_monitored_db(params)
-                    message = 'Updated!'
+                    messages.append('Updated!')
                 elif params.get('new'):
-                    msg = pgwatch2.insert_monitored_db(params)
-                    message = msg
+                    messages.append(pgwatch2.insert_monitored_db(params))
                 elif params.get('delete'):
                     pgwatch2.delete_monitored_db(params)
-                    message = 'Entry with ID {} ("{}") deleted!'.format(
-                        params['md_id'], params['md_unique_name'])
+                    messages.append('Entry with ID {} ("{}") deleted!'.format(
+                        params['md_id'], params['md_unique_name']))
                 elif params.get('influx_delete_single'):
                     if not params['influx_single_unique_name']:
                         raise Exception('No "Unique Name" provided!')
                     pgwatch2_influx.delete_influx_data_single(params['influx_single_unique_name'])
-                    message = 'InfluxDB data for "{}" deleted!'.format(params['influx_single_unique_name'])
+                    messages.append('InfluxDB data for "{}" deleted!'.format(params['influx_single_unique_name']))
                 elif params.get('influx_delete_all'):
                     active_dbs = pgwatch2.get_active_db_uniques()
-                    print('active_dbs', active_dbs)
                     deleted_dbnames = pgwatch2_influx.delete_influx_data_all(active_dbs)
-                    message = 'InfluxDB data deleted for: {}'.format(','.join(deleted_dbnames))
+                    messages.append('InfluxDB data deleted for: {}'.format(','.join(deleted_dbnames)))
             except Exception as e:
-                message = 'ERROR: ' + str(e)
+                messages.append('ERROR: ' + str(e))
 
-        data = pgwatch2.get_all_monitored_dbs()
-        preset_configs = pgwatch2.get_preset_configs()
-        preset_configs_json = json.dumps(
-            {c['pc_name']: c['pc_config'] for c in preset_configs})
-        metrics_list = pgwatch2.get_active_metrics_with_versions()
-        influx_active_dbnames = pgwatch2_influx.get_active_dbnames()
+        try:
+            influx_active_dbnames = pgwatch2_influx.get_active_dbnames()
+        except requests.exceptions.ConnectionError:
+            messages.append('ERROR: Could not connect to InfluxDB')
+        except Exception as e:
+            messages.append('ERROR: ' + str(e))
+
+        try:
+            data = pgwatch2.get_all_monitored_dbs()
+            preset_configs = pgwatch2.get_preset_configs()
+            preset_configs_json = json.dumps(
+                {c['pc_name']: c['pc_config'] for c in preset_configs})
+            metrics_list = pgwatch2.get_active_metrics_with_versions()
+        except psycopg2.OperationalError:
+            messages.append('ERROR: Could not connect to Postgres')
+        except Exception as e:
+            messages.append('ERROR: ' + str(e))
 
         tmpl = env.get_template('dbs.html')
-        return tmpl.render(message=message, data=data, preset_configs=preset_configs, preset_configs_json=preset_configs_json,
+        return tmpl.render(messages=messages, data=data, preset_configs=preset_configs, preset_configs_json=preset_configs_json,
                            metrics_list=metrics_list, influx_active_dbnames=influx_active_dbnames)
 
     @logged_in
     @cherrypy.expose
     def metrics(self, **params):
         logging.debug(params)
-        message = ''
-        if True:
-            try:
-                if params.get('save'):
-                    pgwatch2.update_preset_config(params)
-                    message = 'Config "{}" updated!'.format(params['pc_name'])
-                elif params.get('new'):
-                    config = pgwatch2.insert_preset_config(params)
-                    message = 'Config "{}" added!'.format(config)
-                elif params.get('delete'):
-                    pgwatch2.delete_preset_config(params)
-                    message = 'Config "{}" deleted!'.format(params['pc_name'])
-                if params.get('metric_save'):
-                    pgwatch2.update_metric(params)
-                    message = 'Metric "{}" updated!'.format(params['m_name'])
-                elif params.get('metric_new'):
-                    id = pgwatch2.insert_metric(params)
-                    message = 'Metric with ID "{}" added!'.format(id)
-                elif params.get('metric_delete'):
-                    pgwatch2.delete_metric(params)
-                    message = 'Metric "{}" deleted!'.format(params['m_name'])
-            except Exception as e:
-                message = 'ERROR: ' + str(e)
+        messages = []
+        preset_configs = []
+        metrics_list = []
+        metric_definitions = []
 
-        preset_configs = pgwatch2.get_preset_configs()
-        metrics_list = pgwatch2.get_active_metrics_with_versions()
-        metric_definitions = pgwatch2.get_all_metrics()
+        try:
+            if params.get('save'):
+                pgwatch2.update_preset_config(params)
+                messages.append('Config "{}" updated!'.format(params['pc_name']))
+            elif params.get('new'):
+                config = pgwatch2.insert_preset_config(params)
+                messages.append('Config "{}" added!'.format(config))
+            elif params.get('delete'):
+                pgwatch2.delete_preset_config(params)
+                messages.append('Config "{}" deleted!'.format(params['pc_name']))
+            if params.get('metric_save'):
+                pgwatch2.update_metric(params)
+                messages.append('Metric "{}" updated!'.format(params['m_name']))
+            elif params.get('metric_new'):
+                id = pgwatch2.insert_metric(params)
+                messages.append('Metric with ID "{}" added!'.format(id))
+            elif params.get('metric_delete'):
+                pgwatch2.delete_metric(params)
+                messages.append('Metric "{}" deleted!'.format(params['m_name']))
+
+            preset_configs = pgwatch2.get_preset_configs()
+            metrics_list = pgwatch2.get_active_metrics_with_versions()
+            metric_definitions = pgwatch2.get_all_metrics()
+        except psycopg2.OperationalError:
+            messages.append('ERROR: Could not connect to Postgres')
+        except Exception as e:
+            messages.append('ERROR: ' + str(e))
 
         tmpl = env.get_template('metrics.html')
-        return tmpl.render(message=message, preset_configs=preset_configs, metrics_list=metrics_list,
+        return tmpl.render(messages=messages, preset_configs=preset_configs, metrics_list=metrics_list,
                            metric_definitions=metric_definitions)
 
     @logged_in
@@ -181,31 +202,40 @@ class Root:
     @cherrypy.expose
     def index(self, **params):
         logging.debug('params: %s', params)
-        page = params.get('page', 'index')
-        dbname = params.get('dbname')
+        messages = []
         data = []
+        dbnames = []
+        dbname = params.get('dbname')
+        page = params.get('page', 'index')
         sort_column = params.get('sort_column', 'total_time')
-        if sort_column not in pgwatch2_influx.STATEMENT_SORT_COLUMNS:
-            raise Exception('invalid "sort_column": ' + sort_column)
-        utcn = datetime.utcnow()
-        start_time = params.get(
-            'start_time', (utcn - timedelta(days=1)).isoformat() + 'Z')
-        end_time = params.get('end_time', (utcn.isoformat() + 'Z'))
 
-        dbnames = [x['md_unique_name']
-                   for x in pgwatch2.get_all_monitored_dbs()]
-        if dbname:
-            if page == 'index' and dbname:
-                data = pgwatch2_influx.get_db_overview(dbname)
-            elif page == 'statements' and dbname:
-                data = pgwatch2_influx.find_top_growth_statements(dbname,
-                                                                  sort_column,
-                                                                  start_time,
-                                                                  end_time)
+        try:
+            if sort_column not in pgwatch2_influx.STATEMENT_SORT_COLUMNS:
+                raise Exception('invalid "sort_column": ' + sort_column)
+            utcn = datetime.utcnow()
+            start_time = params.get(
+                'start_time', (utcn - timedelta(days=1)).isoformat() + 'Z')
+            end_time = params.get('end_time', (utcn.isoformat() + 'Z'))
+
+            dbnames = [x['md_unique_name']
+                       for x in pgwatch2.get_all_monitored_dbs()]
+            if dbname:
+                if page == 'index' and dbname:
+                    data = pgwatch2_influx.get_db_overview(dbname)
+                elif page == 'statements' and dbname:
+                    data = pgwatch2_influx.find_top_growth_statements(dbname,
+                                                                      sort_column,
+                                                                      start_time,
+                                                                      end_time)
+        except requests.exceptions.ConnectionError:
+            messages.append('ERROR - Could not connect to InfluxDB')
+        except psycopg2.OperationalError:
+            messages.append('ERROR - Could not connect to Postgres')
 
         tmpl = env.get_template('index.html')
         return tmpl.render(dbnames=dbnames, dbname=dbname, page=page, data=data, sort_column=sort_column,
-                           start_time=start_time, end_time=end_time, grafana_baseurl=cmd_args.grafana_baseurl)
+                           start_time=start_time, end_time=end_time, grafana_baseurl=cmd_args.grafana_baseurl,
+                           messages=messages)
 
 
 if __name__ == '__main__':
