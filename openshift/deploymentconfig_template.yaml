@@ -51,6 +51,12 @@ objects:
                 value: ${PW2_GRAFANASSL}
               - name: PW2_WEBSSL
                 value: ${PW2_WEBSSL}
+              - name: PW2_WEBNOANONYMOUS
+                value: ${PW2_WEBNOANONYMOUS}
+              - name: PW2_WEBUSER
+                value: ${PW2_WEBUSER}
+              - name: PW2_WEBPASSWORD
+                value: ${PW2_WEBPASSWORD}
               - name: PW2_GRAFANA_BASEURL
                 value: ${PW2_GRAFANA_BASEURL}
               - name: PW2_PGHOST
@@ -143,6 +149,15 @@ parameters:
 - description: Use self signed SSL for the Admin UI
   name: PW2_WEBSSL
   value: ""
+- description: Passoword protect config changes via the Web UI. Disabled by default
+  name: PW2_WEBNOANONYMOUS
+  value: "false"
+- description: Web UI admin user
+  name: PW2_WEBUSER
+  value: "admin"
+- description: Web UI admin user password
+  name: PW2_WEBPASSWORD
+  value: "pgwatch2admin"
 - description: When using Grafana externally, set this to get correct links from the Admin UI
   name: PW2_GRAFANA_BASEURL
   value: ""
