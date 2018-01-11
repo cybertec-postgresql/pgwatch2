@@ -1,0 +1,26 @@
+FROM ubuntu:16.04
+
+RUN apt-get -q update && apt-get -qy install python3-pip \
+    && mkdir /pgwatch2
+
+###
+### add webpy source and configure installed components
+###
+
+ADD webpy /pgwatch2/webpy
+ADD docker/launch-wrapper-webui.sh /pgwatch2
+
+# Get Web UI requirements
+RUN pip3 install -r /pgwatch2/webpy/requirements.txt \
+    && chgrp -R 0 /pgwatch2 \
+    && chmod -R g=u /pgwatch2
+
+
+# Admin UI for configuring servers to be monitored
+EXPOSE 8080
+
+USER 10001
+
+CMD ["/pgwatch2/launch-wrapper-webui.sh", "--help"]
+
+ENTRYPOINT ["/pgwatch2/launch-wrapper-webui.sh"]

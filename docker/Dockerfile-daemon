@@ -1,0 +1,30 @@
+FROM ubuntu:16.04
+
+RUN apt-get -q update && apt-get -qy install wget git && apt autoremove -y
+
+###
+### add pgwatch2 source
+###
+
+ADD pgwatch2 /pgwatch2
+
+
+###
+### Install Go and compile the gatherer daemon
+###
+
+RUN wget -q https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz \
+    && rm go1.9.2.linux-amd64.tar.gz \
+    && export PATH=$PATH:/usr/local/go/bin \
+    && cd /pgwatch2 && bash build_gatherer.sh \
+    && rm -rf /usr/local/go \
+    && chgrp -R 0 /pgwatch2 \
+    && chmod -R g=u /pgwatch2
+
+
+USER 10001
+
+CMD ["/pgwatch2/pgwatch2", "--help"]
+
+ENTRYPOINT ["/pgwatch2/pgwatch2"]

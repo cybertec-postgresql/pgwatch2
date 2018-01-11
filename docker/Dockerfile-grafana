@@ -1,0 +1,31 @@
+FROM debian:jessie
+
+###
+# non-root adjustments to https://github.com/grafana/grafana-docker
+###
+
+ARG DOWNLOAD_URL
+
+RUN apt-get update && \
+    apt-get -y --no-install-recommends install libfontconfig curl ca-certificates && \
+    apt-get clean && \
+    curl ${DOWNLOAD_URL} > /tmp/grafana.deb && \
+    dpkg -i /tmp/grafana.deb && \
+    rm /tmp/grafana.deb && \
+    curl -L https://github.com/tianon/gosu/releases/download/1.10/gosu-amd64 > /usr/sbin/gosu && \
+    chmod +x /usr/sbin/gosu && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN usermod -s /bin/bash grafana \
+    && chown -R grafana /var/lib/grafana /var/log/grafana /etc/grafana /usr/share/grafana
+
+VOLUME ["/var/lib/grafana", "/var/log/grafana", "/etc/grafana"]
+
+EXPOSE 3000
+
+COPY ./docker/grafana-run.sh /run.sh
+
+USER 10001
+
+ENTRYPOINT ["/run.sh"]
