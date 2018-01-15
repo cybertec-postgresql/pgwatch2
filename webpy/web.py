@@ -128,7 +128,8 @@ class Root:
 
         tmpl = env.get_template('dbs.html')
         return tmpl.render(messages=messages, data=data, preset_configs=preset_configs, preset_configs_json=preset_configs_json,
-                           metrics_list=metrics_list, influx_active_dbnames=influx_active_dbnames)
+                           metrics_list=metrics_list, influx_active_dbnames=influx_active_dbnames,
+                           no_anonymous_access=cmd_args.no_anonymous_access, session=cherrypy.session)
 
     @logged_in
     @cherrypy.expose
@@ -169,7 +170,9 @@ class Root:
 
         tmpl = env.get_template('metrics.html')
         return tmpl.render(messages=messages, preset_configs=preset_configs, metrics_list=metrics_list,
-                           metric_definitions=metric_definitions)
+                           metric_definitions=metric_definitions, no_anonymous_access=cmd_args.no_anonymous_access,
+                           session=cherrypy.session
+        )
 
     @logged_in
     @cherrypy.expose
@@ -235,7 +238,7 @@ class Root:
         tmpl = env.get_template('index.html')
         return tmpl.render(dbnames=dbnames, dbname=dbname, page=page, data=data, sort_column=sort_column,
                            start_time=start_time, end_time=end_time, grafana_baseurl=cmd_args.grafana_baseurl,
-                           messages=messages)
+                           messages=messages, no_anonymous_access=cmd_args.no_anonymous_access, session=cherrypy.session)
 
 
 if __name__ == '__main__':

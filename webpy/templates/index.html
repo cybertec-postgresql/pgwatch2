@@ -44,8 +44,10 @@
             <li><a href="/versions" target="_blank">Component versions</a></li>
           </ul>
         </li>
+        {% if no_anonymous_access and session['logged_in'] %}
         <li><a href="#">|</a></li>
         <li><a href="/logout">Log out</a></li>
+        {% endif %}
       </ul>
     </div><!-- /.navbar-collapse -->
   </div><!-- /.container-fluid -->
