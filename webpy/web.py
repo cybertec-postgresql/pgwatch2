@@ -129,7 +129,8 @@ class Root:
         tmpl = env.get_template('dbs.html')
         return tmpl.render(messages=messages, data=data, preset_configs=preset_configs, preset_configs_json=preset_configs_json,
                            metrics_list=metrics_list, influx_active_dbnames=influx_active_dbnames,
-                           no_anonymous_access=cmd_args.no_anonymous_access, session=cherrypy.session)
+                           no_anonymous_access=cmd_args.no_anonymous_access, session=cherrypy.session,
+                           no_component_logs=cmd_args.no_component_logs)
 
     @logged_in
     @cherrypy.expose
@@ -171,12 +172,14 @@ class Root:
         tmpl = env.get_template('metrics.html')
         return tmpl.render(messages=messages, preset_configs=preset_configs, metrics_list=metrics_list,
                            metric_definitions=metric_definitions, no_anonymous_access=cmd_args.no_anonymous_access,
-                           session=cherrypy.session
+                           session=cherrypy.session, no_component_logs=cmd_args.no_component_logs
         )
 
     @logged_in
     @cherrypy.expose
     def logs(self, service='pgwatch2', lines=200):
+        if cmd_args.no_component_logs:
+            raise Exception('Component log access is disabled')
         if service not in pgwatch2.SERVICES:
             raise Exception('service needs to be one of: ' +
                             str(pgwatch2.SERVICES.keys()))
@@ -238,7 +241,8 @@ class Root:
         tmpl = env.get_template('index.html')
         return tmpl.render(dbnames=dbnames, dbname=dbname, page=page, data=data, sort_column=sort_column,
                            start_time=start_time, end_time=end_time, grafana_baseurl=cmd_args.grafana_baseurl,
-                           messages=messages, no_anonymous_access=cmd_args.no_anonymous_access, session=cherrypy.session)
+                           messages=messages, no_anonymous_access=cmd_args.no_anonymous_access, session=cherrypy.session,
+                           no_component_logs=cmd_args.no_component_logs)
 
 
 if __name__ == '__main__':
@@ -266,6 +270,9 @@ if __name__ == '__main__':
                         default=(os.getenv('PW2_WEBUSER') or 'admin'))
     parser.add_argument('--admin-password', help='Password for login to read and configure monitoring',
                         default=(os.getenv('PW2_WEBPASSWORD') or 'pgwatch2admin'))
+    parser.add_argument('--no-component-logs', help='Don''t expose component logs via the Web UI',
+                        action='store_true', default=(os.getenv('PW2_WEBNOCOMPONENTLOGS') or False))
+
     # Postgres
     parser.add_argument('-H', '--host', help='Pgwatch2 Config DB host',
                         default=(os.getenv('PW2_PGHOST') or 'localhost'))

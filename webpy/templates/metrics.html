@@ -29,6 +29,7 @@
         <li><a href="/dbs">DBs</a></li>
         <li><a href="#">|</a></li>
         <li class="active"><a href="/metrics">Metrics<span class="sr-only"></span></a></li>
+        {% if not no_component_logs %}
         <li><a href="#">|</a></li>
         <li class="dropdown" title="Logs will open in a new window">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Logs<span class="caret"></span></a>
@@ -41,6 +42,7 @@
             <li><a href="/versions" target="_blank">Component versions</a></li>
           </ul>
         </li>
+        {% endif %}
         {% if no_anonymous_access and session['logged_in'] %}
         <li><a href="#">|</a></li>
         <li><a href="/logout">Log out</a></li>
