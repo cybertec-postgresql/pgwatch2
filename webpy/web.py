@@ -214,14 +214,12 @@ class Root:
         dbname = params.get('dbname')
         page = params.get('page', 'index')
         sort_column = params.get('sort_column', 'total_time')
+        start_time = params.get('start_time', '')
+        end_time = params.get('end_time', '')
 
         try:
             if sort_column not in pgwatch2_influx.STATEMENT_SORT_COLUMNS:
                 raise Exception('invalid "sort_column": ' + sort_column)
-            utcn = datetime.utcnow()
-            start_time = params.get(
-                'start_time', (utcn - timedelta(days=1)).isoformat() + 'Z')
-            end_time = params.get('end_time', (utcn.isoformat() + 'Z'))
 
             dbnames = [x['md_unique_name']
                        for x in pgwatch2.get_all_monitored_dbs()]
@@ -232,7 +230,7 @@ class Root:
                     data = pgwatch2_influx.find_top_growth_statements(dbname,
                                                                       sort_column,
                                                                       start_time,
-                                                                      end_time)
+                                                                      (end_time if end_time else datetime.utcnow().isoformat() + 'Z'))
         except requests.exceptions.ConnectionError:
             messages.append('ERROR - Could not connect to InfluxDB')
         except psycopg2.OperationalError:

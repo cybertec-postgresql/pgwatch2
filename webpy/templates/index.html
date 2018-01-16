@@ -126,9 +126,19 @@
               <option value="{{db}}" {% if db == dbname %}selected{% endif %}>{{db}}</option>
               {% endfor %}
             </select>
-            <input type="text" name="start_time" value="{{start_time}}" size="28" title="Time has to be in ISO-8601 format (UTC)">
-            <input type="text" name="end_time" value="{{end_time}}" size="28" title="Time has to be in ISO-8601 format (UTC)">
+            From: <input type="text" name="start_time" id="start_time" value="{{start_time}}" size="28" title="Time has to be in ISO-8601 format (UTC)">
+            To: <input type="text" name="end_time" id="end_time" value="{{end_time}}" size="28" title="Time has to be in ISO-8601 format (UTC)">
             <input type="submit" name="show" value="Show">
+            <span style="margin-left: 20px">
+              <!-- <button type="button" class="btn btn-link">Link</button> -->
+              <a href="#" id="1h">1h</a>&nbsp;|
+              <a href="#" id="3h">3h</a>&nbsp;|
+              <a href="#" id="6h">6h</a>&nbsp;|
+              <a href="#" id="12h">12h</a>&nbsp;|
+              <a href="#" id="1d">1d</a>&nbsp;|
+              <a href="#" id="1w">1w</a>&nbsp;|
+              <a href="#" id="1m">1m</a>
+            </span>
             </form>
             {% if data %}
             <div class="table-responsive">
@@ -182,6 +192,13 @@
     <script src="/static/bootstrap-3.3.7-dist/js/bootstrap.min.js"></script>
 
     <script>
+      function getLocalTimeWithSecondsToZero() {
+          var d = new Date();
+          d.setMilliseconds(0);
+          d.setSeconds(0);
+          return d;
+      }
+
       $(document).ready(function(){
           $(".sort_column").click(function(event){
               event.preventDefault();
@@ -189,6 +206,55 @@
               $('#sort_column').val($(this).html());
               document.forms[0].submit();
 
+          });
+
+          if ($("#start_time").val() == '' ) {
+            var d = getLocalTimeWithSecondsToZero();
+            d.setHours(d.getHours()-1)
+            $("#start_time").val(d.toISOString());
+          }
+
+          $("#1h").click(function(event){
+              event.preventDefault();
+              var d = getLocalTimeWithSecondsToZero();
+              d.setHours(d.getHours()-1)
+              $("#start_time").val(d.toISOString());
+          });
+          $("#3h").click(function(event){
+              event.preventDefault();
+              var d = getLocalTimeWithSecondsToZero();
+              d.setHours(d.getHours()-3)
+              $("#start_time").val(d.toISOString());
+          });
+          $("#6h").click(function(event){
+              event.preventDefault();
+              var d = getLocalTimeWithSecondsToZero();
+              d.setHours(d.getHours()-6)
+              $("#start_time").val(d.toISOString());
+          });
+          $("#12h").click(function(event){
+              event.preventDefault();
+              var d = getLocalTimeWithSecondsToZero();
+              d.setHours(d.getHours()-12)
+              $("#start_time").val(d.toISOString());
+          });
+          $("#1d").click(function(event){
+              event.preventDefault();
+              var d = getLocalTimeWithSecondsToZero();
+              d.setDate(d.getDate()-1)
+              $("#start_time").val(d.toISOString());
+          });
+          $("#1w").click(function(event){
+              event.preventDefault();
+              var d = getLocalTimeWithSecondsToZero();
+              d.setDate(d.getDate()-7)
+              $("#start_time").val(d.toISOString());
+          });
+          $("#1m").click(function(event){
+              event.preventDefault();
+              var d = getLocalTimeWithSecondsToZero();
+              d.setMonth(d.getMonth()-1)
+              $("#start_time").val(d.toISOString());
           });
       });
     </script>
