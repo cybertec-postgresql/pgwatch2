@@ -311,7 +311,7 @@ if __name__ == '__main__':
         cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password, cmd_args.pg_require_ssl)
     err = datadb.isDataStoreConnectionOK()
     if err:
-        logging.warning("failed to connect to config DB: %s", )
+        logging.warning("config DB connection test failed: %s", err)
 
     pgwatch2_influx.influx_set_connection_params(cmd_args.influx_host, cmd_args.influx_port, cmd_args.influx_user,
                                                  cmd_args.influx_password, cmd_args.influx_database, cmd_args.influx_require_ssl)
