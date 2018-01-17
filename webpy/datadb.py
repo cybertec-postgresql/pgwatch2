@@ -54,6 +54,36 @@ def execute(sql, params=None, statement_timeout=None, quiet=False):
     return result, None
 
 
+def executeOnRemoteHost(sql, host, port, dbname, user, password='', sslmode='prefer', params=None, statement_timeout=None, quiet=False):
+    result = []
+    conn = None
+    try:
+        conn = psycopg2.connect(host=host, port=port, dbname=dbname, user=user, password=password, sslmode=sslmode)
+        conn.autocommit = True
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        if statement_timeout:
+            cur.execute("SET statement_timeout TO '{}'".format(
+                statement_timeout))
+        cur.execute(sql, params)
+        if cur.statusmessage.startswith('SELECT') or cur.description:
+            result = cur.fetchall()
+        else:
+            result = [{'rows_affected': str(cur.rowcount)}]
+    except Exception as e:
+        if quiet:
+            logging.exception('failed to execute "{}" on remote host "{}:{}"'.format(sql))
+            return result, str(e)
+        else:
+            raise
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except:
+                logging.exception('failed to close connection')
+    return result, None
+
+
 def isDataStoreConnectionOK():
     data = []
     try:
@@ -67,4 +97,5 @@ def isDataStoreConnectionOK():
 
 
 if __name__ == '__main__':
-    print(execute('select 1 as x'))
+    print('execute', execute('select 1 as x'))
+    print('executeOnRemoteHost', executeOnRemoteHost('select 1 as x', 'localhost', 5432, 'pgwatch2', 'postgres'))

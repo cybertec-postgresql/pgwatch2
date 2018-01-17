@@ -193,7 +193,9 @@ def insert_monitored_db(params):
         elif params['md_dbtype'] == 'pgbouncer':
             # get all configured pgbouncer DBs
             params['md_dbname'] = 'pgbouncer'
-            active_dbs_on_host, err = datadb.execute("show databases", params)
+            active_dbs_on_host, err = datadb.executeOnRemoteHost("show databases", host=params['md_hostname'], port=params['md_port'],
+                                                                 dbname='pgbouncer', user=params['md_user'], password=params['md_password'],
+                                                                 sslmode=params['md_sslmode'])
             if err:
                 raise Exception("Could not read active DBs from specified host!")
             active_dbs_on_host = [x['name'] for x in active_dbs_on_host]

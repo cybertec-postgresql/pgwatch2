@@ -140,7 +140,7 @@
                     <td></td>
                     <td><input type="text" name="md_unique_name" value="" size="10" title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data)"></td>
                     <td>
-                        <select name="md_dbtype">
+                        <select name="md_dbtype" id="md_dbtype">
                             <option value="postgres">postgres</option>
                             <option value="pgbouncer">pgbouncer</option>
                         </select>
@@ -159,7 +159,7 @@
                         </select>
                     </td>
                     <td>
-                        <select name="md_preset_config_name"> <!-- TODO click with JSON -->
+                        <select name="md_preset_config_name" id="md_preset_config_name">
                             <option value="" title="Empty. 'Custom config' must be filled" ></option>
                             {% for pc in preset_configs %}
                             <option value="{{pc['pc_name']|e}}">{{pc['pc_name']|e}}</option>
@@ -169,7 +169,7 @@
                         <a class="show_metrics" href="/metrics" title="Show JSON config in a new window" target="_blank">show</a>&nbsp;|&nbsp;
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
-                    <td title='{"metric":interval,...}'><textarea name="md_config" value="" cols="15"></textarea></td>
+                    <td title='{"metric":interval,...}'><textarea name="md_config" id="md_config" value="" cols="15"></textarea></td>
                     <td><input type="text" name="md_statement_timeout_seconds" size="2" value="5"></td>
                     <td></td>
                     <td><input type="checkbox" name="md_is_enabled" checked></td>
@@ -292,6 +292,15 @@
                 return false;
             }
 
+        });
+
+        $("#md_dbtype").change(function(event){
+            if ($(this).val() == 'pgbouncer') {
+                $("#md_preset_config_name").val('pgbouncer');
+                alert('NB! Preset Config set to "pgbouncer"');
+            } else if ($(this).val() == 'postgres') {
+                $("#md_preset_config_name").val('');
+            }
         });
     });
 </script>
