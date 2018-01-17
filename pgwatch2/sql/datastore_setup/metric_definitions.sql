@@ -1018,22 +1018,9 @@ true
 /* Stored procedure wrapper for pg_stat_activity - needed for non-superuser to view session state */
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
 values (
-'get_stat_activity',
-9.0,
-$sql$
-BEGIN;
-
-CREATE OR REPLACE FUNCTION public.get_stat_activity() RETURNS SETOF pg_stat_activity AS
-$$
-  select * from pg_stat_activity
-$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
-
-REVOKE EXECUTE ON FUNCTION public.get_stat_activity() FROM PUBLIC;
---GRANT EXECUTE ON FUNCTION public.get_stat_activity() TO pgwatch2;
-COMMENT ON FUNCTION public.get_stat_activity() IS 'created for pgwatch2';
-
-COMMIT;
-$sql$,
-'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
-true
+'pgbouncer_stats',
+0,
+'show stats',
+'pgbouncer per db statistics',
+false
 );

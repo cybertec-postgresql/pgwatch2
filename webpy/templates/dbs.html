@@ -73,9 +73,10 @@
             <tr>
                 <td>ID</td>
                 <td title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data)">Unique name</td>
+                <td title="NB! For 'pgbouncer' insert the to be monitored pool name to 'dbname' field">DB type</td>
                 <td>DB host</td>
                 <td>DB port</td>
-                <td title="NB! If left empty all DBs from the cluster will be added, prefixed with the 'Unique name'">DB dbname <span class="glyphicon glyphicon-info-sign" title="NB! If left empty all DBs from the cluster will be added, prefixed with the 'Unique name'"></span></td>
+                <td title="NB! If left empty all DBs from the cluster will be added, prefixed with the 'Unique name'">DB dbname <span class="glyphicon glyphicon-info-sign" title="NB! If left empty for 'postgres', all DBs from the cluster will be added, prefixed with the 'Unique name'"></span></td>
                 <td>DB user</td>
                 <td title="NB! Password is stored in plain-text in the database">DB password</td>
                 <td title="NB! If checked pgwatch daemon will automatically try to create the CPU load monitoring and stat_statements helper">Is superuser?</td>
@@ -95,6 +96,12 @@
                 <form action="/dbs" method="post">
                     <td>{{row['md_id']}}<input type="hidden" name="md_id" value="{{row['md_id']}}"></td>
                     <td><input type="hidden" name="md_unique_name" value="{{row['md_unique_name']|e}}">{{row['md_unique_name']|e}}</td>
+                    <td>
+                        <select name="md_dbtype">
+                            <option value="postgres" {% if row['md_dbtype'] == "postgres" %}selected{% endif %}>postgres</option>
+                            <option value="pgbouncer"{% if row['md_dbtype'] == "pgbouncer" %}selected{% endif %}>pgbouncer</option>
+                        </select>
+                    </td>
                     <td><input type="text" name="md_hostname" value="{{row['md_hostname']|e}}" size="12"></td>
                     <td><input type="text" name="md_port" value="{{row['md_port']|e}}" size="5"></td>
                     <td><input type="text" name="md_dbname" value="{{row['md_dbname']|e}}" size="12"></td>
@@ -132,6 +139,12 @@
                 <form action="/dbs" method="post">
                     <td></td>
                     <td><input type="text" name="md_unique_name" value="" size="10" title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data)"></td>
+                    <td>
+                        <select name="md_dbtype">
+                            <option value="postgres">postgres</option>
+                            <option value="pgbouncer">pgbouncer</option>
+                        </select>
+                    </td>
                     <td><input type="text" name="md_hostname" value="" size="12"></td>
                     <td><input type="text" name="md_port" value="5432" size="5"></td>
                     <td><input type="text" name="md_dbname" value="" size="12"></td>

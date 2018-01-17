@@ -41,9 +41,11 @@ create table pgwatch2.monitored_db (
     md_is_enabled boolean not null default 't',
     md_last_modified_on timestamptz not null default now(),
     md_statement_timeout_seconds int not null default 5,   -- metrics queries will be canceled after so many seconds
+    md_dbtype text not null default 'postgres',
     UNIQUE (md_unique_name),
     CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':'),
-    CHECK (md_sslmode in ('disable', 'require', 'verify-full'))
+    CHECK (md_sslmode in ('disable', 'require', 'verify-full')),
+    CHECK (md_dbtype in ('postgres', 'pgbouncer'))
 );
 
 create unique index on monitored_db(md_hostname, md_port, md_dbname, md_is_enabled); -- prevent multiple active workers for the same db
@@ -87,6 +89,10 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "index_stats": 60,
     "stat_statements": 60,
     "sproc_stats": 60
+    }'),
+    ('pgbouncer', 'per DB stats',
+    '{
+    "pgbouncer_stats": 60
     }'),
     ('exhaustive', 'almost all available metrics for a deeper performance understanding',
     '{
