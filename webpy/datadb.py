@@ -11,11 +11,10 @@ def setConnectionString(conn_string):
     connection_string = conn_string
 
 
-def setConnectionString(host, port, dbname, username, password, connect_timeout=10):
+def setConnectionString(host, port, dbname, username, password, require_ssl=False, connect_timeout=10):
     global connection_string
-    connection_string = 'host={} port={} dbname={} user={} password={} connect_timeout={}'.format(host, port, dbname,
-                                                                                                  username, password,
-                                                                                                  connect_timeout)
+    connection_string = 'host={} port={} dbname={} user={} password={} connect_timeout={} {}'.format(
+        host, port, dbname, username, password, connect_timeout, '' if not require_ssl else 'sslmode=require')
 
 
 def getDataConnection(autocommit=True):
@@ -85,15 +84,8 @@ def executeOnRemoteHost(sql, host, port, dbname, user, password='', sslmode='pre
 
 
 def isDataStoreConnectionOK():
-    data = []
-    try:
-        data = execute('select 1 as x')
-    except:
-        logging.exception('failed to connect to postgres')
-    if data:
-        return data[0]['x'] == 1
-    else:
-        return False
+    data, err = execute('select 1 as x', quiet=True)
+    return err
 
 
 if __name__ == '__main__':

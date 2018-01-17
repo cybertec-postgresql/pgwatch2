@@ -283,7 +283,7 @@ if __name__ == '__main__':
     parser.add_argument('--password', help='Pgwatch2 Config DB password',
                         default=(os.getenv('PW2_PGPASSWORD') or 'pgwatch2admin'))
     parser.add_argument('--pg-require-ssl', help='Pgwatch2 Config DB SSL connection only', action='store_true',
-                        default=(os.getenv('PW2_PGSSL') or False))    # TODO add check
+                        default=(os.getenv('PW2_PGSSL') or False))
     # Influx
     parser.add_argument('--influx-host', help='InfluxDB host',
                         default=(os.getenv('PW2_IHOST') or 'localhost'))
@@ -308,7 +308,11 @@ if __name__ == '__main__':
     logging.debug(cmd_args)
 
     datadb.setConnectionString(
-        cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password)
+        cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password, cmd_args.pg_require_ssl)
+    err = datadb.isDataStoreConnectionOK()
+    if err:
+        logging.warning("failed to connect to config DB: %s", )
+
     pgwatch2_influx.influx_set_connection_params(cmd_args.influx_host, cmd_args.influx_port, cmd_args.influx_user,
                                                  cmd_args.influx_password, cmd_args.influx_database, cmd_args.influx_require_ssl)
 
