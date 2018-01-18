@@ -1238,7 +1238,7 @@ func main() {
 			if !exists {
 				var err error
 
-				log.Error(fmt.Sprintf("new host \"%s\"found, checking connectivity...", db_unique))
+				log.Info(fmt.Sprintf("new host \"%s\"found, checking connectivity...", db_unique))
 				if db_type == "postgres" {
 					_, err = DBExecReadByDbUniqueName(db_unique, "select 1") // test connectivity
 				} else if db_type == "pgbouncer" {
