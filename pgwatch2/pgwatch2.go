@@ -71,7 +71,7 @@ var metric_def_map_lock = sync.RWMutex{}
 var host_metric_interval_map = make(map[string]float64) // [db1_metric] = 30
 var db_pg_version_map = make(map[string]decimal.Decimal)
 var db_pg_version_map_lock = sync.RWMutex{}
-var InfluxDefaultRetentionPolicyDuration string = "90d" // 90 days of monitoring data will be kept around. adjust if needed
+var InfluxDefaultRetentionPolicyDuration int64 = 90 // 90 days of monitoring data will be kept around. can be adjusted later on influx side if needed
 var monitored_db_cache map[string]map[string]interface{}
 var monitored_db_cache_lock sync.RWMutex
 var metric_fetching_channels = make(map[string](chan MetricFetchMessage)) // [db1unique]=chan
@@ -1018,7 +1018,7 @@ func queryDB(clnt client.Client, cmd string) (res []client.Result, err error) {
 	return res, nil
 }
 
-func InitAndTestInfluxConnection(InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword string, InfluxSSL bool) error {
+func InitAndTestInfluxConnection(InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword string, InfluxSSL bool, RetentionPeriod int64) error {
 	log.Info(fmt.Sprintf("Testing Influx connection to host: %s, port: %s, DB: %s", InfluxHost, InfluxPort, InfluxDbname))
 
 	if InfluxSSL {
@@ -1060,8 +1060,8 @@ retry:
 		}
 	}
 
-	log.Warning(fmt.Sprintf("Database '%s' not found! Creating with 90d retention...", InfluxDbname))
-	isql := fmt.Sprintf("CREATE DATABASE %s WITH DURATION %s REPLICATION 1 SHARD DURATION 3d NAME pgwatch_def_ret", InfluxDbname, InfluxDefaultRetentionPolicyDuration)
+	log.Warning(fmt.Sprintf("Database '%s' not found! Creating with %d retention...", InfluxDbname, RetentionPeriod))
+	isql := fmt.Sprintf("CREATE DATABASE %s WITH DURATION %dd REPLICATION 1 SHARD DURATION 3d NAME pgwatch_def_ret", InfluxDbname, RetentionPeriod)
 	res, err = queryDB(c, isql)
 	if err != nil {
 		log.Fatal(err)
@@ -1127,21 +1127,22 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) {
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
-	Verbose        []bool `short:"v" long:"verbose" description:"Show verbose debug information"`
-	Host           string `long:"host" description:"PG config DB host" default:"localhost" env:"PW2_PGHOST"`
-	Port           string `short:"p" long:"port" description:"PG config DB port" default:"5432" env:"PW2_PGPORT"`
-	Dbname         string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
-	User           string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2" env:"PW2_PGUSER"`
-	Password       string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
-	Datastore      string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
-	InfluxHost     string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
-	InfluxPort     string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
-	InfluxDbname   string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
-	InfluxUser     string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
-	InfluxPassword string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
-	InfluxSSL      bool   `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
-	GraphiteHost   string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
-	GraphitePort   string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
+	Verbose             []bool `short:"v" long:"verbose" description:"Show verbose debug information"`
+	Host                string `long:"host" description:"PG config DB host" default:"localhost" env:"PW2_PGHOST"`
+	Port                string `short:"p" long:"port" description:"PG config DB port" default:"5432" env:"PW2_PGPORT"`
+	Dbname              string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
+	User                string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2" env:"PW2_PGUSER"`
+	Password            string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
+	Datastore           string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
+	InfluxHost          string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
+	InfluxPort          string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
+	InfluxDbname        string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
+	InfluxUser          string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
+	InfluxPassword      string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
+	InfluxSSL           bool   `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
+	InfluxRetentionDays int64  `long:"iretentiondays" description:"Retention period in days [90 default]" env:"PW2_IRETENTIONDAYS"`
+	GraphiteHost        string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
+	GraphitePort        string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
 	//File           string `short:"f" long:"file" description:"Sqlite3 config DB file"`
 }
 
@@ -1188,8 +1189,12 @@ func main() {
 		log.Info("starting GraphitePersister...")
 		go GraphitePersister(persist_ch)
 	} else {
+		retentionPeriod := InfluxDefaultRetentionPolicyDuration
+		if opts.InfluxRetentionDays > 0 {
+			retentionPeriod = opts.InfluxRetentionDays
+		}
 		err := InitAndTestInfluxConnection(opts.InfluxHost, opts.InfluxPort, opts.InfluxDbname, opts.InfluxUser,
-			opts.InfluxPassword, opts.InfluxSSL)
+			opts.InfluxPassword, opts.InfluxSSL, retentionPeriod)
 		if err != nil {
 			log.Fatal("Could not initialize InfluxDB", err)
 		}
