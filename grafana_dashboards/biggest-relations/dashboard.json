@@ -204,7 +204,7 @@
                 {
                   "key": "dbname",
                   "operator": "=",
-                  "value": "pala"
+                  "value": "$dbname"
                 }
               ]
             }
@@ -293,7 +293,7 @@
               ],
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "SELECT last(\"index_size_b\")  as value FROM \"index_stats\" WHERE (\"dbname\" = 'pala') AND time > now() - 1h GROUP BY time(15m), \"index_name\" fill(0)",
+              "query": "SELECT last(\"index_size_b\")  as value FROM \"index_stats\" WHERE (\"dbname\" = '$dbname') AND time > now() - 1h GROUP BY time(15m), \"index_name\" fill(0)",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "time_series",

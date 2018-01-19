@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "hideControls": true,
-  "id": 12,
+  "id": null,
   "links": [],
   "rows": [
     {
@@ -61,7 +61,7 @@
               "link": true,
               "linkTargetBlank": true,
               "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
-              "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=1045341596",
+              "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell",
               "pattern": "queryid",
               "sanitize": false,
               "thresholds": [],
@@ -201,7 +201,7 @@
               "link": true,
               "linkTargetBlank": true,
               "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
-              "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=1045341596",
+              "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell",
               "pattern": "queryid",
               "sanitize": false,
               "thresholds": [],
@@ -341,7 +341,7 @@
               "link": true,
               "linkTargetBlank": true,
               "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
-              "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=1045341596",
+              "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell",
               "pattern": "queryid",
               "sanitize": false,
               "thresholds": [],
@@ -472,8 +472,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "pala",
-          "value": "pala"
+          "text": "",
+          "value": ""
         },
         "datasource": null,
         "hide": 0,
@@ -512,6 +512,11 @@
           },
           {
             "selected": true,
+            "text": "3",
+            "value": "3"
+          },
+          {
+            "selected": false,
             "text": "5",
             "value": "5"
           },
@@ -546,7 +551,7 @@
             "value": "50"
           }
         ],
-        "query": "1,5,10,15,20,30,40,50",
+        "query": "1,3,5,10,15,20,30,40,50",
         "type": "custom"
       }
     ]
@@ -581,6 +586,6 @@
     ]
   },
   "timezone": "browser",
-  "title": "Stat_statements Top",
+  "title": "Stat statements Top",
   "version": 0
 }
