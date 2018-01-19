@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -62,6 +63,9 @@ const EPOCH_COLUMN_NAME string = "epoch_ns"      // this column (epoch in nanose
 const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
 const ACTIVE_SERVERS_REFRESH_TIME int64 = 60     // min time before checking for new/changed databases under monitoring i.e. main loop time
 const GRAPHITE_METRICS_PREFIX string = "pgwatch2"
+const INFLUX_PERSIST_QUEUE_MAX_SIZE = 100000 // storage queue max elements. when reaching the limit, older metrics will be dropped.
+// actual requirements depend a lot of metric type and nr. of obects in schemas,
+// but 100k should be enough for 24h and 5 hosts with "exhaustive" preset config
 
 var configDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
@@ -384,7 +388,7 @@ func UpdateMonitoredDBCache(data [](map[string]interface{})) error {
 
 // TODO batching of mutiple datasets
 func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
-	retry_queue := make([]MetricStoreMessage, 0)
+	retry_queue := list.New()
 
 	for {
 		select {
@@ -393,14 +397,19 @@ func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
 
 			err := SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
 			if err != nil {
-				// TODO back up to disk when too many failures
+				// TODO back up to disk when too many failures, WAL style
 				log.Error(err)
-				retry_queue = append(retry_queue, msg)
+				if retry_queue.Len() == INFLUX_PERSIST_QUEUE_MAX_SIZE {
+					retry_queue.Remove(retry_queue.Back())
+					log.Warning("Dropped the oldest dataset as INFLUX_PERSIST_QUEUE_MAX_SIZE =", INFLUX_PERSIST_QUEUE_MAX_SIZE, "exceeded")
+				}
+				retry_queue.PushFront(msg)
+				time.Sleep(time.Second * 10)
 			}
 		default:
-			for len(retry_queue) > 0 {
-				log.Info("processing retry_queue. len(retry_queue) =", len(retry_queue))
-				msg := retry_queue[0]
+			for retry_queue.Len() > 0 {
+				log.Info("Processing InfluxDB retry_queue. Items in retry_queue:", retry_queue.Len())
+				msg := retry_queue.Back().Value.(MetricStoreMessage)
 
 				err := SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
 				if err != nil {
@@ -412,7 +421,7 @@ func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
 						break
 					}
 				}
-				retry_queue = retry_queue[1:]
+				retry_queue.Remove(retry_queue.Back())
 			}
 
 			time.Sleep(time.Millisecond * 10)
