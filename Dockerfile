@@ -46,7 +46,8 @@ RUN wget -q -O /tmp/go.tar.gz https://storage.googleapis.com/golang/go1.9.2.linu
     && rm /tmp/go.tar.gz \
     && rm -rf /usr/local/go \
     && chgrp -R 0 /pgwatch2/webpy \
-    && chmod -R g=u /pgwatch2/webpy
+    && chmod -R g=u /pgwatch2/webpy \
+    && grafana-cli plugins install savantly-heatmap-panel
 
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
 
