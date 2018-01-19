@@ -1260,6 +1260,7 @@ func main() {
 				metric_fetching_channels[db_unique] = make(chan MetricFetchMessage, 100)
 				go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch) // close message?
 				metric_fetching_channels_lock.Unlock()
+				time.Sleep(time.Millisecond * 250) // not to cause a huge load spike when starting the daemon with 20+ monitored DBs
 			}
 
 			for metric := range host_config {
