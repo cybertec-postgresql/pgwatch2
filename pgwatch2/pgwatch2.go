@@ -423,10 +423,12 @@ func ProcessRetryQueue(data_source string, retry_queue *list.List, limit int) er
 
 // TODO batching of mutiple datasets
 func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
-	retry_queue := list.New()
-	last_try := time.Now() // if Influx errors out, don't retry before 10s
-	in_error := false
+	var last_try time.Time          // if Influx errors out, don't retry before 10s
+	var last_drop_warning time.Time // log metric points drops every 10s to not overflow logs in case Influx is down for longer
 	var err error
+	retry_queue := list.New()
+	points_dropped := 0
+	in_error := false
 
 	for {
 		select {
@@ -436,7 +438,12 @@ func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
 			if retry_queue_length > 0 {
 				if retry_queue_length == PERSIST_QUEUE_MAX_SIZE {
 					retry_queue.Remove(retry_queue.Back())
-					log.Warning("Dropped the oldest dataset as PERSIST_QUEUE_MAX_SIZE =", PERSIST_QUEUE_MAX_SIZE, "exceeded")
+					points_dropped += 1
+					if last_drop_warning.IsZero() || last_drop_warning.Before(time.Now().Add(time.Second*-10)) {
+						log.Warning("Dropped", points_dropped, "oldest data points as PERSIST_QUEUE_MAX_SIZE =", PERSIST_QUEUE_MAX_SIZE, "exceeded")
+						last_drop_warning = time.Now()
+						points_dropped = 0
+					}
 				}
 				retry_queue.PushFront(msg)
 			} else {
@@ -457,8 +464,6 @@ func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
 						in_error = true
 						retry_queue.PushFront(msg)
 					}
-				} else {
-					time.Sleep(0)
 				}
 			}
 		default:
