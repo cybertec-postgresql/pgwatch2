@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# NB! Starting from pgwatch2 version 1.3.0 most users should use Docker volumes defined for single components for easier updating
+# Also note that after below update steps on rare occasions (when getting according schema errors from pgwatch2 daemon)
+# some migration scripts from the "pgwatch2/sql/datastore_setup/migrations" might still be needed to roll out manually
+# on the Postgres config DB.
+
 NAME=$1
 BACKUP_FOLDER=pgwatch2_backup_$NAME
 
@@ -67,7 +72,7 @@ echo "done!"
 # 7. restore InfluxDB meta files
 #       influxd restore -metadir /var/lib/influxdb/meta /pgwatch2_backups/influxdb_backup
 # 8. restore InfluxDB data files (real metric infos)
-#       influxd restore -database pgwatch2 -datadir /var/lib/influxdb/data /pgwatch2_backups/influxdb_data
+#       influxd restore -database pgwatch2 -datadir /var/lib/influxdb/data /pgwatch2_backups/influxdb_backup
 # 9. restart the Docker image
 #        docker stop pw2 && docker start pw2
 # 10. done!
