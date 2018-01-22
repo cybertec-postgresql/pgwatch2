@@ -66,8 +66,8 @@ const GRAPHITE_METRICS_PREFIX string = "pgwatch2"
 const PERSIST_QUEUE_MAX_SIZE = 100000 // storage queue max elements. when reaching the limit, older metrics will be dropped.
 // actual requirements depend a lot of metric type and nr. of obects in schemas,
 // but 100k should be enough for 24h, assuming 5 hosts monitored with "exhaustive" preset config. this would also require ~2 GB RAM
-const DATASOURCE_INFLUX = "influx"
-const DATASOURCE_GRAPHITE = "graphite"
+const DATASTORE_INFLUX = "influx"
+const DATASTORE_GRAPHITE = "graphite"
 
 var configDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
@@ -396,15 +396,15 @@ func ProcessRetryQueue(data_source string, retry_queue *list.List, limit int) er
 		log.Info("Processing InfluxDB retry_queue. Items in retry_queue: ", retry_queue.Len())
 		msg := retry_queue.Back().Value.(MetricStoreMessage)
 
-		if data_source == DATASOURCE_INFLUX {
+		if data_source == DATASTORE_INFLUX {
 			err = SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
-		} else if data_source == DATASOURCE_GRAPHITE {
+		} else if data_source == DATASTORE_GRAPHITE {
 			err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
 		} else {
-			log.Fatal("invalid datasource:", data_source)
+			log.Fatal("Invalid datastore:", data_source)
 		}
 		if err != nil {
-			if data_source == DATASOURCE_INFLUX && strings.Contains(err.Error(), "unable to parse") {
+			if data_source == DATASTORE_INFLUX && strings.Contains(err.Error(), "unable to parse") {
 				log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
 					msg.DBUniqueName, msg.MetricName, msg.Data)) // ignore data points consisting of anything else than strings and floats
 			} else {
@@ -422,10 +422,11 @@ func ProcessRetryQueue(data_source string, retry_queue *list.List, limit int) er
 }
 
 // TODO batching of mutiple datasets
-func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
+func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
 	retry_queue := list.New()
 	last_try := time.Now() // if Influx errors out, don't retry before 10s
 	in_error := false
+	var err error
 
 	for {
 		select {
@@ -439,7 +440,13 @@ func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
 				}
 				retry_queue.PushFront(msg)
 			} else {
-				err := SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
+				if data_store == DATASTORE_INFLUX {
+					err = SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
+				} else if data_store == DATASTORE_GRAPHITE {
+					err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
+				} else {
+					log.Fatal("Invalid datastore:", data_store)
+				}
 				last_try = time.Now()
 				if err != nil {
 					if strings.Contains(err.Error(), "unable to parse") {
@@ -456,53 +463,9 @@ func InfluxPersister(storage_ch <-chan MetricStoreMessage) {
 			}
 		default:
 			if retry_queue.Len() > 0 && (!in_error || last_try.Before(time.Now().Add(time.Second*-10))) {
-				err := ProcessRetryQueue(DATASOURCE_INFLUX, retry_queue, 100)
+				err := ProcessRetryQueue(data_store, retry_queue, 100)
 				if err != nil {
-					log.Error("Error processing Influx retry queue", err)
-					in_error = true
-				} else {
-					in_error = false
-				}
-				last_try = time.Now()
-			} else {
-				time.Sleep(time.Millisecond * 100) // nothing in queue nor in channel
-			}
-		}
-	}
-}
-
-func GraphitePersister(storage_ch <-chan MetricStoreMessage) {
-	retry_queue := list.New()
-	last_try := time.Now() // if Influx errors out, don't retry before 10s
-	in_error := false
-
-	for {
-		select {
-		case msg := <-storage_ch:
-			retry_queue_length := retry_queue.Len()
-
-			if retry_queue_length > 0 {
-				if retry_queue_length == PERSIST_QUEUE_MAX_SIZE {
-					retry_queue.Remove(retry_queue.Back())
-					log.Warning("Dropped the oldest dataset as PERSIST_QUEUE_MAX_SIZE =", PERSIST_QUEUE_MAX_SIZE, "exceeded")
-				}
-				retry_queue.PushFront(msg)
-			} else {
-				err := SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
-				last_try = time.Now()
-				if err != nil {
-					log.Error(err)
-					in_error = true
-					retry_queue.PushFront(msg)
-				} else {
-					time.Sleep(0)
-				}
-			}
-		default:
-			if retry_queue.Len() > 0 && (!in_error || last_try.Before(time.Now().Add(time.Second*-10))) {
-				err := ProcessRetryQueue(DATASOURCE_GRAPHITE, retry_queue, 100)
-				if err != nil {
-					log.Error("Error processing Graphite retry queue", err)
+					log.Error("Error processing retry queue", err)
 					in_error = true
 				} else {
 					in_error = false
@@ -1245,7 +1208,7 @@ func main() {
 		graphite_port, _ := strconv.ParseInt(opts.GraphitePort, 10, 64)
 		InitGraphiteConnection(opts.GraphiteHost, int(graphite_port))
 		log.Info("starting GraphitePersister...")
-		go GraphitePersister(persist_ch)
+		go MetricsPersister(DATASTORE_GRAPHITE, persist_ch)
 	} else {
 		retentionPeriod := InfluxDefaultRetentionPolicyDuration
 		if opts.InfluxRetentionDays > 0 {
@@ -1259,7 +1222,7 @@ func main() {
 		log.Info("InfluxDB connection OK")
 
 		log.Info("starting InfluxPersister...")
-		go InfluxPersister(persist_ch)
+		go MetricsPersister(DATASTORE_INFLUX, persist_ch)
 	}
 
 	first_loop := true
