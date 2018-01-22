@@ -65,7 +65,7 @@ const ACTIVE_SERVERS_REFRESH_TIME int64 = 60     // min time before checking for
 const GRAPHITE_METRICS_PREFIX string = "pgwatch2"
 const PERSIST_QUEUE_MAX_SIZE = 100000 // storage queue max elements. when reaching the limit, older metrics will be dropped.
 // actual requirements depend a lot of metric type and nr. of obects in schemas,
-// but 100k should be enough for 24h, assuming 5 hosts monitored with "exhaustive" preset config. this would also require ~2 GB RAM
+// but 100k should be enough for 24h, assuming 5 hosts monitored with "exhaustive" preset config. this would also require ~2 GB RAM per one Influx host
 const DATASTORE_INFLUX = "influx"
 const DATASTORE_GRAPHITE = "graphite"
 
@@ -82,7 +82,9 @@ var monitored_db_cache map[string]map[string]interface{}
 var monitored_db_cache_lock sync.RWMutex
 var metric_fetching_channels = make(map[string](chan MetricFetchMessage)) // [db1unique]=chan
 var metric_fetching_channels_lock = sync.RWMutex{}
-var InfluxConnectStr string
+var influx_host_count = 1
+var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently supported
+// secondary Influx meant for HA or Grafana load balancing for 100+ instances with lots of alerts
 
 func GetPostgresDBConnection(host, port, dbname, user, password, sslmode string) (*sqlx.DB, error) {
 	var err error
@@ -183,23 +185,23 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 	return data, err
 }
 
-func SendToInflux(dbname, measurement string, data [](map[string]interface{})) error {
+func SendToInflux(connect_str, conn_id, dbname, measurement string, data [](map[string]interface{})) error {
 	if data == nil || len(data) == 0 {
 		return nil
 	}
-	log.Debug("SendToInflux data[0] of ", len(data), ":", data[0])
+	log.Debug("SendToInflux", conn_id, "data[0] of ", len(data), ":", data[0])
 	ts_warning_printed := false
-retry:
 	retries := 1 // 1 retry
+retry:
 
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     InfluxConnectStr,
+		Addr:     connect_str,
 		Username: opts.InfluxUser,
 		Password: opts.InfluxPassword,
 	})
 
 	if err != nil {
-		log.Error("Error connecting to Influx: ", err)
+		log.Error("Error connecting to Influx", conn_id, ": ", err)
 		if retries > 0 {
 			retries--
 			time.Sleep(time.Millisecond * 200)
@@ -262,8 +264,8 @@ retry:
 	err = c.Write(bp)
 	t_diff := time.Now().Sub(t1)
 	if err == nil {
-		log.Info(fmt.Sprintf("wrote %d/%d rows to Influx for [%s:%s] in %dus", rows_batched, len(data),
-			dbname, measurement, t_diff.Nanoseconds()/1000))
+		log.Info(fmt.Sprintf("wrote %d/%d rows to InfluxDB %s for [%s:%s] in %dus", rows_batched, len(data),
+			conn_id, dbname, measurement, t_diff.Nanoseconds()/1000))
 	}
 	return err
 }
@@ -388,16 +390,16 @@ func UpdateMonitoredDBCache(data [](map[string]interface{})) error {
 	return nil
 }
 
-func ProcessRetryQueue(data_source string, retry_queue *list.List, limit int) error {
+func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *list.List, limit int) error {
 	var err error
 	iterations_done := 0
 
 	for retry_queue.Len() > 0 { // send over the whole re-try queue at once if connection works
-		log.Info("Processing InfluxDB retry_queue. Items in retry_queue: ", retry_queue.Len())
+		log.Info("Processing InfluxDB retry_queue", conn_ident, ". Items in retry_queue: ", retry_queue.Len())
 		msg := retry_queue.Back().Value.(MetricStoreMessage)
 
 		if data_source == DATASTORE_INFLUX {
-			err = SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
+			err = SendToInflux(conn_str, conn_ident, msg.DBUniqueName, msg.MetricName, msg.Data)
 		} else if data_source == DATASTORE_GRAPHITE {
 			err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
 		} else {
@@ -423,61 +425,70 @@ func ProcessRetryQueue(data_source string, retry_queue *list.List, limit int) er
 
 // TODO batching of mutiple datasets
 func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
-	var last_try time.Time          // if Influx errors out, don't retry before 10s
-	var last_drop_warning time.Time // log metric points drops every 10s to not overflow logs in case Influx is down for longer
+	var last_try = make([]time.Time, influx_host_count)          // if Influx errors out, don't retry before 10s
+	var last_drop_warning = make([]time.Time, influx_host_count) // log metric points drops every 10s to not overflow logs in case Influx is down for longer
+	var retry_queues = make([]*list.List, influx_host_count)     // separate queues for all Influx hosts
+	var in_error = make([]bool, influx_host_count)
+	var points_dropped = make([]int64, influx_host_count)
 	var err error
-	retry_queue := list.New()
-	points_dropped := 0
-	in_error := false
+
+	for i := 0; i < influx_host_count; i++ {
+		retry_queues[i] = list.New()
+	}
 
 	for {
 		select {
 		case msg := <-storage_ch:
-			retry_queue_length := retry_queue.Len()
+			for i, retry_queue := range retry_queues {
 
-			if retry_queue_length > 0 {
-				if retry_queue_length == PERSIST_QUEUE_MAX_SIZE {
-					retry_queue.Remove(retry_queue.Back())
-					points_dropped += 1
-					if last_drop_warning.IsZero() || last_drop_warning.Before(time.Now().Add(time.Second*-10)) {
-						log.Warning("Dropped", points_dropped, "oldest data points as PERSIST_QUEUE_MAX_SIZE =", PERSIST_QUEUE_MAX_SIZE, "exceeded")
-						last_drop_warning = time.Now()
-						points_dropped = 0
+				retry_queue_length := retry_queue.Len()
+
+				if retry_queue_length > 0 {
+					if retry_queue_length == PERSIST_QUEUE_MAX_SIZE {
+						retry_queue.Remove(retry_queue.Back())
+						points_dropped[i] += 1
+						if last_drop_warning[i].IsZero() || last_drop_warning[i].Before(time.Now().Add(time.Second*-10)) {
+							log.Warning("Dropped", points_dropped, "oldest data points from queue", i, "as PERSIST_QUEUE_MAX_SIZE =", PERSIST_QUEUE_MAX_SIZE, "exceeded")
+							last_drop_warning[i] = time.Now()
+							points_dropped[i] = 0
+						}
 					}
-				}
-				retry_queue.PushFront(msg)
-			} else {
-				if data_store == DATASTORE_INFLUX {
-					err = SendToInflux(msg.DBUniqueName, msg.MetricName, msg.Data)
-				} else if data_store == DATASTORE_GRAPHITE {
-					err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
+					retry_queue.PushFront(msg)
 				} else {
-					log.Fatal("Invalid datastore:", data_store)
-				}
-				last_try = time.Now()
-				if err != nil {
-					if strings.Contains(err.Error(), "unable to parse") {
-						log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
-							msg.DBUniqueName, msg.MetricName, msg.Data)) // ignore data points consisting of anything else than strings and floats
+					if data_store == DATASTORE_INFLUX {
+						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg.DBUniqueName, msg.MetricName, msg.Data)
+					} else if data_store == DATASTORE_GRAPHITE {
+						err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
 					} else {
-						log.Error(err)
-						in_error = true
-						retry_queue.PushFront(msg)
+						log.Fatal("Invalid datastore:", data_store)
+					}
+					last_try[i] = time.Now()
+					if err != nil {
+						if strings.Contains(err.Error(), "unable to parse") {
+							log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
+								msg.DBUniqueName, msg.MetricName, msg.Data)) // ignore data points consisting of anything else than strings and floats
+						} else {
+							log.Error(fmt.Sprintf("Failed to write into datastore %d: %s", i, err))
+							in_error[i] = true
+							retry_queue.PushFront(msg)
+						}
 					}
 				}
 			}
 		default:
-			if retry_queue.Len() > 0 && (!in_error || last_try.Before(time.Now().Add(time.Second*-10))) {
-				err := ProcessRetryQueue(data_store, retry_queue, 100)
-				if err != nil {
-					log.Error("Error processing retry queue", err)
-					in_error = true
+			for i, retry_queue := range retry_queues {
+				if retry_queue.Len() > 0 && (!in_error[i] || last_try[i].Before(time.Now().Add(time.Second*-10))) {
+					err := ProcessRetryQueue(data_store, InfluxConnectStrings[i], strconv.Itoa(i), retry_queue, 100)
+					if err != nil {
+						log.Error("Error processing retry queue", i, ":", err)
+						in_error[i] = true
+					} else {
+						in_error[i] = false
+					}
+					last_try[i] = time.Now()
 				} else {
-					in_error = false
+					time.Sleep(time.Millisecond * 100) // nothing in queue nor in channel
 				}
-				last_try = time.Now()
-			} else {
-				time.Sleep(time.Millisecond * 100) // nothing in queue nor in channel
 			}
 		}
 	}
@@ -1044,24 +1055,25 @@ func queryDB(clnt client.Client, cmd string) (res []client.Result, err error) {
 	return res, nil
 }
 
-func InitAndTestInfluxConnection(InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword string, InfluxSSL bool, RetentionPeriod int64) error {
-	log.Info(fmt.Sprintf("Testing Influx connection to host: %s, port: %s, DB: %s", InfluxHost, InfluxPort, InfluxDbname))
+func InitAndTestInfluxConnection(HostId, InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword string, InfluxSSL bool, RetentionPeriod int64) (string, error) {
+	log.Info(fmt.Sprintf("Testing Influx connection to host %s: %s, port: %s, DB: %s", HostId, InfluxHost, InfluxPort, InfluxDbname))
+	var connect_string string
 
 	if InfluxSSL {
-		InfluxConnectStr = fmt.Sprintf("https://%s:%s", InfluxHost, InfluxPort)
+		connect_string = fmt.Sprintf("https://%s:%s", InfluxHost, InfluxPort)
 	} else {
-		InfluxConnectStr = fmt.Sprintf("http://%s:%s", InfluxHost, InfluxPort)
+		connect_string = fmt.Sprintf("http://%s:%s", InfluxHost, InfluxPort)
 	}
 
 	// Make client
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     InfluxConnectStr,
+		Addr:     connect_string,
 		Username: InfluxUser,
 		Password: InfluxPassword,
 	})
 
 	if err != nil {
-		log.Fatal("Gerring Influx client failed", err)
+		log.Fatal("Getting Influx client failed", err)
 	}
 
 	res, err := queryDB(c, "SHOW DATABASES")
@@ -1074,7 +1086,7 @@ retry:
 			retries = retries - 1
 			goto retry
 		} else {
-			return err
+			return connect_string, err
 		}
 	}
 
@@ -1082,7 +1094,7 @@ retry:
 		log.Debug("Found db:", db_arr[0])
 		if InfluxDbname == db_arr[0] {
 			log.Info(fmt.Sprintf("Database '%s' existing", InfluxDbname))
-			return nil
+			return connect_string, nil
 		}
 	}
 
@@ -1092,10 +1104,10 @@ retry:
 	if err != nil {
 		log.Fatal(err)
 	} else {
-		log.Info("Database 'pgwatch2' created")
+		log.Info("Database 'pgwatch2' created on host", fmt.Sprintf("%s:%s", InfluxHost, InfluxPort))
 	}
 
-	return nil
+	return connect_string, nil
 }
 
 func DoesFunctionExists(dbUnique, functionName string) bool {
@@ -1166,6 +1178,12 @@ type Options struct {
 	InfluxUser          string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
 	InfluxPassword      string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
 	InfluxSSL           bool   `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
+	InfluxHost2         string `long:"ihost2" description:"Influx host II" env:"PW2_IHOST2"`
+	InfluxPort2         string `long:"iport2" description:"Influx port II" env:"PW2_IPORT2"`
+	InfluxDbname2       string `long:"idbname2" description:"Influx DB name II" default:"pgwatch2" env:"PW2_IDATABASE2"`
+	InfluxUser2         string `long:"iuser2" description:"Influx user II" default:"root" env:"PW2_IUSER2"`
+	InfluxPassword2     string `long:"ipassword2" description:"Influx password II" default:"root" env:"PW2_IPASSWORD2"`
+	InfluxSSL2          bool   `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
 	InfluxRetentionDays int64  `long:"iretentiondays" description:"Retention period in days [90 default]" env:"PW2_IRETENTIONDAYS"`
 	GraphiteHost        string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
 	GraphitePort        string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
@@ -1219,13 +1237,26 @@ func main() {
 		if opts.InfluxRetentionDays > 0 {
 			retentionPeriod = opts.InfluxRetentionDays
 		}
-		err := InitAndTestInfluxConnection(opts.InfluxHost, opts.InfluxPort, opts.InfluxDbname, opts.InfluxUser,
+		// check connection and store connection string
+		conn_str, err := InitAndTestInfluxConnection("1", opts.InfluxHost, opts.InfluxPort, opts.InfluxDbname, opts.InfluxUser,
 			opts.InfluxPassword, opts.InfluxSSL, retentionPeriod)
 		if err != nil {
 			log.Fatal("Could not initialize InfluxDB", err)
 		}
-		log.Info("InfluxDB connection OK")
-
+		InfluxConnectStrings[0] = conn_str
+		if len(opts.InfluxHost2) > 0 { // same check for Influx host
+			if len(opts.InfluxPort2) == 0 {
+				log.Fatal("Invalid Influx II connect info")
+			}
+			conn_str, err = InitAndTestInfluxConnection("2", opts.InfluxHost2, opts.InfluxPort2, opts.InfluxDbname2, opts.InfluxUser2,
+				opts.InfluxPassword2, opts.InfluxSSL2, retentionPeriod)
+			if err != nil {
+				log.Fatal("Could not initialize InfluxDB II", err)
+			}
+			InfluxConnectStrings[1] = conn_str
+			influx_host_count = 2
+		}
+		log.Info("InfluxDB connection(s) OK")
 		log.Info("starting InfluxPersister...")
 		go MetricsPersister(DATASTORE_INFLUX, persist_ch)
 	}
