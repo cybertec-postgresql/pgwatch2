@@ -576,72 +576,76 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	if _, ok := host_state["sproc_hashes"]; !ok {
 		first_run = true
 		host_state["sproc_hashes"] = make(map[string]string)
-	} else {
-		first_run = false
 	}
+
 	sql, err := GetSQLForMetricPGVersion("sproc_hashes", db_pg_version)
 	if err != nil {
-		data, err := DBExecReadByDbUniqueName(dbUnique, sql)
-		if err != nil {
-			log.Debug(err)
-		} else {
-			for _, dr := range data {
-				obj_ident := dr["tag_sproc"].(string) + ":" + dr["tag_oid"].(string)
-				prev_hash, ok := host_state["sproc_hashes"][obj_ident]
-				if ok { // we have existing state
-					if prev_hash != dr["md5"].(string) {
-						log.Warning("detected change in sproc:", dr["tag_sproc"], ", oid:", dr["tag_oid"])
-						dr["event"] = "alter"
-						detected_changes = append(detected_changes, dr)
-						host_state["sproc_hashes"][obj_ident] = dr["md5"].(string)
-						change_counts.Altered += 1
-					}
-				} else { // check for new / delete
-					if !first_run {
-						log.Warning("detected new sproc:", dr["tag_sproc"], ", oid:", dr["tag_oid"])
-						dr["event"] = "create"
-						detected_changes = append(detected_changes, dr)
-						change_counts.Created += 1
-					}
-					host_state["sproc_hashes"][obj_ident] = dr["md5"].(string)
-				}
+		log.Error("could not get sproc_hashes sql:", err)
+		return change_counts
+	}
+
+	data, err := DBExecReadByDbUniqueName(dbUnique, sql)
+	if err != nil {
+		log.Error("could not read table_hashes from monitored host: ", dbUnique, ", err:", err)
+		return change_counts
+	}
+
+	for _, dr := range data {
+		obj_ident := dr["tag_sproc"].(string) + ":" + dr["tag_oid"].(string)
+		prev_hash, ok := host_state["sproc_hashes"][obj_ident]
+		if ok { // we have existing state
+			if prev_hash != dr["md5"].(string) {
+				log.Warning("detected change in sproc:", dr["tag_sproc"], ", oid:", dr["tag_oid"])
+				dr["event"] = "alter"
+				detected_changes = append(detected_changes, dr)
+				host_state["sproc_hashes"][obj_ident] = dr["md5"].(string)
+				change_counts.Altered += 1
 			}
-			// detect deletes
-			if !first_run && len(host_state["sproc_hashes"]) != len(data) {
-				deleted_sprocs := make([]string, 0)
-				// turn resultset to map => [oid]=true for faster checks
-				current_oid_map := make(map[string]bool)
-				for _, dr := range data {
-					current_oid_map[dr["tag_sproc"].(string)+":"+dr["tag_oid"].(string)] = true
-				}
-				for sproc_ident, _ := range host_state["sproc_hashes"] {
-					_, ok := current_oid_map[sproc_ident]
-					if !ok {
-						splits := strings.Split(sproc_ident, ":")
-						log.Warning("detected delete of sproc:", splits[0], ", oid:", splits[1])
-						influx_entry := make(map[string]interface{})
-						influx_entry["event"] = "drop"
-						influx_entry["tag_sproc"] = splits[0]
-						influx_entry["tag_oid"] = splits[1]
-						if len(data) > 0 {
-							influx_entry["epoch_ns"] = data[0]["epoch_ns"]
-						} else {
-							influx_entry["epoch_ns"] = time.Now().UnixNano()
-						}
-						detected_changes = append(detected_changes, influx_entry)
-						deleted_sprocs = append(deleted_sprocs, sproc_ident)
-						change_counts.Dropped += 1
-					}
-				}
-				for _, deleted_sproc := range deleted_sprocs {
-					delete(host_state["sproc_hashes"], deleted_sproc)
-				}
+		} else { // check for new / delete
+			if !first_run {
+				log.Warning("detected new sproc:", dr["tag_sproc"], ", oid:", dr["tag_oid"])
+				dr["event"] = "create"
+				detected_changes = append(detected_changes, dr)
+				change_counts.Created += 1
 			}
-			if len(detected_changes) > 0 {
-				storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "sproc_changes", Data: detected_changes}
-			}
+			host_state["sproc_hashes"][obj_ident] = dr["md5"].(string)
 		}
 	}
+	// detect deletes
+	if !first_run && len(host_state["sproc_hashes"]) != len(data) {
+		deleted_sprocs := make([]string, 0)
+		// turn resultset to map => [oid]=true for faster checks
+		current_oid_map := make(map[string]bool)
+		for _, dr := range data {
+			current_oid_map[dr["tag_sproc"].(string)+":"+dr["tag_oid"].(string)] = true
+		}
+		for sproc_ident, _ := range host_state["sproc_hashes"] {
+			_, ok := current_oid_map[sproc_ident]
+			if !ok {
+				splits := strings.Split(sproc_ident, ":")
+				log.Warning("detected delete of sproc:", splits[0], ", oid:", splits[1])
+				influx_entry := make(map[string]interface{})
+				influx_entry["event"] = "drop"
+				influx_entry["tag_sproc"] = splits[0]
+				influx_entry["tag_oid"] = splits[1]
+				if len(data) > 0 {
+					influx_entry["epoch_ns"] = data[0]["epoch_ns"]
+				} else {
+					influx_entry["epoch_ns"] = time.Now().UnixNano()
+				}
+				detected_changes = append(detected_changes, influx_entry)
+				deleted_sprocs = append(deleted_sprocs, sproc_ident)
+				change_counts.Dropped += 1
+			}
+		}
+		for _, deleted_sproc := range deleted_sprocs {
+			delete(host_state["sproc_hashes"], deleted_sproc)
+		}
+	}
+	if len(detected_changes) > 0 {
+		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "sproc_changes", Data: detected_changes}
+	}
+
 	return change_counts
 }
 
@@ -654,70 +658,76 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	if _, ok := host_state["table_hashes"]; !ok {
 		first_run = true
 		host_state["table_hashes"] = make(map[string]string)
-	} else {
-		first_run = false
 	}
+
 	sql, err := GetSQLForMetricPGVersion("table_hashes", db_pg_version)
 	if err != nil {
-		data, err := DBExecReadByDbUniqueName(dbUnique, sql)
-		if err != nil {
-			log.Debug(err)
-		} else {
-			for _, dr := range data {
-				obj_ident := dr["tag_table"].(string)
-				prev_hash, ok := host_state["table_hashes"][obj_ident]
-				if ok { // we have existing state
-					if prev_hash != dr["md5"].(string) {
-						log.Warning("detected DDL change in table:", dr["tag_table"])
-						dr["event"] = "alter"
-						detected_changes = append(detected_changes, dr)
-						host_state["table_hashes"][obj_ident] = dr["md5"].(string)
-						change_counts.Altered += 1
-					}
-				} else { // check for new / delete
-					if !first_run {
-						log.Warning("detected new table:", dr["tag_table"])
-						dr["event"] = "create"
-						detected_changes = append(detected_changes, dr)
-						change_counts.Created += 1
-					}
-					host_state["table_hashes"][obj_ident] = dr["md5"].(string)
-				}
+		log.Error("could not get table_hashes sql:", err)
+		return change_counts
+	}
+
+	data, err := DBExecReadByDbUniqueName(dbUnique, sql)
+	if err != nil {
+		log.Error("could not read table_hashes from monitored host:", dbUnique, ", err:", err)
+		return change_counts
+	}
+
+	for _, dr := range data {
+		obj_ident := dr["tag_table"].(string)
+		prev_hash, ok := host_state["table_hashes"][obj_ident]
+		log.Debug("inspecting table:", obj_ident, "hash:", prev_hash)
+		if ok { // we have existing state
+			if prev_hash != dr["md5"].(string) {
+				log.Warning("detected DDL change in table:", dr["tag_table"])
+				dr["event"] = "alter"
+				detected_changes = append(detected_changes, dr)
+				host_state["table_hashes"][obj_ident] = dr["md5"].(string)
+				change_counts.Altered += 1
 			}
-			// detect deletes
-			if !first_run && len(host_state["table_hashes"]) != len(data) {
-				deleted_tables := make([]string, 0)
-				// turn resultset to map => [table]=true for faster checks
-				current_table_map := make(map[string]bool)
-				for _, dr := range data {
-					current_table_map[dr["tag_table"].(string)] = true
-				}
-				for table, _ := range host_state["table_hashes"] {
-					_, ok := current_table_map[table]
-					if !ok {
-						log.Warning("detected drop of table:", table)
-						influx_entry := make(map[string]interface{})
-						influx_entry["event"] = "drop"
-						influx_entry["tag_table"] = table
-						if len(data) > 0 {
-							influx_entry["epoch_ns"] = data[0]["epoch_ns"]
-						} else {
-							influx_entry["epoch_ns"] = time.Now().UnixNano()
-						}
-						detected_changes = append(detected_changes, influx_entry)
-						deleted_tables = append(deleted_tables, table)
-						change_counts.Dropped += 1
-					}
-				}
-				for _, deleted_table := range deleted_tables {
-					delete(host_state["table_hashes"], deleted_table)
-				}
+		} else { // check for new / delete
+			if !first_run {
+				log.Warning("detected new table:", dr["tag_table"])
+				dr["event"] = "create"
+				detected_changes = append(detected_changes, dr)
+				change_counts.Created += 1
 			}
-			if len(detected_changes) > 0 {
-				storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "table_changes", Data: detected_changes}
-			}
+			host_state["table_hashes"][obj_ident] = dr["md5"].(string)
 		}
 	}
+	// detect deletes
+	if !first_run && len(host_state["table_hashes"]) != len(data) {
+		deleted_tables := make([]string, 0)
+		// turn resultset to map => [table]=true for faster checks
+		current_table_map := make(map[string]bool)
+		for _, dr := range data {
+			current_table_map[dr["tag_table"].(string)] = true
+		}
+		for table, _ := range host_state["table_hashes"] {
+			_, ok := current_table_map[table]
+			if !ok {
+				log.Warning("detected drop of table:", table)
+				influx_entry := make(map[string]interface{})
+				influx_entry["event"] = "drop"
+				influx_entry["tag_table"] = table
+				if len(data) > 0 {
+					influx_entry["epoch_ns"] = data[0]["epoch_ns"]
+				} else {
+					influx_entry["epoch_ns"] = time.Now().UnixNano()
+				}
+				detected_changes = append(detected_changes, influx_entry)
+				deleted_tables = append(deleted_tables, table)
+				change_counts.Dropped += 1
+			}
+		}
+		for _, deleted_table := range deleted_tables {
+			delete(host_state["table_hashes"], deleted_table)
+		}
+	}
+
+	if len(detected_changes) > 0 {
+		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "table_changes", Data: detected_changes}
+	}
+
 	return change_counts
 }
 
@@ -730,70 +740,74 @@ func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	if _, ok := host_state["index_hashes"]; !ok {
 		first_run = true
 		host_state["index_hashes"] = make(map[string]string)
-	} else {
-		first_run = false
 	}
+
 	sql, err := GetSQLForMetricPGVersion("index_hashes", db_pg_version)
 	if err != nil {
-		data, err := DBExecReadByDbUniqueName(dbUnique, sql)
-		if err != nil {
-			log.Debug(err)
-		} else {
-			for _, dr := range data {
-				obj_ident := dr["tag_index"].(string)
-				prev_hash, ok := host_state["index_hashes"][obj_ident]
-				if ok { // we have existing state
-					if prev_hash != (dr["md5"].(string) + dr["is_valid"].(string)) {
-						log.Warning("detected index change:", dr["tag_index"], ", table:", dr["table"])
-						dr["event"] = "alter"
-						detected_changes = append(detected_changes, dr)
-						host_state["index_hashes"][obj_ident] = dr["md5"].(string) + dr["is_valid"].(string)
-						change_counts.Altered += 1
-					}
-				} else { // check for new / delete
-					if !first_run {
-						log.Warning("detected new index:", dr["tag_index"])
-						dr["event"] = "create"
-						detected_changes = append(detected_changes, dr)
-						change_counts.Created += 1
-					}
-					host_state["index_hashes"][obj_ident] = dr["md5"].(string) + dr["is_valid"].(string)
-				}
+		log.Error("could not get index_hashes sql:", err)
+		return change_counts
+	}
+
+	data, err := DBExecReadByDbUniqueName(dbUnique, sql)
+	if err != nil {
+		log.Error("could not read index_hashes from monitored host:", dbUnique, ", err:", err)
+		return change_counts
+	}
+
+	for _, dr := range data {
+		obj_ident := dr["tag_index"].(string)
+		prev_hash, ok := host_state["index_hashes"][obj_ident]
+		if ok { // we have existing state
+			if prev_hash != (dr["md5"].(string) + dr["is_valid"].(string)) {
+				log.Warning("detected index change:", dr["tag_index"], ", table:", dr["table"])
+				dr["event"] = "alter"
+				detected_changes = append(detected_changes, dr)
+				host_state["index_hashes"][obj_ident] = dr["md5"].(string) + dr["is_valid"].(string)
+				change_counts.Altered += 1
 			}
-			// detect deletes
-			if !first_run && len(host_state["index_hashes"]) != len(data) {
-				deleted_indexes := make([]string, 0)
-				// turn resultset to map => [table]=true for faster checks
-				current_index_map := make(map[string]bool)
-				for _, dr := range data {
-					current_index_map[dr["tag_index"].(string)] = true
-				}
-				for index_name, _ := range host_state["index_hashes"] {
-					_, ok := current_index_map[index_name]
-					if !ok {
-						log.Warning("detected drop of index_name:", index_name)
-						influx_entry := make(map[string]interface{})
-						influx_entry["event"] = "drop"
-						influx_entry["tag_index"] = index_name
-						if len(data) > 0 {
-							influx_entry["epoch_ns"] = data[0]["epoch_ns"]
-						} else {
-							influx_entry["epoch_ns"] = time.Now().UnixNano()
-						}
-						detected_changes = append(detected_changes, influx_entry)
-						deleted_indexes = append(deleted_indexes, index_name)
-						change_counts.Dropped += 1
-					}
-				}
-				for _, deleted_index := range deleted_indexes {
-					delete(host_state["index_hashes"], deleted_index)
-				}
+		} else { // check for new / delete
+			if !first_run {
+				log.Warning("detected new index:", dr["tag_index"])
+				dr["event"] = "create"
+				detected_changes = append(detected_changes, dr)
+				change_counts.Created += 1
 			}
-			if len(detected_changes) > 0 {
-				storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "index_changes", Data: detected_changes}
-			}
+			host_state["index_hashes"][obj_ident] = dr["md5"].(string) + dr["is_valid"].(string)
 		}
 	}
+	// detect deletes
+	if !first_run && len(host_state["index_hashes"]) != len(data) {
+		deleted_indexes := make([]string, 0)
+		// turn resultset to map => [table]=true for faster checks
+		current_index_map := make(map[string]bool)
+		for _, dr := range data {
+			current_index_map[dr["tag_index"].(string)] = true
+		}
+		for index_name, _ := range host_state["index_hashes"] {
+			_, ok := current_index_map[index_name]
+			if !ok {
+				log.Warning("detected drop of index_name:", index_name)
+				influx_entry := make(map[string]interface{})
+				influx_entry["event"] = "drop"
+				influx_entry["tag_index"] = index_name
+				if len(data) > 0 {
+					influx_entry["epoch_ns"] = data[0]["epoch_ns"]
+				} else {
+					influx_entry["epoch_ns"] = time.Now().UnixNano()
+				}
+				detected_changes = append(detected_changes, influx_entry)
+				deleted_indexes = append(deleted_indexes, index_name)
+				change_counts.Dropped += 1
+			}
+		}
+		for _, deleted_index := range deleted_indexes {
+			delete(host_state["index_hashes"], deleted_index)
+		}
+	}
+	if len(detected_changes) > 0 {
+		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "index_changes", Data: detected_changes}
+	}
+
 	return change_counts
 }
 
@@ -806,43 +820,47 @@ func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, 
 	if _, ok := host_state["configuration_hashes"]; !ok {
 		first_run = true
 		host_state["configuration_hashes"] = make(map[string]string)
-	} else {
-		first_run = false
 	}
+
 	sql, err := GetSQLForMetricPGVersion("configuration_hashes", db_pg_version)
 	if err != nil {
-		data, err := DBExecReadByDbUniqueName(dbUnique, sql)
-		if err != nil {
-			log.Debug(err)
-		} else {
-			for _, dr := range data {
-				obj_ident := dr["tag_setting"].(string)
-				prev_hash, ok := host_state["configuration_hashes"][obj_ident]
-				if ok { // we have existing state
-					if prev_hash != dr["value"].(string) {
-						log.Warning(fmt.Sprintf("detected settings change: %s = %s (prev: %s)",
-							dr["tag_setting"], dr["value"], prev_hash))
-						dr["event"] = "alter"
-						detected_changes = append(detected_changes, dr)
-						host_state["configuration_hashes"][obj_ident] = dr["value"].(string)
-						change_counts.Altered += 1
-					}
-				} else { // check for new, delete not relevant here (pg_upgrade)
-					if !first_run {
-						log.Warning("detected new setting:", dr["tag_setting"])
-						dr["event"] = "create"
-						detected_changes = append(detected_changes, dr)
-						change_counts.Created += 1
-					}
-					host_state["configuration_hashes"][obj_ident] = dr["value"].(string)
-				}
-			}
+		log.Error("could not get index_hashes sql:", err)
+		return change_counts
+	}
 
-			if len(detected_changes) > 0 {
-				storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "configuration_changes", Data: detected_changes}
+	data, err := DBExecReadByDbUniqueName(dbUnique, sql)
+	if err != nil {
+		log.Error("could not read configuration_hashes from monitored host:", dbUnique, ", err:", err)
+		return change_counts
+	}
+
+	for _, dr := range data {
+		obj_ident := dr["tag_setting"].(string)
+		prev_hash, ok := host_state["configuration_hashes"][obj_ident]
+		if ok { // we have existing state
+			if prev_hash != dr["value"].(string) {
+				log.Warning(fmt.Sprintf("detected settings change: %s = %s (prev: %s)",
+					dr["tag_setting"], dr["value"], prev_hash))
+				dr["event"] = "alter"
+				detected_changes = append(detected_changes, dr)
+				host_state["configuration_hashes"][obj_ident] = dr["value"].(string)
+				change_counts.Altered += 1
 			}
+		} else { // check for new, delete not relevant here (pg_upgrade)
+			if !first_run {
+				log.Warning("detected new setting:", dr["tag_setting"])
+				dr["event"] = "create"
+				detected_changes = append(detected_changes, dr)
+				change_counts.Created += 1
+			}
+			host_state["configuration_hashes"][obj_ident] = dr["value"].(string)
 		}
 	}
+
+	if len(detected_changes) > 0 {
+		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "configuration_changes", Data: detected_changes}
+	}
+
 	return change_counts
 }
 
@@ -874,7 +892,7 @@ func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Deci
 		influx_entry["details"] = message
 		influx_entry["epoch_ns"] = time.Now().UnixNano()
 		detected_changes_summary = append(detected_changes_summary, influx_entry)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "object_changes", Data: detected_changes_summary}
+		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, DBType: "postgres", MetricName: "object_changes", Data: detected_changes_summary}
 	}
 }
 
@@ -975,7 +993,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 
 		select {
 		case msg := <-control_ch:
-			log.Info("got control msg", dbUniqueName, metricName, msg)
+			log.Debug("got control msg", dbUniqueName, metricName, msg)
 			if msg.Action == "START" {
 				config = msg.Config
 				interval = config[metricName].(float64)
