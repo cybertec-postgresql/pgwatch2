@@ -3,8 +3,12 @@ FROM ubuntu:16.04
 RUN apt-get -q update \
     && apt-get -qy install wget apt-transport-https vim git supervisor postgresql postgresql-plpython-9.5 libfontconfig python3-pip \
     && locale-gen "en_US.UTF-8" && apt autoremove -y \
-    && pg_dropcluster 9.5 main ; pg_createcluster --locale en_US.UTF-8 9.5 main \
-    && echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/9.5/main/postgresql.conf
+    && mkdir -p /var/log/supervisor /pgwatch2 \
+    && rm -rf /var/lib/postgresql/9.5/main \
+    && echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/9.5/main/postgresql.conf \
+    && chgrp -R 0 /pgwatch2 /var/log/supervisor /etc/supervisor /var/run /var/lib/postgresql /var/log/postgresql /var/run/postgresql /etc/postgresql \
+    && chmod -R g=u /pgwatch2 /var/log/supervisor /etc/supervisor /var/run /var/lib/postgresql /var/log/postgresql /etc/postgresql \
+    && chmod g=u /etc/passwd
 
 ### Download and install external components
 # Grafana [https://grafana.com/grafana/download]
@@ -15,7 +19,12 @@ RUN apt-get -q update \
 RUN wget -q -O grafana.deb https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_4.6.3_amd64.deb \
     && wget -q -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.4.2_amd64.deb > influxdb_amd64.deb \
     && dpkg -i grafana.deb && rm grafana.deb \
+    && mkdir -p /var/run/grafana \
+    && chgrp -R 0 /etc/grafana/ /usr/share/grafana /var/lib/grafana /var/log/grafana /var/run/grafana \
+    && chmod -R g=u /etc/grafana/ /usr/share/grafana /var/lib/grafana /var/log/grafana /var/run/grafana \
     && dpkg -i influxdb_amd64.deb && rm influxdb_amd64.deb \
+    && chgrp -R 0 /var/lib/influxdb /var/log/influxdb /usr/lib/influxdb /etc/influxdb \
+    && chmod -R g=u /var/lib/influxdb /var/log/influxdb /usr/lib/influxdb /etc/influxdb \
     && sed -i 's/\# query-log-enabled = true/query-log-enabled = false/' /etc/influxdb/influxdb.conf \
     && sed -i 's/\# \[monitor\]/\[monitor\]/' /etc/influxdb/influxdb.conf \
     && sed -i 's/\# store-enabled = true/store-enabled = false/' /etc/influxdb/influxdb.conf \
@@ -36,6 +45,8 @@ RUN wget -q -O /tmp/go.tar.gz https://storage.googleapis.com/golang/go1.9.2.linu
     && cd /pgwatch2 && bash build_gatherer.sh \
     && rm /tmp/go.tar.gz \
     && rm -rf /usr/local/go \
+    && chgrp -R 0 /pgwatch2/webpy \
+    && chmod -R g=u /pgwatch2/webpy \
     && grafana-cli plugins install savantly-heatmap-panel
 
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
@@ -44,13 +55,13 @@ ADD grafana_dashboards /pgwatch2/grafana_dashboards
 COPY .git/refs/heads/master /pgwatch2/build_git_version.txt
 
 # Set up supervisord [https://docs.docker.com/engine/admin/using_supervisord/]
-COPY supervisord.conf /etc/supervisor/supervisord.conf
+COPY supervisord-nonroot.conf /etc/supervisor/supervisord.conf
 
 # Postgres (ver 9.5) config tuning
 # NB! When security is a concern one should definitely alter "pgwatch2" password in change_pw.sql and maybe modify pg_hba.conf accordingly
 COPY postgresql.conf /etc/postgresql/9.5/main/pgwatch_postgresql.conf
 COPY pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
-COPY docker-launcher.sh /pgwatch2/
+COPY docker-launcher-nonroot.sh /pgwatch2/
 
 
 # Admin UI for configuring servers to be monitored
@@ -72,4 +83,11 @@ VOLUME /var/lib/postgresql
 VOLUME /var/lib/influxdb
 VOLUME /var/lib/grafana
 
-CMD ["/pgwatch2/docker-launcher.sh"]
+###
+### OpenShift compatibility - run all using an unprivileged user:
+### https://docs.openshift.org/latest/creating_images/guidelines.html#openshift-specific-guidelines
+###
+
+USER 10001
+
+CMD ["/pgwatch2/docker-launcher-nonroot.sh"]
