@@ -12,19 +12,17 @@ RUN apt-get update && \
     curl ${DOWNLOAD_URL} > /tmp/grafana.deb && \
     dpkg -i /tmp/grafana.deb && \
     rm /tmp/grafana.deb && \
-    curl -L https://github.com/tianon/gosu/releases/download/1.10/gosu-amd64 > /usr/sbin/gosu && \
-    chmod +x /usr/sbin/gosu && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
-RUN usermod -s /bin/bash grafana \
-    && chown -R grafana /var/lib/grafana /var/log/grafana /etc/grafana /usr/share/grafana
+RUN chgrp -R 0 /var/lib/grafana /var/log/grafana /etc/grafana /usr/share/grafana /etc/passwd \
+    && chmod -R g=u /var/lib/grafana /var/log/grafana /etc/grafana/ /usr/share/grafana /etc/passwd
 
 VOLUME ["/var/lib/grafana", "/var/log/grafana", "/etc/grafana"]
 
 EXPOSE 3000
 
-COPY ./docker/grafana-run.sh /run.sh
+COPY grafana-run.sh /run.sh
 
 USER 10001
 
