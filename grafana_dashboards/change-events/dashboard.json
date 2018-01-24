@@ -7,7 +7,7 @@
         "iconColor": "rgba(255, 96, 96, 1)",
         "limit": 100,
         "name": "changes summary",
-        "query": "select details from object_changes",
+        "query": "select details from object_changes where $timeFilter AND dbname = '$dbname'",
         "showIn": 0,
         "type": "alert"
       }
