@@ -1,0 +1,20 @@
+diff --git a/influxdb/1.4/Dockerfile b/influxdb/1.4/Dockerfile
+index 3b4bcfe..77d65ec 100644
+--- a/influxdb/1.4/Dockerfile
++++ b/influxdb/1.4/Dockerfile
+@@ -23,6 +23,10 @@ RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" && \
+     gpg --batch --verify influxdb_${INFLUXDB_VERSION}_${ARCH}.deb.asc influxdb_${INFLUXDB_VERSION}_${ARCH}.deb && \
+     dpkg -i influxdb_${INFLUXDB_VERSION}_${ARCH}.deb && \
+     rm -f influxdb_${INFLUXDB_VERSION}_${ARCH}.deb*
++
++RUN chgrp -R 0 /var/lib/influxdb /etc/influxdb \
++    && chmod -R g=u /var/lib/influxdb /etc/influxdb
++
+ COPY influxdb.conf /etc/influxdb/influxdb.conf
+ 
+ EXPOSE 8086
+@@ -33,3 +37,4 @@ COPY entrypoint.sh /entrypoint.sh
+ COPY init-influxdb.sh /init-influxdb.sh
+ ENTRYPOINT ["/entrypoint.sh"]
+ CMD ["influxd"]
++USER 10001
