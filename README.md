@@ -45,6 +45,14 @@ docker build .
 * Intuitive metrics presentation using the [Grafana](http://grafana.org/) dashboarding engine
 * Optional alerting (Email, Slack, PagerDuty) provided by Grafana
 
+# Project background
+
+For more background on the project motivations and design goals see the original series of blogposts announcing the project:
+
+* [Project announcement](https://www.cybertec-postgresql.com/en/announcing-pgwatch2-a-simple-but-versatile-postgresql-monitoring-tool/)
+* [Implementation details](https://www.cybertec-postgresql.com/en/a-more-detailed-look-at-pgwatch2-postgresql-monitoring-tool/)
+* [Feature pack 1](https://www.cybertec-postgresql.com/en/new-features-for-cybertecs-pgwatch2-postgres-monitoring-tool/)
+* [Feature pack 2](https://www.cybertec-postgresql.com/en/updates-for-the-pgwatch2-postgres-monitoring-tool/)
 
 # Components
 
