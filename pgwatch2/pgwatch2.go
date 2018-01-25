@@ -123,12 +123,13 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password string)
 	}
 }
 
-func DBExecRead(conn *sqlx.DB, sql string, args ...interface{}) ([](map[string]interface{}), error) {
+func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
 	ret := make([]map[string]interface{}, 0)
 
 	rows, err := conn.Queryx(sql, args...)
 	if err != nil {
-		log.Error(err)
+		// connection problems or bad queries etc are quite common so caller should decide if to output something
+		log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -137,7 +138,7 @@ func DBExecRead(conn *sqlx.DB, sql string, args ...interface{}) ([](map[string]i
 		row := make(map[string]interface{})
 		err = rows.MapScan(row)
 		if err != nil {
-			log.Error("failed to MapScan a result row", err)
+			log.Error("failed to MapScan a result row", host_ident, err)
 			return nil, err
 		}
 		ret = append(ret, row)
@@ -145,7 +146,7 @@ func DBExecRead(conn *sqlx.DB, sql string, args ...interface{}) ([](map[string]i
 
 	err = rows.Err()
 	if err != nil {
-		log.Error(err)
+		log.Error("failed to fully process resultset for", host_ident, "sql:", sql, "err:", err)
 	}
 	return ret, err
 }
@@ -164,9 +165,12 @@ func DBExecReadByDbUniqueName(dbUnique string, sql string, args ...interface{}) 
 	}
 	defer conn.Close()
 
-	DBExecRead(conn, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
+	_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("failed to set statement_timeout on %s, query not tried", dbUnique))
+	}
 
-	return DBExecRead(conn, sql, args...)
+	return DBExecRead(conn, dbUnique, sql, args...)
 }
 
 func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
@@ -181,7 +185,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 		where
 		  md_is_enabled
 	`
-	data, err := DBExecRead(configDb, sql)
+	data, err := DBExecRead(configDb, "configDb", sql)
 	if err != nil {
 		log.Error(err)
 	} else {
@@ -525,7 +529,7 @@ func DBGetPGVersion(dbUnique string) (decimal.Decimal, error) {
 		}
 		ver.Version, _ = decimal.NewFromString(data[0]["ver"].(string))
 		ver.LastCheckedOn = time.Now()
-		log.Info(fmt.Sprintf("%s is on version %s", dbUnique, ver))
+		log.Info(fmt.Sprintf("%s is on version %s", dbUnique, ver.Version))
 
 		db_pg_version_map_lock.Lock()
 		db_pg_version_map[dbUnique] = ver
@@ -957,7 +961,7 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- Metri
 				data, err := DBExecReadByDbUniqueName(msg.DBUniqueName, sql)
 				t2 := time.Now().UnixNano()
 				if err != nil {
-					log.Error("failed to fetch metrics for ", msg.DBUniqueName, msg.MetricName, err)
+					log.Error(fmt.Sprintf("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err))
 				} else {
 					log.Info(fmt.Sprintf("fetched %d rows for [%s:%s] in %dus", len(data), msg.DBUniqueName, msg.MetricName, (t2-t1)/1000))
 					if msg.MetricName == "pgbouncer_stats" { // clean unwanted pgbouncer pool stats here as not possible in SQL
@@ -1027,7 +1031,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 func UpdateMetricDefinitionMapFromPostgres() {
 	metric_def_map_new := make(map[string]map[decimal.Decimal]string)
 	sql := "select m_name, m_pg_version_from::text, m_sql from pgwatch2.metric where m_is_active"
-	data, err := DBExecRead(configDb, sql)
+	data, err := DBExecRead(configDb, "configDb", sql)
 	if err != nil {
 		log.Error(err)
 		return
@@ -1160,7 +1164,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) {
 	}
 
 	sql_helpers := "select distinct m_name from metric where m_is_active and m_is_helper" // m_name is a helper function name
-	data, err := DBExecRead(configDb, sql_helpers)
+	data, err := DBExecRead(configDb, "configDb", sql_helpers)
 	if err != nil {
 		log.Error(err)
 		return
