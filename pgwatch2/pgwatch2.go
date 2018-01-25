@@ -59,6 +59,11 @@ type ChangeDetectionResults struct { // for passing around DDL/index/config chan
 	Dropped int
 }
 
+type DBVersionMapEntry struct {
+	LastCheckedOn time.Time
+	Version       decimal.Decimal
+}
+
 const EPOCH_COLUMN_NAME string = "epoch_ns"      // this column (epoch in nanoseconds) is expected in every metric query
 const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
 const ACTIVE_SERVERS_REFRESH_TIME int64 = 60     // min time before checking for new/changed databases under monitoring i.e. main loop time
@@ -75,7 +80,7 @@ var log = logging.MustGetLogger("main")
 var metric_def_map map[string]map[decimal.Decimal]string
 var metric_def_map_lock = sync.RWMutex{}
 var host_metric_interval_map = make(map[string]float64) // [db1_metric] = 30
-var db_pg_version_map = make(map[string]decimal.Decimal)
+var db_pg_version_map = make(map[string]DBVersionMapEntry)
 var db_pg_version_map_lock = sync.RWMutex{}
 var InfluxDefaultRetentionPolicyDuration int64 = 90 // 90 days of monitoring data will be kept around. can be adjusted later on influx side if needed
 var monitored_db_cache map[string]map[string]interface{}
@@ -494,9 +499,8 @@ func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
 	}
 }
 
-// TODO cache for 5min
 func DBGetPGVersion(dbUnique string) (decimal.Decimal, error) {
-	var ver decimal.Decimal
+	var ver DBVersionMapEntry
 	var ok bool
 	sql := `
 		select (regexp_matches(
@@ -509,21 +513,25 @@ func DBGetPGVersion(dbUnique string) (decimal.Decimal, error) {
 	ver, ok = db_pg_version_map[dbUnique]
 	db_pg_version_map_lock.RUnlock()
 
-	if !ok {
-		log.Info("determining DB version for", dbUnique)
+	if ok && ver.LastCheckedOn.After(time.Now().Add(time.Minute*-2)) { // use cached version for 2 min
+		log.Debug(fmt.Sprintf("using cached postgres version %s for %s", ver.Version.String(), dbUnique))
+		return ver.Version, nil
+	} else {
+		log.Debug("determining DB version for", dbUnique)
 		data, err := DBExecReadByDbUniqueName(dbUnique, sql)
 		if err != nil {
 			log.Error("DBGetPGVersion failed", err)
-			return ver, err
+			return ver.Version, err
 		}
-		ver, _ = decimal.NewFromString(data[0]["ver"].(string))
+		ver.Version, _ = decimal.NewFromString(data[0]["ver"].(string))
+		ver.LastCheckedOn = time.Now()
 		log.Info(fmt.Sprintf("%s is on version %s", dbUnique, ver))
 
 		db_pg_version_map_lock.Lock()
 		db_pg_version_map[dbUnique] = ver
 		db_pg_version_map_lock.Unlock()
 	}
-	return ver, nil
+	return ver.Version, nil
 }
 
 // Need to define a sort interface as Go doesn't have support for Numeric/Decimal
