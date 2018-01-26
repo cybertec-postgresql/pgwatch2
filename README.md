@@ -4,7 +4,7 @@ Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution
 
 # Installing
 
-Software is packaged as Docker (for custom setup see the last paragraph below) so getting started should be easy
+Software is packaged as Docker (for custom setup see the last paragraph below) for getting quickly started.
 ```
 # fetch and run the latest Docker image, exposing Grafana on port 3000 and administrative web UI on 8080
 docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2
@@ -17,7 +17,8 @@ parameter when launching the image.
 For production setups without a container management framework also "--restart unless-stopped"
 (or custom startup scripts) is highly recommended. Also usage of volumes is then recommended to enable
 easier updating to newer pgwatch2 Docker images without going through the backup/restore procedure described towards the
-end of README.
+end of README. For maximum flexibility, security and update simplicity though, best would to do a custom setup - see
+paragraph "Installing without Docker" towards the end of REAME for that. 
 
 ```
 for v in pg influx grafana ; do docker volume create $v ; done
@@ -36,6 +37,9 @@ For custom options, more security, or specific component versions one could easi
 docker build .
 ```
 
+For a complete list of all supported Docker environment variables see the according ENV_VARIABLES.md readme
+[here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/README.md)  
+
 
 # Features
 
@@ -53,6 +57,42 @@ For more background on the project motivations and design goals see the original
 * [Implementation details](https://www.cybertec-postgresql.com/en/a-more-detailed-look-at-pgwatch2-postgresql-monitoring-tool/)
 * [Feature pack 1](https://www.cybertec-postgresql.com/en/new-features-for-cybertecs-pgwatch2-postgres-monitoring-tool/)
 * [Feature pack 2](https://www.cybertec-postgresql.com/en/updates-for-the-pgwatch2-postgres-monitoring-tool/)
+
+# Limitations / Performance expectations
+
+* Min 512 MB RAM
+* Docker default disk size of 10 GB should be enough for monitoring 5 hosts (3 month default metrics retention policy, configurable)  
+* A low-spec (1 vCPU, 2 GB RAM) cloud machine can easily monitor 100 DBs in "exhaustive" settings (i.e. almost all metrics
+are monitored with 60s interval) without breaking a sweat (<20% load)
+* One monitored DB in preset "exhaustive" settings requires about ~250 MB of InfluxDB disk storage per month. Depends on
+amount of objects though - tables, indexes, number of unique SQL-s.
+* A single InfluxDB node should handle thousands of requests per second but if this is not enough having a secondary/mirrored
+InfluxDB is also possible. If more than two needed (e.g. feeding many many Grafana instances or some custom exporting) one
+should look at Influx Enterprise (on-prem or cloud) or Graphite (which is also supported as metrics storage backend).
+
+# Security/safety aspects
+
+Settings can be configured for most components, but by default the Docker image doesn't focus on security though but rather
+on being quickly usable for ad-hoc performance troubleshooting. 
+
+* At any time only one query is running on the monitored hosts, with 5s statement timeout (configurable) so no heavy impact
+expected. For some metrics though can happen that the metric reading query (notably "stat_statements") takes some milliseconds,
+which might be more than an average application query.
+* Starting from v1.3.0 there's a non-root Docker version available (suitable for OpenShift)
+* The administrative Web UI doesn't have by default any security (configurable via env.)
+* Viewing Grafana dashboards by default doesn't require login. Editing needs a password (which is configurable via env.)
+* InfluxDB has no authentication in Docker setup
+* Dasboards based on "pg_stat_statements" (Stat Statement Overview / Top) expose actual queries. They are mostly stripped
+of details though, but if no risks can be taken the dashboards (or at least according panels) should be deleted.
+
+
+# Alerting
+
+Alerting is very conveniently (point-and-click style) provided by Grafana - see [here](http://docs.grafana.org/alerting/rules/)
+for documentation. All most popular notification services are supported.
+
+If more complex scenarios/check conditions are required TICK stack and Kapacitor can be easily integrated - see 
+[here](https://www.influxdata.com/time-series-platform/#kapacitor) for more details. 
 
 # Components
 
@@ -160,9 +200,20 @@ Ports exposed by the Docker image:
 * 8086 - InfluxDB API
 * 8088 - InfluxDB Backup port
 
-# The Web UI
+# The Admin Web UI
 
-For easy configuration changes (adding databases to monitoring, adding metrics) there is a small Python Web application bundled (exposed on Docker port 8080), making use of the CherryPy Web-framework. For mass changes one could technically also log into the configuration database and change the tables in the “pgwatch2” schema directly. Besides the configuration options the two other useful features would be the possibility to look at the logs of the single components and at the “Stat Statements Overview” page, which will e.g. enable finding out the query with the slowest average runtime for a time period.
+For easy configuration changes (adding databases to monitoring, adding metrics) there is a small Python Web application
+bundled (exposed on Docker port 8080), making use of the CherryPy Web-framework. For mass changes one could technically
+also log into the configuration database and change the tables in the “pgwatch2” schema directly. Besides managing the
+metrics gathering configurations, the two other useful features for the Web UI would be the possibility to look at the
+logs of the single components (when using Docker) and at the “Stat Statements Overview” page, which will e.g. enable
+finding out the query with the slowest average runtime for a time period.
+
+By default the Web UI is freely accessible. If some security is needed then following env. variables can be used enforce
+write permissions - PW2_WEBNOANONYMOUS, PW2_WEBUSER, PW2_WEBPASSWORD.
+
+By default also the component logs (Postgres, Influx, Grafana, Go daemon, Web UI itself) are exposed via the "/logs"
+endpoint. If this is not wanted set the PW2_WEBNOCOMPONENTLOGS env. variable.  
 
 # Adding metrics
 
