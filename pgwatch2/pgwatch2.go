@@ -1195,7 +1195,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) {
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
-	Verbose             []bool `short:"v" long:"verbose" description:"Show verbose debug information"`
+	Verbose             []bool `short:"v" long:"verbose" description:"Show verbose debug information" env:"PW2_VERBOSE"`
 	Host                string `long:"host" description:"PG config DB host" default:"localhost" env:"PW2_PGHOST"`
 	Port                string `short:"p" long:"port" description:"PG config DB port" default:"5432" env:"PW2_PGPORT"`
 	Dbname              string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
