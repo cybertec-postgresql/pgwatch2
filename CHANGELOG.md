@@ -6,6 +6,36 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.3.0 [2018-01-26]
+
+* Dockerfile/image running as "non-root" user, suitable for example for OpenShift deployments
+* Docker VOLUME-s added to Postgres, Grafana, InfluxDB data directories and pgwatch2 persistent config
+* Added Dockerfiles for deploying components separately. See the "docker" folder for details
+* Grafana security - possible to control anon. access and admin user/passord via env. variables
+* New dashboard - AWS CloudWatch overview. One can now easily monitor/alert on on-prem and cloud DBs
+* New dashboard and datasource type for PgBouncer stats. Visualizes pgbouncer "SHOW STATS" commands. NB! Requires config DB schema
+ change for existing setups, DB-diff file [here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/datastore_setup/migrations/v1.3.0_monitored_db_dbtype.sql)
+* New dashboard for "Top N" time consuming/frequent/slowest/IO-hungry queries added. Base on pg_stat_statements info. NB! When no
+ SQL info should be leaked, dashboard should be deleted after image start as it shows (parametrized) queries!
+* New dashboard - "Biggest relations treemap". Helps to visually detect biggest tables/indexes
+* Dashboard chage to "Single query details" - add IO time percentage graph of total time to determine if query is IO or CPU bound. Also
+ showing SQL for the query
+* Gatherer daemon - InfluxDB HA support added, i.e. writing metrics to 2 independent DBs. Can be also used for load balancing
+* Gatherer daemon - a ringbuffer of max 100k metrics datapoints introduced (i.e. 2GB of RAM) if metric storage is gone.
+ Previously metrics were gather till things blew up
+* Gatherer daemon - improved the startup sequence, no load spikes anymore in case of 50+ monitored DBs
+* Gatherer daemon - "--iretentiondays" param added to specify InfluxDB retention period (90d default)
+* Improved Web UI - nicer errors and providing partial functionality when Postgres or InfluxDB is not available
+* Improved Web UI - not showing the "Log out" btn if no authentication was enabled (the default)
+* Improved Web UI - new flag ---no-component-logs added to not expose error logs for all the components running in Docker
+* Improved Web UI - respecting the --pg-require-ssl param now to force SSL connections to config DB
+* README improvements - a new section on custom deployments and some other minor additions
+* "Change detection" dashboard/metric improvement - the monitoring DB role is not expected to be superuser anymore
+* "Change detection" improvement - showing change event annotations only for the selected DB now
+* Improvement - Postgres version for monitored hosts cached for 2 minutes now
+* Improvement - Docker image size reduced 20%
+* Fix - corrections for "backend" metrics gathering wrapper functions
+
 ## v1.2.3 [2017-12-13]
 
 * Fix for Web UI/Grafana HTTPS mode (outgoing links/logos are now also HTTPS)
