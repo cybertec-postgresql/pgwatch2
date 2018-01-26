@@ -28,6 +28,8 @@ objects:
               - containerPort: 8088
                 protocol: "TCP"
             volumeMounts:
+              - mountPath: /pgwatch2/persistent-config
+                name: pgwatch2-config
               - mountPath: /var/lib/postgresql
                 name: pgwatch2-postgresql
               - mountPath: /var/lib/grafana
@@ -90,6 +92,9 @@ objects:
               - name: PW2_GRAPHITEPORT
                 value: ${PW2_GRAPHITEPORT}
         volumes:
+        - name: pgwatch2-config
+          persistentVolumeClaim:
+            claimName: ${PVC_PGWATCH2}
         - name: pgwatch2-postgresql
           persistentVolumeClaim:
             claimName: ${PVC_POSTGRESQL}
@@ -128,6 +133,10 @@ objects:
       protocol: TCP
       targetPort: 3000
 parameters:
+- description: PVC name for pgwatch2 config(must be pre-created, min 10 MB)
+  name: PVC_PGWATCH2
+  value: ""
+  required: true
 - description: PVC name for Postgres (must be pre-created, min 100 MB)
   name: PVC_POSTGRESQL
   value: ""
@@ -157,6 +166,15 @@ parameters:
   value: "admin"
 - description: Web UI admin user password
   name: PW2_WEBPASSWORD
+  value: "pgwatch2admin"
+- description: Can be set to require login even for viewing dashboards
+  name: PW2_GRAFANANOANONYMOUS
+  value: ""
+- description: Grafana administrative user
+  name: PW2_GRAFANAUSER
+  value: "admin"
+- description: Grafana administrative user password
+  name: PW2_GRAFANAPASSWORD
   value: "pgwatch2admin"
 - description: When using Grafana externally, set this to get correct links from the Admin UI
   name: PW2_GRAFANA_BASEURL
