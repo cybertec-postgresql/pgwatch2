@@ -444,6 +444,137 @@
       "height": 250,
       "panels": [
         {
+          "columns": [],
+          "datasource": null,
+          "description": "NB! If there has been a pg_stat_statement reset or a server crash in the selected timerange, the information is false",
+          "fontSize": "100%",
+          "id": 8,
+          "links": [],
+          "pageSize": null,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 1,
+            "desc": true
+          },
+          "span": 12,
+          "styles": [
+            {
+              "alias": "Time",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "IO time",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "decimals": 1,
+              "pattern": "top",
+              "thresholds": [],
+              "type": "number",
+              "unit": "ms"
+            },
+            {
+              "alias": "Query ID",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "link": true,
+              "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
+              "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell",
+              "pattern": "queryid",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Query",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "link": true,
+              "linkTargetBlank": true,
+              "linkTooltip": "Use 'edit' mode to be able to copy the query text",
+              "linkUrl": "",
+              "pattern": "query",
+              "sanitize": true,
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            }
+          ],
+          "targets": [
+            {
+              "dsType": "influxdb",
+              "groupBy": [
+                {
+                  "params": [
+                    "$__interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                    "null"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "orderByTime": "ASC",
+              "policy": "default",
+              "query": "SELECT top(\"spread\", \"queryid\", \"query\", $top) FROM (SELECT spread(\"blk_read_time\") + spread(\"blk_write_time\") AS spread FROM \"stat_statements\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) ) WHERE spread > 0",
+              "rawQuery": true,
+              "refId": "A",
+              "resultFormat": "table",
+              "select": [
+                [
+                  {
+                    "params": [
+                      "value"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "mean"
+                  }
+                ]
+              ],
+              "tags": []
+            }
+          ],
+          "title": "Top queries by IO",
+          "transform": "table",
+          "type": "table"
+        }
+      ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
+      "showTitle": false,
+      "title": "Dashboard Row",
+      "titleSize": "h6"
+    },
+    {
+      "collapse": false,
+      "height": 250,
+      "panels": [
+        {
           "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2017/11/Cybertec_Logo_2017_300px_slogan_trans.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
           "editable": true,
           "error": false,
