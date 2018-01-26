@@ -15,7 +15,7 @@ objects:
       spec:
         containers:
           - name: "pgwatch2"
-            image: "cybertec/pgwatch2-openshift"
+            image: "cybertec/pgwatch2-nonroot"
             ports:
               - containerPort: 8080
                 protocol: "TCP"
