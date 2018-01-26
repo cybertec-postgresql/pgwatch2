@@ -38,8 +38,8 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_WEBHOST** Network interface to listen on. Default: 0.0.0.0
 - **PW2_WEBPORT** Port. Default: 8080
 - **PW2_WEBSSL** Use HTTPS with self-signed certificates, Default: False
-- **PW2_WEBCERT** Enables use of own certificates for custom deployments. Default: '/pgwatch2/self-signed-ssl.pem'
-- **PW2_WEBKEY** Enables use of own certificates for custom deployments. Default: '/pgwatch2/self-signed-ssl.key'
+- **PW2_WEBCERT** Enables use of own certificates for custom deployments. Default: '/pgwatch2/persistent-config/self-signed-ssl.pem'
+- **PW2_WEBKEY** Enables use of own certificates for custom deployments. Default: '/pgwatch2/persistent-config/self-signed-ssl.key'
 - **PW2_WEBCERTCHAIN** Path to certificate chain file for custom deployments. Default: -
 - **PW2_WEBNOANONYMOUS** Require user/password to edit data. Default: False
 - **PW2_WEBUSER** Admin login. Default: pgwatch2

@@ -68,6 +68,7 @@ EXPOSE 8088
 ### NB! Backwards compatibility is not 100% guaranteed (e.g. InfluxDB has changed index storage format) so a backup
 ### using traditional means is still recommended before updating - see "Updating to a newer Docker version" from README
 
+VOLUME /pgwatch2/persistent-config
 VOLUME /var/lib/postgresql
 VOLUME /var/lib/influxdb
 VOLUME /var/lib/grafana

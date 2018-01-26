@@ -1,12 +1,9 @@
 #!/bin/bash
 
-
-if [ ! -f /pgwatch2/db-bootstrap-done-marker ] ; then
-
-if [ ! -f /pgwatch2/ssl_key.pem -o ! -f /pgwatch2/ssl_cert.pem ] ; then
-    openssl req -x509 -newkey rsa:4096 -keyout /pgwatch2/self-signed-ssl.key -out /pgwatch2/self-signed-ssl.pem -days 3650 -nodes -sha256 -subj '/CN=pw2'
-    cp /pgwatch2/self-signed-ssl.pem /etc/ssl/certs/ssl-cert-snakeoil.pem
-    cp /pgwatch2/self-signed-ssl.key /etc/ssl/private/ssl-cert-snakeoil.key
+if [ ! -f /pgwatch2/persistent-config/ssl_key.pem -o ! -f /pgwatch2/persistent-config/ssl_cert.pem ] ; then
+    openssl req -x509 -newkey rsa:4096 -keyout /pgwatch2/persistent-config/self-signed-ssl.key -out /pgwatch2/persistent-config/self-signed-ssl.pem -days 3650 -nodes -sha256 -subj '/CN=pw2'
+    cp /pgwatch2/persistent-config/self-signed-ssl.pem /etc/ssl/certs/ssl-cert-snakeoil.pem
+    cp /pgwatch2/persistent-config/self-signed-ssl.key /etc/ssl/private/ssl-cert-snakeoil.key
     chown postgres /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/private/ssl-cert-snakeoil.key
     chmod -R 0600 /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/private/ssl-cert-snakeoil.key
 fi
@@ -35,6 +32,8 @@ HERE
 echo "$CFG" >> /etc/grafana/grafana.ini
 fi
 
+if [ ! -f /pgwatch2/persistent-config/db-bootstrap-done-marker ] ; then
+
 su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf postgres </pgwatch2/bootstrap/change_pw.sql" postgres
 su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf postgres </pgwatch2/bootstrap/create_db_pgwatch.sql" postgres
 su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf postgres </pgwatch2/bootstrap/create_db_grafana.sql" postgres
@@ -49,8 +48,7 @@ if [ -z "$NOTESTDB" ] ; then
   su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf pgwatch2 </pgwatch2/bootstrap/insert_test_monitored_db.sql" postgres
 fi
 
-
-touch /pgwatch2/db-bootstrap-done-marker
+touch /pgwatch2/persistent-config/db-bootstrap-done-marker
 
 fi
 
