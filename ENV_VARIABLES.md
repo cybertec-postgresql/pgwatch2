@@ -63,9 +63,14 @@ NB! Some variables influence multiple components. Command line parameters overri
 
 ## Grafana
 
+- **PW2_GRAFANANOANONYMOUS** Can be set to require login even for viewing dashboards. Default: -
+- **PW2_GRAFANAUSER** Administrative user. Default: admin
+- **PW2_GRAFANAPASSWORD** Administrative user password. Default: pgwatch2admin
+- **PW2_GRAFANASSL** Use SSL. Default: -
 - **PW2_GRAFANA_BASEURL** For linking to Grafana "Query details" dashboard from "Stat_stmt. overview". Default: http://0.0.0.0:3000
 
 
 ## InfluxDB
 
-None
+None. NB! InfluxDB built into the pgwatch2 Docker image provides no security (setting up a custom user/password requires
+quite some steps), so if this is a concern, the according ports 8086/8088 should just not be exposed, or a custom setup.

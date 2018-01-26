@@ -37,8 +37,7 @@ For custom options, more security, or specific component versions one could easi
 docker build .
 ```
 
-For a complete list of all supported Docker environment variables see the according ENV_VARIABLES.md readme
-[here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/README.md)  
+For a complete list of all supported Docker environment variables see [ENV_VARIABLES.md](https://github.com/cybertec-postgresql/pgwatch2/blob/master/ENV_VARIABLES.md)
 
 
 # Features
@@ -79,10 +78,10 @@ on being quickly usable for ad-hoc performance troubleshooting.
 expected. For some metrics though can happen that the metric reading query (notably "stat_statements") takes some milliseconds,
 which might be more than an average application query.
 * Starting from v1.3.0 there's a non-root Docker version available (suitable for OpenShift)
-* The administrative Web UI doesn't have by default any security (configurable via env.)
-* Viewing Grafana dashboards by default doesn't require login. Editing needs a password (which is configurable via env.)
-* InfluxDB has no authentication in Docker setup
-* Dasboards based on "pg_stat_statements" (Stat Statement Overview / Top) expose actual queries. They are mostly stripped
+* The administrative Web UI doesn't have by default any security. Configurable via env. variables.
+* Viewing Grafana dashboards by default doesn't require login. Editing needs a password. Configurable via env. variables.
+* InfluxDB has no authentication in Docker setup, so one should just not expose the ports when having concerns.
+* Dashboards based on "pg_stat_statements" (Stat Statement Overview / Top) expose actual queries. They are mostly stripped
 of details though, but if no risks can be taken the dashboards (or at least according panels) should be deleted.
 
 

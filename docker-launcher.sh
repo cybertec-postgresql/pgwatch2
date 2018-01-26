@@ -18,6 +18,23 @@ if [ -n "$PW2_GRAFANASSL" ] ; then
     fi
 fi
 
+if [ -n "$PW2_GRAFANAUSER" ] ; then
+    sed -i "s/admin_user =.*/admin_user = ${PW2_GRAFANAUSER}/" /etc/grafana/grafana.ini
+fi
+
+if [ -n "$PW2_GRAFANAPASSWORD" ] ; then
+    sed -i "s/admin_password =.*/admin_password = ${PW2_GRAFANAPASSWORD}/" /etc/grafana/grafana.ini
+fi
+
+if [ -n "$PW2_GRAFANANOANONYMOUS" ] ; then
+CFG=$(cat <<-'HERE'
+[auth.anonymous]
+enabled = false
+HERE
+)
+echo "$CFG" >> /etc/grafana/grafana.ini
+fi
+
 su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf postgres </pgwatch2/bootstrap/change_pw.sql" postgres
 su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf postgres </pgwatch2/bootstrap/create_db_pgwatch.sql" postgres
 su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf postgres </pgwatch2/bootstrap/create_db_grafana.sql" postgres
