@@ -167,7 +167,7 @@ func DBExecReadByDbUniqueName(dbUnique string, sql string, args ...interface{}) 
 
 	_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("failed to set statement_timeout on %s, query not tried", dbUnique))
+		return nil, err
 	}
 
 	return DBExecRead(conn, dbUnique, sql, args...)
