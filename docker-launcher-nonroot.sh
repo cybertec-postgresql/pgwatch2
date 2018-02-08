@@ -48,6 +48,9 @@ fi
 if [ ! -f /pgwatch2/persistent-config/db-bootstrap-done-marker ] ; then
 
 # need to init here as Postgres requires chmod 0700 for datadir
+if [ ! -d /var/lib/postgresql/9.5 ]; then
+  mkdir /var/lib/postgresql/9.5
+fi
 /usr/lib/postgresql/9.5/bin/initdb -D /var/lib/postgresql/9.5/main/ --locale en_US.UTF-8 -E UTF8 -U postgres
 
 echo "ssl_key_file='/pgwatch2/persistent-config/self-signed-ssl.key'" >> /etc/postgresql/9.5/main/pgwatch_postgresql.conf

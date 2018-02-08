@@ -34,6 +34,15 @@ fi
 
 if [ ! -f /pgwatch2/persistent-config/db-bootstrap-done-marker ] ; then
 
+if [ ! -d /var/lib/postgresql/9.5 ]; then
+  mkdir /var/lib/postgresql/9.5 && chown -R postgres:postgres /var/lib/postgresql/9.5
+  pg_dropcluster 9.5 main
+  pg_createcluster --locale en_US.UTF-8 9.5 main
+  echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/9.5/main/postgresql.conf
+  cp /pgwatch2/postgresql.conf /etc/postgresql/9.5/main/pgwatch_postgresql.conf
+  cp /pgwatch2/pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
+fi
+
 su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf postgres </pgwatch2/bootstrap/change_pw.sql" postgres
 su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf postgres </pgwatch2/bootstrap/create_db_pgwatch.sql" postgres
 su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf postgres </pgwatch2/bootstrap/create_db_grafana.sql" postgres

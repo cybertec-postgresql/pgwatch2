@@ -50,7 +50,7 @@ COPY supervisord.conf /etc/supervisor/supervisord.conf
 # NB! When security is a concern one should definitely alter "pgwatch2" password in change_pw.sql and maybe modify pg_hba.conf accordingly
 COPY postgresql.conf /etc/postgresql/9.5/main/pgwatch_postgresql.conf
 COPY pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
-COPY docker-launcher.sh /pgwatch2/
+COPY docker-launcher.sh postgresql.conf pg_hba.conf /pgwatch2/
 
 
 # Admin UI for configuring servers to be monitored
