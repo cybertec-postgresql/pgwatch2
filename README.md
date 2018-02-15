@@ -160,6 +160,7 @@ psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/stat_activ
 
 * Additionally for extra insights ("Stat statements" dashboard and CPU load) it's also recommended to install the pg_stat_statement
 extension (Postgres 9.4+ needed to be useful for pgwatch2) and the PL/Python language. The latter one though is usually disabled by DB-as-a-service providers for security reasons.
+For maximum pg_stat_statement benefit ("Top queries by IO time" dashboard), one should also then enable the [track_io_timing](https://www.postgresql.org/docs/current/static/runtime-config-statistics.html#GUC-TRACK-IO-TIMING) setting.
 
 ```
 # add pg_stat_statements to your postgresql.conf and restart the server
