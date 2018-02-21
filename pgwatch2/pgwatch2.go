@@ -5,13 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/jessevdk/go-flags"
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
-	"github.com/marpaia/graphite-golang"
-	"github.com/op/go-logging"
-	"github.com/shopspring/decimal"
 	_ "io/ioutil"
 	"os"
 	"sort"
@@ -20,6 +13,14 @@ import (
 	"sync"
 	"time"
 	_ "time"
+
+	"github.com/influxdata/influxdb/client/v2"
+	"github.com/jessevdk/go-flags"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
+	"github.com/marpaia/graphite-golang"
+	"github.com/op/go-logging"
+	"github.com/shopspring/decimal"
 )
 
 type MonitoredDatabase struct {
@@ -152,6 +153,9 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 }
 
 func DBExecReadByDbUniqueName(dbUnique string, sql string, args ...interface{}) ([](map[string]interface{}), error) {
+	if strings.TrimSpace(sql) == "" {
+		return nil, errors.New("empty SQL")
+	}
 	md, err := GetMonitoredDatabaseByUniqueName(dbUnique)
 	if err != nil {
 		return nil, err
@@ -574,8 +578,9 @@ func GetSQLForMetricPGVersion(metric string, pgVer decimal.Decimal) (string, err
 	}
 
 	if !found {
-		return "", errors.New(fmt.Sprintf("suitable SQL not found for metric \"%s\", version \"%s\"", pgVer))
+		return "", errors.New(fmt.Sprintf("suitable SQL not found for metric \"%s\", version \"%s\"", metric, pgVer))
 	}
+
 	return metric_def_map[metric][best_ver], nil
 }
 
@@ -950,7 +955,7 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- Metri
 			sql, err := GetSQLForMetricPGVersion(msg.MetricName, db_pg_version)
 			//log.Debug("SQL", sql)
 			if err != nil {
-				log.Error("Failed to get SQL for metric '%s', version '%s'", msg.MetricName, db_pg_version)
+				log.Error(fmt.Sprintf("Failed to get SQL for metric '%s', version '%s'", msg.MetricName, db_pg_version))
 				continue
 			}
 
@@ -967,7 +972,7 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- Metri
 					if msg.MetricName == "pgbouncer_stats" { // clean unwanted pgbouncer pool stats here as not possible in SQL
 						md, err := GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
 						if err != nil {
-							log.Error("could not get monitored DB details for %s: %s", msg.DBUniqueName, err)
+							log.Error(fmt.Sprintf("could not get monitored DB details for %s: %s", msg.DBUniqueName, err))
 						}
 						data = FilterPgbouncerData(data, md.DBName)
 					}
