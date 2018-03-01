@@ -265,7 +265,7 @@
               ],
               "orderByTime": "ASC",
               "policy": "default",
-              "query": "select top(avg, \"queryid\", \"query\", $top) AS top from (select mean(t) / mean(c) AS avg from (SELECT spread(\"total_time\") AS t, spread(\"calls\") AS c FROM \"stat_statements\" WHERE $timeFilter AND dbname = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) )  where c > 0 group by time(3650d),  \"queryid\", \"query\" )",
+              "query": "select top(avg, \"queryid\", \"query\", $top) AS top from (select mean(t) / mean(c) AS avg from (SELECT spread(\"total_time\") AS t, spread(\"calls\") AS c FROM \"stat_statements\" WHERE $timeFilter AND dbname = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) )  where $timeFilter AND c > 0 group by time(3650d),  \"queryid\", \"query\" )",
               "rawQuery": true,
               "refId": "A",
               "resultFormat": "table",
