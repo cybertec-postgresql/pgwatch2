@@ -106,6 +106,10 @@ Grafana or InfluxDB and run the pgwatch2 image for example only with the metrics
 These external installations must be accessible from within the Docker though. For info on installation without Docker
 at all see end of README.
 
+## Component diagram for default Docker setup
+
+![Component diagram](https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgwatch2_architecture.jpg)
+
 ### To use an existing Postgres DB
 
 Create a new pgwatch2 DB, preferrably also an accroding role who owns it. Then roll out the schema (pgwatch2/sql/datastore_setup/config_store.sql)
