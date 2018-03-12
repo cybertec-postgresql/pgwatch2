@@ -44,9 +44,11 @@ For a complete list of all supported Docker environment variables see [ENV_VARIA
 
 * Easy extensibility by defining metrics in pure SQL (thus they could also be from business domain)
 * Non-invasive setup, no extensions nor superuser rights required for the base functionality
-* DB level configuration of metrics/intervals
-* Intuitive metrics presentation using the [Grafana](http://grafana.org/) dashboarding engine
+* Global or DB level configuration of metrics/intervals
+* Intuitive metrics presentation using the [Grafana](http://grafana.org/) dashboarding engine. Set of dasboards provided
 * Optional alerting (Email, Slack, PagerDuty) provided by Grafana
+* PgBouncer and AWS RDS graphing/alerting supported in addition to PostgreSQL
+* Kubernetes/OpenShift ready
 
 # Project background
 
@@ -56,6 +58,7 @@ For more background on the project motivations and design goals see the original
 * [Implementation details](https://www.cybertec-postgresql.com/en/a-more-detailed-look-at-pgwatch2-postgresql-monitoring-tool/)
 * [Feature pack 1](https://www.cybertec-postgresql.com/en/new-features-for-cybertecs-pgwatch2-postgres-monitoring-tool/)
 * [Feature pack 2](https://www.cybertec-postgresql.com/en/updates-for-the-pgwatch2-postgres-monitoring-tool/)
+* [Feature pack 3](https://www.cybertec-postgresql.com/en/pgwatch2-feature-pack-3/)
 
 # Limitations / Performance expectations
 
@@ -184,6 +187,8 @@ psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/cpu_load_p
 
 # Screenshot of the "DB overview" dashboard
 !["DB overview" dashboard](https://github.com/cybertec-postgresql/pgwatch2/raw/master/screenshots/overview.png)
+
+More screenshots [here](https://github.com/cybertec-postgresql/pgwatch2/tree/master/screenshots)
 
 # Technical details
 
