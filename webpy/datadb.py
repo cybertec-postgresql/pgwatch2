@@ -70,7 +70,7 @@ def executeOnRemoteHost(sql, host, port, dbname, user, password='', sslmode='pre
             result = [{'rows_affected': str(cur.rowcount)}]
     except Exception as e:
         if quiet:
-            logging.exception('failed to execute "{}" on remote host "{}:{}"'.format(sql))
+            logging.exception('failed to execute "{}" on remote host "{}:{}"'.format(sql, host, port))
             return result, str(e)
         else:
             raise

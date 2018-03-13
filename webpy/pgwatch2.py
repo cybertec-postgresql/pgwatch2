@@ -120,15 +120,21 @@ def cherrypy_empty_text_to_nulls(param_dict, keys):
 
 
 def update_monitored_db(params):
+    ret = []
     sql = """
+        with q_old as (
+          /* using CTE to be enable detect if connect info is being changed */
+          select * from pgwatch2.monitored_db
+          where md_id = %(md_id)s
+        )
         update
-          pgwatch2.monitored_db
+          pgwatch2.monitored_db new
         set
           md_hostname = %(md_hostname)s,
           md_port = %(md_port)s,
           md_dbname = %(md_dbname)s,
           md_user = %(md_user)s,
-          md_password = case when %(md_password)s = '***' then md_password else %(md_password)s end,
+          md_password = case when %(md_password)s = '***' then new.md_password else %(md_password)s end,
           md_is_superuser = %(md_is_superuser)s,
           md_sslmode = %(md_sslmode)s,
           md_dbtype = %(md_dbtype)s,
@@ -137,18 +143,34 @@ def update_monitored_db(params):
           md_config = %(md_config)s,
           md_statement_timeout_seconds = %(md_statement_timeout_seconds)s,
           md_last_modified_on = now()
+        from
+          q_old
         where
-          md_id = %(md_id)s
+          new.md_id = %(md_id)s
+        returning
+          (q_old.md_hostname, q_old.md_port, q_old.md_dbname, q_old.md_user, q_old.md_password, q_old.md_sslmode) is distinct from
+            (%(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s,
+            case when %(md_password)s = '***' then q_old.md_password else %(md_password)s end, %(md_sslmode)s
+            ) as connection_data_changed
     """
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
     cherrypy_empty_text_to_nulls(
         params, ['md_preset_config_name', 'md_config'])
-    ret, err = datadb.execute(sql, params)
+    data, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to update "monitored_db": ' + err)
+    ret.append('Updated!')
+    if data[0]['connection_data_changed'] or params['md_is_enabled']:  # show warning when changing connect data but cannot connect
+        data, err = datadb.executeOnRemoteHost('select 1', params['md_hostname'], params['md_port'], params['md_dbname'],
+                                   params['md_user'], params['md_password'], sslmode=params['md_sslmode'], quiet=True)
+        if err:
+            ret.append('Could not connect to specified host: ' + str(err))
+
+    return ret
 
 
 def insert_monitored_db(params):
+    ret = []
     sql_insert_new_db = """
         insert into
           pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password, md_is_superuser,
@@ -187,9 +209,9 @@ def insert_monitored_db(params):
                 if err:
                     raise Exception('Failed to insert into "monitored_db": ' + err)
             if currently_monitored_dbs:
-                return 'Warning! Some DBs not added as already under monitoring: ' + ', '.join(currently_monitored_dbs)
+                ret.append('Warning! Some DBs not added as already under monitoring: ' + ', '.join(currently_monitored_dbs))
             else:
-                return '{} DBs added: {}'.format(len(dbs_to_add), ', '.join(dbs_to_add))
+                ret.append('{} DBs added: {}'.format(len(dbs_to_add), ', '.join(dbs_to_add)))
         elif params['md_dbtype'] == 'pgbouncer':
             # get all configured pgbouncer DBs
             params['md_dbname'] = 'pgbouncer'
@@ -217,14 +239,19 @@ def insert_monitored_db(params):
                 if err:
                     raise Exception('Failed to insert into "monitored_db": ' + err)
             if currently_monitored_dbs:
-                return 'Warning! Some DBs not added as already under monitoring: ' + ', '.join(currently_monitored_dbs)
+                ret.append('Warning! Some DBs not added as already under monitoring: ' + ', '.join(currently_monitored_dbs))
             else:
-                return '{} DBs added: {}'.format(len(dbs_to_add), ', '.join(dbs_to_add))
+                ret.append('{} DBs added: {}'.format(len(dbs_to_add), ', '.join(dbs_to_add)))
     else:   # only 1 DB
-        ret, err = datadb.execute(sql_insert_new_db, params)
+        data, err = datadb.execute(sql_insert_new_db, params)
         if err:
             raise Exception('Failed to insert into "monitored_db": ' + err)
-        return 'Host with ID {} added!'.format(ret[0]['md_id'])
+        ret.append('Host with ID {} added!'.format(data[0]['md_id']))
+        data, err = datadb.executeOnRemoteHost('select 1', params['md_hostname'], params['md_port'], params['md_dbname'],
+                                               params['md_user'], params['md_password'], sslmode=params['md_sslmode'], quiet=True)
+        if err:
+            ret.append('Could not connect to specified host: ' + str(err))
+    return ret
 
 
 def delete_monitored_db(params):

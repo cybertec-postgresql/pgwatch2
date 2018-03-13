@@ -88,10 +88,9 @@ class Root:
         if params:
             try:
                 if params.get('save'):
-                    pgwatch2.update_monitored_db(params)
-                    messages.append('Updated!')
+                    messages += pgwatch2.update_monitored_db(params)
                 elif params.get('new'):
-                    messages.append(pgwatch2.insert_monitored_db(params))
+                    messages += pgwatch2.insert_monitored_db(params)
                 elif params.get('delete'):
                     pgwatch2.delete_monitored_db(params)
                     messages.append('Entry with ID {} ("{}") deleted!'.format(
@@ -106,6 +105,7 @@ class Root:
                     deleted_dbnames = pgwatch2_influx.delete_influx_data_all(active_dbs)
                     messages.append('InfluxDB data deleted for: {}'.format(','.join(deleted_dbnames)))
             except Exception as e:
+                logging.exception('Changing DBs failed')
                 messages.append('ERROR: ' + str(e))
 
         try:
