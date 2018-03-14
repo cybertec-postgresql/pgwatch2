@@ -25,11 +25,11 @@ GRAFANA_MAJOR_VER=$(grafana-server -v | egrep -o [0-9]{1} | head -1)
 
 psql -h /var/run/postgresql -f /pgwatch2/bootstrap/grafana_datasource.sql pgwatch2_grafana
 
-for slug in $(ls --hide='*.md' /pgwatch2/grafana_dashboards) ; do
+for slug in $(ls --hide='*.md' /pgwatch2/grafana_dashboards/v${GRAFANA_MAJOR_VER}) ; do
 
 echo "inserting dashboard: $slug"
-TITLE=$(cat /pgwatch2/grafana_dashboards/${slug}/title.txt)
-JSON=$(cat /pgwatch2/grafana_dashboards/${slug}/dashboard.json)
+TITLE=$(cat /pgwatch2/grafana_dashboards/v${GRAFANA_MAJOR_VER}/${slug}/title.txt)
+JSON=$(cat /pgwatch2/grafana_dashboards/v${GRAFANA_MAJOR_VER}/${slug}/dashboard.json)
 
 # in Grafana 5 "uid" column was introduced that is normally filled by the app
 if [ "$GRAFANA_MAJOR_VER" -gt 4 ] ; then
@@ -37,14 +37,14 @@ if [ "$GRAFANA_MAJOR_VER" -gt 4 ] ; then
 GUID=$(echo "$JSON" | md5sum | egrep -o "^.{9}")
 SQL='insert into dashboard (version, org_id, created, updated, updated_by, created_by, gnet_id, slug, title, data, uid) values (0, 1, now(), now(), 1, 1, 0'
 for d in "$slug" "$TITLE" "$JSON" "$GUID" ; do
-  SQL+=",\$\$${d}\$\$"
+  SQL+=",\$SQL\$${d}\$SQL\$"
 done
 
 else
 
 SQL='insert into dashboard (version, org_id, created, updated, updated_by, created_by, gnet_id, slug, title, data) values (0, 1, now(), now(), 1, 1, 0'
 for d in "$slug" "$TITLE" "$JSON" ; do
-SQL+=",\$\$${d}\$\$"
+SQL+=",\$SQL\$${d}\$SQL\$"
 done
 
 fi
