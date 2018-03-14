@@ -12,8 +12,8 @@ RUN apt-get -q update \
 # Influxdb [https://portal.influxdata.com/downloads]
 #   latest ver.: curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1
 
-RUN wget -q -O grafana.deb https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_4.6.3_amd64.deb \
-    && wget -q -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.4.2_amd64.deb > influxdb_amd64.deb \
+RUN wget -q -O grafana.deb https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_5.0.1_amd64.deb \
+    && wget -q -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.5.0_amd64.deb > influxdb_amd64.deb \
     && dpkg -i grafana.deb && rm grafana.deb \
     && dpkg -i influxdb_amd64.deb && rm influxdb_amd64.deb \
     && sed -i 's/\# query-log-enabled = true/query-log-enabled = false/' /etc/influxdb/influxdb.conf \
@@ -28,14 +28,14 @@ ADD webpy /pgwatch2/webpy
 
 # Go installation [https://golang.org/dl/]
 # Grafana config customizations, Web UI requirements, compilation of the Go gatherer
-RUN wget -q -O /tmp/go.tar.gz https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz \
+RUN wget -q -O /tmp/go.tar.gz https://storage.googleapis.com/golang/go1.10.linux-amd64.tar.gz \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && export PATH=$PATH:/usr/local/go/bin \
     && cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
     && pip3 install -r /pgwatch2/webpy/requirements.txt \
     && cd /pgwatch2 && bash build_gatherer.sh \
     && rm /tmp/go.tar.gz \
-    && rm -rf /usr/local/go \
+    && rm -rf /usr/local/go /root/go \
     && grafana-cli plugins install savantly-heatmap-panel
 
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
