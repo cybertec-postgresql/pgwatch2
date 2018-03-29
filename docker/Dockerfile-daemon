@@ -13,9 +13,9 @@ ADD pgwatch2 /pgwatch2
 ### Install Go and compile the gatherer daemon
 ###
 
-RUN wget -q https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz \
-    && tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz \
-    && rm go1.9.2.linux-amd64.tar.gz \
+RUN wget -q https://storage.googleapis.com/golang/go1.10.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.10.linux-amd64.tar.gz \
+    && rm go1.10.linux-amd64.tar.gz \
     && export PATH=$PATH:/usr/local/go/bin \
     && cd /pgwatch2 && bash build_gatherer.sh \
     && rm -rf /usr/local/go \
