@@ -2,7 +2,6 @@
   "annotations": {
     "list": [
       {
-        "$$hashKey": "object:3249",
         "builtIn": 1,
         "datasource": "-- Grafana --",
         "enable": true,
@@ -69,7 +68,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "2m"
               ],
               "type": "time"
             },
@@ -81,6 +80,7 @@
             }
           ],
           "measurement": "table_stats",
+          "orderByTime": "ASC",
           "policy": "default",
           "query": "SELECT mean(\"total_relation_size_b\") FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
           "rawQuery": false,
@@ -120,7 +120,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "2m"
               ],
               "type": "time"
             },
@@ -132,6 +132,7 @@
             }
           ],
           "measurement": "table_stats",
+          "orderByTime": "ASC",
           "policy": "default",
           "query": "SELECT mean(\"total_relation_size_b\") FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
           "rawQuery": false,
@@ -171,7 +172,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "2m"
               ],
               "type": "time"
             },
@@ -183,6 +184,7 @@
             }
           ],
           "measurement": "index_stats",
+          "orderByTime": "ASC",
           "policy": "default",
           "query": "SELECT mean(\"total_relation_size_b\") FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
           "rawQuery": false,
@@ -217,12 +219,13 @@
           ]
         },
         {
+          "$$hashKey": "object:776",
           "alias": "toast_size",
           "dsType": "influxdb",
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "2m"
               ],
               "type": "time"
             },
@@ -354,7 +357,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "2m"
               ],
               "type": "time"
             },
@@ -366,6 +369,7 @@
             }
           ],
           "measurement": "table_stats",
+          "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
           "resultFormat": "time_series",
@@ -409,7 +413,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "2m"
               ],
               "type": "time"
             },
@@ -421,6 +425,7 @@
             }
           ],
           "measurement": "table_stats",
+          "orderByTime": "ASC",
           "policy": "default",
           "query": "SELECT non_negative_derivative(mean(\"idx_scan\"), 1m) FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
           "rawQuery": false,
@@ -543,7 +548,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "2m"
               ],
               "type": "time"
             },
@@ -555,6 +560,7 @@
             }
           ],
           "measurement": "table_stats",
+          "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
           "resultFormat": "time_series",
@@ -598,7 +604,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "2m"
               ],
               "type": "time"
             },
@@ -610,6 +616,7 @@
             }
           ],
           "measurement": "table_stats",
+          "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",
           "resultFormat": "time_series",
@@ -653,7 +660,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "2m"
               ],
               "type": "time"
             },
@@ -665,6 +672,7 @@
             }
           ],
           "measurement": "table_stats",
+          "orderByTime": "ASC",
           "policy": "default",
           "refId": "D",
           "resultFormat": "time_series",
@@ -708,7 +716,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "2m"
               ],
               "type": "time"
             },
@@ -720,6 +728,7 @@
             }
           ],
           "measurement": "table_stats",
+          "orderByTime": "ASC",
           "policy": "default",
           "refId": "C",
           "resultFormat": "time_series",
@@ -855,8 +864,9 @@
             }
           ],
           "measurement": "table_io_stats",
+          "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"heap_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"heap_blks_hit\"), 10s) + non_negative_derivative(mean(\"heap_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+          "query": "SELECT non_negative_derivative(mean(\"heap_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"heap_blks_hit\"), 10s) + non_negative_derivative(mean(\"heap_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time(2m) fill(null)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -912,8 +922,9 @@
             }
           ],
           "measurement": "table_io_stats",
+          "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"idx_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"idx_blks_hit\"), 10s) + non_negative_derivative(mean(\"idx_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(null)",
+          "query": "SELECT non_negative_derivative(mean(\"idx_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"idx_blks_hit\"), 10s) + non_negative_derivative(mean(\"idx_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time(2m) fill(null)",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -1039,7 +1050,7 @@
           "groupBy": [
             {
               "params": [
-                "auto"
+                "2m"
               ],
               "type": "time"
             },
@@ -1057,6 +1068,7 @@
             }
           ],
           "measurement": "index_stats",
+          "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
           "resultFormat": "time_series",
