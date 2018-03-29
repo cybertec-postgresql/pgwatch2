@@ -19,11 +19,11 @@
   "links": [],
   "panels": [
     {
-      "content": "# Available measurements (\"tables\" with metric info) overview\n\n### NB! Metrics that are actually gathered need to be configured for every DB separately - for that open the Web UI config page [here](http://0.0.0.0:8080/dbs)  or modify the \"pgwatch2.monitored_host\" table directly in the \"pgwatch2\" database\n\n* backends - active, total, waiting sessions\n* bgwriter - pg_stat_bgwriter snapshots\n* cpu_load - CPU load info acquired via a plpython sproc (/pgwatch2/sql/metric_fetching_helpers/)\n* db_stats - pg_stat_database snapshots + DB size info\n* index_stats - pg_stat_user_indexes snapshots\n* kpi - most important high level metrics\n* replication - pg_stat_replication info\n* sproc_stats - pg_stat_user_functions snapshots\n* table_io_stats - pg_statio_user_tables snapshots\n* stat_statements - pg_stat_statements snapshots (requires the extension) \n* table_stats - pg_stat_user_tables snapshots\n* wal - pg_current_xlog_location() values\n\n# For getting started with Grafana in general start [here](http://docs.grafana.org/guides/getting_started/)\n\n\n\n# For learning InfluxDB query language InfluxQL start [here](https://docs.influxdata.com/influxdb/v1.2/query_language/)\n\n# When stuck then additional support and consultations are available from Cybertec - http://www.cybertec.at/kontakt/",
+      "content": "# Available measurements (InfluxDB \"tables\" with metric info) overview\n\n### NB! Metrics that are actually gathered need to be configured for every DB separately - for that open the Web UI config page [here](http://0.0.0.0:8080/dbs)  or modify the \"pgwatch2.monitored_host\" table directly in the \"pgwatch2\" database\n\n* **backends** - active, total, waiting sessions\n* **pgbouncer_stats** - pgbouncer (1.8+) statistics\n* **bgwriter** - pg_stat_bgwriter snapshots\n* **blocking_locks** - detailed info on sessions that are waiting\n* **cpu_load** - CPU load info acquired via a plpython sproc (/pgwatch2/sql/metric_fetching_helpers/)\n* **db_stats** - pg_stat_database snapshots + DB size info\n* **index_stats** - pg_stat_user_indexes snapshots\n* **kpi** - most important high level metrics\n* **locks** - different locktype (page, tuple, ...) counts. NB! for usable data one should set the polling interval very low\n* **locks_mode** - different lock-mode (exclusive, share) counts. NB! for usable data one should set the polling interval very low\n* **replication** - pg_stat_replication info (including replica lag)\n* **sproc_stats** - pg_stat_user_functions snapshots\n* **table_io_stats** - pg_statio_user_tables snapshots\n* **stat_statements** - pg_stat_statements snapshots (requires the extension)\n* **stat_statements_calls** - total query count according to pg_stat_statements\n* **table_bloat_approx_summary** - bloat summary for the whole DB (needs *pgstattuple* extension)\n* **table_stats** - pg_stat_user_tables snapshots\n* **wal** - pg_current_(xlog_location|wal_lsn) values\n\n# For getting started with Grafana in general start [here](http://docs.grafana.org/guides/getting_started/)\n\n\n\n# For learning InfluxDB query language InfluxQL start [here](https://docs.influxdata.com/influxdb/latest/query_language/)\n\n# When stuck then additional support and consultations are available from Cybertec [here](https://www.cybertec-postgresql.com/en/contact/)",
       "editable": true,
       "error": false,
       "gridPos": {
-        "h": 13,
+        "h": 16,
         "w": 24,
         "x": 0,
         "y": 0
@@ -42,7 +42,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 16
       },
       "id": 2,
       "links": [],
@@ -89,6 +89,6 @@
   },
   "timezone": "browser",
   "title": "Documentation",
-  "uid": "40bbd0109",
+  "uid": null,
   "version": 1
 }

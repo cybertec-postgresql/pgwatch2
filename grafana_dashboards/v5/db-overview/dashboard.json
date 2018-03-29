@@ -16,7 +16,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 4,
+  "id": null,
   "iteration": 1521044164450,
   "links": [],
   "panels": [
@@ -2076,6 +2076,6 @@
   },
   "timezone": "browser",
   "title": "DB overview",
-  "uid": "1718cf608",
+  "uid": null,
   "version": 1
 }
