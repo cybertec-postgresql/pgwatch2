@@ -2,7 +2,6 @@
   "annotations": {
     "list": [
       {
-        "$$hashKey": "object:2502",
         "builtIn": 1,
         "datasource": "-- Grafana --",
         "enable": true,
@@ -62,7 +61,7 @@
           "groupBy": [
             {
               "params": [
-                "auto"
+                "30s"
               ],
               "type": "time"
             },
@@ -74,6 +73,7 @@
             }
           ],
           "measurement": "sproc_stats",
+          "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
           "resultFormat": "time_series",
@@ -105,7 +105,7 @@
             },
             {
               "condition": "AND",
-              "key": "function_name",
+              "key": "function_full_name",
               "operator": "=~",
               "value": "/^$sproc_name$/"
             }
@@ -186,6 +186,7 @@
       "steppedLine": false,
       "targets": [
         {
+          "$$hashKey": "object:233",
           "alias": "total_time",
           "dsType": "influxdb",
           "groupBy": [
@@ -203,8 +204,9 @@
             }
           ],
           "measurement": "sproc_stats",
+          "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"total_time\"), 1h)  /  non_negative_derivative(mean(\"sp_calls\"), 1h)  FROM \"sproc_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"function_name\" =~ /^$sproc_name$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"total_time\"), 1h)  /  non_negative_derivative(mean(\"sp_calls\"), 1h)  FROM \"sproc_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"function_full_name\" =~ /^$sproc_name$/ AND $timeFilter GROUP BY time(30s) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -236,19 +238,20 @@
             },
             {
               "condition": "AND",
-              "key": "function_name",
+              "key": "function_full_name",
               "operator": "=~",
               "value": "/^$sproc_name$/"
             }
           ]
         },
         {
+          "$$hashKey": "object:234",
           "alias": "self_time",
           "dsType": "influxdb",
           "groupBy": [
             {
               "params": [
-                "auto"
+                "30s"
               ],
               "type": "time"
             },
@@ -260,8 +263,9 @@
             }
           ],
           "measurement": "sproc_stats",
+          "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"self_time\"), 1h)  /  non_negative_derivative(mean(\"sp_calls\"), 1h)  FROM \"sproc_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"function_name\" =~ /^$sproc_name$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"self_time\"), 1h)  /  non_negative_derivative(mean(\"sp_calls\"), 1h)  FROM \"sproc_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"function_full_name\" =~ /^$sproc_name$/ AND $timeFilter GROUP BY time(30s) fill(none)",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -293,7 +297,7 @@
             },
             {
               "condition": "AND",
-              "key": "function_name",
+              "key": "function_full_name",
               "operator": "=~",
               "value": "/^$sproc_name$/"
             }
@@ -367,10 +371,7 @@
       },
       {
         "allValue": null,
-        "current": {
-          "text": "get_load_average",
-          "value": "get_load_average"
-        },
+        "current": null,
         "datasource": "Influx",
         "hide": 0,
         "includeAll": false,
@@ -378,7 +379,7 @@
         "multi": false,
         "name": "sproc_name",
         "options": [],
-        "query": "SHOW TAG VALUES FROM sproc_stats WITH KEY = \"function_name\" WHERE dbname = '$dbname'",
+        "query": "SHOW TAG VALUES FROM sproc_stats WITH KEY = \"function_full_name\" WHERE dbname = '$dbname'",
         "refresh": 1,
         "regex": "",
         "sort": 0,
