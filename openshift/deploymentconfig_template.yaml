@@ -85,8 +85,8 @@ objects:
                 value: ${PW2_IPASSWORD}
               - name: PW2_ISSL
                 value: ${PW2_ISSL}
-              - name: PW2_IRETENTION
-                value: ${PW2_IRETENTION}
+              - name: PW2_IRETENTIONDAYS
+                value: ${PW2_IRETENTIONDAYS}
               - name: PW2_DATASTORE
                 value: ${PW2_DATASTORE}
               - name: PW2_GRAPHITEHOST
@@ -218,7 +218,7 @@ parameters:
   name: PW2_ISSL
   value: "false"
 - description: Influx DB metrics retention period in days
-  name: PW2_IRETENTION
+  name: PW2_IRETENTIONDAYS
   value: "90"
 - description: Set to "graphite" to use external Graphite server as metrics datastore
   name: PW2_DATASTORE
