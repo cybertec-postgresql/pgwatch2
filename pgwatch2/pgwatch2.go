@@ -1385,6 +1385,7 @@ func main() {
 					if host_metric_interval_map[db_metric] != interval {
 						log.Warning("sending interval update for", db_unique, metric)
 						control_channels[db_metric] <- ControlMessage{Action: "START", Config: host_config}
+						host_metric_interval_map[db_metric] = interval
 					}
 				}
 			}
