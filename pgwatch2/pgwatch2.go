@@ -1241,7 +1241,7 @@ func main() {
 	} else {
 		logging.SetLevel(logging.WARNING, "main")
 	}
-	logging.SetFormatter(logging.MustStringFormatter(`%{time:15:04:05.000} %{level:.4s} %{shortfunc}: %{message}`))
+	logging.SetFormatter(logging.MustStringFormatter(`%{level:.4s} %{shortfunc}: %{message}`))
 
 	log.Debug("opts", opts)
 
