@@ -6,6 +6,23 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.3.5 [2018-04-02]
+
+* Fix - When using volumes, Postgres Bootstrap was correctly done only for volumes created with "docker volume"
+* Fix - Gatherer was always re-logging metric interval change events
+* Improvement - 'Stat statements top' dasboard compatibility for older Influx versions (@dankasak)
+* Metric improvement - "backends" now has separate parallel query workers counter for PG10+
+* Metric/dash improvement - "Sproc details" now based on fully qualified procedure names
+* Minor dashboard improvements - "Table details" and "Overview" adjusted for less jumpy graphs on default settings. NB! If migrating an existing setup it is highly recommended to re-import the following dashboards: "Table details", "Overview", "Sproc details"
+* Web UI Improvement - showing a warning on "DBs" page if changing the connect string but can't actually connect using it
+* README improvements - info on "track_io_timing", component diagram added, new screenshots, project background
+* Logging improvement - in some case root cause errors were masked in logs. Better "empty metric SQL" messages
+* Logging improvement - remove duplicate event times and milliseconds
+* Openshift template - added missing PW2_IRETENTIONDAYS to env vars
+* InfluxDB 1.5.0
+* Grafana 5.0.4 - old v4 dashboards are now in a separate folder (./grafana_dashboards/v4)
+* Go 1.10.1
+
 ## v1.3.0 [2018-01-26]
 
 * Dockerfile/image running as "non-root" user, suitable for example for OpenShift deployments
