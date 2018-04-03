@@ -11,6 +11,9 @@
 BEGIN;
 
 DROP TYPE IF EXISTS public.load_average CASCADE;
+
+CREATE TYPE public.load_average AS ( load_1min real, load_5min real, load_15min real );
+
 CREATE OR REPLACE FUNCTION public.cpu() RETURNS real AS
 $$
 	from ctypes import windll, Structure, sizeof, byref
@@ -32,7 +35,7 @@ $$
 	       }
 
 	FirstSystemTimes = GetSystemTimes()
-	time.sleep(2)
+	time.sleep(0.2)
 	SecSystemTimes = GetSystemTimes()
 
 	usr = SecSystemTimes['userTime'] - FirstSystemTimes['userTime']
