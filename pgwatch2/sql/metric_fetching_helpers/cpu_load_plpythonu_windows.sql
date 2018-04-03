@@ -7,6 +7,7 @@
 */
 --DROP TYPE public.load_average;
 --DROP FUNCTION public.get_load_average();
+--DROP FUNCTION public.cpu();
 
 BEGIN;
 
