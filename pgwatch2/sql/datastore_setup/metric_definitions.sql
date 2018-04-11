@@ -580,7 +580,7 @@ select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   sum(calls) as calls
 from
-  public.pg_stat_statements
+  public.get_stat_statements();
 $sql$
 );
 
