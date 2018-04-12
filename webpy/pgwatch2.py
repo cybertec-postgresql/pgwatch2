@@ -151,7 +151,8 @@ def update_monitored_db(params):
           (q_old.md_hostname, q_old.md_port, q_old.md_dbname, q_old.md_user, q_old.md_password, q_old.md_sslmode) is distinct from
             (%(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s,
             case when %(md_password)s = '***' then q_old.md_password else %(md_password)s end, %(md_sslmode)s
-            ) as connection_data_changed
+            ) as connection_data_changed,
+            case when %(md_password)s = '***' then q_old.md_password else %(md_password)s end as md_password
     """
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
     cherrypy_empty_text_to_nulls(
@@ -162,7 +163,7 @@ def update_monitored_db(params):
     ret.append('Updated!')
     if data[0]['connection_data_changed'] or params['md_is_enabled']:  # show warning when changing connect data but cannot connect
         data, err = datadb.executeOnRemoteHost('select 1', params['md_hostname'], params['md_port'], params['md_dbname'],
-                                   params['md_user'], params['md_password'], sslmode=params['md_sslmode'], quiet=True)
+                                   params['md_user'], data[0]['md_password'], sslmode=params['md_sslmode'], quiet=True)
         if err:
             ret.append('Could not connect to specified host: ' + str(err))
 

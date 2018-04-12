@@ -3,7 +3,7 @@ import psycopg2
 import psycopg2.extras
 
 
-connection_string = "host=localhost dbname=pgwatch2 user=postgres password=postgres connect_timeout='3'"
+connection_string = "host=localhost dbname=pgwatch2 user=pgwatch2 password=pgwatch2 connect_timeout='3'"
 
 
 def setConnectionString(conn_string):
