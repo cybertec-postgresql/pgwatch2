@@ -6,7 +6,7 @@ values (
 9.0,
 $sql$
 with sa_snapshot as (
-  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%' and datname = current_database()
+  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -30,7 +30,7 @@ values (
 9.6,
 $sql$
 with sa_snapshot as (
-  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%' and datname = current_database()
+  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -1094,7 +1094,7 @@ BEGIN
       )[1]::double precision > 9.1 THEN   --parameters normalized only from 9.2
     EXECUTE format(l_sproc_text);
     EXECUTE 'REVOKE EXECUTE ON FUNCTION public.get_stat_statements() FROM PUBLIC;';
-    --EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_stat_statements() TO pgwatch2';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_stat_statements() TO pgwatch2';
     EXECUTE 'COMMENT ON FUNCTION public.get_stat_statements() IS ''created for pgwatch2''';
   END IF;
 END;
@@ -1123,7 +1123,7 @@ $sql$
 
 CREATE OR REPLACE FUNCTION public.get_stat_activity() RETURNS SETOF pg_stat_activity AS
 $$
-  select * from pg_stat_activity;
+  select * from pg_stat_activity where datname = current_database()
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 REVOKE EXECUTE ON FUNCTION public.get_stat_activity() FROM PUBLIC;

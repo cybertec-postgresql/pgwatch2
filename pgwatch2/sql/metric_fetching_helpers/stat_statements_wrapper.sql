@@ -22,7 +22,6 @@ $$
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 $SQL$;
 BEGIN
-  PERFORM 1 from pg_views where viewname = 'pg_stat_statements';
   IF (regexp_matches(
       regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'),
         E'\\d+\\.?\\d+?')

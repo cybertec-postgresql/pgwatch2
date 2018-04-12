@@ -1166,7 +1166,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) {
 		return
 	}
 
-	sql_helpers := "select distinct m_name from metric where m_is_active and m_is_helper" // m_name is a helper function name
+	sql_helpers := "select distinct m_name from pgwatch2.metric where m_is_active and m_is_helper" // m_name is a helper function name
 	data, err := DBExecRead(configDb, "configDb", sql_helpers)
 	if err != nil {
 		log.Error(err)
@@ -1181,15 +1181,15 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) {
 			log.Debug("Trying to create metric fetching helpers for", dbUnique, metric)
 			sql, err := GetSQLForMetricPGVersion(metric, db_pg_version)
 			if err != nil {
-				_, err := DBExecReadByDbUniqueName(dbUnique, sql)
-				if err != nil {
-					log.Warning("Failed to create a metric fetching helper for", dbUnique, metric)
-					log.Warning(err)
-				} else {
-					log.Debug("Successfully created metric fetching helper for", dbUnique, metric)
-				}
-			} else {
 				log.Warning("Could not find query text for", dbUnique, metric)
+				continue
+			}
+			_, err = DBExecReadByDbUniqueName(dbUnique, sql)
+			if err != nil {
+				log.Warning("Failed to create a metric fetching helper for", dbUnique, metric)
+				log.Warning(err)
+			} else {
+				log.Warning("Successfully created metric fetching helper for", dbUnique, metric)
 			}
 		}
 	}
