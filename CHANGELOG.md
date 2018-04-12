@@ -6,6 +6,17 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.3.6 [2018-04-12]
+
+* Admin UI fix - remove confusing error messages shown on existing connection string updates
+* Improvement - stat_statements_calls doesn't need superuser anymore
+* Security improvement - only showing pg_stat_activity info on the taget DB
+* Metric fix - helper (for superuser auto-create) for bloat was missing
+* Gatherer - fix "auto-create" of metric fetching helpers (effective when "Is superuser?" checked on Admin page)
+* "Overview" dashboard - minor adjustments
+* InfluxDB 1.5.0 -> 1.5.1
+
+
 ## v1.3.5 [2018-04-02]
 
 * Fix - When using volumes, Postgres Bootstrap was correctly done only for volumes created with "docker volume"
