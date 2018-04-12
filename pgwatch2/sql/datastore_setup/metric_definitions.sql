@@ -808,7 +808,7 @@ $sql$
 /* Stored procedure needed for fetching stat_statements data - needs pg_stat_statements extension enabled on the machine!
  NB! approx_free_percent is just an average. more exact way would be to calculate a weighed average in Go
 */
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_is_helper)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
 values (
 'get_table_bloat_approx',
 9.5,
@@ -839,6 +839,7 @@ COMMENT ON FUNCTION public.get_table_bloat_approx() is 'created for pgwatch2';
 
 COMMIT;
 $sql$,
+'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
 true
 );
 
@@ -1111,4 +1112,25 @@ values (
 'show stats',
 'pgbouncer per db statistics',
 false
+);
+
+/* Stored procedure needed for fetching backend/session data */
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
+values (
+'get_stat_activity',
+9.0,
+$sql$
+
+CREATE OR REPLACE FUNCTION public.get_stat_activity() RETURNS SETOF pg_stat_activity AS
+$$
+  select * from pg_stat_activity;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+
+REVOKE EXECUTE ON FUNCTION public.get_stat_activity() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_stat_activity() TO pgwatch2;
+COMMENT ON FUNCTION public.get_stat_activity() IS 'created for pgwatch2';
+
+$sql$,
+'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
+true
 );
