@@ -101,7 +101,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"xact_commit\"), 1s) + non_negative_derivative(mean(\"xact_rollback\"), 1s) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($interval) fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"xact_commit\"), 1s) + non_negative_derivative(mean(\"xact_rollback\"), 1s) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time(2m) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -217,8 +217,9 @@
               "type": "fill"
             }
           ],
+          "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"calls\"), 1s) FROM \"stat_statements_calls\" WHERE $timeFilter AND \"dbname\" =~ /^$dbname$/ GROUP BY time(1s) fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"calls\"), 1s) FROM \"stat_statements_calls\" WHERE $timeFilter AND \"dbname\" =~ /^$dbname$/ GROUP BY time(2m) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -336,7 +337,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(last(\"total_time\"), 1h) / non_negative_derivative(last(\"calls\"), 1h) FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
+          "query": "SELECT non_negative_derivative(last(\"total_time\"), 1h) / non_negative_derivative(last(\"calls\"), 1h) FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(2m) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -689,7 +690,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "2m"
               ],
               "type": "time"
             },
@@ -1030,7 +1031,7 @@
           "label": null,
           "logBase": 10,
           "max": null,
-          "min": 0,
+          "min": null,
           "show": true
         },
         {
@@ -1399,7 +1400,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -1407,7 +1408,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         }
       ]
@@ -1486,7 +1487,7 @@
           "measurement": "wal",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT derivative(mean(\"xlog_location_b\"), 1s) FROM \"wal\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(2m) fill(null)",
+          "query": "SELECT derivative(mean(\"xlog_location_b\"), 1s) FROM \"wal\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(2m) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1530,7 +1531,7 @@
             },
             {
               "params": [
-                "null"
+                "none"
               ],
               "type": "fill"
             }
@@ -2043,8 +2044,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "test",
-          "value": "test"
+          "text": null,
+          "value": null
         },
         "datasource": null,
         "hide": 0,
