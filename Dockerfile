@@ -13,7 +13,7 @@ RUN apt-get -q update \
 #   latest ver.: curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1
 
 RUN wget -q -O grafana.deb https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_5.0.4_amd64.deb \
-    && wget -q -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.5.0_amd64.deb > influxdb_amd64.deb \
+    && wget -q -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.5.1_amd64.deb > influxdb_amd64.deb \
     && dpkg -i grafana.deb && rm grafana.deb \
     && dpkg -i influxdb_amd64.deb && rm influxdb_amd64.deb \
     && sed -i 's/\# query-log-enabled = true/query-log-enabled = false/' /etc/influxdb/influxdb.conf \
