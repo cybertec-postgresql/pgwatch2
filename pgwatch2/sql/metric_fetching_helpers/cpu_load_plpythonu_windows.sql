@@ -49,16 +49,7 @@ $$ LANGUAGE plpython3u;
 
 CREATE OR REPLACE FUNCTION public.get_load_average() RETURNS public.load_average AS
 $$
-	CREATE TEMP TABLE IF NOT EXISTS cputimings (cpu real, ts timestamptz DEFAULT now());
-	DELETE FROM cputimings WHERE ts < now() - '15 minutes' :: interval;
-	WITH l1(load_1min) AS (
-	  INSERT INTO cputimings(cpu) VALUES (cpu()) RETURNING *
-	   ), l5(load_5min) AS (
-	  SELECT avg(cpu) :: real FROM cputimings WHERE ts > now() - '5 minutes' :: interval
-	   ), l15(load_15min) AS (  
-	  SELECT avg(cpu) :: real FROM cputimings WHERE ts > now() - '15 minutes' :: interval
-	   )
-	SELECT load_1min, load_5min, load_15min  FROM l1, l5, l15;
+	SELECT val, val, val FROM public.cpu() AS cpu_now(val);
 $$ LANGUAGE sql;
 
 GRANT EXECUTE ON FUNCTION public.get_load_average() TO public;
