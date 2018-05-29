@@ -9,6 +9,7 @@ from pathlib import Path
 import cherrypy
 import time
 import datadb
+import influxdb
 import pgwatch2_influx
 import psycopg2
 import requests
@@ -110,9 +111,10 @@ class Root:
 
         try:
             influx_active_dbnames = pgwatch2_influx.get_active_dbnames()
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, influxdb.exceptions.InfluxDBClientError):
             messages.append('ERROR: Could not connect to InfluxDB')
         except Exception as e:
+            logging.exception('ERROR')
             messages.append('ERROR: ' + str(e))
 
         try:
@@ -231,7 +233,7 @@ class Root:
                                                                       sort_column,
                                                                       start_time,
                                                                       (end_time if end_time else datetime.utcnow().isoformat() + 'Z'))
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, influxdb.exceptions.InfluxDBClientError):
             messages.append('ERROR - Could not connect to InfluxDB')
         except psycopg2.OperationalError:
             messages.append('ERROR - Could not connect to Postgres')
