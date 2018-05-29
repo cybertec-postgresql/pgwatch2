@@ -2054,7 +2054,7 @@
           "text": null,
           "value": null
         },
-        "datasource": "Influx",
+        "datasource": null,
         "hide": 0,
         "includeAll": true,
         "label": null,
