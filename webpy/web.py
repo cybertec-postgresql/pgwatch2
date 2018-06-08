@@ -264,7 +264,7 @@ if __name__ == '__main__':
     # PgWatch2
     parser.add_argument(
         '-v', '--verbose', help='Chat level. none(default)|-v|-vv [$VERBOSE=[0|1|2]]', action='count', default=(os.getenv('PW2_VERBOSE') or 0))
-    parser.add_argument('--no-anonymous-access', help='If set no login required to configure monitoring/metrics',
+    parser.add_argument('--no-anonymous-access', help='If set, login is required to configure monitoring/metrics',
                         action='store_true', default=(os.getenv('PW2_WEBNOANONYMOUS') or False))
     parser.add_argument('--admin-user', help='Username for login',
                         default=(os.getenv('PW2_WEBUSER') or 'admin'))
