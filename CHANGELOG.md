@@ -6,6 +6,22 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.3.7 [2018-06-10]
+
+* Fix - Openshift/nonroot Docker image was failing on container re-launch due to Postgres SSL false handling
+* Fix - setting Grafana SSL via env working now again 
+* Dashboards - new "Global Overview" dash added for aggregates over all or a set of DBs
+* Dashboards - new "Top Sprocs" dash added. Similar to "State Statements Top"
+* Dashboards - "Overview" dash "avg. query runtime" more accurate now as pgwatch2 queries are excluded from calculation
+* Improvement - stat_statements_calls doesn't need superuser anymore
+* Metrics - increase default metric intervals for "multipliable" data i.e. metrics that grow proportional to the amount of objects
+* Metrics - added total_time to stat_statements_calls for fast (approximate) avg. query runtime calculation
+* Docker - SSL keys are now not re-generated on evey launch        
+* Web UI - better error handling when Influx DB is not there  
+* InfluxDB 1.5.1 -> 1.5.3
+* Grafana 5.0.4 -> 5.1.3
+
+
 ## v1.3.6 [2018-04-12]
 
 * Admin UI fix - remove confusing error messages shown on existing connection string updates
