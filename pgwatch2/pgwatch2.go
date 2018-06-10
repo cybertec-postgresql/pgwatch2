@@ -1088,11 +1088,11 @@ func queryDB(clnt client.Client, cmd string) (res []client.Result, err error) {
 	return res, nil
 }
 
-func InitAndTestInfluxConnection(HostId, InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword string, InfluxSSL bool, RetentionPeriod int64) (string, error) {
+func InitAndTestInfluxConnection(HostId, InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword, InfluxSSL string, RetentionPeriod int64) (string, error) {
 	log.Info(fmt.Sprintf("Testing Influx connection to host %s: %s, port: %s, DB: %s", HostId, InfluxHost, InfluxPort, InfluxDbname))
 	var connect_string string
 
-	if InfluxSSL {
+	if b, _ := strconv.ParseBool(InfluxSSL) ; b == true {
 		connect_string = fmt.Sprintf("https://%s:%s", InfluxHost, InfluxPort)
 	} else {
 		connect_string = fmt.Sprintf("http://%s:%s", InfluxHost, InfluxPort)
@@ -1210,13 +1210,13 @@ type Options struct {
 	InfluxDbname        string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
 	InfluxUser          string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
 	InfluxPassword      string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
-	InfluxSSL           bool   `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
+	InfluxSSL           string `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
 	InfluxHost2         string `long:"ihost2" description:"Influx host II" env:"PW2_IHOST2"`
 	InfluxPort2         string `long:"iport2" description:"Influx port II" env:"PW2_IPORT2"`
 	InfluxDbname2       string `long:"idbname2" description:"Influx DB name II" default:"pgwatch2" env:"PW2_IDATABASE2"`
 	InfluxUser2         string `long:"iuser2" description:"Influx user II" default:"root" env:"PW2_IUSER2"`
 	InfluxPassword2     string `long:"ipassword2" description:"Influx password II" default:"root" env:"PW2_IPASSWORD2"`
-	InfluxSSL2          bool   `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
+	InfluxSSL2          string `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
 	InfluxRetentionDays int64  `long:"iretentiondays" description:"Retention period in days [90 default]" env:"PW2_IRETENTIONDAYS"`
 	GraphiteHost        string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
 	GraphitePort        string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
@@ -1251,6 +1251,24 @@ func main() {
 		fmt.Println("Check config DB parameters")
 		return
 	}
+
+    // validate that input is boolean is set
+    if len(strings.TrimSpace(opts.InfluxSSL)) > 0 {
+        if _, err := strconv.ParseBool(opts.InfluxSSL) ;  err != nil {
+            fmt.Println("Check --issl parameter - can be of: 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False")
+            return
+        }
+    } else {
+        opts.InfluxSSL = "false"
+    }
+    if len(strings.TrimSpace(opts.InfluxSSL2)) > 0 {
+        if _, err := strconv.ParseBool(opts.InfluxSSL2) ;  err != nil {
+            fmt.Println("Check --issl2 parameter - can be of: 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False")
+            return
+        }
+    } else {
+        opts.InfluxSSL2 = "false"
+    }
 
 	InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password)
 
