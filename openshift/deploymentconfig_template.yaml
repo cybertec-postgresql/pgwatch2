@@ -39,13 +39,11 @@ objects:
             livenessProbe:
               exec:
                 command:
-                - /usr/bin/psql
-                - -U
+                - /usr/bin/pg_isready
+                - -qU
                 - pgwatch2
-                - -qc
-                - "'select 1'"
               initialDelaySeconds: 30
-              periodSeconds: 5
+              periodSeconds: 30
             env:
               - name: NOTESTDB
                 value: ${NOTESTDB}
@@ -162,7 +160,7 @@ parameters:
   value: ""
 - description: Passoword protect config changes via the Web UI. Disabled by default
   name: PW2_WEBNOANONYMOUS
-  value: "false"
+  value: ""
 - description: Web UI admin user
   name: PW2_WEBUSER
   value: "admin"
