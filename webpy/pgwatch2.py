@@ -206,7 +206,7 @@ def insert_monitored_db(params):
             for db_to_add in dbs_to_add:
                 params_copy['md_unique_name'] = '{}_{}'.format(params['md_unique_name'], db_to_add)
                 params_copy['md_dbname'] = db_to_add
-                ret, err = datadb.execute(sql_insert_new_db, params_copy)
+                retdata, err = datadb.execute(sql_insert_new_db, params_copy)
                 if err:
                     raise Exception('Failed to insert into "monitored_db": ' + err)
             if currently_monitored_dbs:
@@ -236,7 +236,7 @@ def insert_monitored_db(params):
             for db_to_add in dbs_to_add:
                 params_copy['md_unique_name'] = '{}_{}'.format(params['md_unique_name'], db_to_add)
                 params_copy['md_dbname'] = db_to_add
-                ret, err = datadb.execute(sql_insert_new_db, params_copy)
+                retdata, err = datadb.execute(sql_insert_new_db, params_copy)
                 if err:
                     raise Exception('Failed to insert into "monitored_db": ' + err)
             if currently_monitored_dbs:
