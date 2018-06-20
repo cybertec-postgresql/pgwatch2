@@ -182,6 +182,7 @@ def insert_monitored_db(params):
         returning
           md_id
     """
+    sql_active_dbs = "select datname from pg_database where not datistemplate and datallowconn"
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
     cherrypy_empty_text_to_nulls(
         params, ['md_preset_config_name', 'md_config'])
@@ -189,7 +190,9 @@ def insert_monitored_db(params):
     if not params['md_dbname']:     # add all DBs found
         if params['md_dbtype'] == 'postgres':
             # get all active non-template DBs from the entered host
-            active_dbs_on_host, err = datadb.execute("select datname from pg_database where not datistemplate and datallowconn", params)
+            active_dbs_on_host, err = datadb.executeOnRemoteHost(sql_active_dbs, host=params['md_hostname'], port=params['md_port'],
+                                                                 dbname='template1', user=params['md_user'], password=params['md_password'],
+                                                                 sslmode=params['md_sslmode'])
             if err:
                 raise Exception("Could not read active DBs from specified host!")
             active_dbs_on_host = [x['datname'] for x in active_dbs_on_host]
