@@ -189,7 +189,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 	`
 	data, err := DBExecRead(configDb, "configDb", sql)
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 	} else {
 		UpdateMonitoredDBCache(data) // cache used by workers
 	}
@@ -1036,7 +1036,7 @@ func UpdateMetricDefinitionMapFromPostgres() {
 	sql := "select m_name, m_pg_version_from::text, m_sql from pgwatch2.metric where m_is_active"
 	data, err := DBExecRead(configDb, "configDb", sql)
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 		return
 	}
 	if len(data) == 0 {
@@ -1044,7 +1044,7 @@ func UpdateMetricDefinitionMapFromPostgres() {
 		return
 	}
 
-	log.Debug(len(data), "active metrics found from config db (pgwatch2.metric)")
+	log.Debug("%d active metrics found from config db (pgwatch2.metric)", len(data))
 	for _, row := range data {
 		_, ok := metric_def_map_new[row["m_name"].(string)]
 		if !ok {
@@ -1169,7 +1169,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) {
 	sql_helpers := "select distinct m_name from pgwatch2.metric where m_is_active and m_is_helper" // m_name is a helper function name
 	data, err := DBExecRead(configDb, "configDb", sql_helpers)
 	if err != nil {
-		log.Error(err)
+		log.Error(err.Error())
 		return
 	}
 
@@ -1187,7 +1187,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) {
 			_, err = DBExecReadByDbUniqueName(dbUnique, sql)
 			if err != nil {
 				log.Warning("Failed to create a metric fetching helper for", dbUnique, metric)
-				log.Warning(err)
+				log.Warning(err.Error())
 			} else {
 				log.Warning("Successfully created metric fetching helper for", dbUnique, metric)
 			}
