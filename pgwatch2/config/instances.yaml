@@ -4,15 +4,16 @@
   port: 5432
   dbname: pgwatch2
   user: krl
-  password: x
+  password: krl
   sslmode: disable
   stmt_timeout: 5
   is_superuser: true
   preset_metrics: null
-  custom_metrics: {a: 1}
+  custom_metrics: {"wal": 10}
   dbname_include_pattern: (bar|postgres)
   dbname_exclude_pattern: null
   continous_discovery: true
+  is_enabled: true
 
 - unique_name: test2
   dbtype: postgres
@@ -28,3 +29,4 @@
   dbname_include_pattern: (bar|postgres)
   dbname_exclude_pattern:
   continous_discovery: true
+  is_enabled: false
