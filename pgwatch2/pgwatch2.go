@@ -41,6 +41,7 @@ type MonitoredDatabase struct {
 	PresetMetrics        string `yaml:"preset_metrics"`
 	ContinousDiscovery   bool   `yaml:"continous_discovery"`
 	IsSuperuser          bool   `yaml:"is_superuser"`
+	IsEnabled            bool   `yaml:"is_enabled"`
 }
 
 type ControlMessage struct {
@@ -403,7 +404,7 @@ func GetMonitoredDatabaseByUniqueName(name string) (MonitoredDatabase, error) {
 	defer monitored_db_cache_lock.RUnlock()
 	_, exists := monitored_db_cache[name]
 	if !exists {
-		return MonitoredDatabase{}, errors.New("md_unique_name not found")
+		return MonitoredDatabase{}, errors.New("DBUnique not found")
 	}
 	return monitored_db_cache[name], nil
 }
@@ -1052,19 +1053,31 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 	}
 }
 
-func UpdateMetricDefinitionMapFromPostgres() {
+func UpdateMetricDefinitionMap(newMetrics map[string]map[decimal.Decimal]string) {
+	metric_def_map_lock.Lock()
+	metric_def_map = newMetrics
+	metric_def_map_lock.Unlock()
+	log.Debug("metric_def_map:", metric_def_map)
+	log.Info("metrics definitions refreshed from config DB. nr. found:", len(newMetrics))
+}
+
+func UpdateMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decimal.Decimal]string, error) {
 	metric_def_map_new := make(map[string]map[decimal.Decimal]string)
 	sql := "select m_name, m_pg_version_from::text, m_sql from pgwatch2.metric where m_is_active"
 
 	log.Info("updating metrics definitons from ConfigDB...")
 	data, err := DBExecRead(configDb, "configDb", sql)
 	if err != nil {
-		log.Error(err)
-		return
+		if failOnError {
+			log.Fatal(err)
+		} else {
+			log.Error(err)
+			return metric_def_map, err
+		}
 	}
 	if len(data) == 0 {
 		log.Warning("no metric definitions found from config DB")
-		return
+		return metric_def_map_new, err
 	}
 
 	log.Debug(len(data), "active metrics found from config db (pgwatch2.metric)")
@@ -1076,13 +1089,7 @@ func UpdateMetricDefinitionMapFromPostgres() {
 		d, _ := decimal.NewFromString(row["m_pg_version_from"].(string))
 		metric_def_map_new[row["m_name"].(string)][d] = row["m_sql"].(string)
 	}
-
-	metric_def_map_lock.Lock()
-	metric_def_map = metric_def_map_new
-	metric_def_map_lock.Unlock()
-	log.Debug("metric_def_map:", metric_def_map)
-	log.Info("metrics definitions refreshed from config DB. nr. found:", len(metric_def_map_new))
-
+	return metric_def_map_new, err
 }
 
 func jsonTextToMap(jsonText string) map[string]float64 {
@@ -1223,13 +1230,16 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) {
 }
 
 // expected is following structure: metric_name/pg_ver/metric.sql
-func ReadMetricsFromFolder(folder string) (map[string]map[decimal.Decimal]string, error) {
+func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[decimal.Decimal]string, error) {
 	metrics_map := make(map[string]map[decimal.Decimal]string)
 	rIsDigitOrPunctuation := regexp.MustCompile("^[\\d\\.]+$")
 
 	log.Warningf("Searching for metrics from folder %s ...", folder)
 	files, err := ioutil.ReadDir(folder)
 	if err != nil {
+		if failOnError {
+			log.Fatalf("Could not read path %s: %s", folder, err)
+		}
 		log.Error(err)
 		return metrics_map, err
 	}
@@ -1308,7 +1318,9 @@ func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatab
 		}
 		for _, v := range c {
 			log.Debugf("Found monitoring config entry: %#v", v)
-			hostList = c
+			if v.IsEnabled {
+				hostList = append(hostList, v)
+			}
 		}
 	}
 
@@ -1533,47 +1545,40 @@ func main() {
 	first_loop := true
 	var monitored_dbs []MonitoredDatabase
 	var last_metrics_refresh_time int64
+	var err error
+	var metrics map[string]map[decimal.Decimal]string
 
 	for { //main loop
 		if time.Now().Unix()-last_metrics_refresh_time > METRIC_DEFINITION_REFRESH_TIME {
+			//metrics
 			if fileBased {
-				fs_metrics, err := ReadMetricsFromFolder(opts.MetricsFolder)
-				if err != nil {
-					if first_loop {
-						log.Fatalf("Could not read metric definitions from path: %s", opts.MetricsFolder)
-					} else {
-						log.Errorf("Could not read metric definitions from path: %s", opts.MetricsFolder)
-					}
-				} else {
-					metric_def_map_lock.Lock()
-					metric_def_map = fs_metrics
-					metric_def_map_lock.Unlock()
-				}
-
+				metrics, err = ReadMetricsFromFolder(opts.MetricsFolder, first_loop)
 			} else {
-				UpdateMetricDefinitionMapFromPostgres()
+				metrics, err = UpdateMetricDefinitionMapFromPostgres(first_loop)
+			}
+			if err == nil {
+				UpdateMetricDefinitionMap(metrics)
 				last_metrics_refresh_time = time.Now().Unix()
 			}
 		}
 
 		if fileBased {
 			mc, err := ReadMonitoringConfigFromFileOrFolder(opts.Config)
-			if err != nil {
+			if err == nil {
+				log.Debugf("Found %d monitoring config entries", len(mc))
+				monitored_dbs = GetMonitoredDatabasesFromMonitoringConfig(mc)
+				log.Debugf("Found %d databases to monitor from %d config items...", len(monitored_dbs), len(mc))
+			} else {
 				if first_loop {
 					log.Fatalf("Could not read/parse monitoring config from path: %s", opts.Config)
 				} else {
 					log.Errorf("Could not read/parse monitoring config from path: %s", opts.Config)
 				}
+				time.Sleep(time.Second * time.Duration(ACTIVE_SERVERS_REFRESH_TIME))
 				continue
 			}
-			log.Debugf("Found %d monitoring config entries", len(mc))
-
-			md := GetMonitoredDatabasesFromMonitoringConfig(mc)
-			log.Debugf("Found %d databases to monitor from %d config items...", len(md), len(mc))
-			monitored_dbs = md
-			UpdateMonitoredDBCache(md)
 		} else {
-			md, err := GetMonitoredDatabasesFromConfigDB()
+			monitored_dbs, err = GetMonitoredDatabasesFromConfigDB()
 			if err != nil {
 				if first_loop {
 					log.Fatal("could not fetch active hosts - check config!", err)
@@ -1583,9 +1588,9 @@ func main() {
 					continue
 				}
 			}
-			monitored_dbs = md
-			UpdateMonitoredDBCache(md)
 		}
+
+		UpdateMonitoredDBCache(monitored_dbs)
 
 		if first_loop {
 			first_loop = false // only used for failing when 1st config reading fails
