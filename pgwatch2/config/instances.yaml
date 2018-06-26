@@ -1,8 +1,8 @@
 - unique_name: test1  # functions also as prefix for found DBs if using patterns/continous discovery
-  dbtype: postgres    # postgres|pgbouncer
+  dbtype: postgres    # postgres|pgbouncer|postgres-continuous-discovery
   host: localhost
   port: 5432
-  dbname: pgwatch2
+  dbname:
   user: krl
   password: krl
   sslmode: disable
@@ -10,9 +10,8 @@
   is_superuser: true
   preset_metrics: null
   custom_metrics: {"wal": 10}
-  dbname_include_pattern: (bar|postgres)
-  dbname_exclude_pattern: null
-  continous_discovery: true
+  dbname_include_pattern: bench
+  dbname_exclude_pattern: be$
   is_enabled: true
 
 - unique_name: test2
@@ -28,5 +27,4 @@
   custom_metrics: {a: 1}
   dbname_include_pattern: (bar|postgres)
   dbname_exclude_pattern:
-  continous_discovery: true
   is_enabled: false

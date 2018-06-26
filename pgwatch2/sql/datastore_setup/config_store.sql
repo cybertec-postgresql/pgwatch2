@@ -42,10 +42,12 @@ create table pgwatch2.monitored_db (
     md_last_modified_on timestamptz not null default now(),
     md_statement_timeout_seconds int not null default 5,   -- metrics queries will be canceled after so many seconds
     md_dbtype text not null default 'postgres',
+    md_include_pattern text,    -- valid regex expected. relevant for 'postgres-continuous-discovery'
+    md_exclude_pattern text,    -- valid regex expected. relevant for 'postgres-continuous-discovery'
     UNIQUE (md_unique_name),
     CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':'),
     CHECK (md_sslmode in ('disable', 'require', 'verify-full')),
-    CHECK (md_dbtype in ('postgres', 'pgbouncer'))
+    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery'))
 );
 
 create unique index on monitored_db(md_hostname, md_port, md_dbname, md_is_enabled); -- prevent multiple active workers for the same db

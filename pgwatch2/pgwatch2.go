@@ -39,7 +39,6 @@ type MonitoredDatabase struct {
 	DBNameIncludePattern string `yaml:"dbname_include_pattern"`
 	DBNameExcludePattern string `yaml:"dbname_exclude_pattern"`
 	PresetMetrics        string `yaml:"preset_metrics"`
-	ContinousDiscovery   bool   `yaml:"continous_discovery"`
 	IsSuperuser          bool   `yaml:"is_superuser"`
 	IsEnabled            bool   `yaml:"is_enabled"`
 }
@@ -100,7 +99,7 @@ var influx_host_count = 1
 var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently supported
 // secondary Influx meant for HA or Grafana load balancing for 100+ instances with lots of alerts
 var fileBased = false
-var continousMonitoringDatabases = make([]MonitoredDatabase, 0) // TODO
+var continuousMonitoringDatabases = make([]MonitoredDatabase, 0) // TODO
 
 func GetPostgresDBConnection(host, port, dbname, user, password, sslmode string) (*sqlx.DB, error) {
 	var err error
@@ -136,8 +135,14 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password string)
 
 func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
 	ret := make([]map[string]interface{}, 0)
-
-	rows, err := conn.Queryx(sql, args...)
+	var rows *sqlx.Rows
+	var err error
+	if host_ident == "x" {
+		log.Error("HERE")
+		rows, err = conn.Queryx(sql, "bench", "bench")
+	} else {
+		rows, err = conn.Queryx(sql, args...)
+	}
 	if err != nil {
 		// connection problems or bad queries etc are quite common so caller should decide if to output something
 		log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
@@ -191,7 +196,8 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 	sql := `
 		select
 		  md_unique_name, md_dbtype, md_hostname, md_port, md_dbname, md_user, coalesce(md_password, '') as md_password,
-		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode, md_is_superuser
+		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode, md_is_superuser,
+		  coalesce(md_include_pattern, '') as md_include_pattern, coalesce(md_exclude_pattern, '') as md_exclude_pattern
 		from
 		  pgwatch2.monitored_db
 	          left join
@@ -210,26 +216,46 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 }
 
 func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
-	md := make([]MonitoredDatabase, 0)
+	monitoredDBs := make([]MonitoredDatabase, 0)
 	activeHostData, err := GetAllActiveHostsFromConfigDB()
 	if err != nil {
 		log.Errorf("Failed to read monitoring config from DB: %s", err)
-		return md, err
+		return monitoredDBs, err
 	}
-	for _, r := range activeHostData {
-		md = append(md, MonitoredDatabase{
-			DBUniqueName: r["md_unique_name"].(string),
-			Host:         r["md_hostname"].(string),
-			Port:         r["md_port"].(string),
-			DBName:       r["md_dbname"].(string),
-			User:         r["md_user"].(string),
-			Password:     r["md_password"].(string),
-			SslMode:      r["md_sslmode"].(string),
-			StmtTimeout:  r["md_statement_timeout_seconds"].(int64),
-			Metrics:      jsonTextToMap(r["md_config"].(string)),
-			DBType:       r["md_dbtype"].(string)})
+	for _, row := range activeHostData {
+		md := MonitoredDatabase{
+			DBUniqueName:         row["md_unique_name"].(string),
+			Host:                 row["md_hostname"].(string),
+			Port:                 row["md_port"].(string),
+			DBName:               row["md_dbname"].(string),
+			User:                 row["md_user"].(string),
+			Password:             row["md_password"].(string),
+			SslMode:              row["md_sslmode"].(string),
+			StmtTimeout:          row["md_statement_timeout_seconds"].(int64),
+			Metrics:              jsonTextToMap(row["md_config"].(string)),
+			DBType:               row["md_dbtype"].(string),
+			DBNameIncludePattern: row["md_include_pattern"].(string),
+			DBNameExcludePattern: row["md_exclude_pattern"].(string)}
+
+		if md.DBType == "postgres-continuous-discovery" {
+			resolved, err := ResolveDatabasesFromConfigEntry(md)
+			if err != nil {
+				log.Errorf("Failed to resolve DBs for \"%s\": %s", md.DBUniqueName, err)
+				continue
+			}
+			temp_arr := make([]string, 0)
+			for _, rdb := range resolved {
+				monitoredDBs = append(monitoredDBs, rdb)
+				temp_arr = append(temp_arr, rdb.DBName)
+			}
+			log.Debugf("Resolved %d DBs with prefix \"%s\": %s", len(resolved), md.DBUniqueName, strings.Join(temp_arr, ","))
+		} else {
+			monitoredDBs = append(monitoredDBs, md)
+		}
+
+		monitoredDBs = append(monitoredDBs)
 	}
-	return md, err
+	return monitoredDBs, err
 }
 
 func SendToInflux(connect_str, conn_id, dbname, measurement string, data [](map[string]interface{})) error {
@@ -1293,7 +1319,7 @@ func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatab
 		return hostList, err
 	}
 	switch mode := fi.Mode(); {
-	case mode.IsDir():
+	case mode.IsDir(): // TODO walk?
 		log.Infof("Reading monitoring config from folder %s ...", fileOrFolder)
 		files, err := ioutil.ReadDir(fileOrFolder)
 		if err != nil {
@@ -1329,16 +1355,25 @@ func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatab
 
 func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase, error) {
 	md := make([]MonitoredDatabase, 0)
+
 	c, err := GetPostgresDBConnection(ce.Host, ce.Port, "template1", ce.User, ce.Password, ce.SslMode)
 	if err != nil {
 		return md, err
 	}
-	sql := `select datname::text from pg_database where not datistemplate and datallowconn and has_database_privilege (datname, 'CONNECT');`
 
-	data, err := DBExecRead(c, ce.DBUniqueName, sql)
+	sql := `select datname::text
+		from pg_database
+		where not datistemplate
+		and datallowconn
+		and has_database_privilege (datname, 'CONNECT')
+		and case when length(trim($1)) > 0 then datname ~ $2 else true end
+		and case when length(trim($3)) > 0 then not datname ~ $4 else true end`
+
+	data, err := DBExecRead(c, ce.DBUniqueName, sql, ce.DBNameIncludePattern, ce.DBNameIncludePattern, ce.DBNameExcludePattern, ce.DBNameExcludePattern)
 	if err != nil {
 		return md, err
 	}
+
 	for _, d := range data {
 		md = append(md, MonitoredDatabase{DBUniqueName: ce.DBUniqueName + "_" + d["datname"].(string),
 			DBName:        d["datname"].(string),
@@ -1352,6 +1387,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 			PresetMetrics: ce.PresetMetrics,
 			DBType:        ce.DBType})
 	}
+
 	return md, err
 }
 
@@ -1363,7 +1399,11 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 	}
 	for _, e := range mc {
 		log.Errorf("%#v", e)
-		if len(e.DBName) == 0 { //
+		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" {
+			if e.DBType == "postgres-continuous-discovery" {
+				log.Debugf("Adding \"%s\" (host=%s, port=%s) to continuous monitoring ...", e.DBUniqueName, e.Host, e.Port)
+				continuousMonitoringDatabases = append(continuousMonitoringDatabases, e)
+			}
 			found_dbs, err := ResolveDatabasesFromConfigEntry(e)
 			if err != nil {
 				log.Errorf("Failed to resolve DBs for \"%s\": %s", e.DBUniqueName, err)
@@ -1377,10 +1417,6 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 			log.Debugf("Resolved %d DBs with prefix \"%s\": %s", len(found_dbs), e.DBUniqueName, strings.Join(temp_arr, ","))
 		} else {
 			md = append(md, e)
-		}
-		if e.ContinousDiscovery {
-			log.Debugf("Adding \"%s\" (host=%s, port=%s) to continous monitoring ...", e.DBUniqueName, e.Host, e.Port)
-			continousMonitoringDatabases = append(continousMonitoringDatabases, e)
 		}
 	}
 	return md
