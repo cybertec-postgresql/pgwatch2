@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -248,7 +249,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 				monitoredDBs = append(monitoredDBs, rdb)
 				temp_arr = append(temp_arr, rdb.DBName)
 			}
-			log.Debugf("Resolved %d DBs with prefix \"%s\": %s", len(resolved), md.DBUniqueName, strings.Join(temp_arr, ","))
+			log.Debugf("Resolved %d DBs with prefix \"%s\": [%s]", len(resolved), md.DBUniqueName, strings.Join(temp_arr, ", "))
 		} else {
 			monitoredDBs = append(monitoredDBs, md)
 		}
@@ -1084,10 +1085,10 @@ func UpdateMetricDefinitionMap(newMetrics map[string]map[decimal.Decimal]string)
 	metric_def_map = newMetrics
 	metric_def_map_lock.Unlock()
 	log.Debug("metric_def_map:", metric_def_map)
-	log.Info("metrics definitions refreshed from config DB. nr. found:", len(newMetrics))
+	log.Info("metrics definitions refreshed - nr. found:", len(newMetrics))
 }
 
-func UpdateMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decimal.Decimal]string, error) {
+func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decimal.Decimal]string, error) {
 	metric_def_map_new := make(map[string]map[decimal.Decimal]string)
 	sql := "select m_name, m_pg_version_from::text, m_sql from pgwatch2.metric where m_is_active"
 
@@ -1260,7 +1261,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 	metrics_map := make(map[string]map[decimal.Decimal]string)
 	rIsDigitOrPunctuation := regexp.MustCompile("^[\\d\\.]+$")
 
-	log.Warningf("Searching for metrics from folder %s ...", folder)
+	log.Infof("Searching for metrics from path %s ...", folder)
 	files, err := ioutil.ReadDir(folder)
 	if err != nil {
 		if failOnError {
@@ -1310,6 +1311,34 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 	return metrics_map, nil
 }
 
+func ConfigFileToMonitoredDatabases(configFilePath string) ([]MonitoredDatabase, error) {
+	hostList := make([]MonitoredDatabase, 0)
+
+	log.Debugf("Converting monitoring YAML config to MonitoredDatabase from path %s ...", configFilePath)
+	yamlFile, err := ioutil.ReadFile(configFilePath)
+	if err != nil {
+		log.Errorf("Error reading file %s: %s", configFilePath, err)
+		return hostList, err
+	}
+	// TODO check mod timestamp or hash, from a global "caching map"
+	c := make([]MonitoredDatabase, 0) // there can be multiple configs in a single file
+	err = yaml.Unmarshal(yamlFile, &c)
+	if err != nil {
+		log.Errorf("Unmarshaling error: %v", err)
+		return hostList, err
+	}
+	for _, v := range c {
+		log.Debugf("Found monitoring config entry: %#v", v)
+		if v.IsEnabled {
+			hostList = append(hostList, v)
+		}
+	}
+	if len(hostList) == 0 {
+		log.Warningf("Could not find any valid monitoring configs from file: %s", configFilePath)
+	}
+	return hostList, nil
+}
+
 func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatabase, error) {
 	hostList := make([]MonitoredDatabase, 0)
 
@@ -1319,35 +1348,30 @@ func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatab
 		return hostList, err
 	}
 	switch mode := fi.Mode(); {
-	case mode.IsDir(): // TODO walk?
-		log.Infof("Reading monitoring config from folder %s ...", fileOrFolder)
-		files, err := ioutil.ReadDir(fileOrFolder)
+	case mode.IsDir():
+		log.Infof("Reading monitoring config from path %s ...", fileOrFolder)
+
+		err := filepath.Walk(fileOrFolder, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err // abort on first failure
+			}
+			if info.Mode().IsRegular() && (strings.HasSuffix(info.Name(), ".yaml") || strings.HasSuffix(info.Name(), ".yml")) {
+				log.Debug("Found YAML config file:", info.Name())
+				mdbs, err := ConfigFileToMonitoredDatabases(path)
+				if err == nil {
+					for _, md := range mdbs {
+						hostList = append(hostList, md)
+					}
+				}
+			}
+			return nil
+		})
 		if err != nil {
-			log.Errorf("Could not read path %s: %s", fileOrFolder, err)
+			log.Errorf("Could not successfully Walk() path %s: %s", fileOrFolder, err)
 			return hostList, err
-		}
-		for _, f := range files {
-			log.Warningf("Found %s", f.Name())
 		}
 	case mode.IsRegular():
-		log.Infof("Reading monitoring config from file %s ...", fileOrFolder)
-		yamlFile, err := ioutil.ReadFile(fileOrFolder)
-		if err != nil {
-			log.Errorf("Error reading file %s: %s", fileOrFolder, err)
-			return hostList, err
-		}
-		// TODO check mod timestamp or hash
-		c := make([]MonitoredDatabase, 0)
-		err = yaml.Unmarshal(yamlFile, &c)
-		if err != nil {
-			log.Fatalf("Unmarshal: %v", err)
-		}
-		for _, v := range c {
-			log.Debugf("Found monitoring config entry: %#v", v)
-			if v.IsEnabled {
-				hostList = append(hostList, v)
-			}
-		}
+		hostList, err = ConfigFileToMonitoredDatabases(fileOrFolder)
 	}
 
 	return hostList, err
@@ -1399,7 +1423,7 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 		return md
 	}
 	for _, e := range mc {
-		log.Errorf("%#v", e)
+		log.Debugf("Processing config item: %#v", e)
 		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" {
 			if e.DBType == "postgres-continuous-discovery" {
 				log.Debugf("Adding \"%s\" (host=%s, port=%s) to continuous monitoring ...", e.DBUniqueName, e.Host, e.Port)
@@ -1415,7 +1439,7 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 				md = append(md, r)
 				temp_arr = append(temp_arr, r.DBName)
 			}
-			log.Debugf("Resolved %d DBs with prefix \"%s\": %s", len(found_dbs), e.DBUniqueName, strings.Join(temp_arr, ","))
+			log.Debugf("Resolved %d DBs with prefix \"%s\": [%s]", len(found_dbs), e.DBUniqueName, strings.Join(temp_arr, ", "))
 		} else {
 			md = append(md, e)
 		}
@@ -1591,7 +1615,7 @@ func main() {
 			if fileBased {
 				metrics, err = ReadMetricsFromFolder(opts.MetricsFolder, first_loop)
 			} else {
-				metrics, err = UpdateMetricDefinitionMapFromPostgres(first_loop)
+				metrics, err = ReadMetricDefinitionMapFromPostgres(first_loop)
 			}
 			if err == nil {
 				UpdateMetricDefinitionMap(metrics)
