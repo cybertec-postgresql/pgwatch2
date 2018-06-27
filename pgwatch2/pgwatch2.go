@@ -44,6 +44,12 @@ type MonitoredDatabase struct {
 	IsEnabled            bool   `yaml:"is_enabled"`
 }
 
+type PresetConfig struct {
+	Name        string
+	Description string
+	Metrics     map[string]float64
+}
+
 type ControlMessage struct {
 	Action string // START, STOP, PAUSE
 	Config map[string]float64
@@ -82,6 +88,7 @@ const PERSIST_QUEUE_MAX_SIZE = 100000 // storage queue max elements. when reachi
 // but 100k should be enough for 24h, assuming 5 hosts monitored with "exhaustive" preset config. this would also require ~2 GB RAM per one Influx host
 const DATASTORE_INFLUX = "influx"
 const DATASTORE_GRAPHITE = "graphite"
+const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
 
 var configDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
@@ -101,6 +108,7 @@ var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently sup
 // secondary Influx meant for HA or Grafana load balancing for 100+ instances with lots of alerts
 var fileBased = false
 var continuousMonitoringDatabases = make([]MonitoredDatabase, 0) // TODO
+var preset_metric_def_map map[string]map[string]float64          // read from metrics folder in "file mode"
 
 func GetPostgresDBConnection(host, port, dbname, user, password, sslmode string) (*sqlx.DB, error) {
 	var err error
@@ -1256,6 +1264,28 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) {
 	}
 }
 
+// Expects "preset metrics" definition file named preset-config.yaml to be present in provided --metrics folder
+func ReadPresetMetricsConfigFromFolder(folder string, failOnError bool) (map[string]map[string]float64, error) {
+	pmm := make(map[string]map[string]float64)
+
+	log.Infof("Reading preset metric config from path %s ...", folder)
+	preset_metrics, err := ioutil.ReadFile(path.Join(folder, PRESET_CONFIG_YAML_FILE))
+	if err != nil {
+		log.Errorf("Failed to read preset metric config definition at: %s", folder)
+		return pmm, err
+	}
+	pcs := make([]PresetConfig, 0)
+	err = yaml.Unmarshal(preset_metrics, &pcs)
+	if err != nil {
+		log.Errorf("Unmarshaling error reading preset metric config: %v", err)
+		return pmm, err
+	}
+	for _, pc := range pcs {
+		pmm[pc.Name] = pc.Metrics
+	}
+	return pmm, err
+}
+
 // expected is following structure: metric_name/pg_ver/metric.sql
 func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[decimal.Decimal]string, error) {
 	metrics_map := make(map[string]map[decimal.Decimal]string)
@@ -1339,6 +1369,7 @@ func ConfigFileToMonitoredDatabases(configFilePath string) ([]MonitoredDatabase,
 	return hostList, nil
 }
 
+// reads through the YAML files containing descriptions on which hosts to monitor
 func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatabase, error) {
 	hostList := make([]MonitoredDatabase, 0)
 
@@ -1424,6 +1455,14 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 	}
 	for _, e := range mc {
 		log.Debugf("Processing config item: %#v", e)
+		if e.Metrics == nil && len(e.PresetMetrics) > 0 {
+			mdef, ok := preset_metric_def_map[e.PresetMetrics]
+			if !ok {
+				log.Errorf("Failed to resolve preset config \"%s\" for \"%s\"", e.PresetMetrics, e.DBUniqueName)
+				continue
+			}
+			e.Metrics = mdef
+		}
 		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" {
 			if e.DBType == "postgres-continuous-discovery" {
 				log.Debugf("Adding \"%s\" (host=%s, port=%s) to continuous monitoring ...", e.DBUniqueName, e.Host, e.Port)
@@ -1624,6 +1663,14 @@ func main() {
 		}
 
 		if fileBased {
+			pmc, err := ReadPresetMetricsConfigFromFolder(opts.MetricsFolder, false)
+			if err != nil && first_loop {
+				log.Fatalf("Could not read preset metric config from \"%s\": %s", path.Join(opts.MetricsFolder, PRESET_CONFIG_YAML_FILE), err)
+			} else {
+				preset_metric_def_map = pmc
+				log.Debugf("Loaded preset metric config: %#v", pmc)
+			}
+
 			mc, err := ReadMonitoringConfigFromFileOrFolder(opts.Config)
 			if err == nil {
 				log.Debugf("Found %d monitoring config entries", len(mc))
