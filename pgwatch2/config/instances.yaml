@@ -8,9 +8,9 @@
   sslmode: disable
   stmt_timeout: 5
   is_superuser: true
-  preset_metrics: null
-  custom_metrics: {"wal": 10}
-  dbname_include_pattern: bench
+  preset_metrics: minimal
+  custom_metrics:    # if both preset and custom are specified, custom wins
+  dbname_include_pattern: bench$
   dbname_exclude_pattern: be$
   is_enabled: true
 
