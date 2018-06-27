@@ -1353,6 +1353,7 @@ func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatab
 	return hostList, err
 }
 
+// "resolving" reads all the DB names from the given host/port, additionally matching/not matching specified regex patterns
 func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase, error) {
 	md := make([]MonitoredDatabase, 0)
 
@@ -1385,7 +1386,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 			StmtTimeout:   ce.StmtTimeout,
 			Metrics:       ce.Metrics,
 			PresetMetrics: ce.PresetMetrics,
-			DBType:        ce.DBType})
+			DBType:        "postgres"})
 	}
 
 	return md, err
@@ -1648,15 +1649,17 @@ func main() {
 			if !exists {
 				var err error
 
-				log.Info(fmt.Sprintf("new host \"%s\"found, checking connectivity...", db_unique))
+				log.Info(fmt.Sprintf("new host \"%s\" found, checking connectivity...", db_unique))
 				if db_type == "postgres" {
 					_, err = DBExecReadByDbUniqueName(db_unique, "select 1") // test connectivity
 				} else if db_type == "pgbouncer" {
 					_, err = DBExecReadByDbUniqueName(db_unique, "show version")
 				}
 				if err != nil {
-					log.Error(fmt.Sprintf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err))
+					log.Errorf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err)
 					continue
+				} else {
+					log.Info("Connect OK")
 				}
 				if host.IsSuperuser {
 					TryCreateMetricsFetchingHelpers(db_unique)
