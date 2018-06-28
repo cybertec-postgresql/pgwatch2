@@ -10,8 +10,8 @@
   is_superuser: true
   preset_metrics: minimal
   custom_metrics:    # if both preset and custom are specified, custom wins
-  dbname_include_pattern: ^pos
-  dbname_exclude_pattern: be$
+  dbname_include_pattern:
+  dbname_exclude_pattern:
   is_enabled: true
 
 - unique_name: test2
@@ -24,7 +24,8 @@
   sslmode: disable
   stmt_timeout: 5
   preset_metrics:
-  custom_metrics: {a: 1}
+  custom_metrics:
+    wal: 60
   dbname_include_pattern: (bar|postgres)
   dbname_exclude_pattern:
   is_enabled: false
