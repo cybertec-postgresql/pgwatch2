@@ -89,6 +89,7 @@ const PERSIST_QUEUE_MAX_SIZE = 100000 // storage queue max elements. when reachi
 const DATASTORE_INFLUX = "influx"
 const DATASTORE_GRAPHITE = "graphite"
 const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
+const FILE_BASED_METRIC_HELPERS_DIR = "00_helpers"
 
 var configDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
@@ -605,19 +606,27 @@ func (a Decimal) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Decimal) Less(i, j int) bool { return a[i].LessThan(a[j]) }
 
 // assumes upwards compatibility for versions
-func GetSQLForMetricPGVersion(metric string, pgVer decimal.Decimal) (string, error) {
+func GetSQLForMetricPGVersion(metric string, pgVer decimal.Decimal, metricDefMap map[string]map[decimal.Decimal]string) (string, error) {
 	var keys []decimal.Decimal
+	var mdm map[string]map[decimal.Decimal]string
+
+	if metricDefMap != nil {
+		mdm = metricDefMap
+	} else {
+		mdm = metric_def_map // global cache
+	}
 
 	metric_def_map_lock.RLock()
+
 	defer metric_def_map_lock.RUnlock()
 
-	_, ok := metric_def_map[metric]
-	if !ok || len(metric_def_map[metric]) == 0 {
+	_, ok := mdm[metric]
+	if !ok || len(mdm[metric]) == 0 {
 		log.Error("metric", metric, "not found")
 		return "", errors.New("metric SQL not found")
 	}
 
-	for k := range metric_def_map[metric] {
+	for k := range mdm[metric] {
 		keys = append(keys, k)
 	}
 
@@ -636,7 +645,7 @@ func GetSQLForMetricPGVersion(metric string, pgVer decimal.Decimal) (string, err
 		return "", errors.New(fmt.Sprintf("suitable SQL not found for metric \"%s\", version \"%s\"", metric, pgVer))
 	}
 
-	return metric_def_map[metric][best_ver], nil
+	return mdm[metric][best_ver], nil
 }
 
 func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
@@ -650,7 +659,7 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		host_state["sproc_hashes"] = make(map[string]string)
 	}
 
-	sql, err := GetSQLForMetricPGVersion("sproc_hashes", db_pg_version)
+	sql, err := GetSQLForMetricPGVersion("sproc_hashes", db_pg_version, nil)
 	if err != nil {
 		log.Error("could not get sproc_hashes sql:", err)
 		return change_counts
@@ -732,7 +741,7 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		host_state["table_hashes"] = make(map[string]string)
 	}
 
-	sql, err := GetSQLForMetricPGVersion("table_hashes", db_pg_version)
+	sql, err := GetSQLForMetricPGVersion("table_hashes", db_pg_version, nil)
 	if err != nil {
 		log.Error("could not get table_hashes sql:", err)
 		return change_counts
@@ -814,7 +823,7 @@ func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		host_state["index_hashes"] = make(map[string]string)
 	}
 
-	sql, err := GetSQLForMetricPGVersion("index_hashes", db_pg_version)
+	sql, err := GetSQLForMetricPGVersion("index_hashes", db_pg_version, nil)
 	if err != nil {
 		log.Error("could not get index_hashes sql:", err)
 		return change_counts
@@ -894,7 +903,7 @@ func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, 
 		host_state["configuration_hashes"] = make(map[string]string)
 	}
 
-	sql, err := GetSQLForMetricPGVersion("configuration_hashes", db_pg_version)
+	sql, err := GetSQLForMetricPGVersion("configuration_hashes", db_pg_version, nil)
 	if err != nil {
 		log.Error("could not get index_hashes sql:", err)
 		return change_counts
@@ -1007,7 +1016,7 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- Metri
 				// which cannot be accessed from Go lib/pg
 			}
 
-			sql, err := GetSQLForMetricPGVersion(msg.MetricName, db_pg_version)
+			sql, err := GetSQLForMetricPGVersion(msg.MetricName, db_pg_version, nil)
 			//log.Debug("SQL", sql)
 			if err != nil {
 				log.Error(fmt.Sprintf("Failed to get SQL for metric '%s', version '%s'", msg.MetricName, db_pg_version))
@@ -1092,7 +1101,7 @@ func UpdateMetricDefinitionMap(newMetrics map[string]map[decimal.Decimal]string)
 	metric_def_map_lock.Lock()
 	metric_def_map = newMetrics
 	metric_def_map_lock.Unlock()
-	log.Debug("metric_def_map:", metric_def_map)
+	//log.Debug("metric_def_map:", metric_def_map)
 	log.Info("metrics definitions refreshed - nr. found:", len(newMetrics))
 }
 
@@ -1228,40 +1237,69 @@ func DoesFunctionExists(dbUnique, functionName string) bool {
 }
 
 // Called once on daemon startup to try to create "metric fething helper" functions automatically
-func TryCreateMetricsFetchingHelpers(dbUnique string) {
+func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 	db_pg_version, err := DBGetPGVersion(dbUnique)
 	if err != nil {
 		log.Error(fmt.Sprintf("Failed to fetch pg version for \"%s\": %s", dbUnique, err))
-		return
+		return err
 	}
 
-	sql_helpers := "select distinct m_name from pgwatch2.metric where m_is_active and m_is_helper" // m_name is a helper function name
-	data, err := DBExecRead(configDb, "configDb", sql_helpers)
-	if err != nil {
-		log.Error(err)
-		return
-	}
+	if fileBased {
+		helpers, err := ReadMetricsFromFolder(path.Join(opts.MetricsFolder, FILE_BASED_METRIC_HELPERS_DIR), false)
+		if err != nil {
+			log.Error(fmt.Sprintf("Failed to fetch helpers from \"%s\": %s", path.Join(opts.MetricsFolder, FILE_BASED_METRIC_HELPERS_DIR), err))
+			return err
+		}
+		log.Debug("%d helper definitions found from \"%s\"...", len(helpers), path.Join(opts.MetricsFolder, FILE_BASED_METRIC_HELPERS_DIR))
 
-	for _, row := range data {
-		metric := row["m_name"].(string)
+		for helperName, _ := range helpers {
+			if !DoesFunctionExists(dbUnique, helperName) {
 
-		if !DoesFunctionExists(dbUnique, metric) {
-
-			log.Debug("Trying to create metric fetching helpers for", dbUnique, metric)
-			sql, err := GetSQLForMetricPGVersion(metric, db_pg_version)
-			if err != nil {
-				log.Warning("Could not find query text for", dbUnique, metric)
-				continue
+				log.Debug("Trying to create metric fetching helpers for", dbUnique, helperName)
+				sql, err := GetSQLForMetricPGVersion(helperName, db_pg_version, helpers)
+				if err != nil {
+					log.Warning("Could not find query text for", dbUnique, helperName)
+					continue
+				}
+				_, err = DBExecReadByDbUniqueName(dbUnique, sql)
+				if err != nil {
+					log.Warning("Failed to create a metric fetching helper for", dbUnique, helperName)
+					log.Warning(err)
+				} else {
+					log.Warning("Successfully created metric fetching helper for", dbUnique, helperName)
+				}
 			}
-			_, err = DBExecReadByDbUniqueName(dbUnique, sql)
-			if err != nil {
-				log.Warning("Failed to create a metric fetching helper for", dbUnique, metric)
-				log.Warning(err)
-			} else {
-				log.Warning("Successfully created metric fetching helper for", dbUnique, metric)
+		}
+
+	} else {
+		sql_helpers := "select distinct m_name from pgwatch2.metric where m_is_active and m_is_helper" // m_name is a helper function name
+		data, err := DBExecRead(configDb, "configDb", sql_helpers)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		for _, row := range data {
+			metric := row["m_name"].(string)
+
+			if !DoesFunctionExists(dbUnique, metric) {
+
+				log.Debug("Trying to create metric fetching helpers for", dbUnique, metric)
+				sql, err := GetSQLForMetricPGVersion(metric, db_pg_version, nil)
+				if err != nil {
+					log.Warning("Could not find query text for", dbUnique, metric)
+					continue
+				}
+				_, err = DBExecReadByDbUniqueName(dbUnique, sql)
+				if err != nil {
+					log.Warning("Failed to create a metric fetching helper for", dbUnique, metric)
+					log.Warning(err)
+				} else {
+					log.Warning("Successfully created metric fetching helper for", dbUnique, metric)
+				}
 			}
 		}
 	}
+	return nil
 }
 
 // Expects "preset metrics" definition file named preset-config.yaml to be present in provided --metrics folder
@@ -1283,6 +1321,7 @@ func ReadPresetMetricsConfigFromFolder(folder string, failOnError bool) (map[str
 	for _, pc := range pcs {
 		pmm[pc.Name] = pc.Metrics
 	}
+	log.Infof("%d preset metric definitions found", len(pcs))
 	return pmm, err
 }
 
@@ -1303,6 +1342,9 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 
 	for _, f := range metric_folders {
 		if f.IsDir() {
+			if f.Name() == FILE_BASED_METRIC_HELPERS_DIR {
+				continue // helpers are pulled in when needed
+			}
 			log.Debugf("Processing metric: %s", f.Name())
 			pgVers, err := ioutil.ReadDir(path.Join(folder, f.Name()))
 			if err != nil {
@@ -1327,7 +1369,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 					log.Errorf("Failed to read metric definition at: %s", p)
 					continue
 				}
-				log.Debugf("Metric definition for \"%s\" ver %s: %s", f.Name(), pgVer.Name(), metric_sql)
+				//log.Debugf("Metric definition for \"%s\" ver %s: %s", f.Name(), pgVer.Name(), metric_sql)
 				_, ok := metrics_map[f.Name()]
 				if !ok {
 					metrics_map[f.Name()] = make(map[decimal.Decimal]string)
@@ -1441,6 +1483,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 			StmtTimeout:   ce.StmtTimeout,
 			Metrics:       ce.Metrics,
 			PresetMetrics: ce.PresetMetrics,
+			IsSuperuser:   ce.IsSuperuser,
 			DBType:        "postgres"})
 	}
 
@@ -1735,6 +1778,7 @@ func main() {
 					log.Info("Connect OK")
 				}
 				if host.IsSuperuser {
+					log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
 					TryCreateMetricsFetchingHelpers(db_unique)
 				}
 				metric_fetching_channels_lock.Lock()
