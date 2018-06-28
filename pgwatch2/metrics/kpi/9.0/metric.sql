@@ -5,7 +5,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM public.get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
