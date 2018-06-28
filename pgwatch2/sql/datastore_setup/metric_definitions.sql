@@ -6,7 +6,7 @@ values (
 9.0,
 $sql$
 with sa_snapshot as (
-  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
+  select * from public.get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -30,7 +30,7 @@ values (
 9.6,
 $sql$
 with sa_snapshot as (
-  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
+  select * from public.get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -54,7 +54,7 @@ values (
 10,
 $sql$
 with sa_snapshot as (
-  select * from get_stat_activity()
+  select * from public.get_stat_activity()
   where pid != pg_backend_pid()
   and datname = current_database()
 )
@@ -191,7 +191,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM public.get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -236,7 +236,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM public.get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -281,7 +281,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM public.get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -645,7 +645,7 @@ SELECT
   count(*)
 FROM
   pg_stat_ssl AS s,
-  get_stat_activity() AS a
+  public.get_stat_activity() AS a
 WHERE
   a.pid = s.pid
   AND a.datname = current_database()
