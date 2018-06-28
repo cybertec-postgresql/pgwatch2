@@ -1,7 +1,7 @@
 - unique_name: test1  # functions also as prefix for found DBs if using patterns/continous discovery
   dbtype: postgres    # postgres|pgbouncer|postgres-continuous-discovery
   host: localhost
-  port: 5432
+  port: 5435
   dbname:
   user: krl
   password: krl
@@ -10,7 +10,7 @@
   is_superuser: true
   preset_metrics: minimal
   custom_metrics:    # if both preset and custom are specified, custom wins
-  dbname_include_pattern: bench$
+  dbname_include_pattern: ^pos
   dbname_exclude_pattern: be$
   is_enabled: true
 
