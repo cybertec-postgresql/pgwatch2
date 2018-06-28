@@ -1292,7 +1292,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 	rIsDigitOrPunctuation := regexp.MustCompile("^[\\d\\.]+$")
 
 	log.Infof("Searching for metrics from path %s ...", folder)
-	files, err := ioutil.ReadDir(folder)
+	metric_folders, err := ioutil.ReadDir(folder)
 	if err != nil {
 		if failOnError {
 			log.Fatalf("Could not read path %s: %s", folder, err)
@@ -1301,7 +1301,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 		return metrics_map, err
 	}
 
-	for _, f := range files {
+	for _, f := range metric_folders {
 		if f.IsDir() {
 			log.Debugf("Processing metric: %s", f.Name())
 			pgVers, err := ioutil.ReadDir(path.Join(folder, f.Name()))
@@ -1325,7 +1325,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 				metric_sql, err := ioutil.ReadFile(p)
 				if err != nil {
 					log.Errorf("Failed to read metric definition at: %s", p)
-					return metrics_map, err
+					continue
 				}
 				log.Debugf("Metric definition for \"%s\" ver %s: %s", f.Name(), pgVer.Name(), metric_sql)
 				_, ok := metrics_map[f.Name()]
@@ -1571,15 +1571,17 @@ func main() {
 		}
 
 		fileBased = true
-	}
+	} else {
+		// make sure all PG params are there
+		if opts.User == "" {
+			opts.User = os.Getenv("USER")
+		}
+		if opts.Host == "" || opts.Port == "" || opts.Dbname == "" || opts.User == "" {
+			fmt.Println("Check config DB parameters")
+			return
+		}
 
-	// make sure all PG params are there
-	if opts.User == "" {
-		opts.User = os.Getenv("USER")
-	}
-	if opts.Host == "" || opts.Port == "" || opts.Dbname == "" || opts.User == "" {
-		fmt.Println("Check config DB parameters")
-		return
+		InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password)
 	}
 
 	// validate that input is boolean is set
@@ -1599,8 +1601,6 @@ func main() {
 	} else {
 		opts.InfluxSSL2 = "false"
 	}
-
-	InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password)
 
 	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
 	persist_ch := make(chan MetricStoreMessage, 1000)
@@ -1659,6 +1659,8 @@ func main() {
 			if err == nil {
 				UpdateMetricDefinitionMap(metrics)
 				last_metrics_refresh_time = time.Now().Unix()
+			} else {
+				log.Errorf("Could not refresh metric definitions: %s", err)
 			}
 		}
 
