@@ -37,11 +37,12 @@ type MonitoredDatabase struct {
 	Metrics              map[string]float64 `yaml:"custom_metrics"`
 	StmtTimeout          int64
 	DBType               string
-	DBNameIncludePattern string `yaml:"dbname_include_pattern"`
-	DBNameExcludePattern string `yaml:"dbname_exclude_pattern"`
-	PresetMetrics        string `yaml:"preset_metrics"`
-	IsSuperuser          bool   `yaml:"is_superuser"`
-	IsEnabled            bool   `yaml:"is_enabled"`
+	DBNameIncludePattern string            `yaml:"dbname_include_pattern"`
+	DBNameExcludePattern string            `yaml:"dbname_exclude_pattern"`
+	PresetMetrics        string            `yaml:"preset_metrics"`
+	IsSuperuser          bool              `yaml:"is_superuser"`
+	IsEnabled            bool              `yaml:"is_enabled"`
+	CustomTags           map[string]string `yaml:"custom_tags"` // ignored on graphite
 }
 
 type PresetConfig struct {
@@ -65,6 +66,7 @@ type MetricStoreMessage struct {
 	DBUniqueName string
 	DBType       string
 	MetricName   string
+	CustomTags   map[string]string
 	Data         [](map[string]interface{})
 }
 
@@ -268,7 +270,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 	return monitoredDBs, err
 }
 
-func SendToInflux(connect_str, conn_id, dbname, measurement string, data [](map[string]interface{})) error {
+func SendToInflux(connect_str, conn_id, dbname, measurement string, data [](map[string]interface{}), customTags map[string]string) error {
 	if data == nil || len(data) == 0 {
 		return nil
 	}
@@ -308,6 +310,12 @@ retry:
 		fields := make(map[string]interface{})
 
 		tags["dbname"] = dbname
+		log.Error(customTags)
+		if customTags != nil {
+			for k, v := range customTags {
+				tags[k] = fmt.Sprintf("%s", v)
+			}
+		}
 
 		for k, v := range dr {
 			if v == nil || v == "" {
@@ -468,7 +476,7 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 		msg := retry_queue.Back().Value.(MetricStoreMessage)
 
 		if data_source == DATASTORE_INFLUX {
-			err = SendToInflux(conn_str, conn_ident, msg.DBUniqueName, msg.MetricName, msg.Data)
+			err = SendToInflux(conn_str, conn_ident, msg.DBUniqueName, msg.MetricName, msg.Data, msg.CustomTags)
 		} else if data_source == DATASTORE_GRAPHITE {
 			err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
 		} else {
@@ -525,7 +533,7 @@ func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
 					retry_queue.PushFront(msg)
 				} else {
 					if data_store == DATASTORE_INFLUX {
-						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg.DBUniqueName, msg.MetricName, msg.Data)
+						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg.DBUniqueName, msg.MetricName, msg.Data, msg.CustomTags)
 					} else if data_store == DATASTORE_GRAPHITE {
 						err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
 					} else {
@@ -724,7 +732,8 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		}
 	}
 	if len(detected_changes) > 0 {
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "sproc_changes", Data: detected_changes}
+		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
+		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "sproc_changes", Data: detected_changes, CustomTags: md.CustomTags}
 	}
 
 	return change_counts
@@ -806,7 +815,8 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	}
 
 	if len(detected_changes) > 0 {
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "table_changes", Data: detected_changes}
+		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
+		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "table_changes", Data: detected_changes, CustomTags: md.CustomTags}
 	}
 
 	return change_counts
@@ -886,7 +896,8 @@ func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		}
 	}
 	if len(detected_changes) > 0 {
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "index_changes", Data: detected_changes}
+		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
+		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "index_changes", Data: detected_changes, CustomTags: md.CustomTags}
 	}
 
 	return change_counts
@@ -939,7 +950,8 @@ func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, 
 	}
 
 	if len(detected_changes) > 0 {
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "configuration_changes", Data: detected_changes}
+		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
+		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "configuration_changes", Data: detected_changes, CustomTags: md.CustomTags}
 	}
 
 	return change_counts
@@ -973,24 +985,28 @@ func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Deci
 		influx_entry["details"] = message
 		influx_entry["epoch_ns"] = time.Now().UnixNano()
 		detected_changes_summary = append(detected_changes_summary, influx_entry)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, DBType: "postgres", MetricName: "object_changes", Data: detected_changes_summary}
+		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
+		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, DBType: "postgres", MetricName: "object_changes", Data: detected_changes_summary, CustomTags: md.CustomTags}
 	}
 }
 
 func FilterPgbouncerData(data []map[string]interface{}, database_to_keep string) []map[string]interface{} {
 	filtered_data := make([]map[string]interface{}, 0)
-	for _, dr := range data {
-		log.Debug("dr", dr)
-		_, ok := dr["database"]
-		if !ok {
-			log.Warning("Expected 'database' key not found from pgbouncer_stats, not storing data")
-			continue
+
+	if len(database_to_keep) > 0 {
+		for _, dr := range data {
+			log.Debug("dr", dr)
+			_, ok := dr["database"]
+			if !ok {
+				log.Warning("Expected 'database' key not found from pgbouncer_stats, not storing data")
+				continue
+			}
+			if dr["database"] != database_to_keep {
+				continue // we only want pgbouncer stats for the DB specified in monitored_dbs.md_dbname
+			}
+			delete(dr, "database") // remove 'database' as we use 'dbname' by convention
+			filtered_data = append(filtered_data, dr)
 		}
-		if dr["database"] != database_to_keep {
-			continue // we only want pgbouncer stats for the DB specified in monitored_dbs.md_dbname
-		}
-		delete(dr, "database") // remove 'database' as we use 'dbname' by convention
-		filtered_data = append(filtered_data, dr)
 	}
 	return filtered_data
 }
@@ -1032,16 +1048,17 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- Metri
 				if err != nil {
 					log.Error(fmt.Sprintf("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err))
 				} else {
+					md, err := GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
+					if err != nil {
+						log.Error(fmt.Sprintf("could not get monitored DB details for %s: %s", msg.DBUniqueName, err))
+					}
+
 					log.Info(fmt.Sprintf("fetched %d rows for [%s:%s] in %dus", len(data), msg.DBUniqueName, msg.MetricName, (t2-t1)/1000))
 					if msg.MetricName == "pgbouncer_stats" { // clean unwanted pgbouncer pool stats here as not possible in SQL
-						md, err := GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
-						if err != nil {
-							log.Error(fmt.Sprintf("could not get monitored DB details for %s: %s", msg.DBUniqueName, err))
-						}
 						data = FilterPgbouncerData(data, md.DBName)
 					}
 					if len(data) > 0 {
-						storage_ch <- MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data}
+						storage_ch <- MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags}
 					}
 				}
 			}
@@ -1484,6 +1501,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 			Metrics:       ce.Metrics,
 			PresetMetrics: ce.PresetMetrics,
 			IsSuperuser:   ce.IsSuperuser,
+			CustomTags:    ce.CustomTags,
 			DBType:        "postgres"})
 	}
 
@@ -1497,7 +1515,7 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 		return md
 	}
 	for _, e := range mc {
-		log.Debugf("Processing config item: %#v", e)
+		//log.Debugf("Processing config item: %#v", e)
 		if e.Metrics == nil && len(e.PresetMetrics) > 0 {
 			mdef, ok := preset_metric_def_map[e.PresetMetrics]
 			if !ok {
@@ -1752,7 +1770,7 @@ func main() {
 		log.Info("nr. of active hosts:", len(monitored_dbs))
 
 		for _, host := range monitored_dbs {
-			log.Info("processing database", host.DBUniqueName, "config:", host.Metrics)
+			log.Info("processing database:", host.DBUniqueName, ", config:", host.Metrics, ", custom tags:", host.CustomTags)
 
 			host_config := host.Metrics
 			db_unique := host.DBUniqueName
@@ -1834,7 +1852,6 @@ func main() {
 
 			for _, host := range monitored_dbs {
 				if host.DBUniqueName == db {
-					//host_config := jsonTextToMap(host["md_config"].(string))
 					host_config := host.Metrics
 
 					for metric_key := range host_config {
