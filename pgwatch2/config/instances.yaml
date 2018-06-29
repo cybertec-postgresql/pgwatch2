@@ -2,7 +2,7 @@
   dbtype: postgres    # postgres|pgbouncer|postgres-continuous-discovery
   host: localhost
   port: 5435
-  dbname:
+  dbname: pgwatch2
   user: krl
   password: krl
   sslmode: disable
@@ -13,6 +13,9 @@
   dbname_include_pattern:
   dbname_exclude_pattern:
   is_enabled: true
+  custom_tags:      # possibility for the user to add extra Influx tags
+    env: prod
+    cloud: aws
 
 - unique_name: test2
   dbtype: postgres
