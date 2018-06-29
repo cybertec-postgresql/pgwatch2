@@ -44,6 +44,7 @@ create table pgwatch2.monitored_db (
     md_dbtype text not null default 'postgres',
     md_include_pattern text,    -- valid regex expected. relevant for 'postgres-continuous-discovery'
     md_exclude_pattern text,    -- valid regex expected. relevant for 'postgres-continuous-discovery'
+    md_custom_tags jsonb,
     UNIQUE (md_unique_name),
     CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':'),
     CHECK (md_sslmode in ('disable', 'require', 'verify-full')),

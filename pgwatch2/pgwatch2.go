@@ -209,7 +209,8 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 		select
 		  md_unique_name, md_dbtype, md_hostname, md_port, md_dbname, md_user, coalesce(md_password, '') as md_password,
 		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode, md_is_superuser,
-		  coalesce(md_include_pattern, '') as md_include_pattern, coalesce(md_exclude_pattern, '') as md_exclude_pattern
+		  coalesce(md_include_pattern, '') as md_include_pattern, coalesce(md_exclude_pattern, '') as md_exclude_pattern,
+		  coalesce(md_custom_tags::text, '{}') as md_custom_tags
 		from
 		  pgwatch2.monitored_db
 	          left join
@@ -247,7 +248,8 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			Metrics:              jsonTextToMap(row["md_config"].(string)),
 			DBType:               row["md_dbtype"].(string),
 			DBNameIncludePattern: row["md_include_pattern"].(string),
-			DBNameExcludePattern: row["md_exclude_pattern"].(string)}
+			DBNameExcludePattern: row["md_exclude_pattern"].(string),
+			CustomTags:           jsonTextToStringMap(row["md_custom_tags"].(string))}
 
 		if md.DBType == "postgres-continuous-discovery" {
 			resolved, err := ResolveDatabasesFromConfigEntry(md)
@@ -310,10 +312,10 @@ retry:
 		fields := make(map[string]interface{})
 
 		tags["dbname"] = dbname
-		log.Error(customTags)
+
 		if customTags != nil {
 			for k, v := range customTags {
-				tags[k] = fmt.Sprintf("%s", v)
+				tags[k] = fmt.Sprintf("%v", v)
 			}
 		}
 
@@ -325,7 +327,7 @@ retry:
 				epoch_ns = v.(int64)
 			} else if strings.HasPrefix(k, "tag_") {
 				tag := k[4:]
-				tags[tag] = fmt.Sprintf("%s", v)
+				tags[tag] = fmt.Sprintf("%v", v)
 			} else {
 				fields[k] = v
 			}
@@ -1162,6 +1164,19 @@ func jsonTextToMap(jsonText string) map[string]float64 {
 	retmap := make(map[string]float64)
 	for k, v := range host_config {
 		retmap[k] = v.(float64)
+	}
+	return retmap
+}
+
+func jsonTextToStringMap(jsonText string) map[string]string {
+
+	var iMap map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonText), &iMap); err != nil {
+		panic(err)
+	}
+	retmap := make(map[string]string)
+	for k, v := range iMap {
+		retmap[k] = fmt.Sprintf("%v", v)
 	}
 	return retmap
 }
