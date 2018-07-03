@@ -1084,7 +1084,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 	config := config_map
 	interval := config[metricName]
 	running := true
-	ticker := time.NewTicker(time.Second * time.Duration(interval))
+	ticker := time.NewTicker(time.Millisecond * time.Duration(interval*1000))
 
 	for {
 		if running {
