@@ -34,7 +34,10 @@ def get_all_monitored_dbs():
         select
           *,
           date_trunc('second', md_last_modified_on) as md_last_modified_on,
-          md_config::text
+          md_config::text,
+          md_custom_tags::text,
+          coalesce(md_include_pattern, '') as md_include_pattern,
+          coalesce(md_exclude_pattern, '') as md_exclude_pattern
         from
           pgwatch2.monitored_db
         order by
@@ -133,6 +136,8 @@ def update_monitored_db(params):
           md_hostname = %(md_hostname)s,
           md_port = %(md_port)s,
           md_dbname = %(md_dbname)s,
+          md_include_pattern = %(md_include_pattern)s,
+          md_exclude_pattern = %(md_exclude_pattern)s,
           md_user = %(md_user)s,
           md_password = case when %(md_password)s = '***' then new.md_password else %(md_password)s end,
           md_is_superuser = %(md_is_superuser)s,
@@ -141,6 +146,7 @@ def update_monitored_db(params):
           md_is_enabled = %(md_is_enabled)s,
           md_preset_config_name = %(md_preset_config_name)s,
           md_config = %(md_config)s,
+          md_custom_tags = %(md_custom_tags)s,
           md_statement_timeout_seconds = %(md_statement_timeout_seconds)s,
           md_last_modified_on = now()
         from
@@ -156,7 +162,7 @@ def update_monitored_db(params):
     """
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
     cherrypy_empty_text_to_nulls(
-        params, ['md_preset_config_name', 'md_config'])
+        params, ['md_preset_config_name', 'md_config', 'md_custom_tags'])
     data, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to update "monitored_db": ' + err)
@@ -175,17 +181,19 @@ def insert_monitored_db(params):
     sql_insert_new_db = """
         insert into
           pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password, md_is_superuser,
-          md_sslmode, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds, md_dbtype)
+          md_sslmode, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds, md_dbtype,
+          md_include_pattern, md_exclude_pattern, md_custom_tags)
         values
           (%(md_unique_name)s, %(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s, %(md_password)s, %(md_is_superuser)s,
-          %(md_sslmode)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s, %(md_statement_timeout_seconds)s, %(md_dbtype)s)
+          %(md_sslmode)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s, %(md_statement_timeout_seconds)s, %(md_dbtype)s,
+          %(md_include_pattern)s, %(md_exclude_pattern)s, %(md_custom_tags)s)
         returning
           md_id
     """
     sql_active_dbs = "select datname from pg_database where not datistemplate and datallowconn"
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
     cherrypy_empty_text_to_nulls(
-        params, ['md_preset_config_name', 'md_config'])
+        params, ['md_preset_config_name', 'md_config', 'md_custom_tags'])
 
     if not params['md_dbname']:     # add all DBs found
         if params['md_dbtype'] == 'postgres':
