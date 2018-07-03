@@ -1460,7 +1460,7 @@ func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatab
 			if err != nil {
 				return err // abort on first failure
 			}
-			if info.Mode().IsRegular() && (strings.HasSuffix(info.Name(), ".yaml") || strings.HasSuffix(info.Name(), ".yml")) {
+			if info.Mode().IsRegular() && (strings.HasSuffix(strings.ToLower(info.Name()), ".yaml") || strings.HasSuffix(strings.ToLower(info.Name()), ".yml")) {
 				log.Debug("Found YAML config file:", info.Name())
 				mdbs, err := ConfigFileToMonitoredDatabases(path)
 				if err == nil {
