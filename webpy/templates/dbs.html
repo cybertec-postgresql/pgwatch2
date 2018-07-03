@@ -72,17 +72,20 @@
         <thead>
             <tr>
                 <td>ID</td>
-                <td title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data)">Unique name</td>
-                <td title="NB! For 'pgbouncer' insert the to be monitored pool name to 'dbname' field">DB type</td>
+                <td title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data). Will be used as prefix during DB discovery mode">Unique name</td>
+                <td title="NB! For 'pgbouncer' insert the 'to be monitored' pool name to 'dbname' field. For dbtype='pg-continuous-discovery' one can also specify regex inclusion/exclusion patterns">DB type</td>
                 <td>DB host</td>
                 <td>DB port</td>
                 <td title="NB! If left empty all DBs from the cluster will be added, prefixed with the 'Unique name'">DB dbname <span class="glyphicon glyphicon-info-sign" title="NB! If left empty for 'postgres', all DBs from the cluster will be added, prefixed with the 'Unique name'"></span></td>
+                <td title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery">DB name inclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery"></span></td>
+                <td title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery">DB name exclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery"></span></td>
                 <td>DB user</td>
                 <td title="NB! Password is stored in plain-text in the database">DB password</td>
                 <td title="NB! If checked pgwatch daemon will automatically try to create the CPU load monitoring and stat_statements helper">Is superuser?</td>
                 <td title="libpq 'sslmode' parameter. If 'require' or 'verify-full' then no metrics will be gathered if safe connection cannot be established">SSL Mode</td>
                 <td title="Preset config OR custom config needs to be specified">Preset config</td>
                 <td title='{"metric":interval_seconds,...}'>Custom config</td>
+                <td title='User defined tags for extra meaning in InfluxDB e.g. {"env": "prod", "app": "xyz"}'>Custom tags</td>
                 <td title='In seconds. Should stay low for critical DBs'>Statement timeout [seconds]</td>
                 <td>Last modified</td>
                 <td title="A tip - uncheck when leaving 'dbname' empty to review all found DBs before activation">Enabled?</td>
@@ -95,18 +98,21 @@
             <tr>
                 <form action="/dbs" method="post">
                     <td>{{row['md_id']}}<input type="hidden" name="md_id" value="{{row['md_id']}}"></td>
-                    <td><input type="hidden" name="md_unique_name" value="{{row['md_unique_name']|e}}">{{row['md_unique_name']|e}}</td>
+                    <td><input type="hidden" name="md_unique_name" value="{{row['md_unique_name']|e}}" size="8">{{row['md_unique_name']|e}}</td>
                     <td>
                         <select name="md_dbtype">
                             <option value="postgres" {% if row['md_dbtype'] == "postgres" %}selected{% endif %}>postgres</option>
                             <option value="pgbouncer"{% if row['md_dbtype'] == "pgbouncer" %}selected{% endif %}>pgbouncer</option>
+                            <option value="postgres-continuous-discovery"{% if row['md_dbtype'] == "postgres-continuous-discovery" %}selected{% endif %}>pg-continuous-discovery</option>
                         </select>
                     </td>
-                    <td><input type="text" name="md_hostname" value="{{row['md_hostname']|e}}" size="12"></td>
+                    <td><input type="text" name="md_hostname" value="{{row['md_hostname']|e}}" size="10"></td>
                     <td><input type="text" name="md_port" value="{{row['md_port']|e}}" size="5"></td>
-                    <td><input type="text" name="md_dbname" value="{{row['md_dbname']|e}}" size="12"></td>
+                    <td><input type="text" name="md_dbname" value="{{row['md_dbname']|e}}" size="10"></td>
+                    <td><input type="text" name="md_include_pattern" value="{{row['md_include_pattern']|e}}" size="6"></td>
+                    <td><input type="text" name="md_exclude_pattern" value="{{row['md_exclude_pattern']|e}}" size="6"></td>
                     <td><input type="text" name="md_user" value="{{row['md_user']|e}}" size="8"></td>
-                    <td><input type="password" name="md_password" value="***" size="8" title="if left to default ***, password will not be changed"></td>
+                    <td><input type="password" name="md_password" value="***" size="6" title="if left to default ***, password will not be changed"></td>
                     <td><input type="checkbox" name="md_is_superuser" {% if row['md_is_superuser'] %}checked{% endif %}></td>
                     <td>
                         <select name="md_sslmode">
@@ -126,7 +132,8 @@
                         <a class="show_metrics" href="/metrics" title="Show preset configs and metric definitions in a new window" target="_blank">show</a>&nbsp;|&nbsp;
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
-                    <td title='{"metric":interval,...}'><textarea name="md_config" cols="15">{% if row['md_config'] %} {{row['md_config']}} {% endif %}</textarea></td>
+                    <td title='{"metric":interval,...}'><textarea name="md_config" cols="8">{% if row['md_config'] %} {{row['md_config']}} {% endif %}</textarea></td>
+                    <td title='{"env": "prod", ...}'><textarea name="md_custom_tags" cols="8">{% if row['md_custom_tags'] %} {{row['md_custom_tags']}} {% endif %}</textarea></td>
                     <td><input type="text" name="md_statement_timeout_seconds" value="{{row['md_statement_timeout_seconds']}}" size="2"></td>
                     <td>{{row['md_last_modified_on']}}</td>
                     <td><input type="checkbox" name="md_is_enabled" {% if row['md_is_enabled'] %}checked{% endif %}></td>
@@ -138,18 +145,21 @@
             <tr>
                 <form action="/dbs" method="post">
                     <td></td>
-                    <td><input type="text" name="md_unique_name" value="" size="10" title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data)"></td>
+                    <td><input type="text" name="md_unique_name" value="" size="8" title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data)"></td>
                     <td>
-                        <select name="md_dbtype" id="md_dbtype">
-                            <option value="postgres">postgres</option>
+                        <select name="md_dbtype" id="md_dbtype" title="'postgres': Single Postgres DB monitoring, 'pgbouncer': PgBouncer traffic stats for a single pool, 'pg-continuous-discovery': Specified PG cluster will be polled for new DBs to be monitored periodically (with optional pattern matching)">
+                            <option value="">postgres</option>
                             <option value="pgbouncer">pgbouncer</option>
+                            <option value="postgres-continuous-discovery">pg-continuous-discovery</option>
                         </select>
                     </td>
-                    <td><input type="text" name="md_hostname" value="" size="12"></td>
+                    <td><input type="text" name="md_hostname" value="" size="10"></td>
                     <td><input type="text" name="md_port" value="5432" size="5"></td>
-                    <td><input type="text" name="md_dbname" value="" size="12"></td>
+                    <td><input type="text" name="md_dbname" value="" size="10"></td>
+                    <td><input type="text" name="md_include_pattern" value="" size="6"></td>
+                    <td><input type="text" name="md_exclude_pattern" value="" size="6"></td>
                     <td><input type="text" name="md_user" value="" size="8"></td>
-                    <td><input type="password" name="md_password" value="" size="8"></td>
+                    <td><input type="password" name="md_password" value="" size="6"></td>
                     <td><input type="checkbox" name="md_is_superuser"></td>
                     <td>
                         <select name="md_sslmode">
@@ -169,7 +179,8 @@
                         <a class="show_metrics" href="/metrics" title="Show JSON config in a new window" target="_blank">show</a>&nbsp;|&nbsp;
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
-                    <td title='{"metric":interval,...}'><textarea name="md_config" id="md_config" value="" cols="15"></textarea></td>
+                    <td title='{"metric":interval,...}'><textarea name="md_config" id="md_config" value="" cols="8"></textarea></td>
+                    <td title='{"env": "prod", ...}'><textarea name="md_custom_tags" id="md_custom_tags" value="" cols="8"></textarea></td>
                     <td><input type="text" name="md_statement_timeout_seconds" size="2" value="5"></td>
                     <td></td>
                     <td><input type="checkbox" name="md_is_enabled" checked></td>
@@ -298,7 +309,7 @@
             if ($(this).val() == 'pgbouncer') {
                 $("#md_preset_config_name").val('pgbouncer');
                 alert('NB! Preset Config set to "pgbouncer"');
-            } else if ($(this).val() == 'postgres') {
+            } else if ($(this).val() == 'postgres' || $(this).val() == 'postgres-continuous-discovery') {
                 $("#md_preset_config_name").val('');
             }
         });
