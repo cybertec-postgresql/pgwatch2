@@ -135,6 +135,7 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password string)
 	if err != nil {
 		log.Fatal("could not open configDb connection! exit.")
 	}
+	defer configDb.Close()
 
 	err = configDb.Ping()
 
@@ -1490,6 +1491,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 	if err != nil {
 		return md, err
 	}
+	defer c.Close()
 
 	sql := `select datname::text
 		from pg_database
