@@ -135,7 +135,6 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password string)
 	if err != nil {
 		log.Fatal("could not open configDb connection! exit.")
 	}
-	defer configDb.Close()
 
 	err = configDb.Ping()
 
