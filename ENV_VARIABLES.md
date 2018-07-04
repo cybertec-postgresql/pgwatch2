@@ -29,8 +29,11 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_IDATABASE2** Secondary InfluxDB database. Default: pgwatch2
 - **PW2_ISSL2** Use SSL for Secondary InfluxDB. Default: False
 - **PW2_IRETENTIONDAYS** Influx metrics retention period in days. Default: 90
+- **PW2_IRETENTIONNAME** Influx retention policy name. Default: pgwatch_def_ret
 - **PW2_GRAPHITEHOST** Graphite host. Default: -
 - **PW2_GRAPHITEPORT** Graphite port. Default: -
+- **PW2_CONFIG** File or folder of YAML (.yaml/.yml) files containing info on which DBs to monitor and where to store metrics
+- **PW2_METRICS_FOLDER** Folder of metrics definitions
 
 
 ## Web UI

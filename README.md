@@ -45,9 +45,11 @@ For a complete list of all supported Docker environment variables see [ENV_VARIA
 * Easy extensibility by defining metrics in pure SQL (thus they could also be from business domain)
 * Non-invasive setup, no extensions nor superuser rights required for the base functionality
 * Global or DB level configuration of metrics/intervals
+* Central config DB based operation or local config file based for better automation (Ansible, etc)
 * Intuitive metrics presentation using the [Grafana](http://grafana.org/) dashboarding engine. Set of dasboards provided
 * Optional alerting (Email, Slack, PagerDuty) provided by Grafana
 * PgBouncer and AWS RDS graphing/alerting supported in addition to PostgreSQL
+* Possible to monitoring all DBs found in a cluster automatically (with regex pattern matching)
 * Kubernetes/OpenShift ready
 
 # Project background
@@ -62,12 +64,12 @@ For more background on the project motivations and design goals see the original
 
 # Limitations / Performance expectations
 
-* Min 512 MB RAM
-* Docker default disk size of 10 GB should be enough for monitoring 5 hosts (3 month default metrics retention policy, configurable)  
+* Min 1GB RAM
+* Docker default disk size of 10 GB should be enough for monitoring 5 hosts (3 month default metrics retention policy, configurable)
 * A low-spec (1 vCPU, 2 GB RAM) cloud machine can easily monitor 100 DBs in "exhaustive" settings (i.e. almost all metrics
 are monitored with 60s interval) without breaking a sweat (<20% load)
-* One monitored DB in preset "exhaustive" settings requires about ~250 MB of InfluxDB disk storage per month. Depends on
-amount of objects though - tables, indexes, number of unique SQL-s.
+* One monitored DB in preset "exhaustive" settings requires about ~250-500 MB of InfluxDB disk storage per month, depending on
+the amount of schema objects - tables, indexes, number of unique SQL-s.
 * A single InfluxDB node should handle thousands of requests per second but if this is not enough having a secondary/mirrored
 InfluxDB is also possible. If more than two needed (e.g. feeding many many Grafana instances or some custom exporting) one
 should look at Influx Enterprise (on-prem or cloud) or Graphite (which is also supported as metrics storage backend).
@@ -245,6 +247,14 @@ will be indexed by the InfluxDB giving following advantages:
   and repetitive status strings (possible with Singlestat or Table panels) that you’ll be looking 
   up by some ID column, it might still make sense to prefix the column with “tag_” to reduce disks 
   space.
+* Fixed per host "custom tags" are also supported - these can contain any key-value data important to user and are
+added to all captured data rows
+
+# File based operation
+
+From v1.4.0 one can also deploy pgwatch2 gatherer daemons decentrally, based on YAML config files - for both metric definitions
+and "hosts to be monitored" definitions. See pgwatch2/config/instances.yaml for sample config file and pgwatch2/metrics
+folder for metrics (and preset metric configuration) definitions. Relevant Gatherer env. vars / flags: PW2_CONFIG / --config,PW2_METRICS_FOLDER / --metrics-folder.
 
 # Updating to a newer Docker version
 
