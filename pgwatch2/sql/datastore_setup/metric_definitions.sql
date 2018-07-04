@@ -1135,3 +1135,20 @@ $sql$,
 'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
 true
 );
+
+/* replication slot info */
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'replication_slots',
+9.0,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  slot_name::text as tag_slot_name,
+  coalesce(plugin, 'physical')::text as plugin,
+  active
+from
+  pg_replication_slots;
+$sql$
+);
