@@ -393,7 +393,7 @@ retry:
 		pt, err := client.NewPoint(measurement, tags, fields, epoch_time)
 
 		if err != nil {
-			log.Error("NewPoint failed:", err)
+			log.Error("Calling NewPoint() of Influx driver failed. Datapoint dropped. Err:", err)
 			continue
 		}
 
@@ -549,8 +549,31 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 	return nil
 }
 
-// TODO batching of mutiple datasets
-func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
+func MetricsBatcher(data_store string, batching bool, batchingMaxDelay int64, buffered_storage_ch <-chan MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) {
+	var last_flush_time_epoch int64 = time.Now().Unix()
+	batch := make([]MetricStoreMessage, 1) // no size limit here as limited in persister already
+
+	for {
+		select {
+		case msg := <-buffered_storage_ch:
+			log.Error("Msg received", msg)
+			if batching {
+				batch = append(batch, msg)
+				if time.Now().Unix()-last_flush_time_epoch > batchingMaxDelay {
+					flushed := make([]MetricStoreMessage, len(batch))
+					copy(flushed, batch)
+					log.Error("Flushing %d metric datasets", len(batch))
+					storage_ch <- flushed
+					batch = make([]MetricStoreMessage, 1)
+				}
+			} else {
+				storage_ch <- []MetricStoreMessage{msg}
+			}
+		}
+	}
+}
+
+func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage) {
 	var last_try = make([]time.Time, influx_host_count)          // if Influx errors out, don't retry before 10s
 	var last_drop_warning = make([]time.Time, influx_host_count) // log metric points drops every 10s to not overflow logs in case Influx is down for longer
 	var retry_queues = make([]*list.List, influx_host_count)     // separate queues for all Influx hosts
@@ -564,39 +587,42 @@ func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
 
 	for {
 		select {
-		case msg := <-storage_ch:
-			for i, retry_queue := range retry_queues {
+		case msg_arr := <-storage_ch:
+			for _, msg := range msg_arr {
 
-				retry_queue_length := retry_queue.Len()
+				for i, retry_queue := range retry_queues {
 
-				if retry_queue_length > 0 {
-					if retry_queue_length == PERSIST_QUEUE_MAX_SIZE {
-						retry_queue.Remove(retry_queue.Back())
-						points_dropped[i] += 1
-						if last_drop_warning[i].IsZero() || last_drop_warning[i].Before(time.Now().Add(time.Second*-10)) {
-							log.Warning("Dropped", points_dropped, "oldest data points from queue", i, "as PERSIST_QUEUE_MAX_SIZE =", PERSIST_QUEUE_MAX_SIZE, "exceeded")
-							last_drop_warning[i] = time.Now()
-							points_dropped[i] = 0
+					retry_queue_length := retry_queue.Len()
+
+					if retry_queue_length > 0 {
+						if retry_queue_length == PERSIST_QUEUE_MAX_SIZE {
+							retry_queue.Remove(retry_queue.Back())
+							points_dropped[i] += 1
+							if last_drop_warning[i].IsZero() || last_drop_warning[i].Before(time.Now().Add(time.Second*-10)) {
+								log.Warning("Dropped", points_dropped, "oldest data points from queue", i, "as PERSIST_QUEUE_MAX_SIZE =", PERSIST_QUEUE_MAX_SIZE, "exceeded")
+								last_drop_warning[i] = time.Now()
+								points_dropped[i] = 0
+							}
 						}
-					}
-					retry_queue.PushFront(msg)
-				} else {
-					if data_store == DATASTORE_INFLUX {
-						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg.DBUniqueName, msg.MetricName, msg.Data, msg.CustomTags)
-					} else if data_store == DATASTORE_GRAPHITE {
-						err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
+						retry_queue.PushFront(msg)
 					} else {
-						log.Fatal("Invalid datastore:", data_store)
-					}
-					last_try[i] = time.Now()
-					if err != nil {
-						if strings.Contains(err.Error(), "unable to parse") {
-							log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
-								msg.DBUniqueName, msg.MetricName, msg.Data)) // ignore data points consisting of anything else than strings and floats
+						if data_store == DATASTORE_INFLUX {
+							err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg.DBUniqueName, msg.MetricName, msg.Data, msg.CustomTags)
+						} else if data_store == DATASTORE_GRAPHITE {
+							err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
 						} else {
-							log.Error(fmt.Sprintf("Failed to write into datastore %d: %s", i, err))
-							in_error[i] = true
-							retry_queue.PushFront(msg)
+							log.Fatal("Invalid datastore:", data_store)
+						}
+						last_try[i] = time.Now()
+						if err != nil {
+							if strings.Contains(err.Error(), "unable to parse") {
+								log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
+									msg.DBUniqueName, msg.MetricName, msg.Data)) // ignore data points consisting of anything else than strings and floats
+							} else {
+								log.Error(fmt.Sprintf("Failed to write into datastore %d: %s", i, err))
+								in_error[i] = true
+								retry_queue.PushFront(msg)
+							}
 						}
 					}
 				}
@@ -1613,29 +1639,31 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
-	Verbose             []bool `short:"v" long:"verbose" description:"Show verbose debug information" env:"PW2_VERBOSE"`
-	Host                string `long:"host" description:"PG config DB host" default:"localhost" env:"PW2_PGHOST"`
-	Port                string `short:"p" long:"port" description:"PG config DB port" default:"5432" env:"PW2_PGPORT"`
-	Dbname              string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
-	User                string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2" env:"PW2_PGUSER"`
-	Password            string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
-	Datastore           string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
-	InfluxHost          string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
-	InfluxPort          string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
-	InfluxDbname        string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
-	InfluxUser          string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
-	InfluxPassword      string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
-	InfluxSSL           string `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
-	InfluxHost2         string `long:"ihost2" description:"Influx host II" env:"PW2_IHOST2"`
-	InfluxPort2         string `long:"iport2" description:"Influx port II" env:"PW2_IPORT2"`
-	InfluxDbname2       string `long:"idbname2" description:"Influx DB name II" default:"pgwatch2" env:"PW2_IDATABASE2"`
-	InfluxUser2         string `long:"iuser2" description:"Influx user II" default:"root" env:"PW2_IUSER2"`
-	InfluxPassword2     string `long:"ipassword2" description:"Influx password II" default:"root" env:"PW2_IPASSWORD2"`
-	InfluxSSL2          string `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
-	InfluxRetentionDays int64  `long:"iretentiondays" description:"Retention period in days [90 default]" env:"PW2_IRETENTIONDAYS"`
-	InfluxRetentionName string `long:"iretentionname" description:"Retention policy name. [Default: pgwatch_def_ret]" default:"pgwatch_def_ret" env:"PW2_IRETENTIONNAME"`
-	GraphiteHost        string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
-	GraphitePort        string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
+	Verbose                []bool `short:"v" long:"verbose" description:"Show verbose debug information" env:"PW2_VERBOSE"`
+	Host                   string `long:"host" description:"PG config DB host" default:"localhost" env:"PW2_PGHOST"`
+	Port                   string `short:"p" long:"port" description:"PG config DB port" default:"5432" env:"PW2_PGPORT"`
+	Dbname                 string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
+	User                   string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2" env:"PW2_PGUSER"`
+	Password               string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
+	Datastore              string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
+	InfluxHost             string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
+	InfluxPort             string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
+	InfluxDbname           string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
+	InfluxUser             string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
+	InfluxPassword         string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
+	InfluxSSL              string `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
+	InfluxHost2            string `long:"ihost2" description:"Influx host II" env:"PW2_IHOST2"`
+	InfluxPort2            string `long:"iport2" description:"Influx port II" env:"PW2_IPORT2"`
+	InfluxDbname2          string `long:"idbname2" description:"Influx DB name II" default:"pgwatch2" env:"PW2_IDATABASE2"`
+	InfluxUser2            string `long:"iuser2" description:"Influx user II" default:"root" env:"PW2_IUSER2"`
+	InfluxPassword2        string `long:"ipassword2" description:"Influx password II" default:"root" env:"PW2_IPASSWORD2"`
+	InfluxSSL2             string `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
+	InfluxRetentionDays    int64  `long:"iretentiondays" description:"Retention period in days [90 default]" env:"PW2_IRETENTIONDAYS"`
+	InfluxRetentionName    string `long:"iretentionname" description:"Retention policy name. [Default: pgwatch_def_ret]" default:"pgwatch_def_ret" env:"PW2_IRETENTIONNAME"`
+	InfluxBatching         string `long:"ibatching" description:"Send metric data in bulk" default:"false" env:"PW2_IBATCHING"`
+	InfluxBatchingMaxDelay int64  `long:"ibatching-max-delay" description:"Max seconds before sending metrics to Influx anyways [Default: 5]" default:"5" env:"PW2_IBATCHING_MAX_DELAY"`
+	GraphiteHost           string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
+	GraphitePort           string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
 	// Params for running based on local config files, enabled distributed "push model" based metrics gathering. Metrics are sent directly to Influx/Graphite.
 	Config        string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
 	MetricsFolder string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
@@ -1726,9 +1754,22 @@ func main() {
 	} else {
 		opts.InfluxSSL2 = "false"
 	}
+	if len(strings.TrimSpace(opts.InfluxBatching)) > 0 {
+		if _, err := strconv.ParseBool(opts.InfluxBatching); err != nil {
+			fmt.Println("Check --ibatching parameter - can be of: 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False")
+			return
+		}
+	} else {
+		opts.InfluxBatching = "false"
+	}
 
-	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
-	persist_ch := make(chan MetricStoreMessage, 1000)
+	control_channels := make(map[string](chan ControlMessage))  // [db1+metric1]=chan
+	buffered_persist_ch := make(chan MetricStoreMessage, 10000) // "staging area" for metric storage batching, when enabled
+	persist_ch := make(chan []MetricStoreMessage, 10000)
+
+	log.Info("starting MetricsBatcher...")
+	doBatching, _ := strconv.ParseBool(opts.InfluxBatching)
+	go MetricsBatcher(DATASTORE_INFLUX, doBatching, opts.InfluxBatchingMaxDelay, buffered_persist_ch, persist_ch)
 
 	if opts.Datastore == "graphite" {
 		if opts.GraphiteHost == "" || opts.GraphitePort == "" {
@@ -1763,6 +1804,7 @@ func main() {
 			influx_host_count = 2
 		}
 		log.Info("InfluxDB connection(s) OK")
+
 		log.Info("starting InfluxPersister...")
 		go MetricsPersister(DATASTORE_INFLUX, persist_ch)
 	}
@@ -1865,7 +1907,7 @@ func main() {
 				}
 				metric_fetching_channels_lock.Lock()
 				metric_fetching_channels[db_unique] = make(chan MetricFetchMessage, 100)
-				go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch)
+				go MetricsFetcher(metric_fetching_channels[db_unique], buffered_persist_ch)
 				metric_fetching_channels_lock.Unlock()
 				time.Sleep(time.Millisecond * 250) // not to cause a huge load spike when starting the daemon with 20+ monitored DBs
 			}
