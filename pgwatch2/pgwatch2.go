@@ -319,11 +319,10 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 	return monitoredDBs, err
 }
 
-func SendToInflux(connect_str, conn_id, dbname, measurement string, data [](map[string]interface{}), customTags map[string]string) error {
-	if data == nil || len(data) == 0 {
+func SendToInflux(connect_str, conn_id string, storeMessages []MetricStoreMessage) error {
+	if storeMessages == nil || len(storeMessages) == 0 {
 		return nil
 	}
-	log.Debug("SendToInflux", conn_id, "data[0] of ", len(data), ":", data[0])
 	ts_warning_printed := false
 	retries := 1 // 1 retry
 retry:
@@ -351,61 +350,71 @@ retry:
 		return err
 	}
 	rows_batched := 0
-	for _, dr := range data {
-		// Create a point and add to batch
-		var epoch_time time.Time
-		var epoch_ns int64
-		tags := make(map[string]string)
-		fields := make(map[string]interface{})
+	total_rows := 0
 
-		tags["dbname"] = dbname
-
-		if customTags != nil {
-			for k, v := range customTags {
-				tags[k] = fmt.Sprintf("%v", v)
-			}
-		}
-
-		for k, v := range dr {
-			if v == nil || v == "" {
-				continue // not storing NULLs
-			}
-			if k == EPOCH_COLUMN_NAME {
-				epoch_ns = v.(int64)
-			} else if strings.HasPrefix(k, "tag_") {
-				tag := k[4:]
-				tags[tag] = fmt.Sprintf("%v", v)
-			} else {
-				fields[k] = v
-			}
-		}
-
-		if epoch_ns == 0 {
-			if !ts_warning_printed && measurement != "pgbouncer_stats" {
-				log.Warning("No timestamp_ns found, server time will be used. measurement:", measurement)
-				ts_warning_printed = true
-			}
-			epoch_time = time.Now()
-		} else {
-			epoch_time = time.Unix(0, epoch_ns)
-		}
-
-		pt, err := client.NewPoint(measurement, tags, fields, epoch_time)
-
-		if err != nil {
-			log.Error("Calling NewPoint() of Influx driver failed. Datapoint dropped. Err:", err)
+	for _, msg := range storeMessages {
+		if msg.Data == nil || len(msg.Data) == 0 {
 			continue
 		}
+		log.Debug("SendToInflux", conn_id, "data[0] of ", len(msg.Data), ":", msg.Data[0])
 
-		bp.AddPoint(pt)
-		rows_batched += 1
+		for _, dr := range msg.Data {
+			// Create a point and add to batch
+			var epoch_time time.Time
+			var epoch_ns int64
+			tags := make(map[string]string)
+			fields := make(map[string]interface{})
+
+			total_rows += 1
+			tags["dbname"] = msg.DBUniqueName
+
+			if msg.CustomTags != nil {
+				for k, v := range msg.CustomTags {
+					tags[k] = fmt.Sprintf("%v", v)
+				}
+			}
+
+			for k, v := range dr {
+				if v == nil || v == "" {
+					continue // not storing NULLs
+				}
+				if k == EPOCH_COLUMN_NAME {
+					epoch_ns = v.(int64)
+				} else if strings.HasPrefix(k, "tag_") {
+					tag := k[4:]
+					tags[tag] = fmt.Sprintf("%v", v)
+				} else {
+					fields[k] = v
+				}
+			}
+
+			if epoch_ns == 0 {
+				if !ts_warning_printed && msg.MetricName != "pgbouncer_stats" {
+					log.Warning("No timestamp_ns found, server time will be used. measurement:", msg.MetricName)
+					ts_warning_printed = true
+				}
+				epoch_time = time.Now()
+			} else {
+				epoch_time = time.Unix(0, epoch_ns)
+			}
+
+			pt, err := client.NewPoint(msg.MetricName, tags, fields, epoch_time)
+
+			if err != nil {
+				log.Error("Calling NewPoint() of Influx driver failed. Datapoint dropped. Err:", err)
+				continue
+			}
+
+			bp.AddPoint(pt)
+			rows_batched += 1
+		}
 	}
 	t1 := time.Now()
 	err = c.Write(bp)
 	t_diff := time.Now().Sub(t1)
 	if err == nil {
-		log.Info(fmt.Sprintf("wrote %d/%d rows to InfluxDB %s for [%s:%s] in %dus", rows_batched, len(data),
-			conn_id, dbname, measurement, t_diff.Nanoseconds()/1000))
+		log.Info(fmt.Sprintf("wrote %d/%d rows to InfluxDB %s for [%s:%s] in %dus", rows_batched, total_rows,
+			conn_id, t_diff.Nanoseconds()/1000))
 	}
 	return err
 }
@@ -522,10 +531,10 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 
 	for retry_queue.Len() > 0 { // send over the whole re-try queue at once if connection works
 		log.Info("Processing InfluxDB retry_queue", conn_ident, ". Items in retry_queue: ", retry_queue.Len())
-		msg := retry_queue.Back().Value.(MetricStoreMessage)
+		msg := retry_queue.Back().Value.([]MetricStoreMessage)
 
 		if data_source == DATASTORE_INFLUX {
-			err = SendToInflux(conn_str, conn_ident, msg.DBUniqueName, msg.MetricName, msg.Data, msg.CustomTags)
+			err = SendToInflux(conn_str, conn_ident, msg)
 		} else if data_source == DATASTORE_GRAPHITE {
 			err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
 		} else {
@@ -588,41 +597,39 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 	for {
 		select {
 		case msg_arr := <-storage_ch:
-			for _, msg := range msg_arr {
 
-				for i, retry_queue := range retry_queues {
+			for i, retry_queue := range retry_queues {
 
-					retry_queue_length := retry_queue.Len()
+				retry_queue_length := retry_queue.Len()
 
-					if retry_queue_length > 0 {
-						if retry_queue_length == PERSIST_QUEUE_MAX_SIZE {
-							retry_queue.Remove(retry_queue.Back())
-							points_dropped[i] += 1
-							if last_drop_warning[i].IsZero() || last_drop_warning[i].Before(time.Now().Add(time.Second*-10)) {
-								log.Warning("Dropped", points_dropped, "oldest data points from queue", i, "as PERSIST_QUEUE_MAX_SIZE =", PERSIST_QUEUE_MAX_SIZE, "exceeded")
-								last_drop_warning[i] = time.Now()
-								points_dropped[i] = 0
-							}
+				if retry_queue_length > 0 {
+					if retry_queue_length == PERSIST_QUEUE_MAX_SIZE {
+						retry_queue.Remove(retry_queue.Back())
+						points_dropped[i] += 1
+						if last_drop_warning[i].IsZero() || last_drop_warning[i].Before(time.Now().Add(time.Second*-10)) {
+							log.Warning("Dropped", points_dropped, "oldest data points from queue", i, "as PERSIST_QUEUE_MAX_SIZE =", PERSIST_QUEUE_MAX_SIZE, "exceeded")
+							last_drop_warning[i] = time.Now()
+							points_dropped[i] = 0
 						}
-						retry_queue.PushFront(msg)
+					}
+					retry_queue.PushFront(msg)
+				} else {
+					if data_store == DATASTORE_INFLUX {
+						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg_arr)
+					} else if data_store == DATASTORE_GRAPHITE {
+						err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
 					} else {
-						if data_store == DATASTORE_INFLUX {
-							err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg.DBUniqueName, msg.MetricName, msg.Data, msg.CustomTags)
-						} else if data_store == DATASTORE_GRAPHITE {
-							err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
+						log.Fatal("Invalid datastore:", data_store)
+					}
+					last_try[i] = time.Now()
+					if err != nil {
+						if strings.Contains(err.Error(), "unable to parse") {
+							log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
+								msg.DBUniqueName, msg.MetricName, msg.Data)) // ignore data points consisting of anything else than strings and floats
 						} else {
-							log.Fatal("Invalid datastore:", data_store)
-						}
-						last_try[i] = time.Now()
-						if err != nil {
-							if strings.Contains(err.Error(), "unable to parse") {
-								log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
-									msg.DBUniqueName, msg.MetricName, msg.Data)) // ignore data points consisting of anything else than strings and floats
-							} else {
-								log.Error(fmt.Sprintf("Failed to write into datastore %d: %s", i, err))
-								in_error[i] = true
-								retry_queue.PushFront(msg)
-							}
+							log.Error(fmt.Sprintf("Failed to write into datastore %d: %s", i, err))
+							in_error[i] = true
+							retry_queue.PushFront(msg)
 						}
 					}
 				}
