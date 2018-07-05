@@ -104,6 +104,8 @@ var db_pg_version_map_lock = sync.RWMutex{}
 var InfluxDefaultRetentionPolicyDuration int64 = 90 // 90 days of monitoring data will be kept around. can be adjusted later on influx side if needed
 var monitored_db_cache map[string]MonitoredDatabase
 var monitored_db_cache_lock sync.RWMutex
+var monitored_db_conn_cache map[string]*sqlx.DB = make(map[string]*sqlx.DB)
+var monitored_db_conn_cache_lock = sync.RWMutex{}
 var metric_fetching_channels = make(map[string](chan MetricFetchMessage)) // [db1unique]=chan
 var metric_fetching_channels_lock = sync.RWMutex{}
 var influx_host_count = 1
@@ -143,6 +145,8 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password string)
 	} else {
 		log.Info("connect to configDb OK!")
 	}
+	configDb.SetMaxIdleConns(1)
+	configDb.SetMaxOpenConns(2)
 }
 
 func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
@@ -190,11 +194,22 @@ func DBExecReadByDbUniqueName(dbUnique string, sql string, args ...interface{}) 
 	if md.DBType == "pgbouncer" {
 		md.DBName = "pgbouncer"
 	}
-	conn, err := GetPostgresDBConnection(md.Host, md.Port, md.DBName, md.User, md.Password, md.SslMode) // TODO pooling
-	if err != nil {
-		return nil, err
+
+	monitored_db_conn_cache_lock.RLock()
+	conn, exists := monitored_db_conn_cache[dbUnique]
+	monitored_db_conn_cache_lock.RUnlock()
+
+	if !exists {
+		conn, err = GetPostgresDBConnection(md.Host, md.Port, md.DBName, md.User, md.Password, md.SslMode)
+		if err != nil {
+			return nil, err
+		}
+		conn.SetMaxIdleConns(1)
+		conn.SetMaxOpenConns(1)
+		monitored_db_conn_cache_lock.Lock()
+		monitored_db_conn_cache[dbUnique] = conn
+		monitored_db_conn_cache_lock.Unlock()
 	}
-	defer conn.Close()
 
 	_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
 	if err != nil {
@@ -1818,7 +1833,7 @@ func main() {
 				}
 				metric_fetching_channels_lock.Lock()
 				metric_fetching_channels[db_unique] = make(chan MetricFetchMessage, 100)
-				go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch) // close message?
+				go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch)
 				metric_fetching_channels_lock.Unlock()
 				time.Sleep(time.Millisecond * 250) // not to cause a huge load spike when starting the daemon with 20+ monitored DBs
 			}
@@ -1844,7 +1859,7 @@ func main() {
 					// metric definition files were recently removed
 					log.Warning("shutting down metric", metric, "for", host.DBUniqueName)
 					control_channels[db_metric] <- ControlMessage{Action: "STOP"}
-					time.Sleep(time.Second * 1) // enough?
+					time.Sleep(time.Second * 1) // try to be more deterministic here?
 					delete(control_channels, db_metric)
 				} else if !metric_def_ok {
 					log.Warning(fmt.Sprintf("metric definiton \"%s\" not found for \"%s\"", metric, db_unique))
