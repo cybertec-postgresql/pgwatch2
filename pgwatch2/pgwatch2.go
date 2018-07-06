@@ -413,8 +413,13 @@ retry:
 	err = c.Write(bp)
 	t_diff := time.Now().Sub(t1)
 	if err == nil {
-		log.Info(fmt.Sprintf("wrote %d/%d rows to InfluxDB %s for [%s:%s] in %dus", rows_batched, total_rows,
-			conn_id, t_diff.Nanoseconds()/1000))
+		if len(storeMessages) == 1 {
+			log.Info(fmt.Sprintf("wrote %d/%d rows to InfluxDB %s for [%s:%s] in %dus", rows_batched, total_rows,
+				conn_id, storeMessages[0].DBUniqueName, storeMessages[0].MetricName, t_diff.Nanoseconds()/1000))
+		} else {
+			log.Info(fmt.Sprintf("wrote %d/%d rows from %d metric sets to InfluxDB %s for  in %dus", rows_batched, total_rows,
+				len(storeMessages), conn_id, t_diff.Nanoseconds()/1000))
+		}
 	}
 	return err
 }
@@ -536,14 +541,20 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 		if data_source == DATASTORE_INFLUX {
 			err = SendToInflux(conn_str, conn_ident, msg)
 		} else if data_source == DATASTORE_GRAPHITE {
-			err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
+			for _, m := range msg {
+				err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO
+			}
 		} else {
 			log.Fatal("Invalid datastore:", data_source)
 		}
 		if err != nil {
 			if data_source == DATASTORE_INFLUX && strings.Contains(err.Error(), "unable to parse") {
-				log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
-					msg.DBUniqueName, msg.MetricName, msg.Data)) // ignore data points consisting of anything else than strings and floats
+				if len(msg) == 1 { // can only pinpoint faulty input data without batching
+					log.Error(fmt.Sprintf("Dropping %d metric [%s:%s] as Influx is unable to parse the data: %s",
+						msg[0].DBUniqueName, msg[0].MetricName, msg[0].Data)) // ignore data points consisting of anything else than strings and floats
+				} else {
+					log.Errorf("Dropping %d metric-sets as Influx is unable to parse the data: %s", len(msg), err)
+				}
 			} else {
 				return err // still gone, retry later
 			}
@@ -560,7 +571,8 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 
 func MetricsBatcher(data_store string, batching bool, batchingMaxDelay int64, buffered_storage_ch <-chan MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) {
 	var last_flush_time_epoch int64 = time.Now().Unix()
-	batch := make([]MetricStoreMessage, 1) // no size limit here as limited in persister already
+	batch := make([]MetricStoreMessage, 0) // no size limit here as limited in persister already
+	ticker := time.NewTicker(time.Second * time.Duration(batchingMaxDelay))
 
 	for {
 		select {
@@ -571,12 +583,23 @@ func MetricsBatcher(data_store string, batching bool, batchingMaxDelay int64, bu
 				if time.Now().Unix()-last_flush_time_epoch > batchingMaxDelay {
 					flushed := make([]MetricStoreMessage, len(batch))
 					copy(flushed, batch)
-					log.Error("Flushing %d metric datasets", len(batch))
+					log.Errorf("Flushing %d metric datasets", len(batch))
 					storage_ch <- flushed
-					batch = make([]MetricStoreMessage, 1)
+					batch = make([]MetricStoreMessage, 0)
 				}
 			} else {
 				storage_ch <- []MetricStoreMessage{msg}
+			}
+		case <-ticker.C:
+			log.Errorf("Batcher timed out")
+			if len(batch) > 0 {
+				if time.Now().Unix()-last_flush_time_epoch > batchingMaxDelay {
+					flushed := make([]MetricStoreMessage, len(batch))
+					copy(flushed, batch)
+					log.Errorf("Flushing %d metric datasets", len(batch))
+					storage_ch <- flushed
+					batch = make([]MetricStoreMessage, 0)
+				}
 			}
 		}
 	}
@@ -612,24 +635,31 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 							points_dropped[i] = 0
 						}
 					}
-					retry_queue.PushFront(msg)
+					retry_queue.PushFront(msg_arr)
 				} else {
 					if data_store == DATASTORE_INFLUX {
 						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg_arr)
 					} else if data_store == DATASTORE_GRAPHITE {
-						err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
+						for _, m := range msg_arr {
+							err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO
+						}
 					} else {
 						log.Fatal("Invalid datastore:", data_store)
 					}
 					last_try[i] = time.Now()
 					if err != nil {
 						if strings.Contains(err.Error(), "unable to parse") {
-							log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
-								msg.DBUniqueName, msg.MetricName, msg.Data)) // ignore data points consisting of anything else than strings and floats
+							if len(msg_arr) == 1 {
+								log.Errorf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
+									msg_arr[0].DBUniqueName, msg_arr[0].MetricName, msg_arr[0].Data) // ignore data points consisting of anything else than strings and floats
+							} else {
+								log.Errorf("Dropping %d metric-sets as Influx is unable to parse the data: %s", len(msg_arr), err)
+								// TODO loop over single metrics in case of errors?
+							}
 						} else {
 							log.Error(fmt.Sprintf("Failed to write into datastore %d: %s", i, err))
 							in_error[i] = true
-							retry_queue.PushFront(msg)
+							retry_queue.PushFront(msg_arr)
 						}
 					}
 				}
