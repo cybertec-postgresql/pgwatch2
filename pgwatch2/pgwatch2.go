@@ -417,7 +417,7 @@ retry:
 			log.Info(fmt.Sprintf("wrote %d/%d rows to InfluxDB %s for [%s:%s] in %dus", rows_batched, total_rows,
 				conn_id, storeMessages[0].DBUniqueName, storeMessages[0].MetricName, t_diff.Nanoseconds()/1000))
 		} else {
-			log.Info(fmt.Sprintf("wrote %d/%d rows from %d metric sets to InfluxDB %s for  in %dus", rows_batched, total_rows,
+			log.Info(fmt.Sprintf("wrote %d/%d rows from %d metric sets to InfluxDB %s in %dus", rows_batched, total_rows,
 				len(storeMessages), conn_id, t_diff.Nanoseconds()/1000))
 		}
 	}
@@ -569,36 +569,37 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 	return nil
 }
 
-func MetricsBatcher(data_store string, batching bool, batchingMaxDelay int64, buffered_storage_ch <-chan MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) {
-	var last_flush_time_epoch int64 = time.Now().Unix()
+func MetricsBatcher(data_store string, batchingMaxDelayMillis int64, buffered_storage_ch <-chan []MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) {
+	if batchingMaxDelayMillis <= 0 {
+		log.Fatalf("Check --batching-max-delay-ms, zero/negative batching delay:", batchingMaxDelayMillis)
+	}
+	var datapointCounter int = 0
+	var maxBatchSize int = 1000            // flush on maxBatchSize or batchingMaxDelayMillis
 	batch := make([]MetricStoreMessage, 0) // no size limit here as limited in persister already
-	ticker := time.NewTicker(time.Second * time.Duration(batchingMaxDelay))
+	ticker := time.NewTicker(time.Millisecond * time.Duration(batchingMaxDelayMillis))
 
 	for {
 		select {
-		case msg := <-buffered_storage_ch:
-			log.Error("Msg received", msg)
-			if batching {
-				batch = append(batch, msg)
-				if time.Now().Unix()-last_flush_time_epoch > batchingMaxDelay {
-					flushed := make([]MetricStoreMessage, len(batch))
-					copy(flushed, batch)
-					log.Errorf("Flushing %d metric datasets", len(batch))
-					storage_ch <- flushed
-					batch = make([]MetricStoreMessage, 0)
-				}
-			} else {
-				storage_ch <- []MetricStoreMessage{msg}
-			}
 		case <-ticker.C:
-			log.Errorf("Batcher timed out")
 			if len(batch) > 0 {
-				if time.Now().Unix()-last_flush_time_epoch > batchingMaxDelay {
+				flushed := make([]MetricStoreMessage, len(batch))
+				copy(flushed, batch)
+				log.Infof("Flushing %d metric datasets due to batching timeout", len(batch))
+				storage_ch <- flushed
+				batch = make([]MetricStoreMessage, 0)
+				datapointCounter = 0
+			}
+		case msg := <-buffered_storage_ch:
+			for _, m := range msg { // in reality msg are sent by fetchers one by one though
+				batch = append(batch, m)
+				datapointCounter += len(m.Data)
+				if datapointCounter > maxBatchSize { // flush. also set some last_sent_timestamp so that ticker would pass a round?
 					flushed := make([]MetricStoreMessage, len(batch))
 					copy(flushed, batch)
-					log.Errorf("Flushing %d metric datasets", len(batch))
+					log.Infof("Flushing %d metric datasets due to maxBatchSize limit of %d datapoints", len(batch), maxBatchSize)
 					storage_ch <- flushed
 					batch = make([]MetricStoreMessage, 0)
+					datapointCounter = 0
 				}
 			}
 		}
@@ -768,7 +769,7 @@ func GetSQLForMetricPGVersion(metric string, pgVer decimal.Decimal, metricDefMap
 	return mdm[metric][best_ver], nil
 }
 
-func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -845,13 +846,13 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	}
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "sproc_changes", Data: detected_changes, CustomTags: md.CustomTags}
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "sproc_changes", Data: detected_changes, CustomTags: md.CustomTags}}
 	}
 
 	return change_counts
 }
 
-func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -928,13 +929,13 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "table_changes", Data: detected_changes, CustomTags: md.CustomTags}
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "table_changes", Data: detected_changes, CustomTags: md.CustomTags}}
 	}
 
 	return change_counts
 }
 
-func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -1009,13 +1010,13 @@ func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	}
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "index_changes", Data: detected_changes, CustomTags: md.CustomTags}
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "index_changes", Data: detected_changes, CustomTags: md.CustomTags}}
 	}
 
 	return change_counts
 }
 
-func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -1063,13 +1064,13 @@ func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, 
 
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "configuration_changes", Data: detected_changes, CustomTags: md.CustomTags}
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "configuration_changes", Data: detected_changes, CustomTags: md.CustomTags}}
 	}
 
 	return change_counts
 }
 
-func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) {
+func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) {
 	sproc_counts := DetectSprocChanges(dbUnique, db_pg_version, storage_ch, host_state) // TODO some of Detect*() code could be unified...
 	table_counts := DetectTableChanges(dbUnique, db_pg_version, storage_ch, host_state)
 	index_counts := DetectIndexChanges(dbUnique, db_pg_version, storage_ch, host_state)
@@ -1098,7 +1099,7 @@ func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Deci
 		influx_entry["epoch_ns"] = time.Now().UnixNano()
 		detected_changes_summary = append(detected_changes_summary, influx_entry)
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, DBType: "postgres", MetricName: "object_changes", Data: detected_changes_summary, CustomTags: md.CustomTags}
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, DBType: "postgres", MetricName: "object_changes", Data: detected_changes_summary, CustomTags: md.CustomTags}}
 	}
 }
 
@@ -1123,7 +1124,7 @@ func FilterPgbouncerData(data []map[string]interface{}, database_to_keep string)
 	return filtered_data
 }
 
-func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- MetricStoreMessage) {
+func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- []MetricStoreMessage) {
 	host_state := make(map[string]map[string]string) // sproc_hashes: {"sproc_name": "md5..."}
 	var db_pg_version decimal.Decimal
 	var err error
@@ -1170,7 +1171,7 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- Metri
 						data = FilterPgbouncerData(data, md.DBName)
 					}
 					if len(data) > 0 {
-						storage_ch <- MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags}
+						storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags}}
 					}
 				}
 			}
@@ -1676,34 +1677,33 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
-	Verbose                []bool `short:"v" long:"verbose" description:"Show verbose debug information" env:"PW2_VERBOSE"`
-	Host                   string `long:"host" description:"PG config DB host" default:"localhost" env:"PW2_PGHOST"`
-	Port                   string `short:"p" long:"port" description:"PG config DB port" default:"5432" env:"PW2_PGPORT"`
-	Dbname                 string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
-	User                   string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2" env:"PW2_PGUSER"`
-	Password               string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
-	Datastore              string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
-	InfluxHost             string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
-	InfluxPort             string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
-	InfluxDbname           string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
-	InfluxUser             string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
-	InfluxPassword         string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
-	InfluxSSL              string `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
-	InfluxHost2            string `long:"ihost2" description:"Influx host II" env:"PW2_IHOST2"`
-	InfluxPort2            string `long:"iport2" description:"Influx port II" env:"PW2_IPORT2"`
-	InfluxDbname2          string `long:"idbname2" description:"Influx DB name II" default:"pgwatch2" env:"PW2_IDATABASE2"`
-	InfluxUser2            string `long:"iuser2" description:"Influx user II" default:"root" env:"PW2_IUSER2"`
-	InfluxPassword2        string `long:"ipassword2" description:"Influx password II" default:"root" env:"PW2_IPASSWORD2"`
-	InfluxSSL2             string `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
-	InfluxRetentionDays    int64  `long:"iretentiondays" description:"Retention period in days [90 default]" env:"PW2_IRETENTIONDAYS"`
-	InfluxRetentionName    string `long:"iretentionname" description:"Retention policy name. [Default: pgwatch_def_ret]" default:"pgwatch_def_ret" env:"PW2_IRETENTIONNAME"`
-	InfluxBatching         string `long:"ibatching" description:"Send metric data in bulk" default:"false" env:"PW2_IBATCHING"`
-	InfluxBatchingMaxDelay int64  `long:"ibatching-max-delay" description:"Max seconds before sending metrics to Influx anyways [Default: 5]" default:"5" env:"PW2_IBATCHING_MAX_DELAY"`
-	GraphiteHost           string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
-	GraphitePort           string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
+	Verbose             []bool `short:"v" long:"verbose" description:"Show verbose debug information" env:"PW2_VERBOSE"`
+	Host                string `long:"host" description:"PG config DB host" default:"localhost" env:"PW2_PGHOST"`
+	Port                string `short:"p" long:"port" description:"PG config DB port" default:"5432" env:"PW2_PGPORT"`
+	Dbname              string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
+	User                string `short:"u" long:"user" description:"PG config DB host" default:"pgwatch2" env:"PW2_PGUSER"`
+	Password            string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
+	Datastore           string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
+	InfluxHost          string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
+	InfluxPort          string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
+	InfluxDbname        string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
+	InfluxUser          string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
+	InfluxPassword      string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
+	InfluxSSL           string `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
+	InfluxHost2         string `long:"ihost2" description:"Influx host II" env:"PW2_IHOST2"`
+	InfluxPort2         string `long:"iport2" description:"Influx port II" env:"PW2_IPORT2"`
+	InfluxDbname2       string `long:"idbname2" description:"Influx DB name II" default:"pgwatch2" env:"PW2_IDATABASE2"`
+	InfluxUser2         string `long:"iuser2" description:"Influx user II" default:"root" env:"PW2_IUSER2"`
+	InfluxPassword2     string `long:"ipassword2" description:"Influx password II" default:"root" env:"PW2_IPASSWORD2"`
+	InfluxSSL2          string `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
+	InfluxRetentionDays int64  `long:"iretentiondays" description:"Retention period in days [90 default]" env:"PW2_IRETENTIONDAYS"`
+	InfluxRetentionName string `long:"iretentionname" description:"Retention policy name. [Default: pgwatch_def_ret]" default:"pgwatch_def_ret" env:"PW2_IRETENTIONNAME"`
+	GraphiteHost        string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
+	GraphitePort        string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
 	// Params for running based on local config files, enabled distributed "push model" based metrics gathering. Metrics are sent directly to Influx/Graphite.
-	Config        string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
-	MetricsFolder string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
+	Config          string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
+	MetricsFolder   string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
+	BatchingDelayMs int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
 }
 
 var opts Options
@@ -1791,22 +1791,19 @@ func main() {
 	} else {
 		opts.InfluxSSL2 = "false"
 	}
-	if len(strings.TrimSpace(opts.InfluxBatching)) > 0 {
-		if _, err := strconv.ParseBool(opts.InfluxBatching); err != nil {
-			fmt.Println("Check --ibatching parameter - can be of: 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False")
-			return
-		}
-	} else {
-		opts.InfluxBatching = "false"
+
+	if opts.BatchingDelayMs < 0 || opts.BatchingDelayMs > 3600000 {
+		log.Fatal("--batching-delay-ms must be between 0 and 3600000")
 	}
 
-	control_channels := make(map[string](chan ControlMessage))  // [db1+metric1]=chan
-	buffered_persist_ch := make(chan MetricStoreMessage, 10000) // "staging area" for metric storage batching, when enabled
+	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
 	persist_ch := make(chan []MetricStoreMessage, 10000)
-
-	log.Info("starting MetricsBatcher...")
-	doBatching, _ := strconv.ParseBool(opts.InfluxBatching)
-	go MetricsBatcher(DATASTORE_INFLUX, doBatching, opts.InfluxBatchingMaxDelay, buffered_persist_ch, persist_ch)
+	var buffered_persist_ch chan []MetricStoreMessage
+	if opts.BatchingDelayMs > 0 {
+		buffered_persist_ch = make(chan []MetricStoreMessage, 10000) // "staging area" for metric storage batching, when enabled
+		log.Info("starting MetricsBatcher...")
+		go MetricsBatcher(DATASTORE_INFLUX, opts.BatchingDelayMs, buffered_persist_ch, persist_ch)
+	}
 
 	if opts.Datastore == "graphite" {
 		if opts.GraphiteHost == "" || opts.GraphitePort == "" {
@@ -1944,7 +1941,11 @@ func main() {
 				}
 				metric_fetching_channels_lock.Lock()
 				metric_fetching_channels[db_unique] = make(chan MetricFetchMessage, 100)
-				go MetricsFetcher(metric_fetching_channels[db_unique], buffered_persist_ch)
+				if opts.BatchingDelayMs > 0 {
+					go MetricsFetcher(metric_fetching_channels[db_unique], buffered_persist_ch)
+				} else {
+					go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch)
+				}
 				metric_fetching_channels_lock.Unlock()
 				time.Sleep(time.Millisecond * 250) // not to cause a huge load spike when starting the daemon with 20+ monitored DBs
 			}
