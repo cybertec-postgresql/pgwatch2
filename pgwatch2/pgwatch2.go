@@ -319,11 +319,10 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 	return monitoredDBs, err
 }
 
-func SendToInflux(connect_str, conn_id, dbname, measurement string, data [](map[string]interface{}), customTags map[string]string) error {
-	if data == nil || len(data) == 0 {
+func SendToInflux(connect_str, conn_id string, storeMessages []MetricStoreMessage) error {
+	if storeMessages == nil || len(storeMessages) == 0 {
 		return nil
 	}
-	log.Debug("SendToInflux", conn_id, "data[0] of ", len(data), ":", data[0])
 	ts_warning_printed := false
 	retries := 1 // 1 retry
 retry:
@@ -351,61 +350,76 @@ retry:
 		return err
 	}
 	rows_batched := 0
-	for _, dr := range data {
-		// Create a point and add to batch
-		var epoch_time time.Time
-		var epoch_ns int64
-		tags := make(map[string]string)
-		fields := make(map[string]interface{})
+	total_rows := 0
 
-		tags["dbname"] = dbname
-
-		if customTags != nil {
-			for k, v := range customTags {
-				tags[k] = fmt.Sprintf("%v", v)
-			}
-		}
-
-		for k, v := range dr {
-			if v == nil || v == "" {
-				continue // not storing NULLs
-			}
-			if k == EPOCH_COLUMN_NAME {
-				epoch_ns = v.(int64)
-			} else if strings.HasPrefix(k, "tag_") {
-				tag := k[4:]
-				tags[tag] = fmt.Sprintf("%v", v)
-			} else {
-				fields[k] = v
-			}
-		}
-
-		if epoch_ns == 0 {
-			if !ts_warning_printed && measurement != "pgbouncer_stats" {
-				log.Warning("No timestamp_ns found, server time will be used. measurement:", measurement)
-				ts_warning_printed = true
-			}
-			epoch_time = time.Now()
-		} else {
-			epoch_time = time.Unix(0, epoch_ns)
-		}
-
-		pt, err := client.NewPoint(measurement, tags, fields, epoch_time)
-
-		if err != nil {
-			log.Error("NewPoint failed:", err)
+	for _, msg := range storeMessages {
+		if msg.Data == nil || len(msg.Data) == 0 {
 			continue
 		}
+		log.Debug("SendToInflux", conn_id, "data[0] of ", len(msg.Data), ":", msg.Data[0])
 
-		bp.AddPoint(pt)
-		rows_batched += 1
+		for _, dr := range msg.Data {
+			// Create a point and add to batch
+			var epoch_time time.Time
+			var epoch_ns int64
+			tags := make(map[string]string)
+			fields := make(map[string]interface{})
+
+			total_rows += 1
+			tags["dbname"] = msg.DBUniqueName
+
+			if msg.CustomTags != nil {
+				for k, v := range msg.CustomTags {
+					tags[k] = fmt.Sprintf("%v", v)
+				}
+			}
+
+			for k, v := range dr {
+				if v == nil || v == "" {
+					continue // not storing NULLs
+				}
+				if k == EPOCH_COLUMN_NAME {
+					epoch_ns = v.(int64)
+				} else if strings.HasPrefix(k, "tag_") {
+					tag := k[4:]
+					tags[tag] = fmt.Sprintf("%v", v)
+				} else {
+					fields[k] = v
+				}
+			}
+
+			if epoch_ns == 0 {
+				if !ts_warning_printed && msg.MetricName != "pgbouncer_stats" {
+					log.Warning("No timestamp_ns found, server time will be used. measurement:", msg.MetricName)
+					ts_warning_printed = true
+				}
+				epoch_time = time.Now()
+			} else {
+				epoch_time = time.Unix(0, epoch_ns)
+			}
+
+			pt, err := client.NewPoint(msg.MetricName, tags, fields, epoch_time)
+
+			if err != nil {
+				log.Error("Calling NewPoint() of Influx driver failed. Datapoint dropped. Err:", err)
+				continue
+			}
+
+			bp.AddPoint(pt)
+			rows_batched += 1
+		}
 	}
 	t1 := time.Now()
 	err = c.Write(bp)
 	t_diff := time.Now().Sub(t1)
 	if err == nil {
-		log.Info(fmt.Sprintf("wrote %d/%d rows to InfluxDB %s for [%s:%s] in %dus", rows_batched, len(data),
-			conn_id, dbname, measurement, t_diff.Nanoseconds()/1000))
+		if len(storeMessages) == 1 {
+			log.Info(fmt.Sprintf("wrote %d/%d rows to InfluxDB %s for [%s:%s] in %dus", rows_batched, total_rows,
+				conn_id, storeMessages[0].DBUniqueName, storeMessages[0].MetricName, t_diff.Nanoseconds()/1000))
+		} else {
+			log.Info(fmt.Sprintf("wrote %d/%d rows from %d metric sets to InfluxDB %s in %dus", rows_batched, total_rows,
+				len(storeMessages), conn_id, t_diff.Nanoseconds()/1000))
+		}
 	}
 	return err
 }
@@ -522,19 +536,25 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 
 	for retry_queue.Len() > 0 { // send over the whole re-try queue at once if connection works
 		log.Info("Processing InfluxDB retry_queue", conn_ident, ". Items in retry_queue: ", retry_queue.Len())
-		msg := retry_queue.Back().Value.(MetricStoreMessage)
+		msg := retry_queue.Back().Value.([]MetricStoreMessage)
 
 		if data_source == DATASTORE_INFLUX {
-			err = SendToInflux(conn_str, conn_ident, msg.DBUniqueName, msg.MetricName, msg.Data, msg.CustomTags)
+			err = SendToInflux(conn_str, conn_ident, msg)
 		} else if data_source == DATASTORE_GRAPHITE {
-			err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
+			for _, m := range msg {
+				err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO
+			}
 		} else {
 			log.Fatal("Invalid datastore:", data_source)
 		}
 		if err != nil {
 			if data_source == DATASTORE_INFLUX && strings.Contains(err.Error(), "unable to parse") {
-				log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
-					msg.DBUniqueName, msg.MetricName, msg.Data)) // ignore data points consisting of anything else than strings and floats
+				if len(msg) == 1 { // can only pinpoint faulty input data without batching
+					log.Error(fmt.Sprintf("Dropping %d metric [%s:%s] as Influx is unable to parse the data: %s",
+						msg[0].DBUniqueName, msg[0].MetricName, msg[0].Data)) // ignore data points consisting of anything else than strings and floats
+				} else {
+					log.Errorf("Dropping %d metric-sets as Influx is unable to parse the data: %s", len(msg), err)
+				}
 			} else {
 				return err // still gone, retry later
 			}
@@ -549,8 +569,44 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 	return nil
 }
 
-// TODO batching of mutiple datasets
-func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
+func MetricsBatcher(data_store string, batchingMaxDelayMillis int64, buffered_storage_ch <-chan []MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) {
+	if batchingMaxDelayMillis <= 0 {
+		log.Fatalf("Check --batching-max-delay-ms, zero/negative batching delay:", batchingMaxDelayMillis)
+	}
+	var datapointCounter int = 0
+	var maxBatchSize int = 1000            // flush on maxBatchSize or batchingMaxDelayMillis
+	batch := make([]MetricStoreMessage, 0) // no size limit here as limited in persister already
+	ticker := time.NewTicker(time.Millisecond * time.Duration(batchingMaxDelayMillis))
+
+	for {
+		select {
+		case <-ticker.C:
+			if len(batch) > 0 {
+				flushed := make([]MetricStoreMessage, len(batch))
+				copy(flushed, batch)
+				log.Infof("Flushing %d metric datasets due to batching timeout", len(batch))
+				storage_ch <- flushed
+				batch = make([]MetricStoreMessage, 0)
+				datapointCounter = 0
+			}
+		case msg := <-buffered_storage_ch:
+			for _, m := range msg { // in reality msg are sent by fetchers one by one though
+				batch = append(batch, m)
+				datapointCounter += len(m.Data)
+				if datapointCounter > maxBatchSize { // flush. also set some last_sent_timestamp so that ticker would pass a round?
+					flushed := make([]MetricStoreMessage, len(batch))
+					copy(flushed, batch)
+					log.Infof("Flushing %d metric datasets due to maxBatchSize limit of %d datapoints", len(batch), maxBatchSize)
+					storage_ch <- flushed
+					batch = make([]MetricStoreMessage, 0)
+					datapointCounter = 0
+				}
+			}
+		}
+	}
+}
+
+func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage) {
 	var last_try = make([]time.Time, influx_host_count)          // if Influx errors out, don't retry before 10s
 	var last_drop_warning = make([]time.Time, influx_host_count) // log metric points drops every 10s to not overflow logs in case Influx is down for longer
 	var retry_queues = make([]*list.List, influx_host_count)     // separate queues for all Influx hosts
@@ -564,7 +620,8 @@ func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
 
 	for {
 		select {
-		case msg := <-storage_ch:
+		case msg_arr := <-storage_ch:
+
 			for i, retry_queue := range retry_queues {
 
 				retry_queue_length := retry_queue.Len()
@@ -579,24 +636,31 @@ func MetricsPersister(data_store string, storage_ch <-chan MetricStoreMessage) {
 							points_dropped[i] = 0
 						}
 					}
-					retry_queue.PushFront(msg)
+					retry_queue.PushFront(msg_arr)
 				} else {
 					if data_store == DATASTORE_INFLUX {
-						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg.DBUniqueName, msg.MetricName, msg.Data, msg.CustomTags)
+						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg_arr)
 					} else if data_store == DATASTORE_GRAPHITE {
-						err = SendToGraphite(msg.DBUniqueName, msg.MetricName, msg.Data)
+						for _, m := range msg_arr {
+							err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO
+						}
 					} else {
 						log.Fatal("Invalid datastore:", data_store)
 					}
 					last_try[i] = time.Now()
 					if err != nil {
 						if strings.Contains(err.Error(), "unable to parse") {
-							log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
-								msg.DBUniqueName, msg.MetricName, msg.Data)) // ignore data points consisting of anything else than strings and floats
+							if len(msg_arr) == 1 {
+								log.Errorf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
+									msg_arr[0].DBUniqueName, msg_arr[0].MetricName, msg_arr[0].Data) // ignore data points consisting of anything else than strings and floats
+							} else {
+								log.Errorf("Dropping %d metric-sets as Influx is unable to parse the data: %s", len(msg_arr), err)
+								// TODO loop over single metrics in case of errors?
+							}
 						} else {
 							log.Error(fmt.Sprintf("Failed to write into datastore %d: %s", i, err))
 							in_error[i] = true
-							retry_queue.PushFront(msg)
+							retry_queue.PushFront(msg_arr)
 						}
 					}
 				}
@@ -705,7 +769,7 @@ func GetSQLForMetricPGVersion(metric string, pgVer decimal.Decimal, metricDefMap
 	return mdm[metric][best_ver], nil
 }
 
-func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -782,13 +846,13 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	}
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "sproc_changes", Data: detected_changes, CustomTags: md.CustomTags}
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "sproc_changes", Data: detected_changes, CustomTags: md.CustomTags}}
 	}
 
 	return change_counts
 }
 
-func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -865,13 +929,13 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "table_changes", Data: detected_changes, CustomTags: md.CustomTags}
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "table_changes", Data: detected_changes, CustomTags: md.CustomTags}}
 	}
 
 	return change_counts
 }
 
-func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -946,13 +1010,13 @@ func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	}
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "index_changes", Data: detected_changes, CustomTags: md.CustomTags}
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "index_changes", Data: detected_changes, CustomTags: md.CustomTags}}
 	}
 
 	return change_counts
 }
 
-func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -1000,13 +1064,13 @@ func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, 
 
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "configuration_changes", Data: detected_changes, CustomTags: md.CustomTags}
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "configuration_changes", Data: detected_changes, CustomTags: md.CustomTags}}
 	}
 
 	return change_counts
 }
 
-func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- MetricStoreMessage, host_state map[string]map[string]string) {
+func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) {
 	sproc_counts := DetectSprocChanges(dbUnique, db_pg_version, storage_ch, host_state) // TODO some of Detect*() code could be unified...
 	table_counts := DetectTableChanges(dbUnique, db_pg_version, storage_ch, host_state)
 	index_counts := DetectIndexChanges(dbUnique, db_pg_version, storage_ch, host_state)
@@ -1035,7 +1099,7 @@ func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Deci
 		influx_entry["epoch_ns"] = time.Now().UnixNano()
 		detected_changes_summary = append(detected_changes_summary, influx_entry)
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- MetricStoreMessage{DBUniqueName: dbUnique, DBType: "postgres", MetricName: "object_changes", Data: detected_changes_summary, CustomTags: md.CustomTags}
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, DBType: "postgres", MetricName: "object_changes", Data: detected_changes_summary, CustomTags: md.CustomTags}}
 	}
 }
 
@@ -1060,7 +1124,7 @@ func FilterPgbouncerData(data []map[string]interface{}, database_to_keep string)
 	return filtered_data
 }
 
-func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- MetricStoreMessage) {
+func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- []MetricStoreMessage) {
 	host_state := make(map[string]map[string]string) // sproc_hashes: {"sproc_name": "md5..."}
 	var db_pg_version decimal.Decimal
 	var err error
@@ -1107,7 +1171,7 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- Metri
 						data = FilterPgbouncerData(data, md.DBName)
 					}
 					if len(data) > 0 {
-						storage_ch <- MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags}
+						storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags}}
 					}
 				}
 			}
@@ -1637,8 +1701,9 @@ type Options struct {
 	GraphiteHost        string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
 	GraphitePort        string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
 	// Params for running based on local config files, enabled distributed "push model" based metrics gathering. Metrics are sent directly to Influx/Graphite.
-	Config        string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
-	MetricsFolder string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
+	Config          string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
+	MetricsFolder   string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
+	BatchingDelayMs int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
 }
 
 var opts Options
@@ -1727,8 +1792,18 @@ func main() {
 		opts.InfluxSSL2 = "false"
 	}
 
+	if opts.BatchingDelayMs < 0 || opts.BatchingDelayMs > 3600000 {
+		log.Fatal("--batching-delay-ms must be between 0 and 3600000")
+	}
+
 	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
-	persist_ch := make(chan MetricStoreMessage, 1000)
+	persist_ch := make(chan []MetricStoreMessage, 10000)
+	var buffered_persist_ch chan []MetricStoreMessage
+	if opts.BatchingDelayMs > 0 {
+		buffered_persist_ch = make(chan []MetricStoreMessage, 10000) // "staging area" for metric storage batching, when enabled
+		log.Info("starting MetricsBatcher...")
+		go MetricsBatcher(DATASTORE_INFLUX, opts.BatchingDelayMs, buffered_persist_ch, persist_ch)
+	}
 
 	if opts.Datastore == "graphite" {
 		if opts.GraphiteHost == "" || opts.GraphitePort == "" {
@@ -1763,6 +1838,7 @@ func main() {
 			influx_host_count = 2
 		}
 		log.Info("InfluxDB connection(s) OK")
+
 		log.Info("starting InfluxPersister...")
 		go MetricsPersister(DATASTORE_INFLUX, persist_ch)
 	}
@@ -1865,7 +1941,11 @@ func main() {
 				}
 				metric_fetching_channels_lock.Lock()
 				metric_fetching_channels[db_unique] = make(chan MetricFetchMessage, 100)
-				go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch)
+				if opts.BatchingDelayMs > 0 {
+					go MetricsFetcher(metric_fetching_channels[db_unique], buffered_persist_ch)
+				} else {
+					go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch)
+				}
 				metric_fetching_channels_lock.Unlock()
 				time.Sleep(time.Millisecond * 250) // not to cause a huge load spike when starting the daemon with 20+ monitored DBs
 			}
