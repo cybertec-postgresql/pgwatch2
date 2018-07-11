@@ -154,13 +154,16 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 	ret := make([]map[string]interface{}, 0)
 	var rows *sqlx.Rows
 	var err error
-	if host_ident == "x" {
-		log.Error("HERE")
-		rows, err = conn.Queryx(sql, "bench", "bench")
-	} else {
-		rows, err = conn.Queryx(sql, args...)
-	}
+
+	rows, err = conn.Queryx(sql, args...)
+
 	if err != nil {
+		conn.Close()
+		monitored_db_conn_cache_lock.Lock()
+		defer monitored_db_conn_cache_lock.Unlock()
+		if _, ok := monitored_db_conn_cache[host_ident]; ok {
+			monitored_db_conn_cache[host_ident] = nil
+		}
 		// connection problems or bad queries etc are quite common so caller should decide if to output something
 		log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
 		return nil, err
