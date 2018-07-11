@@ -13,3 +13,4 @@ go get -u github.com/influxdata/influxdb/client/v2
 go get -u github.com/jessevdk/go-flags
 go get -u github.com/marpaia/graphite-golang
 go get -u github.com/shopspring/decimal
+go get -u gopkg.in/yaml.v2
