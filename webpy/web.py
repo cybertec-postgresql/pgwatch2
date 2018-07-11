@@ -9,6 +9,7 @@ from pathlib import Path
 import cherrypy
 import time
 import datadb
+import influxdb
 import pgwatch2_influx
 import psycopg2
 import requests
@@ -88,10 +89,9 @@ class Root:
         if params:
             try:
                 if params.get('save'):
-                    pgwatch2.update_monitored_db(params)
-                    messages.append('Updated!')
+                    messages += pgwatch2.update_monitored_db(params)
                 elif params.get('new'):
-                    messages.append(pgwatch2.insert_monitored_db(params))
+                    messages += pgwatch2.insert_monitored_db(params)
                 elif params.get('delete'):
                     pgwatch2.delete_monitored_db(params)
                     messages.append('Entry with ID {} ("{}") deleted!'.format(
@@ -106,13 +106,15 @@ class Root:
                     deleted_dbnames = pgwatch2_influx.delete_influx_data_all(active_dbs)
                     messages.append('InfluxDB data deleted for: {}'.format(','.join(deleted_dbnames)))
             except Exception as e:
+                logging.exception('Changing DBs failed')
                 messages.append('ERROR: ' + str(e))
 
         try:
             influx_active_dbnames = pgwatch2_influx.get_active_dbnames()
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, influxdb.exceptions.InfluxDBClientError):
             messages.append('ERROR: Could not connect to InfluxDB')
         except Exception as e:
+            logging.exception('ERROR')
             messages.append('ERROR: ' + str(e))
 
         try:
@@ -231,7 +233,7 @@ class Root:
                                                                       sort_column,
                                                                       start_time,
                                                                       (end_time if end_time else datetime.utcnow().isoformat() + 'Z'))
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, influxdb.exceptions.InfluxDBClientError):
             messages.append('ERROR - Could not connect to InfluxDB')
         except psycopg2.OperationalError:
             messages.append('ERROR - Could not connect to Postgres')
@@ -262,7 +264,7 @@ if __name__ == '__main__':
     # PgWatch2
     parser.add_argument(
         '-v', '--verbose', help='Chat level. none(default)|-v|-vv [$VERBOSE=[0|1|2]]', action='count', default=(os.getenv('PW2_VERBOSE') or 0))
-    parser.add_argument('--no-anonymous-access', help='If set no login required to configure monitoring/metrics',
+    parser.add_argument('--no-anonymous-access', help='If set, login is required to configure monitoring/metrics',
                         action='store_true', default=(os.getenv('PW2_WEBNOANONYMOUS') or False))
     parser.add_argument('--admin-user', help='Username for login',
                         default=(os.getenv('PW2_WEBUSER') or 'admin'))

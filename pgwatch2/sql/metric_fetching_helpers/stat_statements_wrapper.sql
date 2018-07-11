@@ -15,19 +15,37 @@ thus the "if" in code
 
 DO $OUTER$
 DECLARE
+  l_pgver double precision;
   l_sproc_text text := $SQL$
 CREATE OR REPLACE FUNCTION public.get_stat_statements() RETURNS SETOF pg_stat_statements AS
 $$
   select s.* from pg_stat_statements s join pg_database d on d.oid = s.dbid and d.datname = current_database()
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 $SQL$;
+  l_sproc_text_queryid text := $SQL$
+CREATE OR REPLACE FUNCTION public.get_stat_statements() RETURNS TABLE (
+	queryid int8, query text, calls int8, total_time float8, rows int8, shared_blks_hit int8, shared_blks_read int8,
+	shared_blks_dirtied int8, shared_blks_written int8, local_blks_hit int8, local_blks_read int8, local_blks_dirtied int8,
+	local_blks_written int8, temp_blks_read int8, temp_blks_written int8, blk_read_time float8, blk_write_time float8,
+  userid int8, dbid int8
+) AS
+$$
+begin
+  return query
+  	select (regexp_replace(md5(s.query), E'\\D', '', 'g'))::varchar(10)::int8 as queryid,
+  	s.query, s.calls, s.total_time, s.rows, s.shared_blks_hit, s.shared_blks_read, s.shared_blks_dirtied, s.shared_blks_written,
+  	s.local_blks_hit, s.local_blks_read, s.local_blks_dirtied, s.local_blks_written, s.temp_blks_read, s.temp_blks_written,
+  	s.blk_read_time, s.blk_write_time, s.userid::int8, s.dbid::int8
+  from pg_stat_statements s join pg_database d on d.oid = s.dbid and d.datname = current_database();
+  end;
+$$ LANGUAGE plpgsql VOLATILE SECURITY DEFINER;
+$SQL$;
 BEGIN
-  PERFORM 1 from pg_views where viewname = 'pg_stat_statements';
-  IF (regexp_matches(
+  SELECT ((regexp_matches(
       regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'),
-        E'\\d+\\.?\\d+?')
-      )[1]::double precision > 9.1 THEN   --parameters normalized only from 9.2
-    EXECUTE format(l_sproc_text);
+        E'\\d+\\.?\\d+?'))[1])::double precision INTO l_pgver;
+  IF l_pgver > 9.1 THEN   --parameters normalized only from 9.2
+      EXECUTE format(CASE WHEN l_pgver > 9.3 THEN l_sproc_text ELSE l_sproc_text_queryid END);
     EXECUTE 'REVOKE EXECUTE ON FUNCTION public.get_stat_statements() FROM PUBLIC;';
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_stat_statements() TO pgwatch2';
     EXECUTE 'COMMENT ON FUNCTION public.get_stat_statements() IS ''created for pgwatch2''';

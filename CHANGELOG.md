@@ -6,6 +6,50 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.3.7 [2018-06-10]
+
+* Fix - Openshift/nonroot Docker image was failing on container re-launch due to Postgres SSL false handling
+* Fix - setting Grafana SSL via env working now again 
+* Dashboards - new "Global Overview" dash added for aggregates over all or a set of DBs
+* Dashboards - new "Top Sprocs" dash added. Similar to "State Statements Top"
+* Dashboards - "Overview" dash "avg. query runtime" more accurate now as pgwatch2 queries are excluded from calculation
+* Improvement - stat_statements_calls doesn't need superuser anymore
+* Metrics - increase default metric intervals for "multipliable" data i.e. metrics that grow proportional to the amount of objects
+* Metrics - added total_time to stat_statements_calls for fast (approximate) avg. query runtime calculation
+* Docker - SSL keys are now not re-generated on evey launch        
+* Web UI - better error handling when Influx DB is not there  
+* InfluxDB 1.5.1 -> 1.5.3
+* Grafana 5.0.4 -> 5.1.3
+
+
+## v1.3.6 [2018-04-12]
+
+* Admin UI fix - remove confusing error messages shown on existing connection string updates
+* Improvement - stat_statements_calls doesn't need superuser anymore
+* Security improvement - only showing pg_stat_activity info on the taget DB
+* Metric fix - helper (for superuser auto-create) for bloat was missing
+* Gatherer - fix "auto-create" of metric fetching helpers (effective when "Is superuser?" checked on Admin page)
+* "Overview" dashboard - minor adjustments
+* InfluxDB 1.5.0 -> 1.5.1
+
+
+## v1.3.5 [2018-04-02]
+
+* Fix - When using volumes, Postgres Bootstrap was correctly done only for volumes created with "docker volume"
+* Fix - Gatherer was always re-logging metric interval change events
+* Improvement - 'Stat statements top' dasboard compatibility for older Influx versions (@dankasak)
+* Metric improvement - "backends" now has separate parallel query workers counter for PG10+
+* Metric/dash improvement - "Sproc details" now based on fully qualified procedure names
+* Minor dashboard improvements - "Table details" and "Overview" adjusted for less jumpy graphs on default settings. NB! If migrating an existing setup it is highly recommended to re-import the following dashboards: "Table details", "Overview", "Sproc details"
+* Web UI Improvement - showing a warning on "DBs" page if changing the connect string but can't actually connect using it
+* README improvements - info on "track_io_timing", component diagram added, new screenshots, project background
+* Logging improvement - in some case root cause errors were masked in logs. Better "empty metric SQL" messages
+* Logging improvement - remove duplicate event times and milliseconds
+* Openshift template - added missing PW2_IRETENTIONDAYS to env vars
+* InfluxDB 1.5.0
+* Grafana 5.0.4 - old v4 dashboards are now in a separate folder (./grafana_dashboards/v4)
+* Go 1.10.1
+
 ## v1.3.0 [2018-01-26]
 
 * Dockerfile/image running as "non-root" user, suitable for example for OpenShift deployments

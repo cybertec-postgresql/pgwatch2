@@ -42,10 +42,13 @@ create table pgwatch2.monitored_db (
     md_last_modified_on timestamptz not null default now(),
     md_statement_timeout_seconds int not null default 5,   -- metrics queries will be canceled after so many seconds
     md_dbtype text not null default 'postgres',
+    md_include_pattern text,    -- valid regex expected. relevant for 'postgres-continuous-discovery'
+    md_exclude_pattern text,    -- valid regex expected. relevant for 'postgres-continuous-discovery'
+    md_custom_tags jsonb,
     UNIQUE (md_unique_name),
     CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':'),
     CHECK (md_sslmode in ('disable', 'require', 'verify-full')),
-    CHECK (md_dbtype in ('postgres', 'pgbouncer'))
+    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery'))
 );
 
 create unique index on monitored_db(md_hostname, md_port, md_dbname, md_is_enabled); -- prevent multiple active workers for the same db
@@ -85,10 +88,10 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "cpu_load": 60,
     "wal": 60,
     "db_stats": 60,
-    "table_stats": 60,
-    "index_stats": 60,
-    "stat_statements": 60,
-    "sproc_stats": 60
+    "table_stats": 120,
+    "index_stats": 120,
+    "stat_statements": 120,
+    "sproc_stats": 120
     }'),
     ('pgbouncer', 'per DB stats',
     '{
@@ -100,18 +103,18 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "bgwriter": 60,
     "cpu_load": 60,
     "db_stats": 60,
-    "index_stats": 60,
+    "index_stats": 120,
     "locks": 60,
     "locks_mode": 60,
     "replication": 60,
     "sproc_stats": 60,
-    "stat_statements": 60,
+    "stat_statements": 120,
     "stat_statements_calls": 60,
-    "table_io_stats": 60,
-    "table_stats": 60,
+    "table_io_stats": 120,
+    "table_stats": 120,
     "wal": 60,
     "change_events": 300,
-    "table_bloat_approx_summary": 300
+    "table_bloat_approx_summary": 7200
     }');
 
 /* one host for demo purposes, so that "docker run" could immediately show some graphs */

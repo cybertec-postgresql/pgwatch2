@@ -3,7 +3,7 @@ import psycopg2
 import psycopg2.extras
 
 
-connection_string = "host=localhost dbname=pgwatch2 user=postgres password=postgres connect_timeout='3'"
+connection_string = "host=localhost dbname=pgwatch2 user=pgwatch2 password=pgwatch2 connect_timeout='3'"
 
 
 def setConnectionString(conn_string):
@@ -70,7 +70,7 @@ def executeOnRemoteHost(sql, host, port, dbname, user, password='', sslmode='pre
             result = [{'rows_affected': str(cur.rowcount)}]
     except Exception as e:
         if quiet:
-            logging.exception('failed to execute "{}" on remote host "{}:{}"'.format(sql))
+            logging.exception('failed to execute "{}" on remote host "{}:{}"'.format(sql, host, port))
             return result, str(e)
         else:
             raise

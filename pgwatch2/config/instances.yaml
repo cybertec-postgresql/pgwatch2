@@ -1,0 +1,34 @@
+- unique_name: test1  # functions also as prefix for found DBs if using patterns/continous discovery
+  dbtype: postgres    # postgres|pgbouncer|postgres-continuous-discovery
+  host: localhost
+  port: 5435
+  dbname: pgwatch2
+  user: krl
+  password: krl
+  sslmode: disable
+  stmt_timeout: 5
+  is_superuser: true
+  preset_metrics: minimal
+  custom_metrics:    # if both preset and custom are specified, custom wins
+  dbname_include_pattern:
+  dbname_exclude_pattern:
+  is_enabled: true
+  custom_tags:      # possibility for the user to add extra Influx tags
+    env: prod
+    cloud: aws
+
+- unique_name: test2
+  dbtype: postgres
+  host: localhost
+  port: 5432
+  dbname: ''
+  user: krl
+  password: krl
+  sslmode: disable
+  stmt_timeout: 5
+  preset_metrics:
+  custom_metrics:
+    wal: 60
+  dbname_include_pattern: (bar|postgres)
+  dbname_exclude_pattern:
+  is_enabled: false

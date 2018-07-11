@@ -1,0 +1,94 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "content": "# Available measurements (InfluxDB \"tables\" with metric info) overview\n\n### NB! Metrics that are actually gathered need to be configured for every DB separately - for that open the Web UI config page [here](http://0.0.0.0:8080/dbs)  or modify the \"pgwatch2.monitored_host\" table directly in the \"pgwatch2\" database\n\n* **backends** - active, total, waiting sessions\n* **pgbouncer_stats** - pgbouncer (1.8+) statistics\n* **bgwriter** - pg_stat_bgwriter snapshots\n* **blocking_locks** - detailed info on sessions that are waiting\n* **cpu_load** - CPU load info acquired via a plpython sproc (/pgwatch2/sql/metric_fetching_helpers/)\n* **db_stats** - pg_stat_database snapshots + DB size info\n* **index_stats** - pg_stat_user_indexes snapshots\n* **kpi** - most important high level metrics\n* **locks** - different locktype (page, tuple, ...) counts. NB! for usable data one should set the polling interval very low\n* **locks_mode** - different lock-mode (exclusive, share) counts. NB! for usable data one should set the polling interval very low\n* **replication** - pg_stat_replication info (including replica lag)\n* **sproc_stats** - pg_stat_user_functions snapshots\n* **table_io_stats** - pg_statio_user_tables snapshots\n* **stat_statements** - pg_stat_statements snapshots (requires the extension)\n* **stat_statements_calls** - total query count according to pg_stat_statements\n* **table_bloat_approx_summary** - bloat summary for the whole DB (needs *pgstattuple* extension)\n* **table_stats** - pg_stat_user_tables snapshots\n* **wal** - pg_current_(xlog_location|wal_lsn) values\n\n# For getting started with Grafana in general start [here](http://docs.grafana.org/guides/getting_started/)\n\n\n\n# For learning InfluxDB query language InfluxQL start [here](https://docs.influxdata.com/influxdb/latest/query_language/)\n\n# When stuck then additional support and consultations are available from Cybertec [here](https://www.cybertec-postgresql.com/en/contact/)",
+      "editable": true,
+      "error": false,
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "links": [],
+      "mode": "markdown",
+      "title": "Documentation",
+      "type": "text"
+    },
+    {
+      "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2017/11/Cybertec_Logo_2017_300px_slogan_trans.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "editable": true,
+      "error": false,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 2,
+      "links": [],
+      "mode": "html",
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    }
+  ],
+  "schemaVersion": 16,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Documentation",
+  "uid": null,
+  "version": 1
+}

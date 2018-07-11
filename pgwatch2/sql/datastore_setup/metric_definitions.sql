@@ -6,7 +6,7 @@ values (
 9.0,
 $sql$
 with sa_snapshot as (
-  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%' and datname = current_database()
+  select * from public.get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -30,7 +30,7 @@ values (
 9.6,
 $sql$
 with sa_snapshot as (
-  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%' and datname = current_database()
+  select * from public.get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -54,24 +54,24 @@ values (
 10,
 $sql$
 with sa_snapshot as (
-  select * from get_stat_activity()
+  select * from public.get_stat_activity()
   where pid != pg_backend_pid()
   and datname = current_database()
-  and backend_type = 'client backend'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot) as total,
-  (select count(*) from sa_snapshot where state = 'active') as active,
-  (select count(*) from sa_snapshot where state = 'idle') as idle,
-  (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
-  (select count(*) from sa_snapshot where wait_event_type is not null) as waiting,
+  (select count(*) from sa_snapshot where backend_type = 'background worker') as background_workers,
+  (select count(*) from sa_snapshot where state = 'active' and backend_type = 'client backend') as active,
+  (select count(*) from sa_snapshot where state = 'idle' and backend_type = 'client backend') as idle,
+  (select count(*) from sa_snapshot where state = 'idle in transaction' and backend_type = 'client backend') as idleintransaction,
+  (select count(*) from sa_snapshot where wait_event_type is not null and backend_type = 'client backend') as waiting,
   (select extract(epoch from (now() - backend_start))::int
-    from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
+    from sa_snapshot where backend_type = 'client backend' order by backend_start limit 1) as longest_session_seconds,
   (select extract(epoch from (now() - xact_start))::int
-    from sa_snapshot where xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
+    from sa_snapshot where xact_start is not null and backend_type = 'client backend' order by xact_start limit 1) as longest_tx_seconds,
   (select extract(epoch from max(now() - query_start))::int
-    from sa_snapshot where state = 'active') as longest_query_seconds;
+    from sa_snapshot where state = 'active' and backend_type = 'client backend') as longest_query_seconds;
 $sql$
 );
 
@@ -191,7 +191,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM public.get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -236,7 +236,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM public.get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -281,7 +281,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM public.get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -361,6 +361,7 @@ SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   schemaname::text AS tag_schema,
   funcname::text  AS tag_function_name,
+  quote_ident(schemaname)||'.'||quote_ident(funcname) as tag_function_full_name,
   p.oid as tag_oid, -- for overloaded funcs
   calls as sp_calls,
   self_time,
@@ -577,9 +578,10 @@ values (
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  sum(calls) as calls
+  sum(calls) as calls,
+  sum(total_time) as total_time
 from
-  public.pg_stat_statements
+  public.get_stat_statements();
 $sql$
 );
 
@@ -643,7 +645,7 @@ SELECT
   count(*)
 FROM
   pg_stat_ssl AS s,
-  get_stat_activity() AS a
+  public.get_stat_activity() AS a
 WHERE
   a.pid = s.pid
   AND a.datname = current_database()
@@ -807,7 +809,7 @@ $sql$
 /* Stored procedure needed for fetching stat_statements data - needs pg_stat_statements extension enabled on the machine!
  NB! approx_free_percent is just an average. more exact way would be to calculate a weighed average in Go
 */
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_is_helper)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
 values (
 'get_table_bloat_approx',
 9.5,
@@ -838,6 +840,7 @@ COMMENT ON FUNCTION public.get_table_bloat_approx() is 'created for pgwatch2';
 
 COMMIT;
 $sql$,
+'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
 true
 );
 
@@ -1092,7 +1095,7 @@ BEGIN
       )[1]::double precision > 9.1 THEN   --parameters normalized only from 9.2
     EXECUTE format(l_sproc_text);
     EXECUTE 'REVOKE EXECUTE ON FUNCTION public.get_stat_statements() FROM PUBLIC;';
-    --EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_stat_statements() TO pgwatch2';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_stat_statements() TO pgwatch2';
     EXECUTE 'COMMENT ON FUNCTION public.get_stat_statements() IS ''created for pgwatch2''';
   END IF;
 END;
@@ -1110,4 +1113,42 @@ values (
 'show stats',
 'pgbouncer per db statistics',
 false
+);
+
+/* Stored procedure needed for fetching backend/session data */
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
+values (
+'get_stat_activity',
+9.0,
+$sql$
+
+CREATE OR REPLACE FUNCTION public.get_stat_activity() RETURNS SETOF pg_stat_activity AS
+$$
+  select * from pg_stat_activity where datname = current_database()
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+
+REVOKE EXECUTE ON FUNCTION public.get_stat_activity() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_stat_activity() TO pgwatch2;
+COMMENT ON FUNCTION public.get_stat_activity() IS 'created for pgwatch2';
+
+$sql$,
+'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
+true
+);
+
+/* replication slot info */
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'replication_slots',
+9.0,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  slot_name::text as tag_slot_name,
+  coalesce(plugin, 'physical')::text as plugin,
+  active
+from
+  pg_replication_slots;
+$sql$
 );

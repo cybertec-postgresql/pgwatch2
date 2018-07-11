@@ -39,13 +39,11 @@ objects:
             livenessProbe:
               exec:
                 command:
-                - /usr/bin/psql
-                - -U
+                - /usr/bin/pg_isready
+                - -qU
                 - pgwatch2
-                - -qc
-                - "'select 1'"
               initialDelaySeconds: 30
-              periodSeconds: 5
+              periodSeconds: 30
             env:
               - name: NOTESTDB
                 value: ${NOTESTDB}
@@ -85,6 +83,8 @@ objects:
                 value: ${PW2_IPASSWORD}
               - name: PW2_ISSL
                 value: ${PW2_ISSL}
+              - name: PW2_IRETENTIONDAYS
+                value: ${PW2_IRETENTIONDAYS}
               - name: PW2_DATASTORE
                 value: ${PW2_DATASTORE}
               - name: PW2_GRAPHITEHOST
@@ -160,7 +160,7 @@ parameters:
   value: ""
 - description: Passoword protect config changes via the Web UI. Disabled by default
   name: PW2_WEBNOANONYMOUS
-  value: "false"
+  value: ""
 - description: Web UI admin user
   name: PW2_WEBUSER
   value: "admin"
@@ -215,6 +215,9 @@ parameters:
 - description: External Influx DB - require SSL
   name: PW2_ISSL
   value: "false"
+- description: Influx DB metrics retention period in days
+  name: PW2_IRETENTIONDAYS
+  value: "90"
 - description: Set to "graphite" to use external Graphite server as metrics datastore
   name: PW2_DATASTORE
   value: "influx"
