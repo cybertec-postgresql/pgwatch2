@@ -3,6 +3,6 @@ select
   slot_name::text as tag_slot_name,
   coalesce(plugin, 'physical')::text as tag_plugin,
   active,
-  pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn) as restart_lsn_lag_b
+  pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) as restart_lsn_lag_b
 from
   pg_replication_slots;

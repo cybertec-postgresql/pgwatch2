@@ -323,8 +323,9 @@ $sql$
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   application_name as tag_application_name,
-  coalesce(pg_xlog_location_diff(pg_current_xlog_location(), replay_location)::int8, 0) as lag_b,
-  coalesce(client_addr::text, client_hostname) as client_info,
+  coalesce(client_addr::text, client_hostname) as tag_client_info,
+  coalesce(pg_xlog_location_diff(pg_current_xlog_location(), write_location)::int8, 0) as write_lag_b,
+  coalesce(pg_xlog_location_diff(pg_current_xlog_location(), replay_location)::int8, 0) as replay_lag_b,
   state
 from
   pg_stat_replication;
@@ -341,11 +342,13 @@ $sql$
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   application_name as tag_application_name,
-  coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)::int8, 0) as lag_b,
-  coalesce(client_addr::text, client_hostname) as client_info,
+  coalesce(client_addr::text, client_hostname) as tag_client_info,
+  coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), write_lsn)::int8, 0) as write_lag_b,
+  coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)::int8, 0) as replay_lag_b,
   state
 from
   pg_stat_replication;
+
 $sql$
 );
 
@@ -1141,13 +1144,31 @@ true
 insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'replication_slots',
-9.0,
+9.4,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  slot_name::text as tag_slot_name,
+  coalesce(plugin, 'physical')::text as tag_plugin,
+  active,
+  pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn) as restart_lsn_lag_b
+from
+  pg_replication_slots;
+$sql$
+);
+
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'replication_slots',
+10,
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   slot_name::text as tag_slot_name,
   coalesce(plugin, 'physical')::text as plugin,
-  active
+  active,
+  pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) as restart_lsn_lag_b
 from
   pg_replication_slots;
 $sql$
