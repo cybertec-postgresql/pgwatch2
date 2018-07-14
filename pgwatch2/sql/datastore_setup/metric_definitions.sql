@@ -1030,7 +1030,7 @@ select
   quote_ident(nspname)||'.'||quote_ident(c.relname) as tag_index,
   quote_ident(nspname)||'.'||quote_ident(r.relname) as "table",
   i.indisvalid::text as is_valid,
-  md5(pg_get_indexdef(c.oid))
+  coalesce(md5(pg_get_indexdef(i.indexrelid)), random()::text) as md5
 from
   pg_index i
   join
@@ -1151,6 +1151,7 @@ select
   slot_name::text as tag_slot_name,
   coalesce(plugin, 'physical')::text as tag_plugin,
   active,
+  case when active then 0 else 1 end as non_active_int,
   pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn) as restart_lsn_lag_b
 from
   pg_replication_slots;
@@ -1168,6 +1169,7 @@ select
   slot_name::text as tag_slot_name,
   coalesce(plugin, 'physical')::text as plugin,
   active,
+  case when active then 0 else 1 end as non_active_int,
   pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) as restart_lsn_lag_b
 from
   pg_replication_slots;

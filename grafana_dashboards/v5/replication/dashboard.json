@@ -28,6 +28,7 @@
         "#d44a3a"
       ],
       "datasource": null,
+      "decimals": 0,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -38,7 +39,7 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 8,
+        "w": 6,
         "x": 0,
         "y": 0
       },
@@ -96,7 +97,7 @@
           "measurement": "replication_slots",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select count(\"last\") from (SELECT last(\"active\") FROM \"replication_slots\" WHERE time > now() - 5m group by \"dbname\", \"slot_name\") where \"last\" = false",
+          "query": "select sum(\"last\") from (select last(\"non_active_int\") FROM \"replication_slots\" WHERE  $timeFilter group by \"dbname\", \"slot_name\")",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -125,7 +126,7 @@
       "valueMaps": [
         {
           "op": "=",
-          "text": "0",
+          "text": "N/A",
           "value": "null"
         }
       ],
@@ -133,7 +134,7 @@
     },
     {
       "cacheTimeout": null,
-      "colorBackground": false,
+      "colorBackground": true,
       "colorValue": false,
       "colors": [
         "#299c46",
@@ -141,7 +142,8 @@
         "#d44a3a"
       ],
       "datasource": null,
-      "description": "NB! Data is available  only on connected replicas!",
+      "decimals": 1,
+      "description": "Based on pg_replication_slots",
       "format": "bytes",
       "gauge": {
         "maxValue": 100,
@@ -152,11 +154,11 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 8,
-        "x": 8,
+        "w": 6,
+        "x": 6,
         "y": 0
       },
-      "id": 6,
+      "id": 7,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -166,6 +168,7 @@
           "value": 1
         },
         {
+          "$$hashKey": "object:1328",
           "name": "range to text",
           "value": 2
         }
@@ -193,19 +196,33 @@
       "tableColumn": "",
       "targets": [
         {
-          "groupBy": [],
-          "measurement": "replication",
+          "$$hashKey": "object:358",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "replication_slots",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT max(\"write_lag_b\") FROM \"replication\" WHERE $timeFilter GROUP BY time($__interval) fill(none)",
-          "rawQuery": false,
+          "query": "SELECT max(\"restart_lsn_lag_b\") FROM \"replication_slots\" WHERE $timeFilter GROUP BY time($__interval) fill(none)",
+          "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "write_lag_b"
+                  "restart_lsn_lag_b"
                 ],
                 "type": "field"
               },
@@ -218,13 +235,14 @@
           "tags": []
         }
       ],
-      "thresholds": "",
+      "thresholds": "16000000,1000000000",
       "timeFrom": "5m",
-      "title": "Max. Write Lag",
+      "title": "Slot max. restart_lsn lag",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
         {
+          "$$hashKey": "object:1330",
           "op": "=",
           "text": "N/A",
           "value": "null"
@@ -235,13 +253,14 @@
     {
       "cacheTimeout": null,
       "colorBackground": false,
-      "colorValue": false,
+      "colorValue": true,
       "colors": [
         "#299c46",
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
       "datasource": null,
+      "decimals": 1,
       "description": "NB! Data is available  only on connected replicas!",
       "format": "bytes",
       "gauge": {
@@ -253,11 +272,11 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 8,
-        "x": 16,
+        "w": 6,
+        "x": 12,
         "y": 0
       },
-      "id": 7,
+      "id": 6,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -311,6 +330,123 @@
           "measurement": "replication",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "SELECT max(\"write_lag_b\") FROM \"replication\" WHERE $timeFilter GROUP BY time($__interval) fill(none)",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "write_lag_b"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "max"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "thresholds": "100000000,1000000000",
+      "timeFrom": "5m",
+      "title": "Max. write lag",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": true,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": null,
+      "decimals": 1,
+      "description": "NB! Data is available  only on connected replicas!",
+      "format": "bytes",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 9,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "replication",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT max(\"replay_lag_b\") FROM \"replication\" WHERE $timeFilter GROUP BY time(1m) fill(null)",
+          "rawQuery": false,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -330,9 +466,9 @@
           "tags": []
         }
       ],
-      "thresholds": "",
+      "thresholds": "100000000,1000000000",
       "timeFrom": "5m",
-      "title": "Max. Replay  Lag",
+      "title": "Max. replay lag",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -406,7 +542,7 @@
             },
             {
               "params": [
-                "none"
+                "null"
               ],
               "type": "fill"
             }
