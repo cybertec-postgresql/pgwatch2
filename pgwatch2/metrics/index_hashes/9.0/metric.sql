@@ -3,7 +3,7 @@ select
   quote_ident(nspname)||'.'||quote_ident(c.relname) as tag_index,
   quote_ident(nspname)||'.'||quote_ident(r.relname) as "table",
   i.indisvalid::text as is_valid,
-  md5(pg_get_indexdef(c.oid))
+  coalesce(md5(pg_get_indexdef(i.indexrelid)), random()::text) as md5
 from
   pg_index i
   join
