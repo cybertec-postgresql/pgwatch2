@@ -32,8 +32,12 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_IRETENTIONNAME** Influx retention policy name. Default: pgwatch_def_ret
 - **PW2_GRAPHITEHOST** Graphite host. Default: -
 - **PW2_GRAPHITEPORT** Graphite port. Default: -
-- **PW2_CONFIG** File or folder of YAML (.yaml/.yml) files containing info on which DBs to monitor and where to store metrics
-- **PW2_METRICS_FOLDER** Folder of metrics definitions
+- **PW2_CONFIG** File mode. File or folder of YAML (.yaml/.yml) files containing info on which DBs to monitor and where to store metrics
+- **PW2_METRICS_FOLDER** File mode. Folder of metrics definitions
+- **PW2_BATCHING_MAX_DELAY_MS** Max milliseconds to wait for a batched metrics flush. Default: 250
+- **PW2_ADHOC_CONN_STR** Ad-hoc mode. Monitor a single Postgres DB specified by a standard Libpq connection string
+- **PW2_ADHOC_CONFIG** Ad-hoc mode. A preset config name or a custom JSON config. Default: exhaustive
+- **PW2_ADHOC_NAME** Ad-hoc mode. Unique 'dbname' for Influx. Default: adhoc
 
 
 ## Web UI
