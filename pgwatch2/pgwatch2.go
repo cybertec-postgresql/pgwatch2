@@ -93,6 +93,7 @@ const DATASTORE_GRAPHITE = "graphite"
 const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
 const FILE_BASED_METRIC_HELPERS_DIR = "00_helpers"
 const PG_CONN_RECYCLE_SECONDS = 1800 // applies for monitored nodes
+const APPLICATION_NAME = "pgwatch2"  // will be set on all opened PG connections for informative purposes
 
 var configDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
@@ -122,8 +123,8 @@ func GetPostgresDBConnection(host, port, dbname, user, password, sslmode string)
 
 	//log.Debug("Connecting to: ", host, port, dbname, user, password)
 
-	db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s user=%s password=%s",
-		host, port, dbname, sslmode, user, password))
+	db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s user=%s password=%s application_name=%s",
+		host, port, dbname, sslmode, user, password, APPLICATION_NAME))
 
 	if err != nil {
 		log.Error("could not open configDb connection", err)
@@ -1870,8 +1871,12 @@ func main() {
 
 		if fileBased {
 			pmc, err := ReadPresetMetricsConfigFromFolder(opts.MetricsFolder, false)
-			if err != nil && first_loop {
-				log.Fatalf("Could not read preset metric config from \"%s\": %s", path.Join(opts.MetricsFolder, PRESET_CONFIG_YAML_FILE), err)
+			if err != nil {
+				if first_loop {
+					log.Fatalf("Could not read preset metric config from \"%s\": %s", path.Join(opts.MetricsFolder, PRESET_CONFIG_YAML_FILE), err)
+				} else {
+					log.Errorf("Could not read preset metric config from \"%s\": %s", path.Join(opts.MetricsFolder, PRESET_CONFIG_YAML_FILE), err)
+				}
 			} else {
 				preset_metric_def_map = pmc
 				log.Debugf("Loaded preset metric config: %#v", pmc)
