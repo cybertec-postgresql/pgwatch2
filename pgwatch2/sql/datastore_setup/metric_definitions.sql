@@ -485,6 +485,7 @@ with q_data as (
     sum(shared_blks_hit)::int8 as shared_blks_hit,
     sum(shared_blks_read)::int8 as shared_blks_read,
     sum(shared_blks_written)::int8 as shared_blks_written,
+    sum(shared_blks_dirtied)::int8 as shared_blks_dirtied,
     sum(temp_blks_read)::int8 as temp_blks_read,
     sum(temp_blks_written)::int8 as temp_blks_written,
     sum(blk_read_time)::double precision as blk_read_time,
