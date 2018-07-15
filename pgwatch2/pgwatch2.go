@@ -114,20 +114,35 @@ var influx_host_count = 1
 var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently supported
 // secondary Influx meant for HA or Grafana load balancing for 100+ instances with lots of alerts
 var fileBased = false
+var adHocMode = false
 var continuousMonitoringDatabases = make([]MonitoredDatabase, 0) // TODO
 var preset_metric_def_map map[string]map[string]float64          // read from metrics folder in "file mode"
 
-func GetPostgresDBConnection(host, port, dbname, user, password, sslmode string) (*sqlx.DB, error) {
+func GetPostgresDBConnection(libPgConnString, host, port, dbname, user, password, sslmode string) (*sqlx.DB, error) {
 	var err error
 	var db *sqlx.DB
 
 	//log.Debug("Connecting to: ", host, port, dbname, user, password)
-
-	db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s user=%s password=%s application_name=%s",
-		host, port, dbname, sslmode, user, password, APPLICATION_NAME))
+	if len(libPgConnString) > 0 {
+		if strings.Contains(strings.ToLower(libPgConnString), "sslmode=") {
+			log.Error("Has sslmode")
+			db, err = sqlx.Open("postgres", libPgConnString)
+		} else {
+			if strings.Contains(libPgConnString, "?") { // a bit simplistic, regex would be better
+				log.Error("Adding sslmode", libPgConnString+"&sslmode=disable")
+				db, err = sqlx.Open("postgres", libPgConnString+"&sslmode=disable")
+			} else {
+				log.Error("Adding sslmode", libPgConnString+"?sslmode=disable")
+				db, err = sqlx.Open("postgres", libPgConnString+"?sslmode=disable")
+			}
+		}
+	} else {
+		db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s user=%s password=%s application_name=%s",
+			host, port, dbname, sslmode, user, password, APPLICATION_NAME))
+	}
 
 	if err != nil {
-		log.Error("could not open configDb connection", err)
+		log.Error("could not open Postgres connection", err)
 	}
 	return db, err
 }
@@ -135,7 +150,7 @@ func GetPostgresDBConnection(host, port, dbname, user, password, sslmode string)
 func InitAndTestConfigStoreConnection(host, port, dbname, user, password string) {
 	var err error
 
-	configDb, err = GetPostgresDBConnection(host, port, dbname, user, password, "disable") // configDb is used by the main thread only
+	configDb, err = GetPostgresDBConnection("", host, port, dbname, user, password, "disable") // configDb is used by the main thread only
 	if err != nil {
 		log.Fatal("could not open configDb connection! exit.")
 	}
@@ -207,15 +222,17 @@ func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args .
 			md.DBName = "pgbouncer"
 		}
 
-		conn, err = GetPostgresDBConnection(md.Host, md.Port, md.DBName, md.User, md.Password, md.SslMode)
+		conn, err = GetPostgresDBConnection(opts.AdHocConnString, md.Host, md.Port, md.DBName, md.User, md.Password, md.SslMode)
 		if err != nil {
 			return nil, err
 		}
 		defer conn.Close()
 
-		_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
-		if err != nil {
-			return nil, err
+		if !adHocMode {
+			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		monitored_db_conn_cache_lock.RLock()
@@ -232,13 +249,15 @@ func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args .
 				md.DBName = "pgbouncer"
 			}
 
-			conn, err = GetPostgresDBConnection(md.Host, md.Port, md.DBName, md.User, md.Password, md.SslMode)
+			conn, err = GetPostgresDBConnection(opts.AdHocConnString, md.Host, md.Port, md.DBName, md.User, md.Password, md.SslMode)
 			if err != nil {
 				return nil, err
 			}
-			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
-			if err != nil {
-				return nil, err
+			if !adHocMode {
+				_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
+				if err != nil {
+					return nil, err
+				}
 			}
 
 			conn.SetMaxIdleConns(1)
@@ -1601,7 +1620,7 @@ func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatab
 func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase, error) {
 	md := make([]MonitoredDatabase, 0)
 
-	c, err := GetPostgresDBConnection(ce.Host, ce.Port, "template1", ce.User, ce.Password, ce.SslMode)
+	c, err := GetPostgresDBConnection("", ce.Host, ce.Port, "template1", ce.User, ce.Password, ce.SslMode)
 	if err != nil {
 		return md, err
 	}
@@ -1708,6 +1727,9 @@ type Options struct {
 	Config          string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
 	MetricsFolder   string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
 	BatchingDelayMs int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
+	AdHocConnString string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
+	AdHocConfig     string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
+	AdHocUniqueName string `long:"adhoc-unique-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_UNIQUE_NAME"`
 }
 
 var opts Options
@@ -1730,15 +1752,32 @@ func main() {
 
 	log.Debug("opts", opts)
 
+	// ad-hoc mode
+	if len(opts.AdHocConnString) > 0 {
+		if len(opts.Config) > 0 {
+			log.Fatal("Conflicting flags! --adhoc-conn-str and --config cannot be both set")
+		}
+		if len(opts.MetricsFolder) == 0 {
+			log.Fatal("--adhoc-conn-str requires also --metrics param")
+		}
+		if len(opts.AdHocConfig) == 0 {
+			log.Fatal("--adhoc-conn-str requires also --adhoc-config param")
+		}
+		if len(opts.User) > 0 && len(opts.Password) > 0 {
+			log.Fatal("Conflicting flags! --adhoc-conn-str and --user/--password cannot be both set")
+		}
+		if opts.AdHocUniqueName == "adhoc" {
+			log.Warning("In ad-hoc mode: using default unique name 'adhoc' for metrics storage. use --adhoc-unique-name to override.")
+		}
+		adHocMode = true
+	}
 	// running in config file based mode?
 	if len(opts.Config) > 0 || len(opts.MetricsFolder) > 0 {
 		if len(opts.Config) > 0 && len(opts.MetricsFolder) == 0 {
-			fmt.Println("--metrics-folder required")
-			return
+			log.Fatal("--metrics-folder required")
 		}
-		if len(opts.MetricsFolder) > 0 && len(opts.Config) == 0 {
-			fmt.Println("--config required")
-			return
+		if len(opts.MetricsFolder) > 0 && len(opts.Config) == 0 && !adHocMode {
+			log.Fatal("--config required")
 		}
 
 		// verify that metric/config paths are readable
@@ -1747,20 +1786,22 @@ func main() {
 			log.Fatalf("Could not read path %s: %s", opts.MetricsFolder, err)
 		}
 
-		fi, err := os.Stat(opts.Config)
-		if err != nil {
-			log.Fatalf("Could not Stat() path %s: %s", opts.Config, err)
-		}
-		switch mode := fi.Mode(); {
-		case mode.IsDir():
-			_, err := ioutil.ReadDir(opts.Config)
+		if !adHocMode {
+			fi, err := os.Stat(opts.Config)
 			if err != nil {
-				log.Fatalf("Could not read path %s: %s", opts.Config, err)
+				log.Fatalf("Could not Stat() path %s: %s", opts.Config, err)
 			}
-		case mode.IsRegular():
-			_, err := ioutil.ReadFile(opts.Config)
-			if err != nil {
-				log.Fatalf("Could not read path %s: %s", opts.Config, err)
+			switch mode := fi.Mode(); {
+			case mode.IsDir():
+				_, err := ioutil.ReadDir(opts.Config)
+				if err != nil {
+					log.Fatalf("Could not read path %s: %s", opts.Config, err)
+				}
+			case mode.IsRegular():
+				_, err := ioutil.ReadFile(opts.Config)
+				if err != nil {
+					log.Fatalf("Could not read path %s: %s", opts.Config, err)
+				}
 			}
 		}
 
@@ -1869,7 +1910,7 @@ func main() {
 			}
 		}
 
-		if fileBased {
+		if fileBased || adHocMode {
 			pmc, err := ReadPresetMetricsConfigFromFolder(opts.MetricsFolder, false)
 			if err != nil {
 				if first_loop {
@@ -1882,19 +1923,28 @@ func main() {
 				log.Debugf("Loaded preset metric config: %#v", pmc)
 			}
 
-			mc, err := ReadMonitoringConfigFromFileOrFolder(opts.Config)
-			if err == nil {
-				log.Debugf("Found %d monitoring config entries", len(mc))
-				monitored_dbs = GetMonitoredDatabasesFromMonitoringConfig(mc)
-				log.Debugf("Found %d databases to monitor from %d config items...", len(monitored_dbs), len(mc))
-			} else {
-				if first_loop {
-					log.Fatalf("Could not read/parse monitoring config from path: %s", opts.Config)
-				} else {
-					log.Errorf("Could not read/parse monitoring config from path: %s", opts.Config)
+			if adHocMode {
+				config, ok := pmc[opts.AdHocConfig]
+				if !ok {
+					config = jsonTextToMap(opts.AdHocConfig)
 				}
-				time.Sleep(time.Second * time.Duration(ACTIVE_SERVERS_REFRESH_TIME))
-				continue
+				monitored_dbs = []MonitoredDatabase{{DBUniqueName: opts.AdHocUniqueName, DBType: "postgres",
+					Metrics: config}}
+			} else {
+				mc, err := ReadMonitoringConfigFromFileOrFolder(opts.Config)
+				if err == nil {
+					log.Debugf("Found %d monitoring config entries", len(mc))
+					monitored_dbs = GetMonitoredDatabasesFromMonitoringConfig(mc)
+					log.Debugf("Found %d databases to monitor from %d config items...", len(monitored_dbs), len(mc))
+				} else {
+					if first_loop {
+						log.Fatalf("Could not read/parse monitoring config from path: %s", opts.Config)
+					} else {
+						log.Errorf("Could not read/parse monitoring config from path: %s", opts.Config)
+					}
+					time.Sleep(time.Second * time.Duration(ACTIVE_SERVERS_REFRESH_TIME))
+					continue
+				}
 			}
 		} else {
 			monitored_dbs, err = GetMonitoredDatabasesFromConfigDB()
