@@ -73,6 +73,7 @@ the amount of schema objects - tables, indexes, number of unique SQL-s.
 * A single InfluxDB node should handle thousands of requests per second but if this is not enough having a secondary/mirrored
 InfluxDB is also possible. If more than two needed (e.g. feeding many many Grafana instances or some custom exporting) one
 should look at Influx Enterprise (on-prem or cloud) or Graphite (which is also supported as metrics storage backend).
+* When high InfluxDB latency is problematic (e.g. using a DBaaS across the atlantic) then increasing the default maximum batching delay (--batching-delay-ms) of 250ms would give good results
 
 # Security/safety aspects
 
@@ -253,8 +254,13 @@ added to all captured data rows
 # File based operation
 
 From v1.4.0 one can also deploy pgwatch2 gatherer daemons decentrally, based on YAML config files - for both metric definitions
-and "hosts to be monitored" definitions. See pgwatch2/config/instances.yaml for sample config file and pgwatch2/metrics
-folder for metrics (and preset metric configuration) definitions. Relevant Gatherer env. vars / flags: PW2_CONFIG / --config,PW2_METRICS_FOLDER / --metrics-folder.
+and "hosts to be monitored" definitions. In that case there is no need for the central Postgres "config DB". See pgwatch2/config/instances.yaml for sample config file and pgwatch2/metrics
+folder for metrics (and preset metric configuration) definitions. Relevant Gatherer env. vars / flags: PW2_CONFIG / --config, PW2_METRICS_FOLDER / --metrics-folder.
+
+# Ad-hoc operation
+
+From v1.4.0 it's also possible to run the gatherer daemon in ad-hoc / test mode, by giving a single standard connection
+string as input, and optionally also specifying the metrics to monitor (preset config name or a custom JSON string) and the "unique name". In that case there is no need for the central Postgres "config DB" nor the YAML file specifying which hosts to monitor. Relevant Gatherer env. vars / flags: --adhoc-conn-str, --adhoc-config, --adhoc-name, --metrics-folder / PW2_ADHOC_CONN_STR, PW2_ADHOC_CONFIG, PW2_ADHOC_NAME, PW2_METRICS_FOLDER.
 
 # Updating to a newer Docker version
 
