@@ -1519,8 +1519,11 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 			}
 
 			for _, pgVer := range pgVers {
+				if strings.HasSuffix(pgVer.Name(), ".md") {
+					continue
+				}
 				if !rIsDigitOrPunctuation.MatchString(pgVer.Name()) {
-					log.Errorf("Invalid metric stucture - version folder names should consist of only numerics/dots, found: %s", pgVer.Name())
+					log.Warningf("Invalid metric stucture - version folder names should consist of only numerics/dots, found: %s", pgVer.Name())
 					continue
 				}
 				d, err := decimal.NewFromString(pgVer.Name())
