@@ -585,7 +585,11 @@ select
   sum(calls) as calls,
   sum(total_time) as total_time
 from
-  public.get_stat_statements();
+  pg_stat_statements
+where
+  dbid = (select oid from pg_database where datname = current_database())
+  and calls > 10
+;
 $sql$
 );
 
@@ -1174,5 +1178,50 @@ select
   pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) as restart_lsn_lag_b
 from
   pg_replication_slots;
+$sql$
+);
+
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'psutil_cpu',
+9.0,
+$sql$
+
+SELECT
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  cpu_utilization, load_1m_norm, load_1m, load_5m_norm, load_5m,
+  "user", system, idle, iowait, irqs, other
+from
+  public.get_psutil_cpu();
+$sql$
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'psutil_mem',
+9.0,
+$sql$
+SELECT
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  total, used, free, shared, buff_cache, available, percent,
+  swap_total, swap_used, swap_free, swap_percent
+from
+  public.get_psutil_mem();
+$sql$
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'psutil_disk',
+9.0,
+$sql$
+SELECT
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  dir_or_tablespace as tag_dir_or_tablespace,
+  path as tag_path,
+  total, used, free, percent
+from
+  public.get_psutil_disk();
 $sql$
 );
