@@ -3,4 +3,8 @@ select
   sum(calls) as calls,
   sum(total_time) as total_time
 from
-  public.get_stat_statements();
+  pg_stat_statements
+where
+  dbid = (select oid from pg_database where datname = current_database())
+  and calls > 10
+;
