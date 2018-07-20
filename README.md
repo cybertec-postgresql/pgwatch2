@@ -1,3 +1,6 @@
+![GitHub forks](https://img.shields.io/github/forks/badges/shields.svg?style=social&label=Fork)
+![GitHub stars](https://img.shields.io/github/stars/badges/shields.svg?style=social&label=Stars)
+
 # pgwatch2
 
 Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution
