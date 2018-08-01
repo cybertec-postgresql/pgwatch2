@@ -42,12 +42,16 @@ def exec_cmd(args):
     return p.stdout.decode('utf-8'), p.stderr.decode('utf-8')
 
 def str_to_bool_or_fail(bool_str):
+    if bool_str is None:
+        return None
+    if bool_str.strip() == '' or bool_str.strip() == '""' or bool_str.strip() == "''":
+        return False
     if bool_str.lower().strip() in ['t', 'true', 'y', 'yes', 'on', 'require']:
         return True
     if bool_str.lower().strip() in ['f', 'false', 'n', 'no', 'off', 'disable']:
         return False
     else:
-        raise Exception('Boolean string expected! Found: ' + bool_str)
+        raise Exception('Boolean string (or empty/quotes) expected! Found: ' + bool_str)
 
 
 class Root:
@@ -261,7 +265,7 @@ if __name__ == '__main__':
     parser.add_argument('--socket-port', help='Webserver Listen Port',
                         default=(os.getenv('PW2_WEBPORT') or 8080), type=int)
     parser.add_argument('--ssl', help='Enable Webserver SSL (Self-signed Cert)',
-                        default=(os.getenv('PW2_WEBSSL') or False))
+                        default=(str_to_bool_or_fail(os.getenv('PW2_WEBSSL')) or False))
     parser.add_argument('--ssl-cert', help='Path to SSL certificate',
                         default=(os.getenv('PW2_WEBCERT') or '/pgwatch2/persistent-config/self-signed-ssl.pem'))
     parser.add_argument('--ssl-key', help='Path to SSL private key',
@@ -279,7 +283,7 @@ if __name__ == '__main__':
     parser.add_argument('--admin-password', help='Password for login to read and configure monitoring',
                         default=(os.getenv('PW2_WEBPASSWORD') or 'pgwatch2admin'))
     parser.add_argument('--no-component-logs', help='Don''t expose component logs via the Web UI',
-                        action='store_true', default=(os.getenv('PW2_WEBNOCOMPONENTLOGS') or False))
+                        action='store_true', default=(str_to_bool_or_fail(os.getenv('PW2_WEBNOCOMPONENTLOGS')) or False))
 
     # Postgres
     parser.add_argument('-H', '--host', help='Pgwatch2 Config DB host',
@@ -292,8 +296,8 @@ if __name__ == '__main__':
                         default=(os.getenv('PW2_PGUSER') or 'pgwatch2'))
     parser.add_argument('--password', help='Pgwatch2 Config DB password',
                         default=(os.getenv('PW2_PGPASSWORD') or 'pgwatch2admin'))
-    parser.add_argument('--pg-require-ssl', help='Pgwatch2 Config DB SSL connection only',
-                        default=(os.getenv('PW2_PGSSL') or 'False'))
+    parser.add_argument('--pg-require-ssl', help='Pgwatch2 Config DB SSL connection only', action='store_true',
+                        default=(str_to_bool_or_fail(os.getenv('PW2_PGSSL')) or False))
     # Influx
     parser.add_argument('--influx-host', help='InfluxDB host',
                         default=(os.getenv('PW2_IHOST') or 'localhost'))
@@ -306,7 +310,7 @@ if __name__ == '__main__':
     parser.add_argument('--influx-database', help='InfluxDB database',
                         default=(os.getenv('PW2_IDATABASE') or 'pgwatch2'))
     parser.add_argument('--influx-require-ssl', action='store_true',
-                        help='Use SSL for InfluxDB', default=(os.getenv('PW2_ISSL') or False))
+                        help='Use SSL for InfluxDB', default=(str_to_bool_or_fail(os.getenv('PW2_ISSL')) or False))
     # Grafana
     parser.add_argument(
         '--grafana_baseurl', help='For linking to Grafana "Query details" dashboard', default=(os.getenv('PW2_GRAFANA_BASEURL') or 'http://0.0.0.0:3000'))
@@ -317,11 +321,8 @@ if __name__ == '__main__':
                         level=(logging.DEBUG if int(cmd_args.verbose) >= 2 else (logging.INFO if int(cmd_args.verbose) == 1 else logging.ERROR)))
     logging.debug(cmd_args)
 
-    pg_require_ssl = False
-    if cmd_args.pg_require_ssl:
-        pg_require_ssl = str_to_bool_or_fail(cmd_args.pg_require_ssl)
     datadb.setConnectionString(
-        cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password, pg_require_ssl)
+        cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password, cmd_args.pg_require_ssl)
     err = datadb.isDataStoreConnectionOK()
     if err:
         logging.warning("config DB connection test failed: %s", err)
