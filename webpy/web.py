@@ -41,6 +41,14 @@ def exec_cmd(args):
     p = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return p.stdout.decode('utf-8'), p.stderr.decode('utf-8')
 
+def str_to_bool_or_fail(bool_str):
+    if bool_str.lower().strip() in ['t', 'true', 'y', 'yes', 'on', 'require']:
+        return True
+    if bool_str.lower().strip() in ['f', 'false', 'n', 'no', 'off', 'disable']:
+        return False
+    else:
+        raise Exception('Boolean string expected! Found: ' + bool_str)
+
 
 class Root:
 
@@ -263,7 +271,7 @@ if __name__ == '__main__':
 
     # PgWatch2
     parser.add_argument(
-        '-v', '--verbose', help='Chat level. none(default)|-v|-vv [$VERBOSE=[0|1|2]]', action='count', default=(os.getenv('PW2_VERBOSE') or 0))
+        '-v', '--verbose', help='Chat level. none(default)|-v|-vv [$PW2_VERBOSE]', action='count', default=(os.getenv('PW2_VERBOSE', '').count('v')))
     parser.add_argument('--no-anonymous-access', help='If set, login is required to configure monitoring/metrics',
                         action='store_true', default=(os.getenv('PW2_WEBNOANONYMOUS') or False))
     parser.add_argument('--admin-user', help='Username for login',
@@ -284,8 +292,8 @@ if __name__ == '__main__':
                         default=(os.getenv('PW2_PGUSER') or 'pgwatch2'))
     parser.add_argument('--password', help='Pgwatch2 Config DB password',
                         default=(os.getenv('PW2_PGPASSWORD') or 'pgwatch2admin'))
-    parser.add_argument('--pg-require-ssl', help='Pgwatch2 Config DB SSL connection only', action='store_true',
-                        default=(os.getenv('PW2_PGSSL') or False))
+    parser.add_argument('--pg-require-ssl', help='Pgwatch2 Config DB SSL connection only',
+                        default=(os.getenv('PW2_PGSSL') or 'False'))
     # Influx
     parser.add_argument('--influx-host', help='InfluxDB host',
                         default=(os.getenv('PW2_IHOST') or 'localhost'))
@@ -309,8 +317,11 @@ if __name__ == '__main__':
                         level=(logging.DEBUG if int(cmd_args.verbose) >= 2 else (logging.INFO if int(cmd_args.verbose) == 1 else logging.ERROR)))
     logging.debug(cmd_args)
 
+    pg_require_ssl = False
+    if cmd_args.pg_require_ssl:
+        pg_require_ssl = str_to_bool_or_fail(cmd_args.pg_require_ssl)
     datadb.setConnectionString(
-        cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password, cmd_args.pg_require_ssl)
+        cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password, pg_require_ssl)
     err = datadb.isDataStoreConnectionOK()
     if err:
         logging.warning("config DB connection test failed: %s", err)
