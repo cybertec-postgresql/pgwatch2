@@ -424,7 +424,7 @@ retry:
 			pt, err := client.NewPoint(msg.MetricName, tags, fields, epoch_time)
 
 			if err != nil {
-				log.Error("Calling NewPoint() of Influx driver failed. Datapoint dropped. Err:", err)
+				log.Errorf("Calling NewPoint() of Influx driver failed. Datapoint \"%s\" dropped. Err: %s", dr, err)
 				continue
 			}
 
