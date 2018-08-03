@@ -124,6 +124,7 @@ class Root:
         try:
             influx_active_dbnames = pgwatch2_influx.get_active_dbnames()
         except (requests.exceptions.ConnectionError, influxdb.exceptions.InfluxDBClientError):
+            logging.exception('Influx ERROR')
             messages.append('ERROR: Could not connect to InfluxDB')
         except Exception as e:
             logging.exception('ERROR')

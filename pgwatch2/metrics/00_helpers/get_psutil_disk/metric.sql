@@ -1,7 +1,7 @@
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
 
 CREATE OR REPLACE FUNCTION public.get_psutil_disk(
-	OUT tablespace text, OUT path text, OUT total float8, OUT used float8, OUT free float8, OUT percent float8
+	OUT dir_or_tablespace text, OUT path text, OUT total float8, OUT used float8, OUT free float8, OUT percent float8
 )
  RETURNS SETOF record
  LANGUAGE plpythonu
