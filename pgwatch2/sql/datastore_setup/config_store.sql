@@ -97,7 +97,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     '{
     "pgbouncer_stats": 60
     }'),
-    ('exhaustive', 'almost all available metrics for a deeper performance understanding',
+    ('exhaustive', 'all important metrics for a deeper performance understanding',
     '{
     "backends": 60,
     "bgwriter": 60,
@@ -116,6 +116,31 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "wal": 60,
     "change_events": 300,
     "table_bloat_approx_summary": 7200
+    }'),
+    ('full', 'almost all available metrics for a even deeper performance understanding',
+    '{
+    "backends": 60,
+    "bgwriter": 60,
+    "cpu_load": 60,
+    "db_stats": 60,
+    "index_stats": 120,
+    "locks": 60,
+    "locks_mode": 60,
+    "replication": 120,
+    "replication_slots": 120,
+    "sproc_stats": 60,
+    "stat_statements": 120,
+    "stat_statements_calls": 60,
+    "table_io_stats": 120,
+    "table_stats": 120,
+    "wal": 60,
+    "change_events": 300,
+    "table_bloat_approx_summary": 7200,
+    "kpi": 120,
+    "pg_stat_ssl": 120,
+    "psutil_cpu": 120,
+    "psutil_mem": 120,
+    "psutil_disk": 120
     }');
 
 /* one host for demo purposes, so that "docker run" could immediately show some graphs */

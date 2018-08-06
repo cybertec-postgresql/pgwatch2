@@ -8,7 +8,7 @@
     wal: 60
 
 - name: exhaustive
-  description: almost all available metrics for a deeper performance understanding
+  description: all important metrics for a deeper performance understanding
   metrics:
     backends: 60
     bgwriter: 60
@@ -48,3 +48,29 @@
     stat_statements: 120
     table_stats: 120
     wal: 60
+
+- name: full
+  description: almost all available metrics for a even deeper performance understanding
+  metrics:
+    backends: 60
+    bgwriter: 60
+    change_events: 300
+    cpu_load: 60
+    db_stats: 60
+    index_stats: 120
+    locks: 60
+    locks_mode: 60
+    replication: 120
+    replication_slots: 120
+    sproc_stats: 60
+    stat_statements: 120
+    stat_statements_calls: 60
+    table_bloat_approx_summary: 7200
+    table_io_stats: 120
+    table_stats: 120
+    wal: 60
+    kpi: 120
+    pg_stat_ssl: 120
+    psutil_cpu: 120
+    psutil_mem: 120
+    psutil_disk: 120
