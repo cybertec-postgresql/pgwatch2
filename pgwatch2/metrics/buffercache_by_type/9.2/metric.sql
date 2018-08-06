@@ -6,8 +6,8 @@ SELECT
     WHEN relkind = 't' THEN 'Toast'
     WHEN relkind = 'm' THEN 'Materialized view'
     ELSE 'Other'
-  END,
-  count(*) * 8192
+  END as tag_relkind,
+  count(*) * (current_setting('block_size')::int8) size_b
 FROM
   pg_buffercache AS b,
   pg_class AS d
