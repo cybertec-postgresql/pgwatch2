@@ -1,7 +1,7 @@
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
 
 CREATE OR REPLACE FUNCTION public.get_psutil_disk(
-	OUT tablespace text, OUT path text, OUT total float8, OUT used float8, OUT free float8, OUT percent float8
+	OUT dir_or_tablespace text, OUT path text, OUT total float8, OUT used float8, OUT free float8, OUT percent float8
 )
  RETURNS SETOF record
  LANGUAGE plpythonu
@@ -22,8 +22,8 @@ ret_list.append(['data_directory', r[0]['dd'], du_dd.total, du_dd.used, du_dd.fr
 dd_stat = stat(r[0]['dd'])
 joined_path_ld = join(r[0]['dd'], r[0]['ld'])
 log_stat = stat(joined_path_ld)
-if log_stat.st_dev == dd_stat.st_dev:   # re-use data_directory values if on the same device
-    ret_list.append(['log_directory', joined_path_ld, du_dd.total, du_dd.used, du_dd.free, du_dd.percent])
+if log_stat.st_dev == dd_stat.st_dev:
+    pass                                # no new info, same device
 else:
     du = disk_usage(join(r[0]['dd'], r[0]['ld']))
     ret_list.append(['log_directory', joined_path_ld, du.total, du.used, du.free, du.percent])
@@ -32,8 +32,8 @@ else:
 # plpy.notice('pg_wal' if r[0]['pgver'] >= 100000 else 'pg_xlog', r[0]['pgver'])
 joined_path_wal = join(r[0]['dd'], 'pg_wal' if r[0]['pgver'] >= 100000 else 'pg_xlog')
 wal_stat = stat(joined_path_wal)
-if wal_stat.st_dev == dd_stat.st_dev:   # re-use data_directory values if on the same device
-    ret_list.append(['pg_wal', joined_path_wal, du_dd.total, du_dd.used, du_dd.free, du_dd.percent])
+if wal_stat.st_dev == dd_stat.st_dev:
+    pass                                # no new info, same device
 else:
     du = disk_usage(joined_path_wal)
     ret_list.append(['pg_wal', joined_path_wal, du.total, du.used, du.free, du.percent])
