@@ -1018,9 +1018,7 @@ select
   name as tag_setting,
   coalesce(reset_val, '') as value
 from
-  pg_settings
-where
-  not pending_restart;
+  pg_settings;
 $sql$
 );
 
