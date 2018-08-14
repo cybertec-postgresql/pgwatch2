@@ -78,6 +78,7 @@ type ChangeDetectionResults struct { // for passing around DDL/index/config chan
 
 type DBVersionMapEntry struct {
 	LastCheckedOn time.Time
+	IsInRecovery  bool
 	Version       decimal.Decimal
 }
 
@@ -125,14 +126,13 @@ func GetPostgresDBConnection(libPgConnString, host, port, dbname, user, password
 	//log.Debug("Connecting to: ", host, port, dbname, user, password)
 	if len(libPgConnString) > 0 {
 		if strings.Contains(strings.ToLower(libPgConnString), "sslmode=") {
-			log.Error("Has sslmode")
 			db, err = sqlx.Open("postgres", libPgConnString)
 		} else {
 			if strings.Contains(libPgConnString, "?") { // a bit simplistic, regex would be better
-				log.Error("Adding sslmode", libPgConnString+"&sslmode=disable")
+				log.Debug("Adding sslmode", libPgConnString+"&sslmode=disable")
 				db, err = sqlx.Open("postgres", libPgConnString+"&sslmode=disable")
 			} else {
-				log.Error("Adding sslmode", libPgConnString+"?sslmode=disable")
+				log.Debug("Adding sslmode", libPgConnString+"?sslmode=disable")
 				db, err = sqlx.Open("postgres", libPgConnString+"?sslmode=disable")
 			}
 		}
@@ -714,7 +714,7 @@ func DBGetPGVersion(dbUnique string) (decimal.Decimal, error) {
 		select (regexp_matches(
 			regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'),
 			E'\\d+\\.?\\d+?')
-			)[1]::text as ver;
+			)[1]::text as ver, pg_is_in_recovery();
 	`
 
 	db_pg_version_map_lock.RLock()
@@ -732,8 +732,9 @@ func DBGetPGVersion(dbUnique string) (decimal.Decimal, error) {
 			return ver.Version, err
 		}
 		ver.Version, _ = decimal.NewFromString(data[0]["ver"].(string))
+		ver.IsInRecovery = data[0]["pg_is_in_recovery"].(bool)
 		ver.LastCheckedOn = time.Now()
-		log.Info(fmt.Sprintf("%s is on version %s", dbUnique, ver.Version))
+		log.Info(fmt.Sprintf("%s is on version %s (in recovery: %v)", dbUnique, ver.Version, ver.IsInRecovery))
 
 		db_pg_version_map_lock.Lock()
 		db_pg_version_map[dbUnique] = ver
@@ -1182,6 +1183,16 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- []Met
 				data, err := DBExecReadByDbUniqueName(msg.DBUniqueName, true, sql)
 				t2 := time.Now().UnixNano()
 				if err != nil {
+					// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
+					if strings.Contains(err.Error(), "recovery is in progress") {
+						db_pg_version_map_lock.RLock()
+						ver, _ := db_pg_version_map[msg.DBUniqueName]
+						db_pg_version_map_lock.RUnlock()
+						if ver.IsInRecovery {
+							log.Info(fmt.Sprintf("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err))
+							continue
+						}
+					}
 					log.Error(fmt.Sprintf("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err))
 				} else {
 					md, err := GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
