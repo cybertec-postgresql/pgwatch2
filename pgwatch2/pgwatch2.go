@@ -2007,7 +2007,7 @@ func main() {
 				} else {
 					log.Info("Connect OK")
 				}
-				if host.IsSuperuser {
+				if host.IsSuperuser || adHocMode {
 					log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
 					TryCreateMetricsFetchingHelpers(db_unique)
 				}
