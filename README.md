@@ -159,7 +159,9 @@ into the docker container under /var/logs/supervisor/
 
 # Steps to configure your database for monitoring
 
-* As a base requirement you'll need a login user (non-superuser suggested) for connecting to your server and fetching metrics queries
+* As a base requirement you'll need a login user (non-superuser suggested) for connecting to your server and fetching metrics queries.
+NB! Though theoretically you can use any username you like, but if not using "pgwatch2" you need to modify the "helper" creation
+scripts accordingly as in those by default only the "pgwatch2" will be granted execute privileges.
 ```
 create role pgwatch2 with login password 'secret';
 ```
