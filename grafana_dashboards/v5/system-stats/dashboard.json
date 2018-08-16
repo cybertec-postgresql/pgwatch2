@@ -1459,7 +1459,7 @@
             "text": "adhoc",
             "value": "adhoc"
           },
-          "datasource": "Influx",
+          "datasource": null,
           "hide": 0,
           "includeAll": false,
           "label": null,
