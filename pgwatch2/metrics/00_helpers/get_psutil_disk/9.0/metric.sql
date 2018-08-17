@@ -9,24 +9,31 @@ CREATE OR REPLACE FUNCTION public.get_psutil_disk(
 AS $FUNCTION$
 
 from os import stat
-from os.path import join
+from os.path import join, exists
 from psutil import disk_usage
 ret_list = []
 
 # data_directory
 r = plpy.execute("select current_setting('data_directory') as dd, current_setting('log_directory') as ld, current_setting('server_version_num')::int as pgver")
-du_dd = disk_usage(r[0]['dd'])
-ret_list.append(['data_directory', r[0]['dd'], du_dd.total, du_dd.used, du_dd.free, du_dd.percent])
+dd = r[0]['dd']
+ld = r[0]['ld']
+du_dd = disk_usage(dd)
+ret_list.append(['data_directory', dd, du_dd.total, du_dd.used, du_dd.free, du_dd.percent])
 
 # log_directory
-dd_stat = stat(r[0]['dd'])
-joined_path_ld = join(r[0]['dd'], r[0]['ld'])
-log_stat = stat(joined_path_ld)
-if log_stat.st_dev == dd_stat.st_dev:
-    pass                                # no new info, same device
-else:
-    du = disk_usage(join(r[0]['dd'], r[0]['ld']))
-    ret_list.append(['log_directory', joined_path_ld, du.total, du.used, du.free, du.percent])
+if ld:
+    if not ld.startswith('/'):
+        ld_path = join(dd, ld)
+    else:
+        ld_path = ld
+    if exists(ld_path):
+        dd_stat = stat(dd)
+        log_stat = stat(ld_path)
+        if log_stat.st_dev == dd_stat.st_dev:
+            pass                                # no new info, same device
+        else:
+            du = disk_usage(ld_path)
+            ret_list.append(['log_directory', ld_path, du.total, du.used, du.free, du.percent])
 
 # WAL / XLOG directory
 # plpy.notice('pg_wal' if r[0]['pgver'] >= 100000 else 'pg_xlog', r[0]['pgver'])
