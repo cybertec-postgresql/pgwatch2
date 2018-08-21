@@ -228,7 +228,7 @@ func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args .
 		}
 		defer conn.Close()
 
-		if !adHocMode {
+		if !adHocMode && md.DBType == "postgres" {
 			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
 			if err != nil {
 				return nil, err
@@ -253,7 +253,7 @@ func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args .
 			if err != nil {
 				return nil, err
 			}
-			if !adHocMode {
+			if !adHocMode && md.DBType == "postgres" {
 				_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
 				if err != nil {
 					return nil, err
