@@ -1788,10 +1788,10 @@ func main() {
 	// running in config file based mode?
 	if len(opts.Config) > 0 || len(opts.MetricsFolder) > 0 {
 		if len(opts.Config) > 0 && len(opts.MetricsFolder) == 0 {
-			log.Fatal("--metrics-folder required")
+			log.Fatal("--metrics-folder required. 'File based' operation requires presence of both --config and --metrics-folder")
 		}
 		if len(opts.MetricsFolder) > 0 && len(opts.Config) == 0 && !adHocMode {
-			log.Fatal("--config required")
+			log.Fatal("--config required. 'File based' operation requires presence of both --config and --metrics-folder")
 		}
 
 		// verify that metric/config paths are readable
