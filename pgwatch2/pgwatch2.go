@@ -5,7 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"math"
+	"net"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/influxdb/client/v2"
@@ -118,6 +123,13 @@ var fileBased = false
 var adHocMode = false
 var continuousMonitoringDatabases = make([]MonitoredDatabase, 0) // TODO
 var preset_metric_def_map map[string]map[string]float64          // read from metrics folder in "file mode"
+/// internal statistics calculation
+var lastSuccessfulDatastoreWriteTime time.Time
+var totalMetricsFetchedCounter uint64
+var totalMetricsDroppedCounter uint64
+var totalDatasetsFetchedCounter uint64
+var metricPointsPerMinuteLast5MinAvg int64 = -1 // -1 means the summarization ticker has not yet run
+var gathererStartTime = time.Now()
 
 func GetPostgresDBConnection(libPgConnString, host, port, dbname, user, password, sslmode string) (*sqlx.DB, error) {
 	var err error
@@ -425,6 +437,7 @@ retry:
 
 			if err != nil {
 				log.Errorf("Calling NewPoint() of Influx driver failed. Datapoint \"%s\" dropped. Err: %s", dr, err)
+				atomic.AddUint64(&totalMetricsDroppedCounter, 1)
 				continue
 			}
 
@@ -443,6 +456,7 @@ retry:
 			log.Info(fmt.Sprintf("wrote %d/%d rows from %d metric sets to InfluxDB %s in %dus", rows_batched, total_rows,
 				len(storeMessages), conn_id, t_diff.Nanoseconds()/1000))
 		}
+		lastSuccessfulDatastoreWriteTime = t1
 	}
 	return err
 }
@@ -518,13 +532,15 @@ func SendToGraphite(dbname, measurement string, data [](map[string]interface{}))
 	} // dr
 
 	log.Debug("Sending", len(metrics), "metric points to Graphite...")
-	t1 := time.Now().UnixNano()
+	t1 := time.Now()
 	err := graphiteConnection.SendMetrics(metrics)
-	t2 := time.Now().UnixNano()
+	t2 := time.Now()
 	if err != nil {
 		log.Error("could not send metric to Graphite:", err)
+	} else {
+		lastSuccessfulDatastoreWriteTime = t1
+		log.Debug("Sent in ", (t2.Sub(t1).Nanoseconds())/1000, "us")
 	}
-	log.Debug("Sent in ", (t2-t1)/1000, "us")
 
 	return err
 }
@@ -573,10 +589,12 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 		if err != nil {
 			if data_source == DATASTORE_INFLUX && strings.Contains(err.Error(), "unable to parse") {
 				if len(msg) == 1 { // can only pinpoint faulty input data without batching
-					log.Error(fmt.Sprintf("Dropping %d metric [%s:%s] as Influx is unable to parse the data: %s",
+					log.Error(fmt.Sprintf("Dropping metric [%s:%s] as Influx is unable to parse the data: %v",
 						msg[0].DBUniqueName, msg[0].MetricName, msg[0].Data)) // ignore data points consisting of anything else than strings and floats
+					atomic.AddUint64(&totalMetricsDroppedCounter, 1)
 				} else {
 					log.Errorf("Dropping %d metric-sets as Influx is unable to parse the data: %s", len(msg), err)
+					atomic.AddUint64(&totalMetricsDroppedCounter, uint64(len(msg)))
 				}
 			} else {
 				return err // still gone, retry later
@@ -634,7 +652,6 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 	var last_drop_warning = make([]time.Time, influx_host_count) // log metric points drops every 10s to not overflow logs in case Influx is down for longer
 	var retry_queues = make([]*list.List, influx_host_count)     // separate queues for all Influx hosts
 	var in_error = make([]bool, influx_host_count)
-	var points_dropped = make([]int64, influx_host_count)
 	var err error
 
 	for i := 0; i < influx_host_count; i++ {
@@ -651,12 +668,17 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 
 				if retry_queue_length > 0 {
 					if retry_queue_length == PERSIST_QUEUE_MAX_SIZE {
-						retry_queue.Remove(retry_queue.Back())
-						points_dropped[i] += 1
+						dropped_msgs := retry_queue.Remove(retry_queue.Back())
+						datasets_dropped := len(dropped_msgs.([]MetricStoreMessage))
+						datapoints_dropped := 0
+						for _, msg := range dropped_msgs.([]MetricStoreMessage) {
+							datapoints_dropped += len(msg.Data)
+						}
+						atomic.AddUint64(&totalMetricsDroppedCounter, uint64(datapoints_dropped))
 						if last_drop_warning[i].IsZero() || last_drop_warning[i].Before(time.Now().Add(time.Second*-10)) {
-							log.Warning("Dropped", points_dropped, "oldest data points from queue", i, "as PERSIST_QUEUE_MAX_SIZE =", PERSIST_QUEUE_MAX_SIZE, "exceeded")
+							log.Warningf("Dropped %d oldest data sets with %d data points from queue %d as PERSIST_QUEUE_MAX_SIZE = %d exceeded",
+								datasets_dropped, datapoints_dropped, i, PERSIST_QUEUE_MAX_SIZE)
 							last_drop_warning[i] = time.Now()
-							points_dropped[i] = 0
 						}
 					}
 					retry_queue.PushFront(msg_arr)
@@ -1205,6 +1227,8 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- []Met
 						data = FilterPgbouncerData(data, md.DBName)
 					}
 					if len(data) > 0 {
+						atomic.AddUint64(&totalMetricsFetchedCounter, uint64(len(data)))
+						atomic.AddUint64(&totalDatasetsFetchedCounter, 1)
 						storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags}}
 					}
 				}
@@ -1711,6 +1735,58 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 	return md
 }
 
+func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
+	jsonResponseTemplate := `
+{
+	"secondsFromLastSuccessfulDatastoreWrite": %d,
+	"totalMetricsFetchedCounter": %d,
+	"totalDatasetsFetchedCounter": %d,
+	"metricPointsPerMinuteLast5MinAvg": %v,
+	"metricsDropped": %d,
+	"gathererUptimeSeconds": %d
+}
+`
+	now := time.Now()
+	secondsFromLastSuccessfulDatastoreWrite := int64(now.Sub(lastSuccessfulDatastoreWriteTime).Seconds())
+	totalMetrics := atomic.LoadUint64(&totalMetricsFetchedCounter)
+	totalDatasets := atomic.LoadUint64(&totalDatasetsFetchedCounter)
+	metricsDropped := atomic.LoadUint64(&totalMetricsDroppedCounter)
+	gathererUptimeSeconds := uint64(now.Sub(gathererStartTime).Seconds())
+	var metricPointsPerMinute int64
+	metricPointsPerMinute = atomic.LoadInt64(&metricPointsPerMinuteLast5MinAvg)
+	if metricPointsPerMinute == -1 { // calculate avg. on the fly if 1st summarization hasn't happened yet
+		metricPointsPerMinute = int64((totalMetrics * 60) / gathererUptimeSeconds)
+	}
+	io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, secondsFromLastSuccessfulDatastoreWrite, totalMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, gathererUptimeSeconds))
+}
+
+func StartStatsServer(port int64) {
+	http.HandleFunc("/", StatsServerHandler)
+	for {
+		log.Errorf("Failure in StatsServerHandler:", http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+		time.Sleep(time.Second * 60)
+	}
+}
+
+// Calculates 1min avg metric fetching statistics for last 5min for StatsServerHandler to display
+func StatsSummarizer() {
+	var prevMetricsCounterValue uint64
+	var currentMetricsCounterValue uint64
+	ticker := time.NewTicker(time.Minute * 5)
+	var lastSummarization time.Time = gathererStartTime
+
+	for {
+		select {
+		case <-ticker.C:
+			currentMetricsCounterValue = atomic.LoadUint64(&totalMetricsFetchedCounter)
+			now := time.Now()
+			atomic.StoreInt64(&metricPointsPerMinuteLast5MinAvg, int64(math.Round(float64(currentMetricsCounterValue-prevMetricsCounterValue)*60/now.Sub(lastSummarization).Seconds())))
+			prevMetricsCounterValue = currentMetricsCounterValue
+			lastSummarization = now
+		}
+	}
+}
+
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
@@ -1738,12 +1814,13 @@ type Options struct {
 	GraphiteHost        string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
 	GraphitePort        string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
 	// Params for running based on local config files, enabled distributed "push model" based metrics gathering. Metrics are sent directly to Influx/Graphite.
-	Config          string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
-	MetricsFolder   string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
-	BatchingDelayMs int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
-	AdHocConnString string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
-	AdHocConfig     string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
-	AdHocUniqueName string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
+	Config            string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
+	MetricsFolder     string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
+	BatchingDelayMs   int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
+	AdHocConnString   string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
+	AdHocConfig       string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
+	AdHocUniqueName   string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
+	InternalStatsPort int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
 }
 
 var opts Options
@@ -1853,6 +1930,20 @@ func main() {
 
 	if opts.BatchingDelayMs < 0 || opts.BatchingDelayMs > 3600000 {
 		log.Fatal("--batching-delay-ms must be between 0 and 3600000")
+	}
+
+	if opts.InternalStatsPort > 0 {
+		l, err := net.Listen("tcp", fmt.Sprintf(":%d", opts.InternalStatsPort))
+		if err != nil {
+			log.Fatalf("Could not start the internal statistics interface on port %d: %v", opts.InternalStatsPort, err)
+		}
+		err = l.Close()
+		if err != nil {
+			log.Fatalf("Could not cleanly stop the temporary listener on port %d: %v", opts.InternalStatsPort, err)
+		}
+		log.Infof("Starting the internal statistics interface on port %d...", opts.InternalStatsPort)
+		go StartStatsServer(opts.InternalStatsPort)
+		go StatsSummarizer()
 	}
 
 	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
