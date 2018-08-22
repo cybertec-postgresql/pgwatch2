@@ -13,6 +13,7 @@
   dbname_include_pattern:
   dbname_exclude_pattern:
   is_enabled: true
+  group: default
   custom_tags:      # possibility for the user to add extra Influx tags
     env: prod
     cloud: aws

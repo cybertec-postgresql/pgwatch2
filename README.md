@@ -67,7 +67,9 @@ For more background on the project motivations and design goals see the original
 * Min 1GB RAM
 * Docker default disk size of 10 GB should be enough for monitoring 5 hosts (3 month default metrics retention policy, configurable)
 * A low-spec (1 vCPU, 2 GB RAM) cloud machine can easily monitor 100 DBs in "exhaustive" settings (i.e. almost all metrics
-are monitored with 60s interval) without breaking a sweat (<20% load)
+are monitored with 60s interval) without breaking a sweat (<20% load). When a single node where the metrics collector daemon
+is running is becoming a bottleneck, one can also do "sharding" i.e. limit the amount of monitored databases for that node
+based on the Group label(s) (--group), which is just a string for logical grouping.
 * One monitored DB in preset "exhaustive" settings requires about ~250-500 MB of InfluxDB disk storage per month, depending on
 the amount of schema objects - tables, indexes, number of unique SQL-s.
 * A single InfluxDB node should handle thousands of requests per second but if this is not enough having a secondary/mirrored
@@ -227,7 +229,7 @@ finding out the query with the slowest average runtime for a time period.
 By default the Web UI is freely accessible. If some security is needed then following env. variables can be used enforce
 write permissions - PW2_WEBNOANONYMOUS, PW2_WEBUSER, PW2_WEBPASSWORD.
 
-By default also the component logs (Postgres, Influx, Grafana, Go daemon, Web UI itself) are exposed via the "/logs"
+By default also the Docker component logs (Postgres, Influx, Grafana, Go daemon, Web UI itself) are exposed via the "/logs"
 endpoint. If this is not wanted set the PW2_WEBNOCOMPONENTLOGS env. variable.  
 
 # Adding metrics
@@ -407,7 +409,7 @@ All examples assuming Ubuntu.
     Check for the latest Go version from https://golang.org/dl/
     
     ```
-    # install Go
+    # install Go (latest version preferably)
     wget https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz
     tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz
     export PATH=$PATH:/usr/local/go/bin

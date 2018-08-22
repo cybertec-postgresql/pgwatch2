@@ -14,6 +14,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_PGUSER** Config DB user. Default: pgwatch2
 - **PW2_PGPASSWORD** Config DB password. Default: pgwatch2admin
 - **PW2_PGSSL** Config DB SSL connection only. Default: False
+- **PW2_GROUP** Logical grouping/sharding key to monitor a subset of configured hosts. Default: -
 - **PW2_DATASTORE** Backend for metric storage - [influx|graphite]. Default: influx
 - **PW2_VERBOSE** Logging vebosity. By default warning and errors are logged. Use [-v|-vv] to include [info|debug]. Default: -
 - **PW2_IHOST** InfluxDB host. Default: localhost

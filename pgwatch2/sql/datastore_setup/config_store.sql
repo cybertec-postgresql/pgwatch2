@@ -45,10 +45,12 @@ create table pgwatch2.monitored_db (
     md_include_pattern text,    -- valid regex expected. relevant for 'postgres-continuous-discovery'
     md_exclude_pattern text,    -- valid regex expected. relevant for 'postgres-continuous-discovery'
     md_custom_tags jsonb,
+    md_group text not null default 'default',
     UNIQUE (md_unique_name),
     CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':'),
     CHECK (md_sslmode in ('disable', 'require', 'verify-full')),
-    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery'))
+    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery')),
+    CHECK (md_group ~ E'\\w+')
 );
 
 create unique index on monitored_db(md_hostname, md_port, md_dbname, md_is_enabled); -- prevent multiple active workers for the same db

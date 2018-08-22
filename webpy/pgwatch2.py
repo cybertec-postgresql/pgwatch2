@@ -133,6 +133,7 @@ def update_monitored_db(params):
         update
           pgwatch2.monitored_db new
         set
+          md_group = %(md_group)s,
           md_hostname = %(md_hostname)s,
           md_port = %(md_port)s,
           md_dbname = %(md_dbname)s,
@@ -182,11 +183,11 @@ def insert_monitored_db(params):
         insert into
           pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password, md_is_superuser,
           md_sslmode, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds, md_dbtype,
-          md_include_pattern, md_exclude_pattern, md_custom_tags)
+          md_include_pattern, md_exclude_pattern, md_custom_tags, md_group)
         values
           (%(md_unique_name)s, %(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s, %(md_password)s, %(md_is_superuser)s,
           %(md_sslmode)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s, %(md_statement_timeout_seconds)s, %(md_dbtype)s,
-          %(md_include_pattern)s, %(md_exclude_pattern)s, %(md_custom_tags)s)
+          %(md_include_pattern)s, %(md_exclude_pattern)s, %(md_custom_tags)s, %(md_group)s)
         returning
           md_id
     """
