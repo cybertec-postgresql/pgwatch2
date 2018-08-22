@@ -28,7 +28,7 @@ docker run --name pw2 -v pg:/var/lib/postgresql -v influx:/var/lib/influxdb -v g
 For more advanced usecases (production setup backups) or for easier problemsolving you can decide to expose all services
 ```
 # run with all ports exposed
-docker run -d -p 3000:3000 -p 5432:5432 -p 8086:8086 -p 8080:8080 -p 8088:8088 --name pw2 cybertec/pgwatch2
+docker run -d -p 3000:3000 -p 5432:5432 -p 8086:8086 -p 8080:8080 -p 8081:8081 -p 8088:8088 --name pw2 cybertec/pgwatch2
 ```
 NB! For production usage make sure you also specify listening IPs explicitly (-p IP:host_port:container_port), by default Docker uses 0.0.0.0 (all network devices).
 
@@ -210,6 +210,7 @@ Ports exposed by the Docker image:
 
 * 5432 - Postgres configuration DB
 * 8080 - Management Web UI (monitored hosts, metrics, metrics configurations)
+* 8081 - Gatherer healthcheck / statistics on number of gathered metrics (JSON).
 * 3000 - Grafana dashboarding
 * 8086 - InfluxDB API
 * 8088 - InfluxDB Backup port

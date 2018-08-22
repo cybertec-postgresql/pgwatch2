@@ -68,6 +68,8 @@ COPY docker-launcher-nonroot.sh /pgwatch2/
 
 # Admin UI for configuring servers to be monitored
 EXPOSE 8080
+# Gatherer healthcheck port / metric statistics (JSON)
+EXPOSE 8081
 # Postgres DB holding the pgwatch2 config DB
 EXPOSE 5432
 # Grafana UI
