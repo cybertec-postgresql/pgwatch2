@@ -862,9 +862,7 @@
   ],
   "schemaVersion": 14,
   "style": "dark",
-  "tags": [
-    "PostgreSQL"
-  ],
+  "tags": [],
   "templating": {
     "list": []
   },
@@ -899,5 +897,5 @@
   },
   "timezone": "browser",
   "title": "Replication",
-  "version": 24
+  "version": 1
 }
