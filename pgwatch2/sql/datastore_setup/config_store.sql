@@ -143,6 +143,22 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "psutil_cpu": 120,
     "psutil_mem": 120,
     "psutil_disk": 120
+    }'),
+    ('developer', 'no wrappers + only pg_stat_statements extension expected',
+    '{
+    "bgwriter": 60,
+    "db_stats": 60,
+    "index_stats": 120,
+    "locks": 60,
+    "locks_mode": 60,
+    "replication": 120,
+    "replication_slots": 120,
+    "sproc_stats": 60,
+    "stat_statements_calls": 60,
+    "table_io_stats": 120,
+    "table_stats": 120,
+    "wal": 60,
+    "change_events": 300
     }');
 
 /* one host for demo purposes, so that "docker run" could immediately show some graphs */

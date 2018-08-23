@@ -74,3 +74,20 @@
     psutil_cpu: 120
     psutil_mem: 120
     psutil_disk: 120
+
+- name: developer
+  description: no wrappers + only pg_stat_statements extension expected
+  metrics:
+    bgwriter: 60
+    change_events: 300
+    db_stats: 60
+    index_stats: 120
+    locks: 60
+    locks_mode: 60
+    replication: 120
+    replication_slots: 120
+    sproc_stats: 60
+    stat_statements_calls: 60
+    table_io_stats: 120
+    table_stats: 120
+    wal: 60
