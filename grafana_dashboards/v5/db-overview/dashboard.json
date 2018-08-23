@@ -16,7 +16,6 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521044164450,
   "links": [],
   "panels": [
     {
@@ -752,7 +751,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "IO time info requires track_io_timing=on",
+      "description": "",
       "editable": true,
       "error": false,
       "fill": 1,
@@ -927,90 +926,12 @@
             ]
           ],
           "tags": []
-        },
-        {
-          "alias": "blk_read_time",
-          "dsType": "influxdb",
-          "groupBy": [
-            {
-              "params": [
-                "$interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"blk_read_time\"), 1h) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(2m) fill(none)",
-          "rawQuery": true,
-          "refId": "E",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
-        },
-        {
-          "alias": "blk_write_time",
-          "dsType": "influxdb",
-          "groupBy": [
-            {
-              "params": [
-                "$interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"blk_write_time\"), 1h) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(2m) fill(none)",
-          "rawQuery": true,
-          "refId": "F",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Tuple IUD statistics + IO times (1h rates)",
+      "title": "Tuple  ins. / upd. / del. statistics (1h rates)",
       "tooltip": {
         "msResolution": false,
         "shared": true,
@@ -1040,9 +961,13 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {
@@ -1172,7 +1097,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Buffer hit ratio + Rollback ratio",
+      "title": "Shared Buffers hit ratio + Rollback ratio",
       "tooltip": {
         "msResolution": false,
         "shared": true,
@@ -1204,10 +1129,15 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {
+        "# Sessions": "#cca300",
         "#Backends": "#F9E2D2",
         "Deadlocks (1h rate)": "#BF1B00"
       },
@@ -1245,10 +1175,6 @@
       "renderer": "flot",
       "seriesOverrides": [
         {
-          "alias": "Deadlocks (1h rate)",
-          "yaxis": 1
-        },
-        {
           "alias": "Temp bytes written",
           "yaxis": 2
         }
@@ -1258,46 +1184,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "Deadlocks (1h rate)",
-          "dsType": "influxdb",
-          "groupBy": [
-            {
-              "params": [
-                "$interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"deadlocks\")) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time(2m) fill(none)",
-          "rawQuery": true,
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
-        },
-        {
-          "alias": "#Backends",
+          "alias": "# Sessions",
           "dsType": "influxdb",
           "groupBy": [
             {
@@ -1325,6 +1212,46 @@
               {
                 "params": [
                   "numbackends"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Deadlocks (1h rate)",
+          "dsType": "influxdb",
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "db_stats",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT non_negative_derivative(mean(\"deadlocks\")) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time(2m) fill(none)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
                 ],
                 "type": "field"
               },
@@ -1379,7 +1306,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Backends + Deadlocks + Temp bytes",
+      "title": "Total sessions + Deadlocks + Temp bytes",
       "tooltip": {
         "msResolution": false,
         "shared": true,
@@ -1411,7 +1338,11 @@
           "min": "0",
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {
@@ -1601,7 +1532,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -1610,7 +1545,7 @@
       "dashes": false,
       "datasource": null,
       "decimals": 1,
-      "description": "pg_stat_activity info",
+      "description": "Based on get_stat_activity() helper",
       "fill": 1,
       "gridPos": {
         "h": 6,
@@ -1639,7 +1574,7 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": true,
+      "stack": false,
       "steppedLine": false,
       "targets": [
         {
@@ -1824,10 +1759,10 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Sessions",
+      "title": "Sessions by state",
       "tooltip": {
         "shared": true,
-        "sort": 0,
+        "sort": 2,
         "value_type": "individual"
       },
       "type": "graph",
@@ -1855,7 +1790,11 @@
           "min": null,
           "show": false
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {
@@ -1865,6 +1804,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "decimals": 2,
       "description": "Requires according \"metric fetching helpers\" on the monitored server",
       "fill": 1,
       "gridPos": {
@@ -2001,6 +1941,7 @@
       },
       "yaxes": [
         {
+          "decimals": 1,
           "format": "percent",
           "label": null,
           "logBase": 1,
@@ -2009,6 +1950,7 @@
           "show": true
         },
         {
+          "decimals": 2,
           "format": "ms",
           "label": "",
           "logBase": 1,
@@ -2016,7 +1958,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2017/11/Cybertec_Logo_2017_300px_slogan_trans.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
