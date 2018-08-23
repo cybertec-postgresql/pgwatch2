@@ -15,7 +15,7 @@ $$
       pg_class c
       join
       pg_namespace n on n.oid = c.relnamespace
-      join lateral public.pgstattuple_approx(c.oid) on true
+      join lateral public.pgstattuple_approx(c.oid) on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables
     where
       relkind in ('r', 'm')
       and c.relpages >= 128 -- tables >1mb
