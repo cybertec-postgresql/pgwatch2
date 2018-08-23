@@ -2,6 +2,7 @@ package main
 
 import (
 	"container/list"
+	go_sql "database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -248,11 +249,15 @@ func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args .
 			}
 		}
 	} else {
+		var dbStats go_sql.DBStats
 		monitored_db_conn_cache_lock.RLock()
 		conn, exists = monitored_db_conn_cache[dbUnique]
 		monitored_db_conn_cache_lock.RUnlock()
+		if conn != nil {
+			dbStats = conn.Stats()
+		}
 
-		if !exists || conn == nil {
+		if !exists || conn == nil || dbStats.OpenConnections == 0 {
 
 			md, err = GetMonitoredDatabaseByUniqueName(dbUnique)
 			if err != nil {
@@ -267,6 +272,7 @@ func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args .
 				return nil, err
 			}
 			if !adHocMode && md.DBType == "postgres" {
+				log.Debugf("Setting statement_timeout to %ds for the new PG connection to %s...", md.StmtTimeout, dbUnique)
 				_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
 				if err != nil {
 					return nil, err
