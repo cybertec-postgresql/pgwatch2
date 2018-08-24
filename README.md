@@ -65,7 +65,7 @@ For more background on the project motivations and design goals see the original
 # Limitations / Performance expectations
 
 * Min 1GB RAM
-* Docker default disk size of 10 GB should be enough for monitoring 5 hosts (3 month default metrics retention policy, configurable)
+* Docker default disk size of 10 GB should be enough for monitoring 5 hosts (1 month default metrics retention policy, configurable)
 * A low-spec (1 vCPU, 2 GB RAM) cloud machine can easily monitor 100 DBs in "exhaustive" settings (i.e. almost all metrics
 are monitored with 60s interval) without breaking a sweat (<20% load). When a single node where the metrics collector daemon
 is running is becoming a bottleneck, one can also do "sharding" i.e. limit the amount of monitored databases for that node

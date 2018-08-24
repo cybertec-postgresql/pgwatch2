@@ -113,7 +113,7 @@ var metric_def_map_lock = sync.RWMutex{}
 var host_metric_interval_map = make(map[string]float64) // [db1_metric] = 30
 var db_pg_version_map = make(map[string]DBVersionMapEntry)
 var db_pg_version_map_lock = sync.RWMutex{}
-var InfluxDefaultRetentionPolicyDuration int64 = 90 // 90 days of monitoring data will be kept around. can be adjusted later on influx side if needed
+var InfluxDefaultRetentionPolicyDuration int64 = 30 // 30 days of monitoring data will be kept around. can be adjusted later on influx side if needed
 var monitored_db_cache map[string]MonitoredDatabase
 var monitored_db_cache_lock sync.RWMutex
 var monitored_db_conn_cache map[string]*sqlx.DB = make(map[string]*sqlx.DB)
@@ -1445,7 +1445,7 @@ retry:
 	}
 
 	log.Warning(fmt.Sprintf("Database '%s' not found! Creating with %d retention and retention policy name \"%s\"...", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName))
-	isql := fmt.Sprintf("CREATE DATABASE %s WITH DURATION %dd REPLICATION 1 SHARD DURATION 3d NAME %s", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
+	isql := fmt.Sprintf("CREATE DATABASE %s WITH DURATION %dd REPLICATION 1 SHARD DURATION 1d NAME %s", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
 	res, err = queryDB(c, isql)
 	if err != nil {
 		log.Fatal(err)
@@ -1862,7 +1862,7 @@ type Options struct {
 	InfluxUser2         string `long:"iuser2" description:"Influx user II" default:"root" env:"PW2_IUSER2"`
 	InfluxPassword2     string `long:"ipassword2" description:"Influx password II" default:"root" env:"PW2_IPASSWORD2"`
 	InfluxSSL2          string `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
-	InfluxRetentionDays int64  `long:"iretentiondays" description:"Retention period in days [90 default]" env:"PW2_IRETENTIONDAYS"`
+	InfluxRetentionDays int64  `long:"iretentiondays" description:"Retention period in days [default: 30]" env:"PW2_IRETENTIONDAYS"`
 	InfluxRetentionName string `long:"iretentionname" description:"Retention policy name. [Default: pgwatch_def_ret]" default:"pgwatch_def_ret" env:"PW2_IRETENTIONNAME"`
 	GraphiteHost        string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
 	GraphitePort        string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
