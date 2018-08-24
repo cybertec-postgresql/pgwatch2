@@ -67,6 +67,8 @@ type MetricFetchMessage struct {
 	DBUniqueName string
 	MetricName   string
 	DBType       string
+	Interval     time.Duration
+	CreatedOn    time.Time
 }
 
 type MetricStoreMessage struct {
@@ -311,9 +313,6 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 	if err != nil {
 		log.Error(err)
 	}
-	// else {
-	// 	UpdateMonitoredDBCache(data) // cache used by workers  TODO
-	// }
 	return data, err
 }
 
@@ -1208,6 +1207,10 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- []Met
 	for {
 		select {
 		case msg := <-fetch_msg:
+			if time.Now().Sub(msg.CreatedOn) > 2*msg.Interval {
+				log.Debugf("Skipping an old metrics fetch message for [%s:%s]...", msg.DBUniqueName, msg.MetricName) // skip old fetch messages in case of "traffic jams" (caused by metrics queries being blocked, network etc)
+				continue
+			}
 			if msg.DBType == "postgres" {
 				// DB version lookup
 				db_pg_version, err = DBGetPGVersion(msg.DBUniqueName)
@@ -1287,7 +1290,8 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 
 	for {
 		if running {
-			ForwardQueryMessageToDBUniqueFetcher(MetricFetchMessage{DBUniqueName: dbUniqueName, MetricName: metricName, DBType: dbType})
+			ForwardQueryMessageToDBUniqueFetcher(MetricFetchMessage{DBUniqueName: dbUniqueName, MetricName: metricName, DBType: dbType,
+				CreatedOn: time.Now(), Interval: time.Millisecond * time.Duration(interval*1000)})
 		}
 
 		select {
