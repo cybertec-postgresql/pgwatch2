@@ -75,8 +75,8 @@
     psutil_mem: 120
     psutil_disk: 120
 
-- name: developer
-  description: no wrappers + only pg_stat_statements extension expected
+- name: unprivileged
+  description: no wrappers + only pg_stat_statements extension expected (developer mode)
   metrics:
     bgwriter: 60
     change_events: 300

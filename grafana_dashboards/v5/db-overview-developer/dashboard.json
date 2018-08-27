@@ -1881,7 +1881,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "DB overview Developer / Unprivileged",
+  "title": "DB overview Unprivileged / Developer mode",
   "uid": null,
   "version": 1
 }

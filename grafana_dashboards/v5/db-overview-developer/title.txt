@@ -1,1 +1,1 @@
-DB overview Developer / Unprivileged
+DB overview Unprivileged / Developer mode
