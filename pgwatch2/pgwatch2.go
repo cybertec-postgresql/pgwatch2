@@ -1902,7 +1902,12 @@ func main() {
 			log.Fatal("Conflicting flags! --adhoc-conn-str and --config cannot be both set")
 		}
 		if len(opts.MetricsFolder) == 0 {
-			log.Fatal("--adhoc-conn-str requires also --metrics param")
+			// try Docker image default file based metrics path
+			_, err := ioutil.ReadDir("/pgwatch2/metrics")
+			if err != nil {
+				log.Fatal("--adhoc-conn-str requires also --metrics-folder param")
+			}
+			opts.MetricsFolder = "/pgwatch2/metrics"
 		}
 		if len(opts.AdHocConfig) == 0 {
 			log.Fatal("--adhoc-conn-str requires also --adhoc-config param")
