@@ -45,7 +45,8 @@ For a complete list of all supported Docker environment variables see [ENV_VARIA
 * Easy extensibility by defining metrics in pure SQL (thus they could also be from business domain)
 * Non-invasive setup, no extensions nor superuser rights required for the base functionality
 * Global or DB level configuration of metrics/intervals
-* Central config DB based operation or local config file based for better automation (Ansible, etc)
+* Central config DB based operation or local config file based for better automation (Ansible, etc) or ad-hoch/test mode for
+monitoring a single DB. See b
 * Intuitive metrics presentation using the [Grafana](http://grafana.org/) dashboarding engine. Set of dasboards provided
 * Optional alerting (Email, Slack, PagerDuty) provided by Grafana
 * PgBouncer and AWS RDS graphing/alerting supported in addition to PostgreSQL
@@ -96,7 +97,8 @@ of details though, but if no risks can be taken the dashboards (or at least acco
 # Alerting
 
 Alerting is very conveniently (point-and-click style) provided by Grafana - see [here](http://docs.grafana.org/alerting/rules/)
-for documentation. All most popular notification services are supported.
+for documentation. All most popular notification services are supported. A hint - currently you can set alerts only on Graph
+panels and there must be no variables used in the query so you cannot use the pre-created pgwatch2 graphs.
 
 If more complex scenarios/check conditions are required TICK stack and Kapacitor can be easily integrated - see 
 [here](https://www.influxdata.com/time-series-platform/#kapacitor) for more details. 
@@ -140,7 +142,7 @@ Following parameters needs to be set then: PW2_DATASTORE=graphite, PW2_GRAPHITEH
 
 
 
-# Usage 
+# Usage (Docker based, for file or ad-hoc based see further below)
 
 * by default the "pgwatch2" configuration database running inside Docker is being monitored so that you can immediately see
   some graphs, but you should add new databases by opening the "admin interface" at 127.0.0.1:8080/dbs or logging into the
@@ -219,12 +221,12 @@ Ports exposed by the Docker image:
 
 # The Admin Web UI
 
-For easy configuration changes (adding databases to monitoring, adding metrics) there is a small Python Web application
-bundled (exposed on Docker port 8080), making use of the CherryPy Web-framework. For mass changes one could technically
-also log into the configuration database and change the tables in the “pgwatch2” schema directly. Besides managing the
-metrics gathering configurations, the two other useful features for the Web UI would be the possibility to look at the
-logs of the single components (when using Docker) and at the “Stat Statements Overview” page, which will e.g. enable
-finding out the query with the slowest average runtime for a time period.
+In the centrally managed (config DB based) mode, for easy configuration changes (adding databases to monitoring, adding
+metrics) there is a small Python Web application bundled (exposed on Docker port 8080), making use of the CherryPy
+Web-framework. For mass changes one could technically also log into the configuration database and change the tables in
+the “pgwatch2” schema directly. Besides managing the metrics gathering configurations, the two other useful features for
+the Web UI would be the possibility to look at the logs of the single components (when using Docker) and at the “Stat
+Statements Overview” page, which will e.g. enable finding out the query with the slowest average runtime for a time period.
 
 By default the Web UI is freely accessible. If some security is needed then following env. variables can be used enforce
 write permissions - PW2_WEBNOANONYMOUS, PW2_WEBUSER, PW2_WEBPASSWORD.
@@ -259,13 +261,22 @@ added to all captured data rows
 # File based operation
 
 From v1.4.0 one can also deploy pgwatch2 gatherer daemons decentrally, based on YAML config files - for both metric definitions
-and "hosts to be monitored" definitions. In that case there is no need for the central Postgres "config DB". See pgwatch2/config/instances.yaml for sample config file and pgwatch2/metrics
-folder for metrics (and preset metric configuration) definitions. Relevant Gatherer env. vars / flags: PW2_CONFIG / --config, PW2_METRICS_FOLDER / --metrics-folder.
+and "hosts to be monitored" definitions. In that case there is no need for the central Postgres "config DB". See
+"pgwatch2/config/instances.yaml" for sample config file and "pgwatch2/metrics" folder for metrics (and preset metric
+configuration) definitions. Relevant Gatherer env. vars / flags: PW2_CONFIG / --config, PW2_METRICS_FOLDER / --metrics-folder.
 
 # Ad-hoc operation
 
 From v1.4.0 it's also possible to run the gatherer daemon in ad-hoc / test mode, by giving a single standard connection
-string as input, and optionally also specifying the metrics to monitor (preset config name or a custom JSON string) and the "unique name". In that case there is no need for the central Postgres "config DB" nor the YAML file specifying which hosts to monitor. Relevant Gatherer env. vars / flags: --adhoc-conn-str, --adhoc-config, --adhoc-name, --metrics-folder / PW2_ADHOC_CONN_STR, PW2_ADHOC_CONFIG, PW2_ADHOC_NAME, PW2_METRICS_FOLDER.
+string as input, and optionally also specifying the metrics to monitor (preset config name or a custom JSON string).
+In that case there is no need for the central Postgres "config DB" nor the YAML file specifying which hosts to monitor.
+NB! When using that mode with the default Docker image, the built-in metric definitions can't be changed via the Web UI.
+Relevant Gatherer env. vars / flags: --adhoc-conn-str, --adhoc-config, --adhoc-name, --metrics-folder / PW2_ADHOC_CONN_STR, PW2_ADHOC_CONFIG, PW2_ADHOC_NAME, PW2_METRICS_FOLDER.
+
+```
+# launching in ad-hoc / test mode
+docker run --rm -p 3000:3000 -e PW2_ADHOC_CONN_STR="postgresql://pgwatch2@localhost/pgwatch2" -e PW2_ADHOC_CONFIG=unprivileged --name pw2 cybertec/pgwatch2
+```
 
 # Updating to a newer Docker version
 
