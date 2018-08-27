@@ -127,7 +127,7 @@
                         <select name="md_preset_config_name">
                             <option value="" title="Empty. 'Custom config' must be filled" ></option>
                             {% for pc in preset_configs %}
-                            <option value="{{pc['pc_name']|e}}" {% if pc['pc_name'] == row['md_preset_config_name'] %}selected{% endif %}>{{pc['pc_name']|e}}</option>
+                            <option value="{{pc['pc_name']|e}}" title="{{pc['pc_description']|e}}" {% if pc['pc_name'] == row['md_preset_config_name'] %}selected{% endif %}>{{pc['pc_name']|e}}</option>
                             {% endfor %}
                         </select>
                         <br />
@@ -175,7 +175,7 @@
                         <select name="md_preset_config_name" id="md_preset_config_name">
                             <option value="" title="Empty. 'Custom config' must be filled" ></option>
                             {% for pc in preset_configs %}
-                            <option value="{{pc['pc_name']|e}}">{{pc['pc_name']|e}}</option>
+                            <option value="{{pc['pc_name']|e}}" title="{{pc['pc_description']|e}}">{{pc['pc_name']|e}}</option>
                             {% endfor %}
                         </select>
                         <br />
