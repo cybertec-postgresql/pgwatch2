@@ -194,6 +194,13 @@ psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/stat_state
 psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/cpu_load_plpythonu.sql mydb
 ```
 
+# Running without helper / wrapper functions
+
+Helpers/wrappers are not needed actually, they just provide a bit more information. For unprivileged users (developers)
+with no means to install any wrappers as superuser it's also possible to benefit from pgwatch2 - for such use cases e.g.
+the "unprivileged" preset metrics profile and the according ["DB overview Unprivileged / Developer" dashboard](https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/overview_developer.png)
+is a good starting point as it only assumes existance of pg_stat_statements.
+
 # Screenshot of the "DB overview" dashboard
 !["DB overview" dashboard](https://github.com/cybertec-postgresql/pgwatch2/raw/master/screenshots/overview.png)
 
