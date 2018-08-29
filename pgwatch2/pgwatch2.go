@@ -133,7 +133,8 @@ var totalMetricsFetchedCounter uint64
 var totalMetricsDroppedCounter uint64
 var totalDatasetsFetchedCounter uint64
 var metricPointsPerMinuteLast5MinAvg int64 = -1 // -1 means the summarization ticker has not yet run
-var gathererStartTime = time.Now()
+var gathererStartTime time.Time = time.Now()
+var useConnPooling bool
 
 func GetPostgresDBConnection(libPgConnString, host, port, dbname, user, password, sslmode string) (*sqlx.DB, error) {
 	var err error
@@ -793,7 +794,7 @@ func DBGetPGVersion(dbUnique string) (decimal.Decimal, error) {
 		return ver.Version, nil
 	} else {
 		log.Debug("determining DB version for", dbUnique)
-		data, err := DBExecReadByDbUniqueName(dbUnique, true, sql)
+		data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
 		if err != nil {
 			log.Error("DBGetPGVersion failed", err)
 			return ver.Version, err
@@ -877,7 +878,7 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		return change_counts
 	}
 
-	data, err := DBExecReadByDbUniqueName(dbUnique, true, sql)
+	data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
 	if err != nil {
 		log.Error("could not read table_hashes from monitored host: ", dbUnique, ", err:", err)
 		return change_counts
@@ -960,7 +961,7 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		return change_counts
 	}
 
-	data, err := DBExecReadByDbUniqueName(dbUnique, true, sql)
+	data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
 	if err != nil {
 		log.Error("could not read table_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -1043,7 +1044,7 @@ func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		return change_counts
 	}
 
-	data, err := DBExecReadByDbUniqueName(dbUnique, true, sql)
+	data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
 	if err != nil {
 		log.Error("could not read index_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -1124,7 +1125,7 @@ func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, 
 		return change_counts
 	}
 
-	data, err := DBExecReadByDbUniqueName(dbUnique, true, sql)
+	data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
 	if err != nil {
 		log.Error("could not read configuration_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -1251,7 +1252,7 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- []Met
 				CheckForPGObjectChangesAndStore(msg.DBUniqueName, db_pg_version, storage_ch, host_state)
 			} else {
 				t1 := time.Now().UnixNano()
-				data, err := DBExecReadByDbUniqueName(msg.DBUniqueName, true, sql)
+				data, err := DBExecReadByDbUniqueName(msg.DBUniqueName, useConnPooling, sql)
 				t2 := time.Now().UnixNano()
 				if err != nil {
 					// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
@@ -1475,7 +1476,7 @@ retry:
 func DoesFunctionExists(dbUnique, functionName string) bool {
 	log.Debug("Checking for function existance", dbUnique, functionName)
 	sql := fmt.Sprintf("select 1 from pg_proc join pg_namespace n on pronamespace = n.oid where proname = '%s' and n.nspname = 'public'", functionName)
-	data, err := DBExecReadByDbUniqueName(dbUnique, true, sql)
+	data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
 	if err != nil {
 		log.Error("Failed to check for function existance", dbUnique, functionName, err)
 		return false
@@ -1512,7 +1513,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 					log.Warning("Could not find query text for", dbUnique, helperName)
 					continue
 				}
-				_, err = DBExecReadByDbUniqueName(dbUnique, true, sql)
+				_, err = DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
 				if err != nil {
 					log.Warning("Failed to create a metric fetching helper for", dbUnique, helperName)
 					log.Warning(err)
@@ -1891,6 +1892,7 @@ type Options struct {
 	AdHocConfig       string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
 	AdHocUniqueName   string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
 	InternalStatsPort int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
+	ConnPooling       string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: true]" default:"true" env:"PW2_CONN_POOLING"`
 }
 
 var opts Options
@@ -2006,6 +2008,8 @@ func main() {
 	if opts.BatchingDelayMs < 0 || opts.BatchingDelayMs > 3600000 {
 		log.Fatal("--batching-delay-ms must be between 0 and 3600000")
 	}
+
+	useConnPooling = StringToBoolOrFail(opts.ConnPooling)
 
 	if opts.InternalStatsPort > 0 {
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", opts.InternalStatsPort))
