@@ -196,7 +196,7 @@ parameters:
   value: ""
 - description: Postgres config store - require SSL
   name: PW2_PGSSL
-  value: ""
+  value: "false"
 - description: Use already External Influx DB for storing metrics
   name: PW2_IHOST
   value: "localhost"
