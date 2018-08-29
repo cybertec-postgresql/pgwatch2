@@ -217,7 +217,7 @@ parameters:
   value: "false"
 - description: Influx DB metrics retention period in days
   name: PW2_IRETENTIONDAYS
-  value: "90"
+  value: "30"
 - description: Set to "graphite" to use external Graphite server as metrics datastore
   name: PW2_DATASTORE
   value: "influx"
@@ -227,3 +227,12 @@ parameters:
 - description: External Graphite - port
   name: PW2_GRAPHITEPORT
   value: ""
+- description: Max milliseconds to wait for a batched metrics flush
+  name: PW2_BATCHING_MAX_DELAY_MS
+  value: "250"
+- description: Port for inquiring monitoring status in JSON format
+  name: PW2_INTERNAL_STATS_PORT
+  value: "8081"
+- description: Enable re-use of metrics fetching connections. "false" means reconnect every time
+  name: PW2_CONN_POOLING
+  value: "true"
