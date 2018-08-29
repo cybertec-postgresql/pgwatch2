@@ -6,6 +6,36 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.4.0 [2018-08-29]
+
+* Feature - "config file based operation". Now one can run pgwatch2 without the config DB using YAML configs, making automatization easier. See README or help output on --metrics-folder/--config params
+* Feature - "Ad hoc" mode. For test/ad hoc purposes the gatherer can now be run from command line, given a JDBC connect string. See README or --adhoc-conn-str param
+* Feature - "continous discovery". The gatherer daemon can now periodically scan for new DBs on the cluster and monitor them automatically
+* Feature - "custom tags". Now users can add any data (e.g. env. flags/app ID's) to be stored for all metric points as tags in InfluxDB
+* Feature -  a stats/health interface outputting JSON on internal metric counters for the gatherer. Runs on port 8081 by default, use --internal-stats-port to change
+* Feature -  "Group" field added for monitored DBs. Enables logical separation and thus running many gatherers on one config DB (sharding)
+* Improvement - batching of InfluxDB requests. Huge latency wins over slower connections. Default batching delay is 250ms (changeable)
+* Improvement - gatherer daemon now supports < 1s gathering intervals for some extreme use cases
+* Improvement - connection pooling on monitored DBs (with 30min recycling). Can be disabled via the --conn-pooling param
+* Improvement - set "pgwatch2" as application name on all DB connections for better visibility
+* Improvement - InfluxDB retention policy / duration made configurable on command line
+* Dashboards - new "DB overview Developer / Unprivileged" dashboard together with an according preset metrics set
+* Dashboards - new "System Stats" dashboard together with according helpers / metrics. "psutil" Python package required
+* Dashboards - new "Checkpointer/Bgwriter/Block IO Stats" dashboard
+* Dashboards - "DB overview" dashboard simplified a bit to be more beginner friendly
+* Dashboards - lots of minor corrections e.g. for "Single query details", "Replication"
+* Metrics - new metrics "replication_slots", "psutil*" (to take advantage of Python's "psutil" package for OS/system metrics)
+* Fix - pg_stat_statements wrapper now compatible with 9.2/9.3
+* Fix - make server config change tracking work for PG <9.5
+* Fix - correct auto-adding of all DBs in a cluster via Web UI
+* Fix - Web UI --pg-require-ssl/--verbose param handling made more robust for env. usage
+* Docker - expose the new gather internal statistics port 8081
+* Docker - reduce default metrics retention from 90d to 30d
+* Docker - Grafana updated to 5.2.2
+* Docker - Influx updated to 1.6.1
+
+NB! To migrate from older installations it's also needed to execute v1.4.0 SQL-s from the "pgwatch2/sql/datastore_setup/migrations" folder on the config DB. 
+
 ## v1.3.7 [2018-06-10]
 
 * Fix - Openshift/nonroot Docker image was failing on container re-launch due to Postgres SSL false handling
