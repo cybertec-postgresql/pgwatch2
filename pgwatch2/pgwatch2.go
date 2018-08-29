@@ -163,10 +163,26 @@ func GetPostgresDBConnection(libPgConnString, host, port, dbname, user, password
 	return db, err
 }
 
-func InitAndTestConfigStoreConnection(host, port, dbname, user, password string) {
-	var err error
+func StringToBoolOrFail(boolAsString string) bool {
+	conversionMap := map[string]bool{
+		"true": true, "t": true, "on": true, "y": true, "yes": true, "require": true, "1": true,
+		"false": false, "f": false, "off": false, "n": false, "no": false, "disable": false, "0": false,
+	}
+	val, ok := conversionMap[strings.TrimSpace(strings.ToLower(boolAsString))]
+	if !ok {
+		log.Fatalf("invalid input for boolean: %s", boolAsString)
+	}
+	return val
+}
 
-	configDb, err = GetPostgresDBConnection("", host, port, dbname, user, password, "disable") // configDb is used by the main thread only
+func InitAndTestConfigStoreConnection(host, port, dbname, user, password, requireSSL string) {
+	var err error
+	SSLMode := "disable"
+
+	if StringToBoolOrFail(requireSSL) {
+		SSLMode = "require"
+	}
+	configDb, err = GetPostgresDBConnection("", host, port, dbname, user, password, SSLMode) // configDb is used by the main thread only
 	if err != nil {
 		log.Fatal("could not open configDb connection! exit.")
 	}
@@ -1848,6 +1864,7 @@ type Options struct {
 	Dbname              string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
 	User                string `short:"u" long:"user" description:"PG config DB user" default:"pgwatch2" env:"PW2_PGUSER"`
 	Password            string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
+	PgRequireSSL        string `long:"pg-require-ssl" description:"PG config DB SSL connection only" default:"false" env:"PW2_PGSSL"`
 	Group               string `short:"g" long:"group" description:"Group (or groups, comma separated) for filtering which DBs to monitor. By default all are monitored" env:"PW2_GROUP"`
 	Datastore           string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
 	InfluxHost          string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
@@ -1965,7 +1982,7 @@ func main() {
 			return
 		}
 
-		InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password)
+		InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password, opts.PgRequireSSL)
 	}
 
 	// validate that input is boolean is set
