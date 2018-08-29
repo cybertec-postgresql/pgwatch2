@@ -46,9 +46,9 @@ def str_to_bool_or_fail(bool_str):
         return None
     if bool_str.strip() == '' or bool_str.strip() == '""' or bool_str.strip() == "''":
         return False
-    if bool_str.lower().strip() in ['t', 'true', 'y', 'yes', 'on', 'require']:
+    if bool_str.lower().strip() in ['t', 'true', 'y', 'yes', 'on', 'require', '1']:
         return True
-    if bool_str.lower().strip() in ['f', 'false', 'n', 'no', 'off', 'disable']:
+    if bool_str.lower().strip() in ['f', 'false', 'n', 'no', 'off', 'disable', '0']:
         return False
     else:
         raise Exception('Boolean string (or empty/quotes) expected! Found: ' + bool_str)
