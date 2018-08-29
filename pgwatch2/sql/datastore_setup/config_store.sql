@@ -142,7 +142,8 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "pg_stat_ssl": 120,
     "psutil_cpu": 120,
     "psutil_mem": 120,
-    "psutil_disk": 120
+    "psutil_disk": 120,
+    "psutil_disk_io_total": 120
     }'),
     ('unprivileged', 'no wrappers + only pg_stat_statements extension expected (developer mode)',
     '{

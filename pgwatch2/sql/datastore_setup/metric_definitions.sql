@@ -1231,3 +1231,19 @@ from
   public.get_psutil_disk();
 $sql$
 );
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'psutil_disk_io_total',
+9.0,
+$sql$
+SELECT
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  read_count,
+  write_count,
+  read_bytes,
+  write_bytes
+from
+  public.get_psutil_disk_io_total();
+$sql$
+);

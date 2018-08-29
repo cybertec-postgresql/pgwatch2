@@ -74,6 +74,7 @@
     psutil_cpu: 120
     psutil_mem: 120
     psutil_disk: 120
+    psutil_disk_io_total: 120
 
 - name: unprivileged
   description: no wrappers + only pg_stat_statements extension expected (developer mode)
