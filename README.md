@@ -427,9 +427,9 @@ All examples assuming Ubuntu.
     Check for the latest Go version from https://golang.org/dl/
     
     ```
-    # install Go (latest version preferably)
-    wget https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz
-    tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz
+    # install Go (latest version preferably, but at least 1.10)
+    wget https://dl.google.com/go/go1.11.linux-amd64.tar.gz
+    tar -C /usr/local -xzf go1.11.linux-amd64.tar.gz
     export PATH=$PATH:/usr/local/go/bin
     
     # compile the gatherer daemon
