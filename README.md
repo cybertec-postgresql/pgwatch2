@@ -304,7 +304,8 @@ image on the other hand needs quite some steps currently. See the take_backup.sh
 bit easier, the preferred way should be though to think about it previously and use Docker volumes accordingly - see the
 Dockerfile for details. On some rare occasions updating to newer pgwatch2 Web UI or gahterer daemon might additionally
 still require rollout of some manual config DB schema migrations scripts from the "migrations" subfolder - error messages
-will include "missing columns" or "wrong datatype" then.
+will include "missing columns" or "wrong datatype" then. SQL "patches" might be provided also for important metric updates,
+but for dashboard changes there will be none - users need to import them from JSON directly!
 
 Basically there are two options – first, go into the Docker container (e.g. docker exec -it pw2 /bin/bash)
 and just update the component yourself – i.e. download the latest Grafana .deb package and install it with “dpkg -i …”. 
