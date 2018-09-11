@@ -4,7 +4,8 @@ Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution
 
 # Installing
 
-Software is packaged as Docker (for custom setup see the last paragraph below) for getting quickly started.
+Software is packaged as Docker (for custom setup see the last paragraph below, for a Docker quickstart see
+[here](https://docs.docker.com/get-started/)) for getting started quickly.
 ```
 # fetch and run the latest Docker image, exposing Grafana on port 3000 and administrative web UI on 8080
 docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2
