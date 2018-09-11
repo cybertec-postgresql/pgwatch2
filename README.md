@@ -118,7 +118,7 @@ at all see end of README.
 
 ## Component diagram for default Docker setup
 
-![Component diagram](https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgwatch2_architecture.jpg)
+![Component diagram](https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgwatch2_architecture.png)
 
 ### To use an existing Postgres DB
 
