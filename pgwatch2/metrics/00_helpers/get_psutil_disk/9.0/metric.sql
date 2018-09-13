@@ -20,6 +20,7 @@ ld = r[0]['ld']
 du_dd = disk_usage(dd)
 ret_list.append(['data_directory', dd, du_dd.total, du_dd.used, du_dd.free, du_dd.percent])
 
+dd_stat = stat(dd)
 # log_directory
 if ld:
     if not ld.startswith('/'):
@@ -27,7 +28,6 @@ if ld:
     else:
         ld_path = ld
     if exists(ld_path):
-        dd_stat = stat(dd)
         log_stat = stat(ld_path)
         if log_stat.st_dev == dd_stat.st_dev:
             pass                                # no new info, same device
