@@ -1418,9 +1418,10 @@ func queryDB(clnt client.Client, cmd string) (res []client.Result, err error) {
 	return res, nil
 }
 
-func InitAndTestInfluxConnection(HostId, InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword, InfluxSSL string, RetentionPeriod int64) (string, error) {
+func InitAndTestInfluxConnection(HostId, InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword, InfluxSSL, SkipSSLCertVerify string, RetentionPeriod int64) (string, error) {
 	log.Info(fmt.Sprintf("Testing Influx connection to host %s: %s, port: %s, DB: %s", HostId, InfluxHost, InfluxPort, InfluxDbname))
 	var connect_string string
+	skipSSLCertVerify, _ := strconv.ParseBool(SkipSSLCertVerify)
 
 	if b, _ := strconv.ParseBool(InfluxSSL); b == true {
 		connect_string = fmt.Sprintf("https://%s:%s", InfluxHost, InfluxPort)
@@ -1430,9 +1431,10 @@ func InitAndTestInfluxConnection(HostId, InfluxHost, InfluxPort, InfluxDbname, I
 
 	// Make client
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     connect_string,
-		Username: InfluxUser,
-		Password: InfluxPassword,
+		Addr:               connect_string,
+		Username:           InfluxUser,
+		Password:           InfluxPassword,
+		InsecureSkipVerify: skipSSLCertVerify,
 	})
 
 	if err != nil {
@@ -1859,31 +1861,33 @@ func FilterMonitoredDatabasesByGroup(monitoredDBs []MonitoredDatabase, group str
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
-	Verbose             []bool `short:"v" long:"verbose" description:"Show verbose debug information" env:"PW2_VERBOSE"`
-	Host                string `long:"host" description:"PG config DB host" default:"localhost" env:"PW2_PGHOST"`
-	Port                string `short:"p" long:"port" description:"PG config DB port" default:"5432" env:"PW2_PGPORT"`
-	Dbname              string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
-	User                string `short:"u" long:"user" description:"PG config DB user" default:"pgwatch2" env:"PW2_PGUSER"`
-	Password            string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
-	PgRequireSSL        string `long:"pg-require-ssl" description:"PG config DB SSL connection only" default:"false" env:"PW2_PGSSL"`
-	Group               string `short:"g" long:"group" description:"Group (or groups, comma separated) for filtering which DBs to monitor. By default all are monitored" env:"PW2_GROUP"`
-	Datastore           string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
-	InfluxHost          string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
-	InfluxPort          string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
-	InfluxDbname        string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
-	InfluxUser          string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
-	InfluxPassword      string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
-	InfluxSSL           string `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
-	InfluxHost2         string `long:"ihost2" description:"Influx host II" env:"PW2_IHOST2"`
-	InfluxPort2         string `long:"iport2" description:"Influx port II" env:"PW2_IPORT2"`
-	InfluxDbname2       string `long:"idbname2" description:"Influx DB name II" default:"pgwatch2" env:"PW2_IDATABASE2"`
-	InfluxUser2         string `long:"iuser2" description:"Influx user II" default:"root" env:"PW2_IUSER2"`
-	InfluxPassword2     string `long:"ipassword2" description:"Influx password II" default:"root" env:"PW2_IPASSWORD2"`
-	InfluxSSL2          string `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
-	InfluxRetentionDays int64  `long:"iretentiondays" description:"Retention period in days [default: 30]" env:"PW2_IRETENTIONDAYS"`
-	InfluxRetentionName string `long:"iretentionname" description:"Retention policy name. [Default: pgwatch_def_ret]" default:"pgwatch_def_ret" env:"PW2_IRETENTIONNAME"`
-	GraphiteHost        string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
-	GraphitePort        string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
+	Verbose              []bool `short:"v" long:"verbose" description:"Show verbose debug information" env:"PW2_VERBOSE"`
+	Host                 string `long:"host" description:"PG config DB host" default:"localhost" env:"PW2_PGHOST"`
+	Port                 string `short:"p" long:"port" description:"PG config DB port" default:"5432" env:"PW2_PGPORT"`
+	Dbname               string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
+	User                 string `short:"u" long:"user" description:"PG config DB user" default:"pgwatch2" env:"PW2_PGUSER"`
+	Password             string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
+	PgRequireSSL         string `long:"pg-require-ssl" description:"PG config DB SSL connection only" default:"false" env:"PW2_PGSSL"`
+	Group                string `short:"g" long:"group" description:"Group (or groups, comma separated) for filtering which DBs to monitor. By default all are monitored" env:"PW2_GROUP"`
+	Datastore            string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
+	InfluxHost           string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
+	InfluxPort           string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
+	InfluxDbname         string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
+	InfluxUser           string `long:"iuser" description:"Influx user" default:"root" env:"PW2_IUSER"`
+	InfluxPassword       string `long:"ipassword" description:"Influx password" default:"root" env:"PW2_IPASSWORD"`
+	InfluxSSL            string `long:"issl" description:"Influx require SSL" env:"PW2_ISSL"`
+	InfluxSSLSkipVerify  string `long:"issl-skip-verify" description:"Skip Influx Cert validation i.e. allows self-signed certs" default:"true" env:"PW2_ISSL_SKIP_VERIFY"`
+	InfluxHost2          string `long:"ihost2" description:"Influx host II" env:"PW2_IHOST2"`
+	InfluxPort2          string `long:"iport2" description:"Influx port II" env:"PW2_IPORT2"`
+	InfluxDbname2        string `long:"idbname2" description:"Influx DB name II" default:"pgwatch2" env:"PW2_IDATABASE2"`
+	InfluxUser2          string `long:"iuser2" description:"Influx user II" default:"root" env:"PW2_IUSER2"`
+	InfluxPassword2      string `long:"ipassword2" description:"Influx password II" default:"root" env:"PW2_IPASSWORD2"`
+	InfluxSSL2           string `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
+	InfluxSSLSkipVerify2 string `long:"issl-skip-verify2" description:"Skip Influx Cert validation i.e. allows self-signed certs" default:"true" env:"PW2_ISSL_SKIP_VERIFY2"`
+	InfluxRetentionDays  int64  `long:"iretentiondays" description:"Retention period in days [default: 30]" env:"PW2_IRETENTIONDAYS"`
+	InfluxRetentionName  string `long:"iretentionname" description:"Retention policy name. [Default: pgwatch_def_ret]" default:"pgwatch_def_ret" env:"PW2_IRETENTIONNAME"`
+	GraphiteHost         string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
+	GraphitePort         string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
 	// Params for running based on local config files, enabled distributed "push model" based metrics gathering. Metrics are sent directly to Influx/Graphite.
 	Config            string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
 	MetricsFolder     string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
@@ -2049,7 +2053,7 @@ func main() {
 		}
 		// check connection and store connection string
 		conn_str, err := InitAndTestInfluxConnection("1", opts.InfluxHost, opts.InfluxPort, opts.InfluxDbname, opts.InfluxUser,
-			opts.InfluxPassword, opts.InfluxSSL, retentionPeriod)
+			opts.InfluxPassword, opts.InfluxSSL, opts.InfluxSSLSkipVerify, retentionPeriod)
 		if err != nil {
 			log.Fatal("Could not initialize InfluxDB", err)
 		}
@@ -2059,7 +2063,7 @@ func main() {
 				log.Fatal("Invalid Influx II connect info")
 			}
 			conn_str, err = InitAndTestInfluxConnection("2", opts.InfluxHost2, opts.InfluxPort2, opts.InfluxDbname2, opts.InfluxUser2,
-				opts.InfluxPassword2, opts.InfluxSSL2, retentionPeriod)
+				opts.InfluxPassword2, opts.InfluxSSL2, opts.InfluxSSLSkipVerify2, retentionPeriod)
 			if err != nil {
 				log.Fatal("Could not initialize InfluxDB II", err)
 			}

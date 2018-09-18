@@ -23,12 +23,14 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_IPASSWORD** InfluxDB password. Default: root
 - **PW2_IDATABASE** InfluxDB database. Default: pgwatch2
 - **PW2_ISSL** Use SSL for InfluxDB. Default: False
+- **PW2_ISSL_SKIP_VERIFY** Skip SSL cert validation. Allows self-signed certs. Default: true
 - **PW2_IHOST2** Secondary InfluxDB host. Default: localhost
 - **PW2_IPORT2** Secondary InfluxDB port. Default: 8086
 - **PW2_IUSER2** Secondary InfluxDB username. Default: root
 - **PW2_IPASSWORD2** Secondary InfluxDB password. Default: root
 - **PW2_IDATABASE2** Secondary InfluxDB database. Default: pgwatch2
 - **PW2_ISSL2** Use SSL for Secondary InfluxDB. Default: False
+- **PW2_ISSL_SKIP_VERIFY2** Skip SSL cert validation. Allows self-signed certs. Default: true
 - **PW2_IRETENTIONDAYS** Influx metrics retention period in days. Default: 30
 - **PW2_IRETENTIONNAME** Influx retention policy name. Default: pgwatch_def_ret
 - **PW2_GRAPHITEHOST** Graphite host. Default: -
