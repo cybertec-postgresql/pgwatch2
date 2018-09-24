@@ -24,6 +24,49 @@ select
 $sql$
 );
 
+with sa_snapshot as (
+  select * from public.get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
+)
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  (select count(*) from sa_snapshot) as total,
+  (select count(*) from sa_snapshot where state = 'active') as active,
+  (select count(*) from sa_snapshot where state = 'idle') as idle,
+  (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
+  (select count(*) from sa_snapshot where waiting) as waiting,
+  (select extract(epoch from (now() - backend_start))::int
+    from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
+  (select extract(epoch from (now() - xact_start))::int
+    from sa_snapshot where xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
+  (select extract(epoch from max(now() - query_start))::int
+    from sa_snapshot where state = 'active') as longest_query_seconds,
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'backends',
+9.4,
+$sql$
+with sa_snapshot as (
+  select * from public.get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
+)
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  (select count(*) from sa_snapshot) as total,
+  (select count(*) from sa_snapshot where state = 'active') as active,
+  (select count(*) from sa_snapshot where state = 'idle') as idle,
+  (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
+  (select count(*) from sa_snapshot where waiting) as waiting,
+  (select extract(epoch from (now() - backend_start))::int
+    from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
+  (select extract(epoch from (now() - xact_start))::int
+    from sa_snapshot where xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
+  (select extract(epoch from max(now() - query_start))::int
+    from sa_snapshot where state = 'active') as longest_query_seconds,
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
+$sql$
+);
+
 insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'backends',
@@ -44,7 +87,8 @@ select
   (select extract(epoch from (now() - xact_start))::int
     from sa_snapshot where xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
   (select extract(epoch from max(now() - query_start))::int
-    from sa_snapshot where state = 'active') as longest_query_seconds;
+    from sa_snapshot where state = 'active') as longest_query_seconds,
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
 $sql$
 );
 
@@ -71,7 +115,8 @@ select
   (select extract(epoch from (now() - xact_start))::int
     from sa_snapshot where xact_start is not null and backend_type = 'client backend' order by xact_start limit 1) as longest_tx_seconds,
   (select extract(epoch from max(now() - query_start))::int
-    from sa_snapshot where state = 'active' and backend_type = 'client backend') as longest_query_seconds;
+    from sa_snapshot where state = 'active' and backend_type = 'client backend') as longest_query_seconds,
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
 $sql$
 );
 
@@ -1163,7 +1208,8 @@ select
   coalesce(plugin, 'physical')::text as tag_plugin,
   active,
   case when active then 0 else 1 end as non_active_int,
-  pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn)::int8 as restart_lsn_lag_b
+  pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn)::int8 as restart_lsn_lag_b,
+  greatest(age(xmin), age(catalog_xmin))::int8 as xmin_age_tx
 from
   pg_replication_slots;
 $sql$
@@ -1181,7 +1227,8 @@ select
   coalesce(plugin, 'physical')::text as plugin,
   active,
   case when active then 0 else 1 end as non_active_int,
-  pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)::int8 as restart_lsn_lag_b
+  pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)::int8 as restart_lsn_lag_b,
+  greatest(age(xmin), age(catalog_xmin))::int8 as xmin_age_tx
 from
   pg_replication_slots;
 $sql$

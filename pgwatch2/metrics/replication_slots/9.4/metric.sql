@@ -4,6 +4,7 @@ select
   coalesce(plugin, 'physical')::text as tag_plugin,
   active,
   case when active then 0 else 1 end as non_active_int,
-  pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn)::int8 as restart_lsn_lag_b
+  pg_xlog_location_diff(pg_current_xlog_location(), restart_lsn)::int8 as restart_lsn_lag_b,
+  greatest(age(xmin), age(catalog_xmin))::int8 as xmin_age_tx
 from
   pg_replication_slots;
