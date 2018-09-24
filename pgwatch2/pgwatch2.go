@@ -100,6 +100,7 @@ const PERSIST_QUEUE_MAX_SIZE = 100000 // storage queue max elements. when reachi
 // but 100k should be enough for 24h, assuming 5 hosts monitored with "exhaustive" preset config. this would also require ~2 GB RAM per one Influx host
 const DATASTORE_INFLUX = "influx"
 const DATASTORE_GRAPHITE = "graphite"
+const DATASTORE_JSON = "json"
 const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
 const FILE_BASED_METRIC_HELPERS_DIR = "00_helpers"
 const PG_CONN_RECYCLE_SECONDS = 1800 // applies for monitored nodes
@@ -693,6 +694,28 @@ func MetricsBatcher(data_store string, batchingMaxDelayMillis int64, buffered_st
 	}
 }
 
+func WriteMetricsToJsonFile(msgArr []MetricStoreMessage, jsonPath string) error {
+	if len(msgArr) == 0 {
+		return nil
+	}
+
+	jsonOutFile, err := os.Create(jsonPath)
+	if err != nil {
+		return err
+	}
+	defer jsonOutFile.Close()
+
+	log.Infof("Writing %d metric sets to JSON file at \"%s\"...", len(msgArr), jsonPath)
+	enc := json.NewEncoder(jsonOutFile)
+	for _, msg := range msgArr {
+		err = enc.Encode(map[string]interface{}{"metric": msg.MetricName, "data": msg.Data, "dbname": msg.DBUniqueName, "custom_tags": msg.CustomTags})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage) {
 	var last_try = make([]time.Time, influx_host_count)          // if Influx errors out, don't retry before 10s
 	var last_drop_warning = make([]time.Time, influx_host_count) // log metric points drops every 10s to not overflow logs in case Influx is down for longer
@@ -733,8 +756,10 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg_arr)
 					} else if data_store == DATASTORE_GRAPHITE {
 						for _, m := range msg_arr {
-							err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO
+							err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO does Graphite library support batching?
 						}
+					} else if data_store == DATASTORE_JSON {
+						err = WriteMetricsToJsonFile(msg_arr, opts.JsonStorageFile)
 					} else {
 						log.Fatal("Invalid datastore:", data_store)
 					}
@@ -1869,7 +1894,7 @@ type Options struct {
 	Password             string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
 	PgRequireSSL         string `long:"pg-require-ssl" description:"PG config DB SSL connection only" default:"false" env:"PW2_PGSSL"`
 	Group                string `short:"g" long:"group" description:"Group (or groups, comma separated) for filtering which DBs to monitor. By default all are monitored" env:"PW2_GROUP"`
-	Datastore            string `long:"datastore" description:"[influx|graphite]" default:"influx" env:"PW2_DATASTORE"`
+	Datastore            string `long:"datastore" description:"[influx|graphite|json]" default:"influx" env:"PW2_DATASTORE"`
 	InfluxHost           string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
 	InfluxPort           string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
 	InfluxDbname         string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
@@ -1888,6 +1913,7 @@ type Options struct {
 	InfluxRetentionName  string `long:"iretentionname" description:"Retention policy name. [Default: pgwatch_def_ret]" default:"pgwatch_def_ret" env:"PW2_IRETENTIONNAME"`
 	GraphiteHost         string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
 	GraphitePort         string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
+	JsonStorageFile      string `long:"json-storage-file" description:"Path to file where metrics will be stored when --datastore=json, one metric set per line" env:"PW2_JSON_STORAGE_FILE"`
 	// Params for running based on local config files, enabled distributed "push model" based metrics gathering. Metrics are sent directly to Influx/Graphite.
 	Config            string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
 	MetricsFolder     string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
@@ -2046,7 +2072,7 @@ func main() {
 		InitGraphiteConnection(opts.GraphiteHost, int(graphite_port))
 		log.Info("starting GraphitePersister...")
 		go MetricsPersister(DATASTORE_GRAPHITE, persist_ch)
-	} else {
+	} else if opts.Datastore == "influx" {
 		retentionPeriod := InfluxDefaultRetentionPolicyDuration
 		if opts.InfluxRetentionDays > 0 {
 			retentionPeriod = opts.InfluxRetentionDays
@@ -2074,6 +2100,22 @@ func main() {
 
 		log.Info("starting InfluxPersister...")
 		go MetricsPersister(DATASTORE_INFLUX, persist_ch)
+	} else if opts.Datastore == DATASTORE_JSON {
+		if len(opts.JsonStorageFile) == 0 {
+			log.Fatal("--datastore=json requires --json-storage-file to be set")
+		}
+		jsonOutFile, err := os.Create(opts.JsonStorageFile) // test file path writeability
+		if err != nil {
+			log.Fatalf("Could not create JSON storage file: %s", err)
+		}
+		err = jsonOutFile.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Warning("In JSON ouput mode. Gathered metrics will be written to \"%s\"...")
+		go MetricsPersister(DATASTORE_JSON, persist_ch)
+	} else {
+		log.Fatal("Unknown datastore. Check the --datastore param")
 	}
 
 	first_loop := true
