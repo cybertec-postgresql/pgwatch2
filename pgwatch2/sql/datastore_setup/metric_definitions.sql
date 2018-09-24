@@ -207,11 +207,11 @@ SELECT
   blks_read,
   blks_hit,
   temp_bytes,
-  (select sum(seq_scan) from q_stat_tables) AS seq_scans_on_tbls_gt_10mb,
+  (select sum(seq_scan) from q_stat_tables)::int8 AS seq_scans_on_tbls_gt_10mb,
   tup_inserted,
   tup_updated,
   tup_deleted,
-  (select sum(calls) from pg_stat_user_functions where not schemaname like any(array[E'pg\\_%', 'information_schema'])) AS sproc_calls,
+  (select sum(calls) from pg_stat_user_functions where not schemaname like any(array[E'pg\\_%', 'information_schema']))::int8 AS sproc_calls,
   blk_read_time,
   blk_write_time,
   deadlocks
@@ -252,11 +252,11 @@ SELECT
   blks_read,
   blks_hit,
   temp_bytes,
-  (select sum(seq_scan) from q_stat_tables) AS seq_scans_on_tbls_gt_10mb,
+  (select sum(seq_scan) from q_stat_tables)::int8 AS seq_scans_on_tbls_gt_10mb,
   tup_inserted,
   tup_updated,
   tup_deleted,
-  (select sum(calls) from pg_stat_user_functions where not schemaname like any(array[E'pg\\_%', 'information_schema'])) AS sproc_calls,
+  (select sum(calls) from pg_stat_user_functions where not schemaname like any(array[E'pg\\_%', 'information_schema']))::int8 AS sproc_calls,
   blk_read_time,
   blk_write_time,
   deadlocks
@@ -297,11 +297,11 @@ SELECT
   blks_read,
   blks_hit,
   temp_bytes,
-  (select sum(seq_scan) from q_stat_tables) AS seq_scans_on_tbls_gt_10mb,
+  (select sum(seq_scan) from q_stat_tables)::int8 AS seq_scans_on_tbls_gt_10mb,
   tup_inserted,
   tup_updated,
   tup_deleted,
-  (select sum(calls) from pg_stat_user_functions where not schemaname like any(array[E'pg\\_%', 'information_schema'])) AS sproc_calls,
+  (select sum(calls) from pg_stat_user_functions where not schemaname like any(array[E'pg\\_%', 'information_schema']))::int8 AS sproc_calls,
   blk_read_time,
   blk_write_time,
   deadlocks
@@ -365,7 +365,7 @@ SELECT
   schemaname::text AS tag_schema,
   funcname::text  AS tag_function_name,
   quote_ident(schemaname)||'.'||quote_ident(funcname) as tag_function_full_name,
-  p.oid as tag_oid, -- for overloaded funcs
+  p.oid::text as tag_oid, -- for overloaded funcs
   calls as sp_calls,
   self_time,
   total_time
@@ -592,8 +592,8 @@ values (
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  coalesce(sum(calls), 0) as calls,
-  coalesce(sum(total_time), 0) as total_time
+  coalesce(sum(calls), 0)::int8 as calls,
+  coalesce(sum(total_time), 0)::float8 as total_time
 from
   pg_stat_statements
 where

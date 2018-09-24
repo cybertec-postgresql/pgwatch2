@@ -21,11 +21,11 @@ SELECT
   blks_read,
   blks_hit,
   temp_bytes,
-  (select sum(seq_scan) from q_stat_tables) AS seq_scans_on_tbls_gt_10mb,
+  (select sum(seq_scan) from q_stat_tables)::int8 AS seq_scans_on_tbls_gt_10mb,
   tup_inserted,
   tup_updated,
   tup_deleted,
-  (select sum(calls) from pg_stat_user_functions where not schemaname like any(array[E'pg\\_%', 'information_schema'])) AS sproc_calls,
+  (select sum(calls) from pg_stat_user_functions where not schemaname like any(array[E'pg\\_%', 'information_schema']))::int8 AS sproc_calls,
   blk_read_time,
   blk_write_time,
   deadlocks
