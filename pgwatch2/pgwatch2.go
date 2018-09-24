@@ -2044,7 +2044,7 @@ func main() {
 	if opts.InternalStatsPort > 0 {
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", opts.InternalStatsPort))
 		if err != nil {
-			log.Fatalf("Could not start the internal statistics interface on port %d: %v", opts.InternalStatsPort, err)
+			log.Fatalf("Could not start the internal statistics interface on port %d. Set --internal-stats-port to an open port or to 0 to disable. Err: %v", opts.InternalStatsPort, err)
 		}
 		err = l.Close()
 		if err != nil {
