@@ -1,13 +1,13 @@
 - unique_name: test1  # functions also as prefix for found DBs if using patterns/continous discovery
   dbtype: postgres    # postgres|pgbouncer|postgres-continuous-discovery
   host: localhost
-  port: 5435
+  port: 5432
   dbname: pgwatch2
   user: krl
   password: krl
   sslmode: disable
   stmt_timeout: 5
-  is_superuser: true
+  is_superuser: false
   preset_metrics: minimal
   custom_metrics:    # if both preset and custom are specified, custom wins
   dbname_include_pattern:
