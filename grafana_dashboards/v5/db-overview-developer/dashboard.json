@@ -219,7 +219,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(last(\"calls\"), 1s) FROM \"stat_statements_calls\" WHERE $timeFilter AND \"dbname\" =~ /^$dbname$/ GROUP BY time(2m) fill(none)",
+          "query": "SELECT non_negative_derivative(last(\"calls\"), 1s) FROM \"stat_statements_calls\" WHERE $timeFilter AND \"dbname\" =~ /^$dbname$/ GROUP BY time(5m) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -337,7 +337,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(last(\"total_time\"), 1h) / non_negative_derivative(last(\"calls\"), 1h) FROM \"stat_statements_calls\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(2m) fill(none)",
+          "query": "SELECT non_negative_derivative(last(\"total_time\"), 1h) / non_negative_derivative(last(\"calls\"), 1h) FROM \"stat_statements_calls\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(5m) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -997,7 +997,7 @@
         "y": 3
       },
       "id": 8,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "alignAsTable": false,
         "avg": true,
@@ -1163,7 +1163,7 @@
         "y": 9
       },
       "id": 12,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -1290,7 +1290,7 @@
       },
       "height": "",
       "id": 10,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "alignAsTable": false,
         "avg": true,
@@ -1483,7 +1483,7 @@
         "y": 15
       },
       "id": 9,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "avg": false,
         "current": false,
@@ -1687,7 +1687,7 @@
         "y": 15
       },
       "id": 11,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -1857,7 +1857,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
