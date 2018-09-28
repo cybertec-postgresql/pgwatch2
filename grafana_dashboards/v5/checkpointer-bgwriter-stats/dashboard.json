@@ -95,7 +95,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         },
         {
           "alias": "checkpoints_req",
@@ -138,7 +144,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
       "thresholds": [],
@@ -258,7 +270,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         },
         {
           "alias": "checkpoint_sync_time",
@@ -301,7 +319,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
       "thresholds": [],
@@ -421,7 +445,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         },
         {
           "alias": "buffers_clean",
@@ -464,7 +494,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         },
         {
           "alias": "buffers_backend",
@@ -507,7 +543,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         },
         {
           "alias": "buffers_backend_fsync",
@@ -550,7 +592,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
       "thresholds": [],
