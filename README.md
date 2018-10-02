@@ -411,6 +411,10 @@ All examples assuming Ubuntu.
     sudo pip3 install -U -r webpy/requirements.txt 
     ```
     
+    4.0. Optional step: for use cases where exposing component (Grafana, Postgres, Influx, gatherer daemon, Web UI itself) logs via the
+    Web UI could be benficial, one should also change the log file paths hardcoded in the SERVICES variable of the pgwatch2.py source
+    file. Defaults are set to work with the Docker image.
+
     4.1. Start the Web UI
     ```
     cd webpy
