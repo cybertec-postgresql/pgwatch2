@@ -2,7 +2,6 @@
   "annotations": {
     "list": [
       {
-        "$$hashKey": "object:2667",
         "builtIn": 1,
         "datasource": "-- Grafana --",
         "enable": true,
@@ -17,7 +16,6 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521046091854,
   "links": [],
   "panels": [
     {
@@ -37,6 +35,7 @@
         "y": 0
       },
       "id": 1,
+      "interval": "10m",
       "legend": {
         "avg": false,
         "current": false,
@@ -62,7 +61,6 @@
       "steppedLine": false,
       "targets": [
         {
-          "$$hashKey": "object:2725",
           "alias": "$tag_queryid",
           "dsType": "influxdb",
           "groupBy": [
@@ -88,7 +86,7 @@
           "measurement": "stat_statements",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"total_time\"), 1h) / non_negative_derivative(mean(\"calls\"), 1h) FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval), \"queryid\" fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"total_time\"), 1h) / non_negative_derivative(mean(\"calls\"), 1h) as avg_runtime FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND calls > $min_calls AND $timeFilter GROUP BY time($__interval), \"queryid\" fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -135,7 +133,6 @@
       },
       "yaxes": [
         {
-          "$$hashKey": "object:2740",
           "format": "ms",
           "label": "",
           "logBase": 1,
@@ -144,7 +141,6 @@
           "show": true
         },
         {
-          "$$hashKey": "object:2741",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -152,7 +148,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -171,6 +171,7 @@
         "y": 7
       },
       "id": 2,
+      "interval": "10m",
       "legend": {
         "avg": false,
         "current": false,
@@ -219,8 +220,9 @@
             }
           ],
           "measurement": "stat_statements",
+          "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"total_time\"), 1h) FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval), \"queryid\" fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"total_time\"), 1h) FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter AND calls >= $min_calls GROUP BY time($__interval), \"queryid\" fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -282,7 +284,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -301,6 +307,7 @@
         "y": 14
       },
       "id": 3,
+      "interval": "10m",
       "legend": {
         "avg": false,
         "current": false,
@@ -349,8 +356,9 @@
             }
           ],
           "measurement": "stat_statements",
+          "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"calls\"), 1h) FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($interval), \"queryid\" fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"calls\"), 1h) FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter AND calls >= $min_calls GROUP BY time($__interval), \"queryid\" fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -412,7 +420,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2017/11/Cybertec_Logo_2017_300px_slogan_trans.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
@@ -459,11 +471,53 @@
         "tagsQuery": null,
         "type": "query",
         "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "100",
+          "value": "100"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "min. \"pg_stat_statements.calls\"",
+        "multi": false,
+        "name": "min_calls",
+        "options": [
+          {
+            "selected": false,
+            "text": "1",
+            "value": "1"
+          },
+          {
+            "selected": false,
+            "text": "10",
+            "value": "10"
+          },
+          {
+            "selected": true,
+            "text": "100",
+            "value": "100"
+          },
+          {
+            "selected": false,
+            "text": "1000",
+            "value": "1000"
+          },
+          {
+            "selected": false,
+            "text": "10000",
+            "value": "10000"
+          }
+        ],
+        "query": "1,10,100,1000,10000",
+        "type": "custom"
       }
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -494,5 +548,5 @@
   "timezone": "browser",
   "title": "Stat_statements overview",
   "uid": null,
-  "version": 0
+  "version": 1
 }

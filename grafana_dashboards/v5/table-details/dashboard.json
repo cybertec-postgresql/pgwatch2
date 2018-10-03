@@ -16,7 +16,6 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521046209745,
   "links": [],
   "panels": [
     {
@@ -35,14 +34,15 @@
         "y": 0
       },
       "id": 1,
+      "interval": "5m",
       "legend": {
-        "avg": false,
+        "avg": true,
         "current": false,
         "max": false,
         "min": false,
         "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -68,7 +68,7 @@
           "groupBy": [
             {
               "params": [
-                "2m"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -120,7 +120,7 @@
           "groupBy": [
             {
               "params": [
-                "2m"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -172,7 +172,7 @@
           "groupBy": [
             {
               "params": [
-                "2m"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -219,13 +219,12 @@
           ]
         },
         {
-          "$$hashKey": "object:776",
           "alias": "toast_size",
           "dsType": "influxdb",
           "groupBy": [
             {
               "params": [
-                "2m"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -279,7 +278,7 @@
       "tooltip": {
         "msResolution": false,
         "shared": true,
-        "sort": 0,
+        "sort": 2,
         "value_type": "individual"
       },
       "type": "graph",
@@ -307,7 +306,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {
@@ -329,6 +332,7 @@
         "y": 5
       },
       "id": 2,
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -357,7 +361,7 @@
           "groupBy": [
             {
               "params": [
-                "2m"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -413,7 +417,7 @@
           "groupBy": [
             {
               "params": [
-                "2m"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -473,7 +477,7 @@
       "tooltip": {
         "msResolution": false,
         "shared": true,
-        "sort": 0,
+        "sort": 2,
         "value_type": "individual"
       },
       "type": "graph",
@@ -502,7 +506,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -520,6 +528,7 @@
         "y": 10
       },
       "id": 3,
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -548,7 +557,7 @@
           "groupBy": [
             {
               "params": [
-                "2m"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -604,7 +613,7 @@
           "groupBy": [
             {
               "params": [
-                "2m"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -660,7 +669,7 @@
           "groupBy": [
             {
               "params": [
-                "2m"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -716,7 +725,7 @@
           "groupBy": [
             {
               "params": [
-                "2m"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -774,7 +783,7 @@
       "tooltip": {
         "msResolution": false,
         "shared": true,
-        "sort": 0,
+        "sort": 2,
         "value_type": "individual"
       },
       "type": "graph",
@@ -800,9 +809,13 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -821,10 +834,11 @@
         "y": 15
       },
       "id": 4,
+      "interval": "5m",
       "legend": {
         "alignAsTable": false,
         "avg": true,
-        "current": true,
+        "current": false,
         "hideEmpty": false,
         "hideZero": false,
         "max": false,
@@ -866,7 +880,7 @@
           "measurement": "table_io_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"heap_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"heap_blks_hit\"), 10s) + non_negative_derivative(mean(\"heap_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time(2m) fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"heap_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"heap_blks_hit\"), 10s) + non_negative_derivative(mean(\"heap_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -924,7 +938,7 @@
           "measurement": "table_io_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"idx_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"idx_blks_hit\"), 10s) + non_negative_derivative(mean(\"idx_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time(2m) fill(null)",
+          "query": "SELECT non_negative_derivative(mean(\"idx_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"idx_blks_hit\"), 10s) + non_negative_derivative(mean(\"idx_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -970,7 +984,7 @@
       "tooltip": {
         "msResolution": false,
         "shared": true,
-        "sort": 0,
+        "sort": 2,
         "value_type": "individual"
       },
       "type": "graph",
@@ -999,7 +1013,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -1019,6 +1037,7 @@
       },
       "height": "175",
       "id": 5,
+      "interval": "5m",
       "legend": {
         "alignAsTable": false,
         "avg": true,
@@ -1050,7 +1069,7 @@
           "groupBy": [
             {
               "params": [
-                "2m"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -1108,7 +1127,7 @@
       "tooltip": {
         "msResolution": false,
         "shared": true,
-        "sort": 0,
+        "sort": 2,
         "value_type": "individual"
       },
       "type": "graph",
@@ -1136,7 +1155,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2017/11/Cybertec_Logo_2017_300px_slogan_trans.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
@@ -1187,8 +1210,9 @@
       {
         "allValue": null,
         "current": {
-          "text": "pgwatch2.metric",
-          "value": "pgwatch2.metric"
+          "tags": [],
+          "text": null,
+          "value": null
         },
         "datasource": null,
         "hide": 0,

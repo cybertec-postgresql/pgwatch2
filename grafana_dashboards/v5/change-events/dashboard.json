@@ -2,7 +2,6 @@
   "annotations": {
     "list": [
       {
-        "$$hashKey": "object:1270",
         "builtIn": 1,
         "datasource": "-- Grafana --",
         "enable": true,
@@ -12,7 +11,6 @@
         "type": "dashboard"
       },
       {
-        "$$hashKey": "object:1271",
         "datasource": null,
         "enable": true,
         "iconColor": "rgba(255, 96, 96, 1)",
@@ -28,8 +26,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 3,
-  "iteration": 1521045576738,
+  "id": null,
   "links": [],
   "panels": [
     {
@@ -50,6 +47,7 @@
         "y": 0
       },
       "id": 1,
+      "interval": "2m",
       "legend": {
         "avg": true,
         "current": false,
@@ -208,7 +206,11 @@
           "min": "0",
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "columns": [],

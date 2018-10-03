@@ -33,6 +33,7 @@
         "y": 0
       },
       "id": 3,
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -162,6 +163,7 @@
         "y": 5
       },
       "id": 2,
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -295,6 +297,7 @@
         "y": 10
       },
       "id": 1,
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -428,6 +431,7 @@
         "y": 15
       },
       "id": 4,
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -557,6 +561,7 @@
         "y": 20
       },
       "id": 10,
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -580,7 +585,6 @@
       "steppedLine": false,
       "targets": [
         {
-          "$$hashKey": "object:2870",
           "alias": "shared_blks_written",
           "dsType": "influxdb",
           "groupBy": [
@@ -639,7 +643,6 @@
           ]
         },
         {
-          "$$hashKey": "object:3756",
           "alias": "shared_blks_read",
           "dsType": "influxdb",
           "groupBy": [
@@ -698,7 +701,6 @@
           ]
         },
         {
-          "$$hashKey": "object:4012",
           "alias": "shared_blks_hit",
           "dsType": "influxdb",
           "groupBy": [
@@ -757,7 +759,6 @@
           ]
         },
         {
-          "$$hashKey": "object:4189",
           "alias": "shared_blks_dirtied",
           "dsType": "influxdb",
           "groupBy": [
@@ -836,7 +837,6 @@
       },
       "yaxes": [
         {
-          "$$hashKey": "object:3555",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -845,7 +845,6 @@
           "show": true
         },
         {
-          "$$hashKey": "object:3556",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -873,6 +872,7 @@
         "y": 25
       },
       "id": 5,
+      "interval": "5m",
       "legend": {
         "avg": false,
         "current": false,
@@ -1063,6 +1063,7 @@
         "y": 30
       },
       "id": 6,
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -1201,7 +1202,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Block Read/Write time ($rate_unit rate)",
+      "title": "Backend block Read/Write time ($rate_unit rate)",
       "tooltip": {
         "shared": true,
         "sort": 2,
@@ -1252,6 +1253,7 @@
         "y": 35
       },
       "id": 8,
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -1480,8 +1482,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "test1",
-          "value": "test1"
+          "text": null,
+          "value": null
         },
         "datasource": null,
         "hide": 0,
