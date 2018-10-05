@@ -6,6 +6,19 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.4.1 [2018-10-05]
+
+* Metrics fix - PG10+ 'backends.waiting' column filter was including also non-blocked states
+* Dashboard fix - some "Checkpointer/Bgwriter" panels didn't respect "dbname"
+* Gatherer feature - allow self-signed InfluxDB SSL certs by default in the gatherer
+* Gatherer feature - enable storing gathered metrics to a JSON file with --datastore=json + --json-storage-file=somefile. Allows testing metric gathering and also possibly some data integrations with custom monitoring systems
+* Gatherer improvment - better error message on stats interface port collision
+* Metrics - casting some fields explicitly to int8
+* Metrics - Added XMIN horizon to replication_slots/stat_activity metrics
+* Dashboard improvement - increase most aggregation intervals to 5min (was 2m) + some small usability improvements
+* Docker component update - Golang 1.11.1, InfluxDB 1.6.3 and Grafana 5.2.4
+
+
 ## v1.4.0 [2018-08-29]
 
 * Feature - "config file based operation". Now one can run pgwatch2 without the config DB using YAML configs, making automatization easier. See README or help output on --metrics-folder/--config params
