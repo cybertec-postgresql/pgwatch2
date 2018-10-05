@@ -28,7 +28,7 @@ ADD webpy /pgwatch2/webpy
 
 # Go installation [https://golang.org/dl/]
 # Grafana config customizations, Web UI requirements, compilation of the Go gatherer
-RUN wget -q -O /tmp/go.tar.gz https://storage.googleapis.com/golang/go1.10.3.linux-amd64.tar.gz \
+RUN wget -q -O /tmp/go.tar.gz https://storage.googleapis.com/golang/go1.11.1.linux-amd64.tar.gz \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && export PATH=$PATH:/usr/local/go/bin \
     && cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
