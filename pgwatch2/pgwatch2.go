@@ -103,8 +103,10 @@ const DATASTORE_GRAPHITE = "graphite"
 const DATASTORE_JSON = "json"
 const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
 const FILE_BASED_METRIC_HELPERS_DIR = "00_helpers"
-const PG_CONN_RECYCLE_SECONDS = 1800 // applies for monitored nodes
-const APPLICATION_NAME = "pgwatch2"  // will be set on all opened PG connections for informative purposes
+const PG_CONN_RECYCLE_SECONDS = 1800               // applies for monitored nodes
+const APPLICATION_NAME = "pgwatch2"                // will be set on all opened PG connections for informative purposes
+const TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS = 900 // special statement timeout override for pgstatuple_approx metrics as they can be sloq (seq. scans)
+const MAX_PG_CONNECTIONS_PER_MONITORED_DB = 2
 
 var configDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
@@ -237,7 +239,7 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 	return ret, err
 }
 
-func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args ...interface{}) ([](map[string]interface{}), error) {
+func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql string, args ...interface{}) ([](map[string]interface{}), error) {
 	var conn *sqlx.DB
 	var exists bool
 	var md MonitoredDatabase
@@ -247,11 +249,12 @@ func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args .
 		return nil, errors.New("empty SQL")
 	}
 
+	md, err = GetMonitoredDatabaseByUniqueName(dbUnique)
+	if err != nil {
+		return nil, err
+	}
+
 	if !useCache {
-		md, err = GetMonitoredDatabaseByUniqueName(dbUnique)
-		if err != nil {
-			return nil, err
-		}
 		if md.DBType == "pgbouncer" {
 			md.DBName = "pgbouncer"
 		}
@@ -263,7 +266,11 @@ func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args .
 		defer conn.Close()
 
 		if !adHocMode && md.DBType == "postgres" {
-			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
+			stmtTimeout := md.StmtTimeout
+			if (metricName == "table_bloat_approx_summary" || metricName == "table_bloat_approx_stattuple") && md.StmtTimeout < TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS {
+				stmtTimeout = TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS
+			}
+			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", stmtTimeout))
 			if err != nil {
 				return nil, err
 			}
@@ -279,10 +286,6 @@ func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args .
 
 		if !exists || conn == nil || dbStats.OpenConnections == 0 {
 
-			md, err = GetMonitoredDatabaseByUniqueName(dbUnique)
-			if err != nil {
-				return nil, err
-			}
 			if md.DBType == "pgbouncer" {
 				md.DBName = "pgbouncer"
 			}
@@ -300,7 +303,7 @@ func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args .
 			}
 
 			conn.SetMaxIdleConns(1)
-			conn.SetMaxOpenConns(1)
+			conn.SetMaxOpenConns(MAX_PG_CONNECTIONS_PER_MONITORED_DB)
 			// recycling periodically makes sense as long sessions might bloat memory or maybe conn info (password) was changed
 			conn.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
 
@@ -308,9 +311,27 @@ func DBExecReadByDbUniqueName(dbUnique string, useCache bool, sql string, args .
 			monitored_db_conn_cache[dbUnique] = conn
 			monitored_db_conn_cache_lock.Unlock()
 		}
+
+		// special override for possibly long running bloat queries
+		if md.DBType == "postgres" && (metricName == "table_bloat_approx_summary" || metricName == "table_bloat_approx_stattuple") && md.StmtTimeout < TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS {
+			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS))
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
-	return DBExecRead(conn, dbUnique, sql, args...)
+	data, err := DBExecRead(conn, dbUnique, sql, args...)
+
+	if err == nil && md.DBType == "postgres" && useCache && (metricName == "table_bloat_approx_summary" || metricName == "table_bloat_approx_stattuple") {
+		// restore general statement timeout
+		_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return data, err
 }
 
 func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
@@ -819,7 +840,7 @@ func DBGetPGVersion(dbUnique string) (decimal.Decimal, error) {
 		return ver.Version, nil
 	} else {
 		log.Debug("determining DB version for", dbUnique)
-		data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
+		data, err := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
 		if err != nil {
 			log.Error("DBGetPGVersion failed", err)
 			return ver.Version, err
@@ -903,7 +924,7 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		return change_counts
 	}
 
-	data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
+	data, err := DBExecReadByDbUniqueName(dbUnique, "sproc_hashes", useConnPooling, sql)
 	if err != nil {
 		log.Error("could not read table_hashes from monitored host: ", dbUnique, ", err:", err)
 		return change_counts
@@ -986,7 +1007,7 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		return change_counts
 	}
 
-	data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
+	data, err := DBExecReadByDbUniqueName(dbUnique, "table_hashes", useConnPooling, sql)
 	if err != nil {
 		log.Error("could not read table_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -1069,7 +1090,7 @@ func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		return change_counts
 	}
 
-	data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
+	data, err := DBExecReadByDbUniqueName(dbUnique, "index_hashes", useConnPooling, sql)
 	if err != nil {
 		log.Error("could not read index_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -1150,7 +1171,7 @@ func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, 
 		return change_counts
 	}
 
-	data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
+	data, err := DBExecReadByDbUniqueName(dbUnique, "configuration_hashes", useConnPooling, sql)
 	if err != nil {
 		log.Error("could not read configuration_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -1277,7 +1298,7 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- []Met
 				CheckForPGObjectChangesAndStore(msg.DBUniqueName, db_pg_version, storage_ch, host_state)
 			} else {
 				t1 := time.Now().UnixNano()
-				data, err := DBExecReadByDbUniqueName(msg.DBUniqueName, useConnPooling, sql)
+				data, err := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
 				t2 := time.Now().UnixNano()
 				if err != nil {
 					// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
@@ -1503,7 +1524,7 @@ retry:
 func DoesFunctionExists(dbUnique, functionName string) bool {
 	log.Debug("Checking for function existance", dbUnique, functionName)
 	sql := fmt.Sprintf("select 1 from pg_proc join pg_namespace n on pronamespace = n.oid where proname = '%s' and n.nspname = 'public'", functionName)
-	data, err := DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
+	data, err := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
 	if err != nil {
 		log.Error("Failed to check for function existance", dbUnique, functionName, err)
 		return false
@@ -1540,7 +1561,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 					log.Warning("Could not find query text for", dbUnique, helperName)
 					continue
 				}
-				_, err = DBExecReadByDbUniqueName(dbUnique, useConnPooling, sql)
+				_, err = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
 				if err != nil {
 					log.Warning("Failed to create a metric fetching helper for", dbUnique, helperName)
 					log.Warning(err)
@@ -1568,7 +1589,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 					log.Warning("Could not find query text for", dbUnique, metric)
 					continue
 				}
-				_, err = DBExecReadByDbUniqueName(dbUnique, true, sql)
+				_, err = DBExecReadByDbUniqueName(dbUnique, "", true, sql)
 				if err != nil {
 					log.Warning("Failed to create a metric fetching helper for", dbUnique, metric)
 					log.Warning(err)
@@ -2218,9 +2239,9 @@ func main() {
 
 				log.Info(fmt.Sprintf("new host \"%s\" found, checking connectivity...", db_unique))
 				if db_type == "postgres" {
-					_, err = DBExecReadByDbUniqueName(db_unique, false, "select 1") // test connectivity
+					_, err = DBExecReadByDbUniqueName(db_unique, "", false, "select 1") // test connectivity
 				} else if db_type == "pgbouncer" {
-					_, err = DBExecReadByDbUniqueName(db_unique, false, "show version")
+					_, err = DBExecReadByDbUniqueName(db_unique, "", false, "show version")
 				}
 				if err != nil {
 					log.Errorf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err)
