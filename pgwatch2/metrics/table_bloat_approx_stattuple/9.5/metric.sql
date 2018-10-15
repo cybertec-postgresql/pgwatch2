@@ -1,8 +1,11 @@
+/* NB! accessing pgstattuple_approx directly requires superuser or pg_stat_scan_tables/pg_monitor builtin roles */
 select
   quote_ident(n.nspname)||'.'||quote_ident(c.relname) as tag_full_table_name,
   approx_free_percent,
-  approx_free_space,
-  approx_tuple_count
+  approx_free_space_b,
+  approx_tuple_count,
+  dead_tuple_percent,
+  dead_tuple_len_b
 from
   pg_class c
   join lateral public.pgstattuple_approx(c.oid) st on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables,

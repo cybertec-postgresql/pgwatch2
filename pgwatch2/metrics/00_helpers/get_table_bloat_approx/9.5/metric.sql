@@ -6,11 +6,15 @@ DO $OUTER$
 
 DECLARE
   l_sproc_text text := $_SQL_$
-CREATE OR REPLACE FUNCTION public.get_table_bloat_approx(OUT approx_free_percent double precision, OUT approx_free_space double precision) AS
+CREATE OR REPLACE FUNCTION public.get_table_bloat_approx(
+  OUT approx_free_percent double precision, OUT approx_free_space double precision,
+  OUT dead_tuple_percent double precision, OUT dead_tuple_len double precision) AS
 $$
     select
       avg(approx_free_percent)::double precision as approx_free_percent,
-      sum(approx_free_space)::double precision as approx_free_space
+      sum(approx_free_space)::double precision as approx_free_space,
+      avg(dead_tuple_percent)::double precision as dead_tuple_percent,
+      sum(dead_tuple_len)::double precision as dead_tuple_len
     from
       pg_class c
       join
@@ -20,7 +24,6 @@ $$
       relkind in ('r', 'm')
       and c.relpages >= 128 -- tables >1mb
       and not n.nspname like any (array[E'pg\\_%', 'information_schema'])
-      having sum(approx_free_space)::double precision > 0
 $$ LANGUAGE sql SECURITY DEFINER;
 $_SQL_$;
 

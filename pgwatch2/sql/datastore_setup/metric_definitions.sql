@@ -827,7 +827,7 @@ $sql$
 );
 
 
-/* approx. bloat - needs pgstattuple extension! superuser only by default! */
+/* approx. bloat - needs pgstattuple extension! superuser or pg_stat_scan_tables/pg_monitor builtin role required */
 insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'table_bloat_approx_stattuple',
@@ -836,8 +836,10 @@ $sql$
 select
   quote_ident(n.nspname)||'.'||quote_ident(c.relname) as tag_full_table_name,
   approx_free_percent,
-  approx_free_space,
-  approx_tuple_count
+  approx_free_space_b,
+  approx_tuple_count,
+  dead_tuple_percent,
+  dead_tuple_len_b
 from
   pg_class c
   join lateral public.pgstattuple_approx(c.oid) st on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables,
@@ -861,11 +863,16 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgstattuple WITH SCHEMA PUBLIC;
 
-CREATE OR REPLACE FUNCTION public.get_table_bloat_approx(OUT approx_free_percent double precision, OUT approx_free_space double precision) AS
+CREATE OR REPLACE FUNCTION public.get_table_bloat_approx(
+  OUT approx_free_percent double precision, OUT approx_free_space double precision,
+  OUT approx_free_percent double precision, OUT approx_free_space double precision
+) AS
 $$
     select
       avg(approx_free_percent)::double precision as approx_free_percent,
-      sum(approx_free_space)::double precision as approx_free_space
+      sum(approx_free_space)::double precision as approx_free_space,
+      avg(dead_tuple_percent)::double precision as dead_tuple_percent,
+      sum(dead_tuple_len)::double precision as dead_tuple_len
     from
       pg_class c
       join
@@ -875,7 +882,6 @@ $$
       relkind in ('r', 'm')
       and c.relpages >= 128 -- tables >1mb
       and not n.nspname like any (array[E'pg\\_%', 'information_schema'])
-      having sum(approx_free_space)::double precision > 0
 $$ LANGUAGE sql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.get_table_bloat_approx() TO public;
@@ -896,7 +902,9 @@ $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   approx_free_percent,
-  approx_free_space as approx_free_space_b
+  approx_free_space as approx_free_space_b,
+  dead_tuple_percent,
+  dead_tuple_len as dead_tuple_len_b
 from
   public.get_table_bloat_approx()
 where
