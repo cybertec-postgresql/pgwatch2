@@ -84,15 +84,14 @@ should look at Influx Enterprise (on-prem or cloud) or Graphite (which is also s
 Settings can be configured for most components, but by default the Docker image doesn't focus on security though but rather
 on being quickly usable for ad-hoc performance troubleshooting. 
 
-* At any time only one query is running on the monitored hosts, with 5s statement timeout (configurable) so no heavy impact
-expected. For some metrics though can happen that the metric reading query (notably "stat_statements") takes some milliseconds,
-which might be more than an average application query.
+* No noticable impact for the monitored DB is expected with the default settings. For some metrics though can happen that the metric reading query (notably "stat_statements") takes some milliseconds, which might be more than an average application query. At any time only 2 metric fetching queries are running in parallel on the monitored DBs, with 5s per default "statement timeout" (configurable).
 * Starting from v1.3.0 there's a non-root Docker version available (suitable for OpenShift)
 * The administrative Web UI doesn't have by default any security. Configurable via env. variables.
 * Viewing Grafana dashboards by default doesn't require login. Editing needs a password. Configurable via env. variables.
 * InfluxDB has no authentication in Docker setup, so one should just not expose the ports when having concerns.
 * Dashboards based on "pg_stat_statements" (Stat Statement Overview / Top) expose actual queries. They are mostly stripped
-of details though, but if no risks can be taken the dashboards (or at least according panels) should be deleted.
+of details though, but if no risks can be taken the dashboards (or at least according panels) should be deleted. As an alternative "pg_stat_statements_calls"
+can be used, which only records total runtimes and call counts.
 
 
 # Alerting
