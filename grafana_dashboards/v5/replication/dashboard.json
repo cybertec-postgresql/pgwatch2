@@ -492,7 +492,7 @@
         "y": 2
       },
       "id": 2,
-      "interval": ">1m",
+      "interval": "2m",
       "legend": {
         "avg": true,
         "current": false,
@@ -521,7 +521,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -539,7 +539,7 @@
             },
             {
               "params": [
-                "null"
+                "none"
               ],
               "type": "fill"
             }
@@ -571,7 +571,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Replication slot restart_lsn lag",
+      "title": "Replication slot restart_lsn lag (primary extra WAL size)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -623,7 +623,7 @@
         "y": 8
       },
       "id": 1,
-      "interval": ">1m",
+      "interval": "2m",
       "legend": {
         "avg": true,
         "current": false,
@@ -652,7 +652,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -676,7 +676,7 @@
             },
             {
               "params": [
-                "null"
+                "none"
               ],
               "type": "fill"
             }
@@ -760,7 +760,7 @@
         "y": 14
       },
       "id": 8,
-      "interval": ">1m",
+      "interval": "2m",
       "legend": {
         "avg": true,
         "current": false,
@@ -814,7 +814,7 @@
             },
             {
               "params": [
-                "null"
+                "none"
               ],
               "type": "fill"
             }
@@ -898,7 +898,7 @@
         "y": 20
       },
       "id": 10,
-      "interval": ">1m",
+      "interval": "2m",
       "legend": {
         "avg": true,
         "current": false,
@@ -923,7 +923,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "[[tag_dbname]] [[tag_application_name]] [[tag_client_info]]",
+          "alias": "[[tag_dbname]] [[tag_slot_name]]",
           "dsType": "influxdb",
           "groupBy": [
             {
@@ -940,13 +940,13 @@
             },
             {
               "params": [
-                "client_info"
+                "plugin"
               ],
               "type": "tag"
             },
             {
               "params": [
-                "application_name"
+                "slot_name"
               ],
               "type": "tag"
             },
@@ -960,8 +960,8 @@
           "measurement": "replication_slots",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"xmin_age_tx\") FROM \"replication_slots\" WHERE $timeFilter GROUP BY time($__interval), \"dbname\", \"client_info\", \"application_name\" fill(none)",
-          "rawQuery": true,
+          "query": "SELECT mean(\"xmin_age_tx\") FROM \"replication_slots\" WHERE $timeFilter GROUP BY time($__interval), \"dbname\", \"plugin\", \"slot_name\" fill(none)",
+          "rawQuery": false,
           "refId": "B",
           "resultFormat": "time_series",
           "select": [
