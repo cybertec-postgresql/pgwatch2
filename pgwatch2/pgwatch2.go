@@ -202,6 +202,7 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password, requir
 	}
 	configDb.SetMaxIdleConns(1)
 	configDb.SetMaxOpenConns(2)
+	configDb.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
 }
 
 func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
