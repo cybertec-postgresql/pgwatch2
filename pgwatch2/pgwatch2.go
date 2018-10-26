@@ -103,9 +103,9 @@ const DATASTORE_GRAPHITE = "graphite"
 const DATASTORE_JSON = "json"
 const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
 const FILE_BASED_METRIC_HELPERS_DIR = "00_helpers"
-const PG_CONN_RECYCLE_SECONDS = 1800               // applies for monitored nodes
-const APPLICATION_NAME = "pgwatch2"                // will be set on all opened PG connections for informative purposes
-const TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS = 900 // special statement timeout override for pgstatuple_approx metrics as they can be sloq (seq. scans)
+const PG_CONN_RECYCLE_SECONDS = 1800                // applies for monitored nodes
+const APPLICATION_NAME = "pgwatch2"                 // will be set on all opened PG connections for informative purposes
+const TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS = 1800 // special statement timeout override for pgstatuple_approx metrics as they can be slow (seq. scans)
 const MAX_PG_CONNECTIONS_PER_MONITORED_DB = 2
 
 var configDb *sqlx.DB
