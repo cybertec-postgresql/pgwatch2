@@ -123,6 +123,8 @@ var monitored_db_conn_cache map[string]*sqlx.DB = make(map[string]*sqlx.DB)
 var monitored_db_conn_cache_lock = sync.RWMutex{}
 var metric_fetching_channels = make(map[string](chan MetricFetchMessage)) // [db1unique]=chan
 var metric_fetching_channels_lock = sync.RWMutex{}
+var actively_fetched_metrics_per_db = make(map[string]string) // to allow only one concurrent metric fetching for a single metric definition per DB
+var actively_fetched_metrics_per_db_lock = sync.RWMutex{}
 var influx_host_count = 1
 var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently supported
 // secondary Influx meant for HA or Grafana load balancing for 100+ instances with lots of alerts
@@ -1297,9 +1299,28 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- []Met
 			if msg.MetricName == "change_events" { // special handling, multiple queries + stateful
 				CheckForPGObjectChangesAndStore(msg.DBUniqueName, db_pg_version, storage_ch, host_state)
 			} else {
+				actively_fetched_metrics_per_db_lock.RLock()
+				active_metrics_string := actively_fetched_metrics_per_db[msg.DBUniqueName]
+				actively_fetched_metrics_per_db_lock.RUnlock()
+
+				if strings.Contains(active_metrics_string, ":"+msg.MetricName+":") { // we use a simple ":metricName:" format to store running metrics
+					// discard the fetch message
+					log.Infof("Discarding fetch message for [%s:%s] as one query already executing (consider reducing the interval or review the metric SQL)...", msg.DBUniqueName, msg.MetricName)
+					continue
+				} else {
+					actively_fetched_metrics_per_db_lock.Lock()
+					actively_fetched_metrics_per_db[msg.DBUniqueName] = actively_fetched_metrics_per_db[msg.DBUniqueName] + ":" + msg.MetricName + ":"
+					actively_fetched_metrics_per_db_lock.Unlock()
+				}
+
 				t1 := time.Now().UnixNano()
 				data, err := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
 				t2 := time.Now().UnixNano()
+
+				actively_fetched_metrics_per_db_lock.Lock() // release metric fetching lock
+				actively_fetched_metrics_per_db[msg.DBUniqueName] = strings.Replace(actively_fetched_metrics_per_db[msg.DBUniqueName], ":"+msg.MetricName+":", "", 1)
+				actively_fetched_metrics_per_db_lock.Unlock()
+
 				if err != nil {
 					// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
 					if strings.Contains(err.Error(), "recovery is in progress") {
@@ -2255,10 +2276,15 @@ func main() {
 				}
 				metric_fetching_channels_lock.Lock()
 				metric_fetching_channels[db_unique] = make(chan MetricFetchMessage, 100)
-				if opts.BatchingDelayMs > 0 {
-					go MetricsFetcher(metric_fetching_channels[db_unique], buffered_persist_ch)
-				} else {
-					go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch)
+				i := 0
+				for i < MAX_PG_CONNECTIONS_PER_MONITORED_DB {
+					if opts.BatchingDelayMs > 0 {
+						log.Infof("Starting metrics fetcher #%d for [%s]", i, db_unique)
+						go MetricsFetcher(metric_fetching_channels[db_unique], buffered_persist_ch)
+						i++
+					} else {
+						go MetricsFetcher(metric_fetching_channels[db_unique], persist_ch)
+					}
 				}
 				metric_fetching_channels_lock.Unlock()
 				time.Sleep(time.Millisecond * 250) // not to cause a huge load spike when starting the daemon with 20+ monitored DBs
