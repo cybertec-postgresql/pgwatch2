@@ -143,7 +143,7 @@
       ],
       "datasource": null,
       "decimals": 1,
-      "description": "Based on pg_replication_slots",
+      "description": "Based on \"pg_replication_slots.restart_lsn\" and translates to \"overhead\" WAL folder size",
       "format": "bytes",
       "gauge": {
         "maxValue": 100,
@@ -486,7 +486,7 @@
       "description": "Based on pg_replication_slots.  Primary only",
       "fill": 1,
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 24,
         "x": 0,
         "y": 2
@@ -617,10 +617,10 @@
       "description": "Based on pg_stat_replication on primaries. NB! Data is available  only on connected replicas!",
       "fill": 1,
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 7
       },
       "id": 1,
       "interval": "2m",
@@ -754,10 +754,10 @@
       "description": "Based on pg_stat_replication on primaries. NB! Data is available  only on connected replicas!",
       "fill": 1,
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 12
       },
       "id": 8,
       "interval": "2m",
@@ -889,13 +889,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Based on pg_replication_slots.xmin",
+      "description": "Based on \"pg_replication_slots.xmin\". The oldest transaction that this slot needs the database to retain. VACUUM cannot remove tuples deleted by any later transaction.",
       "fill": 1,
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 17
       },
       "id": 10,
       "interval": "2m",
@@ -984,7 +984,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Repl. slot XMIN age",
+      "title": "Repl. slot XMIN age (in transactions)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1020,16 +1020,60 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2017/11/Cybertec_Logo_2017_300px_slogan_trans.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 12,
+      "links": [],
+      "mode": "html",
+      "title": "",
+      "transparent": true,
+      "type": "text"
     }
   ],
+  "refresh": false,
   "schemaVersion": 16,
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "influx",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "dbname",
+        "options": [],
+        "query": "SHOW TAG VALUES FROM \"replication\", \"replication_slots\" WITH KEY = \"dbname\"",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
