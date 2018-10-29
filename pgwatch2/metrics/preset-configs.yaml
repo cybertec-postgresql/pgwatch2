@@ -10,6 +10,7 @@
 - name: exhaustive
   description: all important metrics for a deeper performance understanding
   metrics:
+    archiver: 60
     backends: 60
     bgwriter: 60
     change_events: 300
@@ -52,6 +53,7 @@
 - name: full
   description: almost all available metrics for a even deeper performance understanding
   metrics:
+    archiver: 60
     backends: 60
     bgwriter: 60
     change_events: 300

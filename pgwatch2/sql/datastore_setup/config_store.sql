@@ -101,6 +101,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     }'),
     ('exhaustive', 'all important metrics for a deeper performance understanding',
     '{
+    "archiver": 60,
     "backends": 60,
     "bgwriter": 60,
     "cpu_load": 60,
@@ -121,6 +122,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     }'),
     ('full', 'almost all available metrics for a even deeper performance understanding',
     '{
+    "archiver": 60,
     "backends": 60,
     "bgwriter": 60,
     "cpu_load": 60,
