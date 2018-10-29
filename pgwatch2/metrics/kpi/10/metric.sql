@@ -11,8 +11,8 @@ SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0'))::int8 AS wal_location_b,
   numbackends - 1 as numbackends,
-  (select count(1) from q_stat_activity where state = 'active') AS active_backends,
-  (select count(1) from q_stat_activity where wait_event_type is not null) AS blocked_backends,
+  (select count(*) from q_stat_activity where state in ('active', 'idle in transaction')) AS active_backends,
+  (select count(*) from q_stat_activity where wait_event_type in ('LWLock', 'Lock', 'BufferPin')) AS blocked_backends,
   (select round(extract(epoch from now()) - extract(epoch from (select xact_start from q_stat_activity
     where datid = d.datid and not query like 'autovacuum:%' order by xact_start limit 1))))::int AS kpi_oldest_tx_s,
   xact_commit + xact_rollback AS tps,

@@ -12,7 +12,7 @@ SELECT
   (select pg_xlog_location_diff(pg_current_xlog_location(), '0/0'))::int8 AS wal_location_b,
   numbackends - 1 as numbackends,
   (select count(*) from q_stat_activity where state in ('active', 'idle in transaction')) AS active_backends,
-  (select count(*) from q_stat_activity where waiting) AS blocked_backends,
+  (select count(*) from q_stat_activity where wait_event_type in ('LWLockNamed', 'Lock', 'BufferPin')) AS blocked_backends,
   (select round(extract(epoch from now()) - extract(epoch from (select xact_start from q_stat_activity
     where datid = d.datid and not query like 'autovacuum:%' order by xact_start limit 1))))::int AS kpi_oldest_tx_s,
   xact_commit + xact_rollback AS tps,
