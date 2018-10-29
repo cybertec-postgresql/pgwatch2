@@ -15,7 +15,7 @@
     change_events: 300
     cpu_load: 60
     db_stats: 60
-    index_stats: 120
+    index_stats: 300
     locks: 60
     locks_mode: 60
     replication: 120
@@ -43,7 +43,7 @@
   metrics:
     cpu_load: 60
     db_stats: 60
-    index_stats: 120
+    index_stats: 300
     sproc_stats: 120
     stat_statements: 120
     table_stats: 120
@@ -57,7 +57,7 @@
     change_events: 300
     cpu_load: 60
     db_stats: 60
-    index_stats: 120
+    index_stats: 300
     locks: 60
     locks_mode: 60
     replication: 120
@@ -82,7 +82,7 @@
     bgwriter: 60
     change_events: 300
     db_stats: 60
-    index_stats: 120
+    index_stats: 300
     locks: 60
     locks_mode: 60
     replication: 120
