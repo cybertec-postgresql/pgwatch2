@@ -28,7 +28,8 @@ SELECT
   (select sum(calls) from pg_stat_user_functions where not schemaname like any(array[E'pg\\_%', 'information_schema']))::int8 AS sproc_calls,
   blk_read_time,
   blk_write_time,
-  deadlocks
+  deadlocks,
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s  
 FROM
   pg_stat_database d
 WHERE

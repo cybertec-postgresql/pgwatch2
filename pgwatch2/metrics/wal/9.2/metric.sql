@@ -6,4 +6,5 @@ select
     else
       pg_xlog_location_diff(pg_last_xlog_replay_location(), '0/0')::int8
     end as xlog_location_b,
-  not pg_is_in_recovery() as is_primary;
+  not pg_is_in_recovery() as is_primary,
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s;
