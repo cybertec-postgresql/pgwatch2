@@ -7,7 +7,7 @@ select
   (select count(*) from sa_snapshot where state = 'active') as active,
   (select count(*) from sa_snapshot where state = 'idle') as idle,
   (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
-  (select count(*) from sa_snapshot where wait_event_type is not null) as waiting,
+  (select count(*) from sa_snapshot where wait_event_type in ('LWLockNamed', 'Lock', 'BufferPin')) as waiting,
   (select extract(epoch from (now() - backend_start))::int
     from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
   (select extract(epoch from (now() - xact_start))::int
