@@ -12,13 +12,15 @@ SELECT
   quote_ident(schemaname)||'.'||quote_ident(sui.indexrelname) as index_full_name_val,
   md5(regexp_replace(replace(pg_get_indexdef(sui.indexrelid),indexrelname,'X'), '^CREATE UNIQUE','CREATE')) as tag_index_def_hash,
   regexp_replace(replace(pg_get_indexdef(sui.indexrelid),indexrelname,'X'), '^CREATE UNIQUE','CREATE') as index_def,
-  i.indisvalid as is_valid,
-  i.indisprimary as is_pk
+  case when not i.indisvalid then 1 else 0 end as is_invalid_int,
+  case when i.indisprimary then 1 else 0 end as is_pk_int
 FROM
   pg_stat_user_indexes sui
   JOIN
   pg_index i USING (indexrelid)
 WHERE
   NOT schemaname like E'pg\\_temp%'
+  AND i.indrelid not in (select relation from pg_locks where mode = 'AccessExclusiveLock' and granted)
 ORDER BY
   schemaname, relname, indexrelname;
+  
