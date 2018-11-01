@@ -97,7 +97,7 @@
           "measurement": "replication_slots",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select sum(\"last\") from (select last(\"non_active_int\") FROM \"replication_slots\" WHERE  $timeFilter group by \"dbname\", \"slot_name\")",
+          "query": "select sum(\"last\") from (select last(\"non_active_int\") FROM \"replication_slots\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter group by \"dbname\", \"slot_name\")",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -212,7 +212,7 @@
           "measurement": "replication_slots",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT max(\"restart_lsn_lag_b\") FROM \"replication_slots\" WHERE $timeFilter GROUP BY time($__interval) fill(none)",
+          "query": "SELECT max(\"restart_lsn_lag_b\") FROM \"replication_slots\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -345,7 +345,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
       "thresholds": "100000000,1000000000",
@@ -442,7 +448,7 @@
           "measurement": "replication",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT max(\"replay_lag_b\") FROM \"replication\" WHERE $timeFilter GROUP BY time(1m) fill(null)",
+          "query": "SELECT max(\"replay_lag_b\") FROM \"replication\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": false,
           "refId": "A",
           "resultFormat": "time_series",
@@ -460,7 +466,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
       "thresholds": "100000000,1000000000",
@@ -565,7 +577,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
       "thresholds": [],
@@ -684,7 +702,7 @@
           "measurement": "replication",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"lag_b\") FROM \"replication\" WHERE $timeFilter GROUP BY time($interval) fill(none)",
+          "query": "SELECT mean(\"write_lag_b\") FROM \"replication\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time($__interval), \"dbname\", \"client_info\", \"application_name\" fill(none)",
           "rawQuery": false,
           "refId": "B",
           "resultFormat": "time_series",
@@ -702,7 +720,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
       "thresholds": [],
@@ -840,7 +864,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
       "thresholds": [],
@@ -978,7 +1008,13 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
       "thresholds": [],
@@ -1046,7 +1082,6 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "All",
           "value": [
             "$__all"
