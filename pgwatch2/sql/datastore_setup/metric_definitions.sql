@@ -169,7 +169,8 @@ select
   temp_bytes,
   deadlocks,
   blk_read_time,
-  blk_write_time
+  blk_write_time,
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s
 from
   pg_stat_database
 where
@@ -198,8 +199,8 @@ SELECT
   quote_ident(schemaname)||'.'||quote_ident(sui.indexrelname) as index_full_name_val,
   md5(regexp_replace(replace(pg_get_indexdef(sui.indexrelid),indexrelname,'X'), '^CREATE UNIQUE','CREATE')) as tag_index_def_hash,
   regexp_replace(replace(pg_get_indexdef(sui.indexrelid),indexrelname,'X'), '^CREATE UNIQUE','CREATE') as index_def,
-  i.indisvalid as is_valid,
-  i.indisprimary as is_pk
+  case when not i.indisvalid then 1 else 0 end as is_invalid_int,
+  case when i.indisprimary then 1 else 0 end as is_pk_int
 FROM
   pg_stat_user_indexes sui
   JOIN
@@ -353,15 +354,18 @@ $sql$
 insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'replication',
-9.1,
+9.2,
 $sql$
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   application_name as tag_application_name,
-  coalesce(client_addr::text, client_hostname) as tag_client_info,
+  concat(coalesce(client_addr::text, client_hostname), '_', client_port::text) as tag_client_info,
   coalesce(pg_xlog_location_diff(pg_current_xlog_location(), write_location)::int8, 0) as write_lag_b,
+  coalesce(pg_xlog_location_diff(pg_current_xlog_location(), flush_location)::int8, 0) as flush_lag_b,
   coalesce(pg_xlog_location_diff(pg_current_xlog_location(), replay_location)::int8, 0) as replay_lag_b,
-  state
+  state,
+  sync_state,
+  case when sync_state in ('sync', 'quorum') then 1 else 0 end as is_sync_int
 from
   pg_stat_replication;
 $sql$
@@ -377,10 +381,13 @@ $sql$
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   application_name as tag_application_name,
-  coalesce(client_addr::text, client_hostname) as tag_client_info,
+  concat(coalesce(client_addr::text, client_hostname), '_', client_port::text) as tag_client_info,
   coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), write_lsn)::int8, 0) as write_lag_b,
+  coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), flush_lsn)::int8, 0) as flush_lag_b,
   coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)::int8, 0) as replay_lag_b,
-  state
+  state,
+  sync_state,
+  case when sync_state in ('sync', 'quorum') then 1 else 0 end as is_sync_int
 from
   pg_stat_replication;
 
