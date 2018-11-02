@@ -29,6 +29,7 @@
       ],
       "datasource": null,
       "decimals": 0,
+      "description": "Based on last 5m data.  > 1 ~ Error. Causes WAL accumulation on the master and possibly autovacuum inefficiencies",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -39,10 +40,11 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 6,
+        "w": 4,
         "x": 0,
         "y": 0
       },
+      "hideTimeOverride": true,
       "id": 4,
       "interval": null,
       "links": [],
@@ -120,7 +122,245 @@
       ],
       "thresholds": "1,1000",
       "timeFrom": "5m",
-      "title": "# Non-active replication slots",
+      "title": "Inactive repl. slots",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "#bf1b00",
+        "#d44a3a"
+      ],
+      "datasource": null,
+      "decimals": 0,
+      "description": "Based on last 5m data. FYI - no thresholds defined",
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 13,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "1m"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "replication_slots",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select count(\"active\") from (select last(\"active\") as \"active\" FROM \"replication_slots\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter group by \"dbname\", \"slot_name\") WHERE \"active\" =  true",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "active"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "thresholds": "1,1000",
+      "timeFrom": "5m",
+      "title": "Active repl. slots",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": true,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": null,
+      "decimals": 0,
+      "description": "NB! Data is available  only on connected replicas. No thresholds by default",
+      "format": "short",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 14,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "1d"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "replication",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select count(\"last\") from (SELECT last(\"state\") FROM \"replication\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(1d), dbname, client_info fill(none)) where \"last\" = 'streaming'",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "replay_lag_b"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "count"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": "100000000,1000000000",
+      "timeFrom": "5m",
+      "title": "Active replicas",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -143,7 +383,7 @@
       ],
       "datasource": null,
       "decimals": 1,
-      "description": "Based on \"pg_replication_slots.restart_lsn\" and translates to \"overhead\" WAL folder size",
+      "description": "Based on last 5m of \"pg_replication_slots.restart_lsn\" and translates to \"overhead\" WAL folder size",
       "format": "bytes",
       "gauge": {
         "maxValue": 100,
@@ -154,10 +394,11 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 6,
-        "x": 6,
+        "w": 4,
+        "x": 12,
         "y": 0
       },
+      "hideTimeOverride": true,
       "id": 7,
       "interval": null,
       "links": [],
@@ -212,7 +453,7 @@
           "measurement": "replication_slots",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT max(\"restart_lsn_lag_b\") FROM \"replication_slots\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
+          "query": "SELECT max(\"restart_lsn_lag_b\") FROM \"replication_slots\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1d) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -258,7 +499,7 @@
       ],
       "datasource": null,
       "decimals": 1,
-      "description": "NB! Data is available  only on connected replicas!",
+      "description": "NB! Data is available  only on connected replicas! Based on last 5m data.",
       "format": "bytes",
       "gauge": {
         "maxValue": 100,
@@ -269,10 +510,11 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 6,
-        "x": 12,
+        "w": 4,
+        "x": 16,
         "y": 0
       },
+      "hideTimeOverride": true,
       "id": 6,
       "interval": null,
       "links": [],
@@ -313,7 +555,7 @@
           "groupBy": [
             {
               "params": [
-                "$__interval"
+                "1d"
               ],
               "type": "time"
             },
@@ -390,10 +632,11 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 6,
-        "x": 18,
+        "w": 4,
+        "x": 20,
         "y": 0
       },
+      "hideTimeOverride": true,
       "id": 9,
       "interval": null,
       "links": [],
@@ -434,7 +677,7 @@
           "groupBy": [
             {
               "params": [
-                "$__interval"
+                "1d"
               ],
               "type": "time"
             },
@@ -1082,12 +1325,13 @@
       {
         "allValue": null,
         "current": {
+          "tags": [],
           "text": "All",
           "value": [
             "$__all"
           ]
         },
-        "datasource": "influx",
+        "datasource": null,
         "hide": 0,
         "includeAll": true,
         "label": null,

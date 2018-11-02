@@ -16,7 +16,6 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521045971830,
   "links": [],
   "panels": [
     {
@@ -33,6 +32,7 @@
         "y": 0
       },
       "id": 1,
+      "interval": "2m",
       "legend": {
         "avg": true,
         "current": false,
@@ -61,7 +61,7 @@
           "groupBy": [
             {
               "params": [
-                "30s"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -146,7 +146,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -163,6 +167,7 @@
         "y": 7
       },
       "id": 2,
+      "interval": "2m",
       "legend": {
         "avg": true,
         "current": false,
@@ -186,7 +191,6 @@
       "steppedLine": false,
       "targets": [
         {
-          "$$hashKey": "object:233",
           "alias": "total_time",
           "dsType": "influxdb",
           "groupBy": [
@@ -206,7 +210,7 @@
           "measurement": "sproc_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"total_time\"), 1h)  /  non_negative_derivative(mean(\"sp_calls\"), 1h)  FROM \"sproc_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"function_full_name\" =~ /^$sproc_name$/ AND $timeFilter GROUP BY time(30s) fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"total_time\"), 1h)  /  non_negative_derivative(mean(\"sp_calls\"), 1h)  FROM \"sproc_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"function_full_name\" =~ /^$sproc_name$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -245,7 +249,6 @@
           ]
         },
         {
-          "$$hashKey": "object:234",
           "alias": "self_time",
           "dsType": "influxdb",
           "groupBy": [
@@ -265,7 +268,7 @@
           "measurement": "sproc_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"self_time\"), 1h)  /  non_negative_derivative(mean(\"sp_calls\"), 1h)  FROM \"sproc_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"function_full_name\" =~ /^$sproc_name$/ AND $timeFilter GROUP BY time(30s) fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"self_time\"), 1h)  /  non_negative_derivative(mean(\"sp_calls\"), 1h)  FROM \"sproc_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"function_full_name\" =~ /^$sproc_name$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -338,7 +341,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "schemaVersion": 16,
@@ -349,8 +356,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "test",
-          "value": "test"
+          "text": null,
+          "value": null
         },
         "datasource": "Influx",
         "hide": 0,

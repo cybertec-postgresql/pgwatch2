@@ -1643,8 +1643,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "kala",
-          "value": "kala"
+          "text": null,
+          "value": null
         },
         "datasource": null,
         "hide": 0,

@@ -122,7 +122,7 @@
         }
       ],
       "thresholds": "1,2",
-      "timeFrom": "5m",
+      "timeFrom": "$online_interval",
       "title": "Instance state",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -152,7 +152,7 @@
       "datasource": null,
       "decimals": 0,
       "description": "< 5m Error, < 30m Warn thresholds by default",
-      "format": "s",
+      "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -207,7 +207,7 @@
           "groupBy": [
             {
               "params": [
-                "1h"
+                "1d"
               ],
               "type": "time"
             },
@@ -239,11 +239,17 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
       "thresholds": "300, 1800",
-      "timeFrom": "5m",
+      "timeFrom": "$online_interval",
       "title": "Instance uptime",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -254,20 +260,20 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "cacheTimeout": null,
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#d44a3a",
         "rgba(237, 129, 40, 0.89)",
-        "#299c46"
+        "#299c46",
+        "#d44a3a"
       ],
       "datasource": null,
       "decimals": 0,
-      "description": "< 1 Error / < 2 Warning thresholds by default",
+      "description": "< 1 Warn / > 300 Error thresholds by default",
       "format": "short",
       "gauge": {
         "maxValue": 100,
@@ -285,7 +291,17 @@
       "hideTimeOverride": true,
       "id": 15,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DB overview",
+          "includeVars": true,
+          "params": "panelId=11&fullscreen",
+          "targetBlank": true,
+          "title": "'DB overview :: backends' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -355,11 +371,17 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
-      "thresholds": "1,2",
-      "timeFrom": "5m",
+      "thresholds": "1,300",
+      "timeFrom": "$online_interval",
       "title": "Backends",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -383,6 +405,7 @@
       ],
       "datasource": null,
       "decimals": 0,
+      "description": "1 Warn / 5 Err thresholds by default",
       "format": "short",
       "gauge": {
         "maxValue": 100,
@@ -400,7 +423,15 @@
       "hideTimeOverride": true,
       "id": 34,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "Lock details",
+          "includeVars": true,
+          "targetBlank": true,
+          "title": "'Lock details' dashboard",
+          "type": "dashboard"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -438,7 +469,7 @@
           "groupBy": [
             {
               "params": [
-                "15m"
+                "1d"
               ],
               "type": "time"
             },
@@ -480,7 +511,7 @@
         }
       ],
       "thresholds": "1,5",
-      "timeFrom": "5m",
+      "timeFrom": "$online_interval",
       "title": "Blocked backends",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -521,7 +552,17 @@
       "hideTimeOverride": true,
       "id": 4,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "Replication lag",
+          "includeVars": true,
+          "params": "",
+          "targetBlank": true,
+          "title": "'Replication lag' dashboard",
+          "type": "dashboard",
+          "url": "/dashboard/db/replication"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -595,7 +636,7 @@
         }
       ],
       "thresholds": "1,1000",
-      "timeFrom": "5m",
+      "timeFrom": "$online_interval",
       "title": "Non-active repl. slots",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -637,7 +678,17 @@
       "hideTimeOverride": true,
       "id": 13,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DB overview",
+          "includeVars": true,
+          "params": "panelId=8&fullscreen",
+          "targetBlank": true,
+          "title": "'DB overview :: Rollback Ratio' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -752,7 +803,17 @@
       "hideTimeOverride": true,
       "id": 33,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DB overview",
+          "includeVars": true,
+          "params": "panelId=11&fullscreen",
+          "targetBlank": true,
+          "title": "'DB overview :: Backends' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -832,7 +893,7 @@
         }
       ],
       "thresholds": "1,5",
-      "timeFrom": "5m",
+      "timeFrom": "$online_interval",
       "title": "\"Idle in TX\" count",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -874,7 +935,17 @@
       "hideTimeOverride": true,
       "id": 14,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DB overview",
+          "includeVars": true,
+          "params": "panelId=12&fullscreen",
+          "targetBlank": true,
+          "title": "'DB overview :: CPU load' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -990,7 +1061,17 @@
       "hideTimeOverride": true,
       "id": 7,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DB overview Unprivileged / Developer",
+          "includeVars": true,
+          "params": "panelId=15&fullscreen",
+          "targetBlank": true,
+          "title": "'DB overview Unprivileged / Developer :: TPS' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview-developer"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -1106,7 +1187,17 @@
       "hideTimeOverride": true,
       "id": 16,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DB overview Unprivileged / Developer mode",
+          "includeVars": true,
+          "params": "panelId=15&fullscreen",
+          "targetBlank": true,
+          "title": "'DB overview Unprivileged / Developer :: QPS' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview-developer"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -1222,7 +1313,17 @@
       "hideTimeOverride": true,
       "id": 17,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DB overview",
+          "includeVars": true,
+          "params": "panelId=12&fullscreen",
+          "targetBlank": true,
+          "title": "'DB overview:: Query runtime' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -1375,7 +1476,7 @@
           "groupBy": [
             {
               "params": [
-                "15m"
+                "1d"
               ],
               "type": "time"
             },
@@ -1401,7 +1502,7 @@
               },
               {
                 "params": [],
-                "type": "max"
+                "type": "last"
               }
             ]
           ],
@@ -1415,7 +1516,7 @@
         }
       ],
       "thresholds": "30,300",
-      "timeFrom": "5m",
+      "timeFrom": "$online_interval",
       "title": "Longest query runtime",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -1457,7 +1558,16 @@
       "hideTimeOverride": true,
       "id": 22,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DDL / Config change events",
+          "includeVars": true,
+          "targetBlank": true,
+          "title": "'DDL / Config change events' dash",
+          "type": "dashboard",
+          "url": "/dashboard/db/change-events"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -1579,7 +1689,16 @@
       "hideTimeOverride": true,
       "id": 20,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DDL / Config change events",
+          "includeVars": true,
+          "targetBlank": true,
+          "title": "'DDL / Config change events' dash",
+          "type": "dashboard",
+          "url": "/dashboard/db/change-events"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -1701,7 +1820,16 @@
       "hideTimeOverride": true,
       "id": 21,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DDL / Config change events",
+          "includeVars": true,
+          "targetBlank": true,
+          "title": "'DDL / Config change events' dash",
+          "type": "dashboard",
+          "url": "/dashboard/db/change-events"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -1823,7 +1951,16 @@
       "hideTimeOverride": true,
       "id": 24,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DDL / Config change events",
+          "includeVars": true,
+          "targetBlank": true,
+          "title": "'DDL / Config change events' dash",
+          "type": "dashboard",
+          "url": "/dashboard/db/change-events"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -1945,7 +2082,17 @@
       "hideTimeOverride": true,
       "id": 23,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DB overview",
+          "includeVars": true,
+          "params": "panelId=10&fullscreen",
+          "targetBlank": true,
+          "title": "'DB overview :: DB size' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -2061,7 +2208,17 @@
       "hideTimeOverride": true,
       "id": 25,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DB overview",
+          "includeVars": true,
+          "params": "panelId=10&fullscreen",
+          "targetBlank": true,
+          "title": "'DB overview :: DB size' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -2177,7 +2334,15 @@
       "hideTimeOverride": true,
       "id": 19,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "Tables Top",
+          "includeVars": true,
+          "targetBlank": true,
+          "title": "'Tables Top' dasboard",
+          "type": "dashboard"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -2229,8 +2394,8 @@
           "measurement": "table_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "",
-          "rawQuery": false,
+          "query": "select sum(last) from (SELECT last(\"table_size_b\") FROM \"table_stats\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(1d), table_full_name fill(none))",
+          "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -2268,7 +2433,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "cacheTimeout": null,
@@ -2299,7 +2464,16 @@
       "hideTimeOverride": true,
       "id": 26,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "Index overview",
+          "includeVars": true,
+          "params": "panelId=9&fullscreen",
+          "targetBlank": true,
+          "title": "'Index overview :: Top' panel",
+          "type": "dashboard"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -2420,7 +2594,7 @@
           "dashboard": "Index overview",
           "title": "\"Index overview\" dashboard",
           "type": "dashboard",
-          "url": "/d/truQnRaik/index-overview"
+          "url": "/dashboard/db/index-overview"
         }
       ],
       "mappingType": 1,
@@ -2536,9 +2710,10 @@
         {
           "dashboard": "Index overview",
           "targetBlank": true,
-          "title": "\"Index overview\" dashboard",
+          "includeVars": true,
+          "title": "'Index overview' dashboard",
           "type": "dashboard",
-          "url": "/d/truQnRaik/index-overview"
+          "url": "/dashboard/db/index-overview"
         }
       ],
       "mappingType": 1,
@@ -2702,7 +2877,7 @@
           "measurement": "table_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select sum(bloat) from (SELECT last(\"approx_free_space_b\") as bloat FROM \"table_bloat_approx_summary\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY dbname, time(1d) fill(none))",
+          "query": "select sum(bloat) from (SELECT last(\"approx_free_space_b\") as bloat FROM \"table_bloat_approx_summary\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1d) fill(none))",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -2724,7 +2899,7 @@
         }
       ],
       "thresholds": "",
-      "timeFrom": "1d",
+      "timeFrom": "$online_interval",
       "title": "Approx. bloat",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -2844,7 +3019,7 @@
           ]
         }
       ],
-      "thresholds": "43200,129600",
+      "thresholds": "259200,604800",
       "timeFrom": "30m",
       "title": "Avg. time from last autovacuum (tbls > 100MB)",
       "type": "singlestat",
@@ -2886,7 +3061,17 @@
       "hideTimeOverride": true,
       "id": 36,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DB overview",
+          "includeVars": true,
+          "params": "panelId=10&fullscreen",
+          "targetBlank": true,
+          "title": "'DB overview :: WAL' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -2938,7 +3123,7 @@
           "measurement": "wal",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "",
+          "query": "SELECT non_negative_derivative(last(\"xlog_location_b\"), 1s) FROM \"wal\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": false,
           "refId": "A",
           "resultFormat": "time_series",
@@ -3014,7 +3199,17 @@
       "hideTimeOverride": true,
       "id": 37,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "DB overview",
+          "includeVars": true,
+          "params": "panelId=9&fullscreen",
+          "targetBlank": true,
+          "title": "DB overview",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -3142,7 +3337,16 @@
       "hideTimeOverride": true,
       "id": 39,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "Tables Top",
+          "includeVars": true,
+          "params": "panelId=4&fullscreen",
+          "targetBlank": true,
+          "title": "'Tables Top :: Most scans' panel",
+          "type": "dashboard"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -3194,7 +3398,7 @@
           "measurement": "table_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select sum(\"last\") from (select last(\"scans\") from (SELECT non_negative_derivative(last(\"seq_scan\"), 1m) as \"scans\" FROM \"table_stats\" WHERE (\"dbname\" =~ /^kala$/) AND $timeFilter AND table_size_b > 100000000 GROUP BY time($__interval), table_full_name fill(none)) group by table_full_name)",
+          "query": "select sum(\"last\") from (select last(\"scans\") from (SELECT non_negative_derivative(last(\"seq_scan\"), 1m) as \"scans\" FROM \"table_stats\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter AND table_size_b > 100000000 GROUP BY time($__interval), table_full_name fill(none)) group by table_full_name)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -3270,7 +3474,17 @@
       "hideTimeOverride": true,
       "id": 43,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "Replication",
+          "includeVars": true,
+          "params": "panelId=10&fullscreen",
+          "targetBlank": true,
+          "title": "'Replication :: XMIN age' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/replication"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -3386,7 +3600,16 @@
       "hideTimeOverride": true,
       "id": 38,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "Tables Top",
+          "includeVars": true,
+          "params": "panelId=6&fullscreen",
+          "targetBlank": true,
+          "title": "'Tables Top :: Inserts' panel",
+          "type": "dashboard"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -3514,7 +3737,16 @@
       "hideTimeOverride": true,
       "id": 40,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "Tables Top",
+          "includeVars": true,
+          "params": "panelId=7&fullscreen",
+          "targetBlank": true,
+          "title": "'Tables Top :: Updates' panel",
+          "type": "dashboard"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -3642,7 +3874,16 @@
       "hideTimeOverride": true,
       "id": 41,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "dashboard": "Tables Top",
+          "includeVars": true,
+          "params": "panelId=8&fullscreen",
+          "targetBlank": true,
+          "title": "'Tables Top :: Deletes' panel",
+          "type": "dashboard"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -3808,7 +4049,7 @@
           "groupBy": [
             {
               "params": [
-                "365d"
+                "1d"
               ],
               "type": "time"
             },
@@ -3850,7 +4091,7 @@
         }
       ],
       "thresholds": "10000,100000",
-      "timeFrom": "15m",
+      "timeFrom": "$online_interval",
       "title": "Backend max. XMIN horizon (in TX)",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -3887,9 +4128,8 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
-          "text": "kala",
-          "value": "kala"
+          "text": null,
+          "value": null
         },
         "datasource": null,
         "hide": 0,
@@ -3908,11 +4148,54 @@
         "tagsQuery": "",
         "type": "query",
         "useTags": false
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "text": "3m",
+          "value": "3m"
+        },
+        "hide": 0,
+        "label": "Max. age for 'online' metrics",
+        "name": "online_interval",
+        "options": [
+          {
+            "selected": false,
+            "text": "1m",
+            "value": "1m"
+          },
+          {
+            "selected": true,
+            "text": "3m",
+            "value": "3m"
+          },
+          {
+            "selected": false,
+            "text": "5m",
+            "value": "5m"
+          },
+          {
+            "selected": false,
+            "text": "10m",
+            "value": "10m"
+          },
+          {
+            "selected": false,
+            "text": "15m",
+            "value": "15m"
+          }
+        ],
+        "query": "1m,3m,5m,10m,15m",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
       }
     ]
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {

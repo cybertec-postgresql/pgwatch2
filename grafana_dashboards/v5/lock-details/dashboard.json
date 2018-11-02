@@ -17,7 +17,6 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521045806004,
   "links": [],
   "panels": [
     {
@@ -35,7 +34,7 @@
         "y": 0
       },
       "id": 1,
-      "interval": ">60s",
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -64,7 +63,7 @@
           "groupBy": [
             {
               "params": [
-                "$interval"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -82,6 +81,7 @@
             }
           ],
           "measurement": "locks_mode",
+          "orderByTime": "ASC",
           "policy": "default",
           "refId": "E",
           "resultFormat": "time_series",
@@ -142,7 +142,11 @@
           "min": null,
           "show": false
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "schemaVersion": 16,
@@ -153,8 +157,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "test",
-          "value": "test"
+          "text": null,
+          "value": null
         },
         "datasource": null,
         "hide": 0,
@@ -166,6 +170,7 @@
         "query": "SHOW TAG VALUES FROM \"locks_mode\" WITH KEY = \"dbname\"",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
