@@ -2,7 +2,6 @@
   "annotations": {
     "list": [
       {
-        "$$hashKey": "object:2929",
         "builtIn": 1,
         "datasource": "-- Grafana --",
         "enable": true,
@@ -17,7 +16,6 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521046146341,
   "links": [],
   "panels": [
     {
@@ -95,7 +93,7 @@
           ],
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
-          "link": true,
+          "link": false,
           "linkTargetBlank": true,
           "linkTooltip": "Use 'edit' mode to be able to copy the query text",
           "linkUrl": "",
@@ -228,7 +226,7 @@
           ],
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
-          "link": true,
+          "link": false,
           "linkTargetBlank": true,
           "linkTooltip": "Use 'edit' mode to be able to copy the query text",
           "linkUrl": "",
@@ -361,7 +359,7 @@
           ],
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
-          "link": true,
+          "link": false,
           "linkTargetBlank": true,
           "linkTooltip": "Use 'edit' mode to be able to copy the query text",
           "linkUrl": "",
@@ -488,7 +486,7 @@
           ],
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
-          "link": true,
+          "link": false,
           "linkTargetBlank": true,
           "linkTooltip": "Use 'edit' mode to be able to copy the query text",
           "linkUrl": "",
@@ -582,6 +580,7 @@
         "query": "SHOW TAG VALUES WITH KEY = \"dbname\"",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": null,
         "tags": [],
@@ -603,67 +602,59 @@
         "name": "top",
         "options": [
           {
-            "$$hashKey": "object:3000",
             "selected": false,
             "text": "1",
             "value": "1"
           },
           {
-            "$$hashKey": "object:3001",
             "selected": false,
             "text": "3",
             "value": "3"
           },
           {
-            "$$hashKey": "object:3002",
             "selected": true,
             "text": "5",
             "value": "5"
           },
           {
-            "$$hashKey": "object:3003",
             "selected": false,
             "text": "10",
             "value": "10"
           },
           {
-            "$$hashKey": "object:3004",
             "selected": false,
             "text": "15",
             "value": "15"
           },
           {
-            "$$hashKey": "object:3005",
             "selected": false,
             "text": "20",
             "value": "20"
           },
           {
-            "$$hashKey": "object:3006",
             "selected": false,
             "text": "30",
             "value": "30"
           },
           {
-            "$$hashKey": "object:3007",
             "selected": false,
             "text": "40",
             "value": "40"
           },
           {
-            "$$hashKey": "object:3008",
             "selected": false,
             "text": "50",
             "value": "50"
           }
         ],
         "query": "1,3,5,10,15,20,30,40,50",
+        "skipUrlSync": false,
         "type": "custom"
       }
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
