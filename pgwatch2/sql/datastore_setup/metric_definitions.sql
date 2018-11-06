@@ -1321,3 +1321,35 @@ where
   current_setting('archive_mode') in ('on', 'always');
 $sql$
 );
+
+/* Stored procedure for getting WAL folder size */
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
+values (
+'get_wal_size',
+10,
+$sql$
+
+CREATE OR REPLACE FUNCTION public.get_wal_size() RETURNS int8 AS
+$$
+select (sum((pg_stat_file('pg_wal/' || name)).size))::int8 from pg_ls_waldir()
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+
+REVOKE EXECUTE ON FUNCTION public.get_wal_size() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_wal_size() TO pgwatch2;
+COMMENT ON FUNCTION public.get_wal_size() IS 'created for pgwatch2';
+
+$sql$,
+'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
+true
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'wal_size',
+10,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  public.get_wal_size() as wal_size_b;
+$sql$
+);

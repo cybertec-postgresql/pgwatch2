@@ -138,6 +138,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "table_io_stats": 120,
     "table_stats": 120,
     "wal": 60,
+    "wal_size": 120,
     "change_events": 300,
     "table_bloat_approx_summary": 7200,
     "kpi": 120,

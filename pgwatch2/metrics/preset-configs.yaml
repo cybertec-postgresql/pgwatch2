@@ -71,6 +71,7 @@
     table_io_stats: 120
     table_stats: 120
     wal: 60
+    wal_size: 120
     kpi: 120
     pg_stat_ssl: 120
     psutil_cpu: 120
