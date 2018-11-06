@@ -71,7 +71,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 1,
           "mappingType": 1,
-          "pattern": "max_index_size_b",
+          "pattern": "max_index_size",
           "thresholds": [],
           "type": "number",
           "unit": "bytes"
@@ -145,7 +145,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select \"index_def\", \"max_index_size_b\", \"count\" from (select mode(\"index_def\") as \"index_def\", count(distinct(\"index_full_name_val\")), max(\"index_size_b\") as \"max_index_size_b\"  from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_def_hash\", \"dbname\") where \"count\" > 1 group by \"table_full_name\", \"index_def_hash\", \"dbname\"",
+          "query": "select \"index_def\", \"max_index_size\", \"count\" from (select mode(\"index_def\") as \"index_def\", count(distinct(\"index_full_name_val\")), max(\"index_size_b\") as \"max_index_size\"  from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_def_hash\", \"dbname\") where \"count\" > 1 group by \"table_full_name\", \"index_def_hash\", \"dbname\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "table",
@@ -229,7 +229,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 1,
           "mappingType": 1,
-          "pattern": "index_size_b",
+          "pattern": "index_size",
           "thresholds": [],
           "type": "number",
           "unit": "bytes"
@@ -267,7 +267,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select \"index_size_b\", \"idx_scan\" from (select last(\"index_size_b\") as \"index_size_b\", last(\"idx_scan\") as \"idx_scan\", last(\"is_pk\") as \"is_pk\" from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_full_name\", \"dbname\") where  \"idx_scan\" = 0 and \"is_pk\" = false group by \"table_full_name\", \"index_full_name\", \"dbname\"",
+          "query": "select \"index_size\", \"idx_scans_from_last_reset\" from (select last(\"index_size_b\") as \"index_size\", last(\"idx_scan\") as \"idx_scans_from_last_reset\", last(\"is_pk\") as \"is_pk\" from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_full_name\", \"dbname\") where  \"idx_scans_from_last_reset\" = 0 and \"is_pk\" = false group by \"table_full_name\", \"index_full_name\", \"dbname\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "table",
@@ -350,7 +350,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 1,
           "mappingType": 1,
-          "pattern": "index_size_b",
+          "pattern": "index_size",
           "thresholds": [],
           "type": "number",
           "unit": "bytes"
@@ -388,7 +388,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select \"index_size_b\" from (select last(\"index_size_b\") as \"index_size_b\", last(\"is_invalid_int\") as \"is_invalid_int\" from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_full_name\", \"dbname\") where  \"is_invalid_int\" = 1 group by \"table_full_name\", \"index_full_name\", \"dbname\"",
+          "query": "select \"index_size\" from (select last(\"index_size_b\") as \"index_size\", last(\"is_invalid_int\") as \"is_invalid_int\" from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_full_name\", \"dbname\") where  \"is_invalid_int\" = 1 group by \"table_full_name\", \"index_full_name\", \"dbname\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "table",
@@ -461,7 +461,7 @@
           "unit": "short"
         },
         {
-          "alias": "Size",
+          "alias": "index_size",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -475,6 +475,22 @@
           "thresholds": [],
           "type": "number",
           "unit": "bytes"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "idx_scans_from_last_reset",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
         },
         {
           "alias": "",
@@ -509,7 +525,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select \"dbname\", \"index_full_name\", \"table_full_name\", top(\"index_size_b\", 20) from (select last(\"index_size_b\") as \"index_size_b\" from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_full_name\", \"dbname\")",
+          "query": "select \"dbname\", \"index_full_name\", \"table_full_name\", top(\"index_size_b\", 20), \"idx_scans_from_last_reset\" from (select last(\"index_size_b\") as \"index_size_b\", last(\"idx_scan\") as idx_scans_from_last_reset from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_full_name\", \"dbname\")",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "table",
