@@ -125,6 +125,7 @@ var metric_fetching_channels = make(map[string](chan MetricFetchMessage)) // [db
 var metric_fetching_channels_lock = sync.RWMutex{}
 var actively_fetched_metrics_per_db = make(map[string]string) // to allow only one concurrent metric fetching for a single metric definition per DB
 var actively_fetched_metrics_per_db_lock = sync.RWMutex{}
+var last_sql_fetch_error sync.Map
 var influx_host_count = 1
 var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently supported
 // secondary Influx meant for HA or Grafana load balancing for 100+ instances with lots of alerts
@@ -1293,7 +1294,11 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- []Met
 			sql, err := GetSQLForMetricPGVersion(msg.MetricName, db_pg_version, nil)
 			//log.Debug("SQL", sql)
 			if err != nil {
-				log.Error(fmt.Sprintf("Failed to get SQL for metric '%s', version '%s'", msg.MetricName, db_pg_version))
+				epoch, ok := last_sql_fetch_error.Load(msg.MetricName + ":" + db_pg_version.String())
+				if !ok || ((time.Now().Unix() - epoch.(int64)) > 3600) { // complain only 1x per hour
+					log.Warningf("Failed to get SQL for metric '%s', version '%s'", msg.MetricName, db_pg_version)
+					last_sql_fetch_error.Store(msg.MetricName+":"+db_pg_version.String(), time.Now().Unix())
+				}
 				continue
 			}
 
@@ -2315,7 +2320,11 @@ func main() {
 					time.Sleep(time.Second * 1) // try to be more deterministic here?
 					delete(control_channels, db_metric)
 				} else if !metric_def_ok {
-					log.Warning(fmt.Sprintf("metric definiton \"%s\" not found for \"%s\"", metric, db_unique))
+					epoch, ok := last_sql_fetch_error.Load(metric)
+					if !ok || ((time.Now().Unix() - epoch.(int64)) > 360) { // complain only 1x per hour
+						log.Warning(fmt.Sprintf("metric definiton \"%s\" not found for \"%s\"", metric, db_unique))
+						last_sql_fetch_error.Store(metric, time.Now().Unix())
+					}
 				} else {
 					// check if interval has changed
 					if host_metric_interval_map[db_metric] != interval {
