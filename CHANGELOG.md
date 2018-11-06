@@ -6,6 +6,22 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.4.5 [2018-11-06]
+
+* Metrics fix - KPI for 9.6 corrected
+* Gatherer improvement - complain only 1x per hour about missing metric definitions
+* Gatherer improvement - re-cycle config DB connections the same way as for monitored DBs
+* Gatherer feature - introduce parallel metric fetching per DB, max. 2 queries (hardcoded)
+* Gatherer feature - default timeout for built-in bloat metrix set to 30min to run through for 100GB+ tables
+* New dash - "Healt-check". Main KPI-s as "single stat" panels with links to according graphs
+* New dash - "Index overview". Also supporting "index_stats" metric changes
+* New dash - "Tables top". Top-N by size/growth/IUD
+* Dashboards - "Replication lag" now has a "dbname" filter like most other dashboards + 2 new panels
+* New metric - "archiver" based on pg_stat_archiver to detect WAL shipping issues
+* New metric/helper - "wal_size" based on pg_ls_waldir() to detect accumulating WAL folder. PG 10+ 
+* Docker component update - InfluxDB 1.6.4 and Grafana 5.3.2
+
+
 ## v1.4.1 [2018-10-05]
 
 * Metrics fix - PG10+ 'backends.waiting' column filter was including also non-blocked states
