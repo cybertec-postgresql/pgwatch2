@@ -2321,7 +2321,7 @@ func main() {
 					delete(control_channels, db_metric)
 				} else if !metric_def_ok {
 					epoch, ok := last_sql_fetch_error.Load(metric)
-					if !ok || ((time.Now().Unix() - epoch.(int64)) > 360) { // complain only 1x per hour
+					if !ok || ((time.Now().Unix() - epoch.(int64)) > 3600) { // complain only 1x per hour
 						log.Warning(fmt.Sprintf("metric definiton \"%s\" not found for \"%s\"", metric, db_unique))
 						last_sql_fetch_error.Store(metric, time.Now().Unix())
 					}
