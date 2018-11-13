@@ -282,8 +282,10 @@ Relevant Gatherer env. vars / flags: --adhoc-conn-str, --adhoc-config, --adhoc-n
 
 ```
 # launching in ad-hoc / test mode
-docker run --rm -p 3000:3000 -e PW2_ADHOC_CONN_STR="postgresql://pgwatch2@localhost/pgwatch2" -e PW2_ADHOC_CONFIG=unprivileged --name pw2 cybertec/pgwatch2
+docker run --rm -p 3000:3000 -p 8080:8080 -e PW2_ADHOC_CONN_STR="postgresql://user:pwd@mydb:5432/mydb1" -e PW2_ADHOC_CONFIG=unprivileged --name pw2 cybertec/pgwatch2
 ```
+NB! In ad-hoc mode pgwatch2 always tries (will succeed if connecting with superuser privileges) to create all of the
+metrics fetching helpers automatically on the monitored DB.
 
 # Updating to a newer Docker version
 
