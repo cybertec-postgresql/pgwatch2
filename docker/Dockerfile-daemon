@@ -25,6 +25,4 @@ RUN wget -q https://storage.googleapis.com/golang/go1.10.1.linux-amd64.tar.gz \
 
 USER 10001
 
-CMD ["/pgwatch2/pgwatch2", "--help"]
-
 ENTRYPOINT ["/pgwatch2/pgwatch2"]

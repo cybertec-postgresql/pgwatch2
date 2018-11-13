@@ -2160,7 +2160,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Warning("In JSON ouput mode. Gathered metrics will be written to \"%s\"...")
+		log.Warningf("In JSON ouput mode. Gathered metrics will be written to \"%s\"...", opts.JsonStorageFile)
 		go MetricsPersister(DATASTORE_JSON, persist_ch)
 	} else {
 		log.Fatal("Unknown datastore. Check the --datastore param")
