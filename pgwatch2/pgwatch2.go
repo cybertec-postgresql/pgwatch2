@@ -29,6 +29,7 @@ import (
 	"github.com/marpaia/graphite-golang"
 	"github.com/op/go-logging"
 	"github.com/shopspring/decimal"
+	"github.com/coreos/go-systemd/daemon"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -2166,6 +2167,7 @@ func main() {
 		log.Fatal("Unknown datastore. Check the --datastore param")
 	}
 
+	daemon.SdNotify(false, "READY=1") // Notify systemd, does nothing outside of systemd
 	first_loop := true
 	var monitored_dbs []MonitoredDatabase
 	var last_metrics_refresh_time int64
