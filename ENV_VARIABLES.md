@@ -42,7 +42,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_ADHOC_CONFIG** Ad-hoc mode. A preset config name or a custom JSON config. Default: exhaustive
 - **PW2_ADHOC_NAME** Ad-hoc mode. Unique 'dbname' for Influx. Default: adhoc
 - **PW2_INTERNAL_STATS_PORT** Port for inquiring monitoring status in JSON format. Default: 8081
-- **PW2_CONN_POOLING** Enable re-use of metrics fetching connections. "false" means reconnect every time. Default: true
+- **PW2_CONN_POOLING** Enable re-use of metrics fetching connections. "off" means reconnect every time. Default: off
 
 
 ## Web UI

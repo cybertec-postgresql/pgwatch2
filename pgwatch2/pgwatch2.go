@@ -22,6 +22,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/coreos/go-systemd/daemon"
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/jessevdk/go-flags"
 	"github.com/jmoiron/sqlx"
@@ -29,7 +30,6 @@ import (
 	"github.com/marpaia/graphite-golang"
 	"github.com/op/go-logging"
 	"github.com/shopspring/decimal"
-	"github.com/coreos/go-systemd/daemon"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -1971,7 +1971,7 @@ type Options struct {
 	AdHocConfig       string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
 	AdHocUniqueName   string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
 	InternalStatsPort int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
-	ConnPooling       string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: true]" default:"true" env:"PW2_CONN_POOLING"`
+	ConnPooling       string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: off]" default:"off" env:"PW2_CONN_POOLING"`
 }
 
 var opts Options
