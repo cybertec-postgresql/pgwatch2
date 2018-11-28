@@ -1346,6 +1346,13 @@ true
 insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'wal_size',
+9.0,
+$sql$$sql$
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'wal_size',
 10,
 $sql$
 select

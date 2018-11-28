@@ -1329,6 +1329,10 @@ func MetricsFetcher(fetch_msg <-chan MetricFetchMessage, storage_ch chan<- []Met
 				actively_fetched_metrics_per_db_lock.Unlock()
 
 				if err != nil {
+					if strings.Contains(err.Error(), "empty SQL") { // empty / dummy SQL is used for metrics that became available at a certain version
+						log.Infof("Ignoring fetch message - got an empty/dummy SQL string for [%s:%s]", msg.DBUniqueName, msg.MetricName)
+						continue
+					}
 					// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
 					if strings.Contains(err.Error(), "recovery is in progress") {
 						db_pg_version_map_lock.RLock()
