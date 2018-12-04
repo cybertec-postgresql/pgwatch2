@@ -23,7 +23,7 @@ paragraph "Installing without Docker" towards the end of REAME for that.
 
 ```
 for v in pg influx grafana pw2 ; do docker volume create $v ; done
-docker run --name pw2 -v pg:/var/lib/postgresql -v influx:/var/lib/influxdb -v grafana:/var/lib/grafana -v pw2:/pgwatch2/persistent-config -p 8080:8080 -p 3000:3000 cybertec/pgwatch2
+docker run -d --name pw2 -v pg:/var/lib/postgresql -v influx:/var/lib/influxdb -v grafana:/var/lib/grafana -v pw2:/pgwatch2/persistent-config -p 8080:8080 -p 3000:3000 cybertec/pgwatch2
 ```
 
 For more advanced usecases (production setup backups) or for easier problemsolving you can decide to expose all services
