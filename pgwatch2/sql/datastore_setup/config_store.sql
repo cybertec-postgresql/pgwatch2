@@ -83,13 +83,15 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     '{
     "cpu_load": 60,
     "wal": 60,
-    "db_stats": 60
+    "db_stats": 60,
+    "db_size": 300
     }'),
     ('standard', '"basic" level + table, index, stat_statements stats',
     '{
     "cpu_load": 60,
     "wal": 60,
     "db_stats": 60,
+    "db_size": 300,
     "table_stats": 120,
     "index_stats": 300,
     "stat_statements": 120,
@@ -106,6 +108,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "bgwriter": 60,
     "cpu_load": 60,
     "db_stats": 60,
+    "db_size": 300,
     "index_stats": 300,
     "locks": 60,
     "locks_mode": 60,
@@ -127,6 +130,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "bgwriter": 60,
     "cpu_load": 60,
     "db_stats": 60,
+    "db_size": 300,
     "index_stats": 300,
     "locks": 60,
     "locks_mode": 60,
@@ -152,6 +156,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     '{
     "bgwriter": 60,
     "db_stats": 60,
+    "db_size": 300,
     "index_stats": 300,
     "locks": 60,
     "locks_mode": 60,

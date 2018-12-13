@@ -153,7 +153,6 @@ values (
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  pg_database_size(datname) as size_b,
   numbackends,
   xact_commit,
   xact_rollback,
@@ -175,6 +174,19 @@ from
   pg_stat_database
 where
   datname = current_database();
+$sql$
+);
+
+/* db_size */
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'db_size',
+9.0,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  pg_database_size(current_database()) as size_b;
 $sql$
 );
 

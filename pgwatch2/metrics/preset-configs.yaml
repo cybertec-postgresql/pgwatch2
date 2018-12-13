@@ -5,6 +5,7 @@
   metrics:
     cpu_load: 60
     db_stats: 60
+    db_size: 300
     wal: 60
 
 - name: exhaustive
@@ -16,6 +17,7 @@
     change_events: 300
     cpu_load: 60
     db_stats: 60
+    db_size: 300
     index_stats: 300
     locks: 60
     locks_mode: 60
@@ -44,6 +46,7 @@
   metrics:
     cpu_load: 60
     db_stats: 60
+    db_size: 300
     index_stats: 300
     sproc_stats: 120
     stat_statements: 120
@@ -59,6 +62,7 @@
     change_events: 300
     cpu_load: 60
     db_stats: 60
+    db_size: 300
     index_stats: 300
     locks: 60
     locks_mode: 60
@@ -85,6 +89,7 @@
     bgwriter: 60
     change_events: 300
     db_stats: 60
+    db_size: 300
     index_stats: 300
     locks: 60
     locks_mode: 60

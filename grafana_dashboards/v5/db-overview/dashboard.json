@@ -455,7 +455,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT last(\"size_b\")  - first(\"size_b\") FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h) fill(none)",
+          "query": "SELECT last(\"size_b\")  - first(\"size_b\") FROM \"db_size\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1471,7 +1471,7 @@
               "type": "fill"
             }
           ],
-          "measurement": "db_stats",
+          "measurement": "db_size",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "B",

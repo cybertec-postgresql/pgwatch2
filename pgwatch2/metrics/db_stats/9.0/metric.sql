@@ -1,6 +1,5 @@
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  pg_database_size(datname) as size_b,
   numbackends,
   xact_commit,
   xact_rollback,
