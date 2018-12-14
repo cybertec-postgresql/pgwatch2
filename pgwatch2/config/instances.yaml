@@ -17,6 +17,9 @@
   custom_tags:      # possibility for the user to add extra Influx tags
     env: prod
     cloud: aws
+  sslrootcert: ''
+  sslcert: ''
+  sslkey: ''
 
 - unique_name: test2
   dbtype: postgres

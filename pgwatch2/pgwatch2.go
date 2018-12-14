@@ -42,9 +42,9 @@ type MonitoredDatabase struct {
 	User                 string
 	Password             string
 	SslMode              string
-	SslRootCAPath        string
-	SslClientCertPath    string
-	SslClientKeyPath     string
+	SslRootCAPath        string             `yaml:"sslrootcert"`
+	SslClientCertPath    string             `yaml:"sslcert"`
+	SslClientKeyPath     string             `yaml:"sslkey"`
 	Metrics              map[string]float64 `yaml:"custom_metrics"`
 	StmtTimeout          int64
 	DBType               string
@@ -488,7 +488,7 @@ retry:
 		if msg.Data == nil || len(msg.Data) == 0 {
 			continue
 		}
-		log.Debug("SendToInflux", conn_id, "data[0] of ", len(msg.Data), ":", msg.Data[0])
+		log.Debugf("SendToInflux %s data[0] of %d [%s:%s]:", conn_id, len(msg.Data), msg.DBUniqueName, msg.MetricName, msg.Data[0])
 
 		for _, dr := range msg.Data {
 			// Create a point and add to batch
