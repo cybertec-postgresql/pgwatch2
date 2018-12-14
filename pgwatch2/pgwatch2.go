@@ -26,7 +26,7 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/jessevdk/go-flags"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/marpaia/graphite-golang"
 	"github.com/op/go-logging"
 	"github.com/shopspring/decimal"
@@ -83,6 +83,14 @@ type MetricStoreMessage struct {
 	Data         [](map[string]interface{})
 }
 
+type MetricStoreMessagePostgres struct {
+	Time    time.Time
+	DBName  string
+	Metric  string
+	Data    map[string]interface{}
+	TagData map[string]interface{}
+}
+
 type ChangeDetectionResults struct { // for passing around DDL/index/config change detection results
 	Created int
 	Altered int
@@ -105,6 +113,7 @@ const PERSIST_QUEUE_MAX_SIZE = 100000 // storage queue max elements. when reachi
 const DATASTORE_INFLUX = "influx"
 const DATASTORE_GRAPHITE = "graphite"
 const DATASTORE_JSON = "json"
+const DATASTORE_POSTGRES = "postgres"
 const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
 const FILE_BASED_METRIC_HELPERS_DIR = "00_helpers"
 const PG_CONN_RECYCLE_SECONDS = 1800                // applies for monitored nodes
@@ -115,6 +124,7 @@ const GATHERER_STATUS_START = "START"
 const GATHERER_STATUS_STOP = "STOP"
 
 var configDb *sqlx.DB
+var metricDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
 var log = logging.MustGetLogger("main")
 var metric_def_map map[string]map[decimal.Decimal]string
@@ -209,6 +219,26 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password, requir
 	configDb.SetMaxIdleConns(1)
 	configDb.SetMaxOpenConns(2)
 	configDb.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
+}
+
+func InitAndTestMetricStoreConnection(connStr string) {
+	var err error
+
+	metricDb, err = GetPostgresDBConnection(connStr, "", "", "", "", "", "", "", "", "")
+	if err != nil {
+		log.Fatal("could not open metricDb connection! exit.")
+	}
+
+	err = metricDb.Ping()
+
+	if err != nil {
+		log.Fatal("could not ping metricDb! exit.", err)
+	} else {
+		log.Info("connect to metricDb OK!")
+	}
+	metricDb.SetMaxIdleConns(1)
+	metricDb.SetMaxOpenConns(2)
+	metricDb.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
 }
 
 func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
@@ -558,6 +588,137 @@ retry:
 	return err
 }
 
+func SendToPostgres(storeMessages []MetricStoreMessage) error {
+	if storeMessages == nil || len(storeMessages) == 0 {
+		return nil
+	}
+	ts_warning_printed := false
+	metricsToStore := make([]MetricStoreMessagePostgres, 0)
+	rows_batched := 0
+	total_rows := 0
+
+	for _, msg := range storeMessages {
+		if msg.Data == nil || len(msg.Data) == 0 {
+			continue
+		}
+		log.Debug("SendToPG data[0] of ", len(msg.Data), ":", msg.Data[0])
+
+		for _, dr := range msg.Data {
+			// Create a point and add to batch
+			var epoch_time time.Time
+			var epoch_ns int64
+
+			tags := make(map[string]interface{})
+			fields := make(map[string]interface{})
+
+			total_rows += 1
+
+			if msg.CustomTags != nil {
+				for k, v := range msg.CustomTags {
+					tags[k] = fmt.Sprintf("%v", v)
+				}
+			}
+
+			for k, v := range dr {
+				if v == nil || v == "" {
+					continue // not storing NULLs
+				}
+				if k == EPOCH_COLUMN_NAME {
+					epoch_ns = v.(int64)
+				} else if strings.HasPrefix(k, "tag_") {
+					tag := k[4:]
+					tags[tag] = fmt.Sprintf("%v", v)
+				} else {
+					fields[k] = v
+				}
+			}
+
+			if epoch_ns == 0 {
+				if !ts_warning_printed && msg.MetricName != "pgbouncer_stats" {
+					log.Warning("No timestamp_ns found, server time will be used. measurement:", msg.MetricName)
+					ts_warning_printed = true
+				}
+				epoch_time = time.Now()
+			} else {
+				epoch_time = time.Unix(0, epoch_ns)
+			}
+
+			metricsToStore = append(metricsToStore, MetricStoreMessagePostgres{Time: epoch_time, DBName: msg.DBUniqueName,
+				Metric: msg.MetricName, Data: fields, TagData: tags})
+			rows_batched += 1
+		}
+	}
+
+	log.Debugf("COPY-ing %d metrics to Postgres metricsDB...", len(metricsToStore))
+	t1 := time.Now()
+
+	txn, err := metricDb.Begin()
+	if err != nil {
+		log.Error("Could not start Postgres metricsDB transaction:", err)
+		return err
+	}
+
+	stmt, err := txn.Prepare(pq.CopyIn("metrics", "time", "dbname", "metric", "data", "tag_data"))
+	if err != nil {
+		log.Error("Could not prepare COPY to 'metrics' table:", err)
+		return err
+	}
+
+	for _, m := range metricsToStore {
+		jsonBytes, err := mapToJson(m.Data)
+		if err != nil {
+			log.Errorf("Skipping 1 metric for [%s:%s] due to JSON conversion error: %s", m.DBName, m.Metric, err)
+			continue
+		}
+
+		if len(m.TagData) > 0 {
+			jsonBytesTags, err := mapToJson(m.TagData)
+			if err != nil {
+				log.Errorf("Skipping 1 metric for [%s:%s] due to JSON conversion error: %s", m.DBName, m.Metric, err)
+				goto stmt_close
+			}
+			_, err = stmt.Exec(m.Time, m.DBName, m.Metric, string(jsonBytes), string(jsonBytesTags))
+			if err != nil {
+				log.Error("Formatting 1 metric to COPY format failed: ", jsonBytesTags)
+				goto stmt_close
+			}
+		} else {
+			_, err = stmt.Exec(m.Time, m.DBName, m.Metric, string(jsonBytes), nil)
+			if err != nil {
+				log.Error("Formatting 1 metric to COPY format failed: ", err)
+				goto stmt_close
+			}
+		}
+	}
+
+	_, err = stmt.Exec()
+	if err != nil {
+		log.Error("COPY to Postgres failed:", err)
+	}
+stmt_close:
+	err = stmt.Close()
+	if err != nil {
+		log.Error("stmt.Close() failed:", err)
+	}
+	err = txn.Commit()
+	if err != nil {
+		log.Error("COPY Commit to Postgres failed:", err)
+	}
+
+	t_diff := time.Now().Sub(t1)
+	if err == nil {
+		if len(storeMessages) == 1 {
+			log.Infof("wrote %d/%d rows to Postgres for [%s:%s] in %.1f ms", rows_batched, total_rows,
+				storeMessages[0].DBUniqueName, storeMessages[0].MetricName, float64(t_diff.Nanoseconds())/1000000)
+		} else {
+			log.Infof("wrote %d/%d rows from %d metric sets to Postgres in %.1f ms", rows_batched, total_rows,
+				len(storeMessages), float64(t_diff.Nanoseconds())/1000000)
+		}
+		lastSuccessfulDatastoreWriteTime = t1
+	}
+	return err
+}
+
 func InitGraphiteConnection(host string, port int) {
 	var err error
 	log.Debug("Connecting to Graphite...")
@@ -676,6 +837,8 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 
 		if data_source == DATASTORE_INFLUX {
 			err = SendToInflux(conn_str, conn_ident, msg)
+		} else if data_source == DATASTORE_POSTGRES {
+			err = SendToPostgres(msg)
 		} else if data_source == DATASTORE_GRAPHITE {
 			for _, m := range msg {
 				err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO
@@ -709,7 +872,7 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 
 func MetricsBatcher(data_store string, batchingMaxDelayMillis int64, buffered_storage_ch <-chan []MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) {
 	if batchingMaxDelayMillis <= 0 {
-		log.Fatalf("Check --batching-max-delay-ms, zero/negative batching delay:", batchingMaxDelayMillis)
+		log.Fatalf("Check --batching-delay-ms, zero/negative batching delay:", batchingMaxDelayMillis)
 	}
 	var datapointCounter int = 0
 	var maxBatchSize int = 1000            // flush on maxBatchSize or batchingMaxDelayMillis
@@ -804,6 +967,8 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 				} else {
 					if data_store == DATASTORE_INFLUX {
 						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg_arr)
+					} else if data_store == DATASTORE_POSTGRES {
+						err = SendToPostgres(msg_arr)
 					} else if data_store == DATASTORE_GRAPHITE {
 						for _, m := range msg_arr {
 							err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO does Graphite library support batching?
@@ -1477,6 +1642,10 @@ func jsonTextToStringMap(jsonText string) map[string]string {
 	return retmap
 }
 
+func mapToJson(metricsMap map[string]interface{}) ([]byte, error) {
+	return json.Marshal(metricsMap)
+}
+
 // queryDB convenience function to query the database
 func queryDB(clnt client.Client, cmd string) (res []client.Result, err error) {
 	q := client.Query{
@@ -1946,7 +2115,8 @@ type Options struct {
 	Password             string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
 	PgRequireSSL         string `long:"pg-require-ssl" description:"PG config DB SSL connection only" default:"false" env:"PW2_PGSSL"`
 	Group                string `short:"g" long:"group" description:"Group (or groups, comma separated) for filtering which DBs to monitor. By default all are monitored" env:"PW2_GROUP"`
-	Datastore            string `long:"datastore" description:"[influx|graphite|json]" default:"influx" env:"PW2_DATASTORE"`
+	Datastore            string `long:"datastore" description:"[influx|postgres|graphite|json]" default:"influx" env:"PW2_DATASTORE"`
+	PGMetricStoreConnStr string `long:"pg-metric-store-conn-str" description:"PG Metric Store" env:"PW2_PG_METRIC_STORE_CONN_STR"`
 	InfluxHost           string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
 	InfluxPort           string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
 	InfluxDbname         string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
@@ -2166,6 +2336,15 @@ func main() {
 		}
 		log.Warningf("In JSON ouput mode. Gathered metrics will be written to \"%s\"...", opts.JsonStorageFile)
 		go MetricsPersister(DATASTORE_JSON, persist_ch)
+	} else if opts.Datastore == DATASTORE_POSTGRES {
+		if len(opts.PGMetricStoreConnStr) == 0 {
+			log.Fatal("--datastore=postgres requires --pg-metric-store-conn-str to be set")
+		}
+
+		InitAndTestMetricStoreConnection(opts.PGMetricStoreConnStr)
+
+		log.Info("starting PostgresPersister...")
+		go MetricsPersister(DATASTORE_POSTGRES, persist_ch)
 	} else {
 		log.Fatal("Unknown datastore. Check the --datastore param")
 	}

@@ -1,0 +1,1903 @@
+{
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "gnetId": null,
+    "graphTooltip": 0,
+    "id": null,
+    "links": [],
+    "panels": [
+      {
+        "cacheTimeout": null,
+        "colorBackground": false,
+        "colorValue": false,
+        "colors": [
+          "rgba(245, 54, 54, 0.9)",
+          "rgba(237, 129, 40, 0.89)",
+          "rgba(50, 172, 45, 0.97)"
+        ],
+        "datasource": null,
+        "description": "Current Transaction Per Second",
+        "editable": true,
+        "error": false,
+        "format": "none",
+        "gauge": {
+          "maxValue": 100,
+          "minValue": 0,
+          "show": false,
+          "thresholdLabels": false,
+          "thresholdMarkers": true
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 0,
+          "y": 0
+        },
+        "id": 1,
+        "interval": "5m",
+        "links": [],
+        "mappingType": 1,
+        "mappingTypes": [
+          {
+            "name": "value to text",
+            "value": 1
+          },
+          {
+            "name": "range to text",
+            "value": 2
+          }
+        ],
+        "maxDataPoints": 100,
+        "nullPointMode": "connected",
+        "nullText": null,
+        "postfix": "",
+        "postfixFontSize": "50%",
+        "prefix": "",
+        "prefixFontSize": "50%",
+        "rangeMaps": [
+          {
+            "from": "null",
+            "text": "N/A",
+            "to": "null"
+          }
+        ],
+        "sparkline": {
+          "fillColor": "rgba(31, 118, 189, 0.18)",
+          "full": true,
+          "lineColor": "rgb(31, 120, 193)",
+          "show": true
+        },
+        "tableColumn": "",
+        "targets": [
+          {
+            "alias": "TPS",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "null"
+                ],
+                "type": "fill"
+              }
+            ],
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "select\n  time,\n  ((c - c_lag) + (r - r_lag)) / extract(epoch from time - time_lag) as tps\nfrom (\n        select \n          (data->>'xact_commit')::int8 as c, lag((data->>'xact_commit')::int8) over w as c_lag,\n          (data->>'xact_rollback')::int8 as r, lag((data->>'xact_rollback')::int8) over w as r_lag,\n          time, lag(time) over w as time_lag\n        from metrics \n        where dbname = '$dbname' and metric = 'db_stats' and time > now() - '30m'::interval\n        window w as (order by time)        \n) x \nwhere c >= c_lag and r >= r_lag\norder by time\n;",
+            "rawQuery": true,
+            "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg(((c - c_lag) + (r - r_lag)) / extract(epoch from time - time_lag)) as tps\nfrom (\n        select \n          (data->>'xact_commit')::int8 as c, lag((data->>'xact_commit')::int8) over w as c_lag,\n          (data->>'xact_rollback')::int8 as r, lag((data->>'xact_rollback')::int8) over w as r_lag,\n          time, lag(time) over w as time_lag\n        from metrics\n        where dbname = '$dbname' and metric = 'db_stats' and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere c >= c_lag and r >= r_lag\ngroup by 1\norder by 1",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "value"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": "",
+        "timeFrom": "6h",
+        "title": "TPS",
+        "type": "singlestat",
+        "valueFontSize": "80%",
+        "valueMaps": [
+          {
+            "op": "=",
+            "text": "N/A",
+            "value": "null"
+          }
+        ],
+        "valueName": "current"
+      },
+      {
+        "cacheTimeout": null,
+        "colorBackground": false,
+        "colorValue": false,
+        "colors": [
+          "rgba(245, 54, 54, 0.9)",
+          "rgba(237, 129, 40, 0.89)",
+          "rgba(50, 172, 45, 0.97)"
+        ],
+        "datasource": null,
+        "description": "Queries Per Second based on pg_stat_statements.calls",
+        "editable": true,
+        "error": false,
+        "format": "none",
+        "gauge": {
+          "maxValue": 100,
+          "minValue": 0,
+          "show": false,
+          "thresholdLabels": false,
+          "thresholdMarkers": true
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 4,
+          "y": 0
+        },
+        "height": "150",
+        "id": 2,
+        "interval": "5m",
+        "links": [],
+        "mappingType": 1,
+        "mappingTypes": [
+          {
+            "name": "value to text",
+            "value": 1
+          },
+          {
+            "name": "range to text",
+            "value": 2
+          }
+        ],
+        "maxDataPoints": 100,
+        "nullPointMode": "connected",
+        "nullText": null,
+        "postfix": "",
+        "postfixFontSize": "50%",
+        "prefix": "",
+        "prefixFontSize": "50%",
+        "rangeMaps": [
+          {
+            "from": "null",
+            "text": "N/A",
+            "to": "null"
+          }
+        ],
+        "sparkline": {
+          "fillColor": "rgba(31, 118, 189, 0.18)",
+          "full": true,
+          "lineColor": "rgb(31, 120, 193)",
+          "show": true
+        },
+        "tableColumn": "",
+        "targets": [
+          {
+            "alias": "QPS",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "null"
+                ],
+                "type": "fill"
+              }
+            ],
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "SELECT non_negative_derivative(last(\"calls\"), 1s) FROM \"stat_statements_calls\" WHERE $timeFilter AND \"dbname\" =~ /^$dbname$/ GROUP BY time(5m) fill(none)",
+            "rawQuery": true,
+            "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg((c - c_lag) / extract(epoch from time - time_lag)) as qps\nfrom (\n        select \n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          time, lag(time) over w as time_lag\n        from metrics\n        where dbname = '$dbname' and metric = 'stat_statements_calls' and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere c >= c_lag\ngroup by 1\norder by 1\n",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "value"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": "",
+        "timeFrom": "6h",
+        "title": "QPS",
+        "type": "singlestat",
+        "valueFontSize": "80%",
+        "valueMaps": [
+          {
+            "op": "=",
+            "text": "N/A",
+            "value": "null"
+          }
+        ],
+        "valueName": "current"
+      },
+      {
+        "cacheTimeout": null,
+        "colorBackground": false,
+        "colorValue": false,
+        "colors": [
+          "rgba(245, 54, 54, 0.9)",
+          "rgba(237, 129, 40, 0.89)",
+          "rgba(50, 172, 45, 0.97)"
+        ],
+        "datasource": null,
+        "description": "Requries pg_stat_statements extension and the \"get_stat_statements\" helper function  from  the \"sql/metric_fetching_helpers\" folder on the monitored DB",
+        "editable": true,
+        "error": false,
+        "format": "none",
+        "gauge": {
+          "maxValue": 100,
+          "minValue": 0,
+          "show": false,
+          "thresholdLabels": false,
+          "thresholdMarkers": true
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 8,
+          "y": 0
+        },
+        "height": "150",
+        "id": 3,
+        "interval": null,
+        "links": [],
+        "mappingType": 1,
+        "mappingTypes": [
+          {
+            "name": "value to text",
+            "value": 1
+          },
+          {
+            "name": "range to text",
+            "value": 2
+          }
+        ],
+        "maxDataPoints": 100,
+        "nullPointMode": "connected",
+        "nullText": null,
+        "postfix": " ms",
+        "postfixFontSize": "50%",
+        "prefix": "",
+        "prefixFontSize": "50%",
+        "rangeMaps": [
+          {
+            "from": "null",
+            "text": "N/A",
+            "to": "null"
+          }
+        ],
+        "sparkline": {
+          "fillColor": "rgba(31, 118, 189, 0.18)",
+          "full": true,
+          "lineColor": "rgb(31, 120, 193)",
+          "show": true
+        },
+        "tableColumn": "",
+        "targets": [
+          {
+            "alias": "avg_query_runtime_per_db",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "null"
+                ],
+                "type": "fill"
+              }
+            ],
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "--select mean(q) from (SELECT non_negative_derivative(mean(\"total_time\")) / non_negative_derivative(mean(\"calls\")) as q FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND \"query\" !~ /(?i)::int8[\\s+]as[\\s]+epoch_ns/ AND $timeFilter GROUP BY queryid, time(5m) fill(none)) group by time(5m) fill(none)\n",
+            "rawQuery": true,
+            "rawSql": "select\n  time,\n  avg(avg) as \"avg_query_runtime\"\nfrom (\n\nselect\n$__timeGroup(time, $__interval),\nqueryid,\navg((tt-tt_lag)::numeric / (c-c_lag))\n\nfrom (\n\n        select \n          (data->>'total_time')::float8 as tt, lag((data->>'total_time')::float8) over w as tt_lag,\n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          tag_data->>'queryid' as queryid,\n          time\n        from metrics\n        where dbname = '$dbname' and metric = 'stat_statements' and $__timeFilter(time)\n        and tag_data ? 'queryid'\n        window w as (partition by tag_data->>'queryid' order by time)\n) x\nwhere c > c_lag and tt >= tt_lag\ngroup by 1, 2\norder by 1, 2\n) y\ngroup by 1\norder by 1",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "value"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": "",
+        "timeFrom": "6h",
+        "timeShift": null,
+        "title": "Query runtime",
+        "type": "singlestat",
+        "valueFontSize": "80%",
+        "valueMaps": [
+          {
+            "op": "=",
+            "text": "N/A",
+            "value": "null"
+          }
+        ],
+        "valueName": "current"
+      },
+      {
+        "cacheTimeout": null,
+        "colorBackground": false,
+        "colorValue": false,
+        "colors": [
+          "rgba(245, 54, 54, 0.9)",
+          "rgba(237, 129, 40, 0.89)",
+          "rgba(50, 172, 45, 0.97)"
+        ],
+        "datasource": null,
+        "decimals": 1,
+        "editable": true,
+        "error": false,
+        "format": "bytes",
+        "gauge": {
+          "maxValue": 100,
+          "minValue": 0,
+          "show": false,
+          "thresholdLabels": false,
+          "thresholdMarkers": true
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 12,
+          "y": 0
+        },
+        "height": "150",
+        "id": 4,
+        "interval": null,
+        "links": [],
+        "mappingType": 1,
+        "mappingTypes": [
+          {
+            "name": "value to text",
+            "value": 1
+          },
+          {
+            "name": "range to text",
+            "value": 2
+          }
+        ],
+        "maxDataPoints": 100,
+        "nullPointMode": "connected",
+        "nullText": null,
+        "postfix": " ",
+        "postfixFontSize": "50%",
+        "prefix": "",
+        "prefixFontSize": "50%",
+        "rangeMaps": [
+          {
+            "from": "null",
+            "text": "N/A",
+            "to": "null"
+          }
+        ],
+        "sparkline": {
+          "fillColor": "rgba(31, 118, 189, 0.18)",
+          "full": true,
+          "lineColor": "rgb(31, 120, 193)",
+          "show": true
+        },
+        "tableColumn": "",
+        "targets": [
+          {
+            "alias": "db_size_change_last_hour",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "null"
+                ],
+                "type": "fill"
+              }
+            ],
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "",
+            "rawQuery": true,
+            "rawSql": "select\n  time,\n  max(last_value-first_value) as size_diff\nfrom (\n  select\n    date_trunc('hour', time) as time,\n    first_value((data->>'size_b')::int8) over w,\n    last_value((data->>'size_b')::int8) over w\n  from\n    metrics\n  where \n    dbname = '$dbname' and metric = 'db_stats' and $__timeFilter(time)\n  window w as (\n     partition by date_trunc('hour', time) order by time rows BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING\n  )\n) x\ngroup by 1\norder by 1;",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "value"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": "",
+        "timeFrom": "6h",
+        "timeShift": null,
+        "title": "DB size ch. 1h",
+        "type": "singlestat",
+        "valueFontSize": "80%",
+        "valueMaps": [
+          {
+            "op": "=",
+            "text": "N/A",
+            "value": "null"
+          }
+        ],
+        "valueName": "current"
+      },
+      {
+        "cacheTimeout": null,
+        "colorBackground": false,
+        "colorValue": false,
+        "colors": [
+          "rgba(245, 54, 54, 0.9)",
+          "rgba(237, 129, 40, 0.89)",
+          "rgba(50, 172, 45, 0.97)"
+        ],
+        "datasource": null,
+        "decimals": 1,
+        "description": "Based on pgstattuple_approx, for tables >800KB",
+        "editable": true,
+        "error": false,
+        "format": "bytes",
+        "gauge": {
+          "maxValue": 100,
+          "minValue": 0,
+          "show": false,
+          "thresholdLabels": false,
+          "thresholdMarkers": true
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 16,
+          "y": 0
+        },
+        "height": "150",
+        "id": 5,
+        "interval": null,
+        "links": [],
+        "mappingType": 1,
+        "mappingTypes": [
+          {
+            "name": "value to text",
+            "value": 1
+          },
+          {
+            "name": "range to text",
+            "value": 2
+          }
+        ],
+        "maxDataPoints": 100,
+        "nullPointMode": "connected",
+        "nullText": null,
+        "postfix": " ",
+        "postfixFontSize": "50%",
+        "prefix": "",
+        "prefixFontSize": "50%",
+        "rangeMaps": [
+          {
+            "from": "null",
+            "text": "N/A",
+            "to": "null"
+          }
+        ],
+        "sparkline": {
+          "fillColor": "rgba(31, 118, 189, 0.18)",
+          "full": true,
+          "lineColor": "rgb(31, 120, 193)",
+          "show": true
+        },
+        "tableColumn": "",
+        "targets": [
+          {
+            "alias": "Bloat size",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "1h"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "none"
+                ],
+                "type": "fill"
+              }
+            ],
+            "measurement": "table_bloat_approx_summary",
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "SELECT mean(\"approx_free_space_b\") FROM \"table_bloat_approx_summary\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(1h) fill(none)",
+            "rawQuery": true,
+            "rawSql": "-- SELECT mean(\"approx_free_space_b\") FROM \"table_bloat_approx_summary\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(1h) fill(none)\nSELECT\n  date_trunc('hour', time) as time,\n  avg((data->>'approx_free_space_b')::int8)\nFROM\n  metrics\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname' and metric = 'table_bloat_approx_summary'\nGROUP BY\n  1\nORDER BY\n  1\n",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "approx_free_space_b"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [
+              {
+                "key": "dbname",
+                "operator": "=~",
+                "value": "/^$dbname$/"
+              }
+            ],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": "",
+        "timeFrom": "6h",
+        "timeShift": null,
+        "title": "Approx Bloat",
+        "type": "singlestat",
+        "valueFontSize": "80%",
+        "valueMaps": [
+          {
+            "op": "=",
+            "text": "N/A",
+            "value": "null"
+          }
+        ],
+        "valueName": "current"
+      },
+      {
+        "cacheTimeout": null,
+        "colorBackground": false,
+        "colorValue": false,
+        "colors": [
+          "rgba(245, 54, 54, 0.9)",
+          "rgba(237, 129, 40, 0.89)",
+          "rgba(50, 172, 45, 0.97)"
+        ],
+        "datasource": null,
+        "decimals": 1,
+        "description": "Last CPU load_5 value. NB! Requires get_load_average() function making use of PL/Pythonu",
+        "editable": true,
+        "error": false,
+        "format": "percent",
+        "gauge": {
+          "maxValue": 100,
+          "minValue": 0,
+          "show": false,
+          "thresholdLabels": false,
+          "thresholdMarkers": true
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 20,
+          "y": 0
+        },
+        "height": "150",
+        "id": 6,
+        "interval": null,
+        "links": [],
+        "mappingType": 1,
+        "mappingTypes": [
+          {
+            "name": "value to text",
+            "value": 1
+          },
+          {
+            "name": "range to text",
+            "value": 2
+          }
+        ],
+        "maxDataPoints": 100,
+        "nullPointMode": "connected",
+        "nullText": null,
+        "postfix": " ",
+        "postfixFontSize": "50%",
+        "prefix": "",
+        "prefixFontSize": "50%",
+        "rangeMaps": [
+          {
+            "from": "null",
+            "text": "N/A",
+            "to": "null"
+          }
+        ],
+        "sparkline": {
+          "fillColor": "rgba(31, 118, 189, 0.18)",
+          "full": true,
+          "lineColor": "rgb(31, 120, 193)",
+          "show": true
+        },
+        "tableColumn": "",
+        "targets": [
+          {
+            "alias": "load_5",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$__interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "none"
+                ],
+                "type": "fill"
+              }
+            ],
+            "measurement": "cpu_load",
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "SELECT mean(\"load_5min\") FROM \"cpu_load\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time($__interval) fill(none)",
+            "rawQuery": true,
+            "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  avg((data->>'load_5min')::numeric)\nFROM\n  metrics\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname' and metric = 'cpu_load'\nGROUP BY 1\nORDER BY 1\n",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "load_5min"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [
+              {
+                "key": "dbname",
+                "operator": "=~",
+                "value": "/^$dbname$/"
+              }
+            ],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": "",
+        "timeFrom": "6h",
+        "timeShift": null,
+        "title": "CPU Load",
+        "type": "singlestat",
+        "valueFontSize": "80%",
+        "valueMaps": [
+          {
+            "op": "=",
+            "text": "N/A",
+            "value": "null"
+          }
+        ],
+        "valueName": "current"
+      },
+      {
+        "aliasColors": {},
+        "bars": false,
+        "dashLength": 10,
+        "dashes": false,
+        "description": "",
+        "editable": true,
+        "error": false,
+        "fill": 1,
+        "grid": {},
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 3
+        },
+        "id": 7,
+        "interval": "5m",
+        "legend": {
+          "alignAsTable": false,
+          "avg": true,
+          "current": false,
+          "max": false,
+          "min": false,
+          "show": true,
+          "total": false,
+          "values": true
+        },
+        "lines": true,
+        "linewidth": 2,
+        "links": [],
+        "nullPointMode": "connected",
+        "percentage": false,
+        "pointradius": 5,
+        "points": false,
+        "renderer": "flot",
+        "seriesOverrides": [
+          {
+            "alias": "db_stats.mean",
+            "yaxis": 2
+          },
+          {
+            "alias": "DB size",
+            "yaxis": 2
+          },
+          {
+            "alias": "blk_read_time",
+            "yaxis": 2
+          },
+          {
+            "alias": "blk_write_time",
+            "yaxis": 2
+          }
+        ],
+        "spaceLength": 10,
+        "stack": false,
+        "steppedLine": false,
+        "targets": [
+          {
+            "alias": "DELETE",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "null"
+                ],
+                "type": "fill"
+              }
+            ],
+            "measurement": "db_stats",
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "SELECT non_negative_derivative(mean(\"tup_deleted\"), 1h) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
+            "rawQuery": true,
+            "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg((ins-ins_lag) * 3600 / extract(epoch from time - time_lag)) as \"INSERT\",\n  avg((upd-upd_lag) * 3600 / extract(epoch from time - time_lag)) as \"UPDATE\",\n  avg((del-del_lag) * 3600 / extract(epoch from time - time_lag)) as \"DELETE\"\nfrom (\n        select \n          (data->>'tup_inserted')::int8 as ins, lag((data->>'tup_inserted')::int8) over w as ins_lag,\n          (data->>'tup_updated')::int8 as upd, lag((data->>'tup_updated')::int8) over w as upd_lag,\n          (data->>'tup_deleted')::int8 as del, lag((data->>'tup_deleted')::int8) over w as del_lag,\n          time, lag(time) over w as time_lag\n        from metrics\n        where dbname = '$dbname' and metric = 'db_stats' and $__timeFilter(time)\n        window w as (order by time)\n) x\nwhere ins >= ins_lag and upd >= upd_lag and del >= del_lag\ngroup by 1\norder by 1",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "tup_deleted"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [
+              {
+                "key": "dbname",
+                "operator": "=~",
+                "value": "/^$dbname$/"
+              }
+            ],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": [],
+        "timeFrom": null,
+        "timeRegions": [],
+        "timeShift": null,
+        "title": "Tuple  ins. / upd. / del. statistics (1h rates)",
+        "tooltip": {
+          "msResolution": false,
+          "shared": true,
+          "sort": 0,
+          "value_type": "cumulative"
+        },
+        "type": "graph",
+        "xaxis": {
+          "buckets": null,
+          "mode": "time",
+          "name": null,
+          "show": true,
+          "values": []
+        },
+        "yaxes": [
+          {
+            "format": "short",
+            "label": null,
+            "logBase": 10,
+            "max": null,
+            "min": null,
+            "show": true
+          },
+          {
+            "format": "ms",
+            "label": null,
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": false
+          }
+        ],
+        "yaxis": {
+          "align": false,
+          "alignLevel": null
+        }
+      },
+      {
+        "aliasColors": {
+          "TX rollback ratio": "#890F02"
+        },
+        "bars": false,
+        "dashLength": 10,
+        "dashes": false,
+        "datasource": null,
+        "decimals": 1,
+        "editable": true,
+        "error": false,
+        "fill": 1,
+        "grid": {},
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 3
+        },
+        "id": 8,
+        "interval": "5m",
+        "legend": {
+          "alignAsTable": false,
+          "avg": true,
+          "current": false,
+          "max": false,
+          "min": false,
+          "show": true,
+          "total": false,
+          "values": true
+        },
+        "lines": true,
+        "linewidth": 2,
+        "links": [],
+        "nullPointMode": "connected",
+        "percentage": false,
+        "pointradius": 5,
+        "points": false,
+        "renderer": "flot",
+        "seriesOverrides": [],
+        "spaceLength": 10,
+        "stack": false,
+        "steppedLine": false,
+        "targets": [
+          {
+            "alias": "Shared buffers hit ratio",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "null"
+                ],
+                "type": "fill"
+              }
+            ],
+            "hide": false,
+            "measurement": "db_stats",
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "SELECT ( non_negative_derivative(mean(\"blks_hit\")) / (non_negative_derivative(mean(\"blks_hit\")) + non_negative_derivative(mean(\"blks_read\")))) * 100 FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($__interval) fill(none)",
+            "rawQuery": true,
+            "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg((hit-hit_lag)::numeric / ((hit-hit_lag) + (read-read_lag)))*100 as \"Shared buffers hit ratio\",\n  avg((roll-roll_lag)::numeric / ((roll-roll_lag) + (comm-comm_lag)))*100 as \"TX rollback ratio\"\nfrom (\n        select \n          (data->>'blks_hit')::int8 as hit, lag((data->>'blks_hit')::int8) over w as hit_lag,\n          (data->>'blks_read')::int8 as read, lag((data->>'blks_read')::int8) over w as read_lag,\n          (data->>'xact_rollback')::int8 as roll, lag((data->>'xact_rollback')::int8) over w as roll_lag,\n          (data->>'xact_commit')::int8 as comm, lag((data->>'xact_commit')::int8) over w as comm_lag,\n          time\n        from metrics\n        where dbname = '$dbname' and metric = 'db_stats' and $__timeFilter(time)\n        window w as (order by time)\n) x\nwhere hit >= hit_lag and read >= read_lag and ((hit-hit_lag) + (read-read_lag) > 0)\ngroup by 1\norder by 1",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "blks_hit"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": [],
+        "timeFrom": null,
+        "timeRegions": [],
+        "timeShift": null,
+        "title": "Shared Buffers hit ratio + Rollback ratio",
+        "tooltip": {
+          "msResolution": false,
+          "shared": true,
+          "sort": 0,
+          "value_type": "cumulative"
+        },
+        "type": "graph",
+        "xaxis": {
+          "buckets": null,
+          "mode": "time",
+          "name": null,
+          "show": true,
+          "values": []
+        },
+        "yaxes": [
+          {
+            "format": "percent",
+            "label": null,
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true
+          },
+          {
+            "format": "short",
+            "label": null,
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true
+          }
+        ],
+        "yaxis": {
+          "align": false,
+          "alignLevel": null
+        }
+      },
+      {
+        "aliasColors": {
+          "# Sessions": "#cca300",
+          "#Backends": "#F9E2D2",
+          "Deadlocks (1h rate)": "#BF1B00",
+          "Temp bytes (1h rate)": "#6ed0e0"
+        },
+        "bars": false,
+        "dashLength": 10,
+        "dashes": false,
+        "datasource": null,
+        "decimals": 1,
+        "editable": true,
+        "error": false,
+        "fill": 1,
+        "grid": {},
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 9
+        },
+        "id": 9,
+        "interval": "10m",
+        "legend": {
+          "avg": true,
+          "current": false,
+          "max": false,
+          "min": false,
+          "show": true,
+          "total": false,
+          "values": true
+        },
+        "lines": true,
+        "linewidth": 2,
+        "links": [],
+        "nullPointMode": "connected",
+        "percentage": false,
+        "pointradius": 5,
+        "points": false,
+        "renderer": "flot",
+        "seriesOverrides": [
+          {
+            "alias": "Temp bytes (1h rate)",
+            "yaxis": 2
+          }
+        ],
+        "spaceLength": 10,
+        "stack": false,
+        "steppedLine": false,
+        "targets": [
+          {
+            "alias": "# Sessions",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "none"
+                ],
+                "type": "fill"
+              }
+            ],
+            "measurement": "db_stats",
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "SELECT mean(\"numbackends\") FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
+            "rawQuery": true,
+            "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg(nb) as \"# Sessions\",\n  avg(case when dl-dl_lag > 0 then (dl-dl_lag) / (etime - lag_etime) else 0 end) as \"Deadlocks (1h rate)\"\nfrom (\n        select \n          (data->>'numbackends')::int8 as nb,\n          (data->>'deadlocks')::int8 as dl, lag((data->>'deadlocks')::int8) over w as dl_lag,\n          (extract(epoch from time))::int8 as etime,\n          (lag(extract(epoch from time)) over w)::int8 as lag_etime,\n          time\n        from metrics\n        where dbname = '$dbname' and metric = 'db_stats' and $__timeFilter(time)\n        window w as (order by time)\n) x\nwhere dl >= dl_lag\ngroup by 1\norder by 1\n",
+            "refId": "B",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "numbackends"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          },
+          {
+            "format": "time_series",
+            "group": [],
+            "metricColumn": "none",
+            "rawQuery": true,
+            "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg(case when tb-tb_lag > 0 then (tb-tb_lag) / (etime - lag_etime) else 0 end) as \"Temp bytes (1h rate)\"\nfrom (\n        select \n          (data->>'temp_bytes')::int8 as tb, lag((data->>'temp_bytes')::int8) over w as tb_lag,\n          (extract(epoch from time))::int8 as etime,\n          (lag(extract(epoch from time)) over w)::int8 as lag_etime,\n          time\n        from metrics\n        where dbname = '$dbname' and metric = 'db_stats' and $__timeFilter(time)\n        window w as (order by time)\n) x\nwhere tb >= tb_lag\ngroup by 1\norder by 1\n",
+            "refId": "A",
+            "select": [
+              [
+                {
+                  "params": [
+                    "value"
+                  ],
+                  "type": "column"
+                }
+              ]
+            ],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": [],
+        "timeFrom": null,
+        "timeRegions": [],
+        "timeShift": null,
+        "title": "Total sessions + Deadlocks + Temp bytes",
+        "tooltip": {
+          "msResolution": false,
+          "shared": true,
+          "sort": 0,
+          "value_type": "cumulative"
+        },
+        "type": "graph",
+        "xaxis": {
+          "buckets": null,
+          "mode": "time",
+          "name": null,
+          "show": true,
+          "values": []
+        },
+        "yaxes": [
+          {
+            "decimals": 1,
+            "format": "short",
+            "label": null,
+            "logBase": 1,
+            "max": null,
+            "min": "0",
+            "show": true
+          },
+          {
+            "format": "Bps",
+            "label": null,
+            "logBase": 1,
+            "max": null,
+            "min": "0",
+            "show": true
+          }
+        ],
+        "yaxis": {
+          "align": false,
+          "alignLevel": null
+        }
+      },
+      {
+        "aliasColors": {
+          "DB Size": "#2F575E",
+          "WAL rate": "#0A50A1"
+        },
+        "bars": false,
+        "dashLength": 10,
+        "dashes": false,
+        "datasource": null,
+        "decimals": 1,
+        "editable": true,
+        "error": false,
+        "fill": 1,
+        "grid": {},
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 9
+        },
+        "height": "",
+        "id": 10,
+        "interval": "2m",
+        "legend": {
+          "alignAsTable": false,
+          "avg": true,
+          "current": false,
+          "max": false,
+          "min": false,
+          "show": true,
+          "total": false,
+          "values": true
+        },
+        "lines": true,
+        "linewidth": 2,
+        "links": [],
+        "nullPointMode": "connected",
+        "percentage": false,
+        "pointradius": 5,
+        "points": false,
+        "renderer": "flot",
+        "seriesOverrides": [
+          {
+            "alias": "WAL rate (bytes/h)",
+            "yaxis": 2
+          },
+          {
+            "alias": "DB Size",
+            "yaxis": 2
+          }
+        ],
+        "spaceLength": 10,
+        "stack": false,
+        "steppedLine": false,
+        "targets": [
+          {
+            "alias": "WAL rate",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "null"
+                ],
+                "type": "fill"
+              }
+            ],
+            "measurement": "wal",
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "SELECT derivative(mean(\"xlog_location_b\"), 1s) FROM \"wal\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
+            "rawQuery": true,
+            "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg((wal-wal_lag) / (etime-lag_etime)) as \"WAL rate\"\nfrom (\n        select \n          (data->>'xlog_location_b')::int8 as wal, lag((data->>'xlog_location_b')::int8) over w as wal_lag,\n          extract(epoch from time) as etime,\n          lag(extract(epoch from time)) over w as lag_etime,\n          time\n        from metrics\n        where dbname = '$dbname' and metric = 'wal' and $__timeFilter(time)\n        window w as (order by time)\n) x\nwhere wal >= wal_lag and etime - lag_etime > 0\ngroup by 1\norder by 1",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "xlog_location_b"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                },
+                {
+                  "params": [
+                    "1h"
+                  ],
+                  "type": "derivative"
+                }
+              ]
+            ],
+            "tags": [
+              {
+                "key": "dbname",
+                "operator": "=~",
+                "value": "/^$dbname$/"
+              }
+            ],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          },
+          {
+            "format": "time_series",
+            "group": [],
+            "metricColumn": "none",
+            "rawQuery": true,
+            "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg(size_b) as \"DB Size\"\nfrom (\n        select \n          (data->>'size_b')::int8 as size_b,\n          time\n        from metrics\n        where dbname = '$dbname' and metric = 'db_stats' and $__timeFilter(time)\n) x\ngroup by 1\norder by 1",
+            "refId": "B",
+            "select": [
+              [
+                {
+                  "params": [
+                    "value"
+                  ],
+                  "type": "column"
+                }
+              ]
+            ],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": [],
+        "timeFrom": null,
+        "timeRegions": [],
+        "timeShift": null,
+        "title": "WAL rate + DB size",
+        "tooltip": {
+          "msResolution": false,
+          "shared": true,
+          "sort": 0,
+          "value_type": "cumulative"
+        },
+        "type": "graph",
+        "xaxis": {
+          "buckets": null,
+          "mode": "time",
+          "name": null,
+          "show": true,
+          "values": []
+        },
+        "yaxes": [
+          {
+            "decimals": 1,
+            "format": "Bps",
+            "label": null,
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true
+          },
+          {
+            "decimals": 1,
+            "format": "bytes",
+            "label": null,
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true
+          }
+        ],
+        "yaxis": {
+          "align": false,
+          "alignLevel": null
+        }
+      },
+      {
+        "aliasColors": {
+          "idle in transaction": "#bf1b00"
+        },
+        "bars": false,
+        "dashLength": 10,
+        "dashes": false,
+        "datasource": null,
+        "decimals": null,
+        "description": "Based on get_stat_activity() helper",
+        "fill": 1,
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 15
+        },
+        "id": 11,
+        "interval": "5m",
+        "legend": {
+          "avg": true,
+          "current": false,
+          "max": false,
+          "min": false,
+          "show": true,
+          "total": false,
+          "values": true
+        },
+        "lines": true,
+        "linewidth": 1,
+        "links": [],
+        "nullPointMode": "null",
+        "percentage": false,
+        "pointradius": 5,
+        "points": false,
+        "renderer": "flot",
+        "seriesOverrides": [],
+        "spaceLength": 10,
+        "stack": false,
+        "steppedLine": false,
+        "targets": [
+          {
+            "alias": "idle",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$__interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "none"
+                ],
+                "type": "fill"
+              }
+            ],
+            "measurement": "backends",
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "SELECT mean(\"idle\") FROM \"backends\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
+            "rawQuery": true,
+            "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg((data->>'idle')::int8) as idle,\n  avg((data->>'idleintransaction')::int8) as \"idle in transaction\",\n  avg((data->>'waiting')::int8) as waiting,\n  avg((data->>'active')::int8) as active  \nfrom metrics\n  where dbname = '$dbname' and metric = 'backends'and $__timeFilter(time)\ngroup by 1\norder by 1",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "idle"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [
+              {
+                "key": "dbname",
+                "operator": "=~",
+                "value": "/^$dbname$/"
+              }
+            ],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": [],
+        "timeFrom": null,
+        "timeRegions": [],
+        "timeShift": null,
+        "title": "Sessions by state",
+        "tooltip": {
+          "shared": true,
+          "sort": 2,
+          "value_type": "individual"
+        },
+        "type": "graph",
+        "xaxis": {
+          "buckets": null,
+          "mode": "time",
+          "name": null,
+          "show": true,
+          "values": []
+        },
+        "yaxes": [
+          {
+            "format": "short",
+            "label": null,
+            "logBase": 1,
+            "max": null,
+            "min": "0",
+            "show": true
+          },
+          {
+            "format": "short",
+            "label": null,
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": false
+          }
+        ],
+        "yaxis": {
+          "align": false,
+          "alignLevel": null
+        }
+      },
+      {
+        "aliasColors": {
+          "load_5": "#BA43A9"
+        },
+        "bars": false,
+        "dashLength": 10,
+        "dashes": false,
+        "datasource": null,
+        "decimals": 2,
+        "description": "Requires according \"metric fetching helpers\" on the monitored server",
+        "fill": 1,
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 15
+        },
+        "id": 12,
+        "interval": "10m",
+        "legend": {
+          "avg": true,
+          "current": false,
+          "max": false,
+          "min": false,
+          "show": true,
+          "total": false,
+          "values": true
+        },
+        "lines": true,
+        "linewidth": 2,
+        "links": [],
+        "nullPointMode": "null",
+        "percentage": false,
+        "pointradius": 5,
+        "points": false,
+        "renderer": "flot",
+        "seriesOverrides": [
+          {
+            "alias": "avg_query_runtime",
+            "yaxis": 2
+          }
+        ],
+        "spaceLength": 10,
+        "stack": false,
+        "steppedLine": false,
+        "targets": [
+          {
+            "alias": "load_5",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "none"
+                ],
+                "type": "fill"
+              }
+            ],
+            "hide": false,
+            "measurement": "cpu_load",
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "SELECT mean(\"load_5min\") FROM \"cpu_load\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
+            "rawQuery": true,
+            "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  avg((data->>'load_5min')::numeric) as \"load_5\"\nFROM\n  metrics\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname' and metric = 'cpu_load'\nGROUP BY 1\nORDER BY 1\n",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "load_5min"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          },
+          {
+            "alias": "avg_query_runtime",
+            "dsType": "influxdb",
+            "format": "time_series",
+            "group": [],
+            "groupBy": [
+              {
+                "params": [
+                  "$interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "null"
+                ],
+                "type": "fill"
+              }
+            ],
+            "hide": false,
+            "measurement": "stat_statements",
+            "metricColumn": "none",
+            "orderByTime": "ASC",
+            "policy": "default",
+            "query": "select mean(runtime) from (SELECT non_negative_derivative(last(\"total_time\"), 1h) / non_negative_derivative(last(\"calls\"), 1h) as runtime FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND \"query\" !~ /(?i)::int8[\\s]+as[\\s]+epoch_ns/ AND $timeFilter GROUP BY queryid, time($__interval) fill(none)) group by time($__interval) fill(none)",
+            "rawQuery": true,
+            "rawSql": "select\n  time,\n  avg(avg) as \"avg_query_runtime\"\nfrom (\n\nselect\n$__timeGroup(time, $__interval),\nqueryid,\navg((tt-tt_lag)::numeric / (c-c_lag))\n\nfrom (\n\n        select \n          (data->>'total_time')::float8 as tt, lag((data->>'total_time')::float8) over w as tt_lag,\n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          tag_data->>'queryid' as queryid,\n          time\n        from metrics\n        where dbname = '$dbname' and metric = 'stat_statements' and $__timeFilter(time)\n        and tag_data ? 'queryid'\n        window w as (partition by tag_data->>'queryid' order by time)\n) x\nwhere c > c_lag and tt >= tt_lag\ngroup by 1, 2\norder by 1, 2\n) y\ngroup by 1\norder by 1",
+            "refId": "B",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "value"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [],
+            "timeColumn": "time",
+            "where": [
+              {
+                "name": "$__timeFilter",
+                "params": [],
+                "type": "macro"
+              }
+            ]
+          }
+        ],
+        "thresholds": [],
+        "timeFrom": null,
+        "timeRegions": [],
+        "timeShift": null,
+        "title": "CPU load + avg. query runtime",
+        "tooltip": {
+          "shared": true,
+          "sort": 0,
+          "value_type": "individual"
+        },
+        "type": "graph",
+        "xaxis": {
+          "buckets": null,
+          "mode": "time",
+          "name": null,
+          "show": true,
+          "values": []
+        },
+        "yaxes": [
+          {
+            "decimals": 1,
+            "format": "percent",
+            "label": null,
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true
+          },
+          {
+            "decimals": 2,
+            "format": "ms",
+            "label": "",
+            "logBase": 1,
+            "max": null,
+            "min": null,
+            "show": true
+          }
+        ],
+        "yaxis": {
+          "align": false,
+          "alignLevel": null
+        }
+      },
+      {
+        "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2017/11/Cybertec_Logo_2017_300px_slogan_trans.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+        "editable": true,
+        "error": false,
+        "gridPos": {
+          "h": 7,
+          "w": 12,
+          "x": 0,
+          "y": 21
+        },
+        "id": 14,
+        "links": [],
+        "mode": "html",
+        "title": "",
+        "transparent": true,
+        "type": "text"
+      }
+    ],
+    "refresh": false,
+    "schemaVersion": 16,
+    "style": "dark",
+    "tags": [],
+    "templating": {
+      "list": [
+        {
+          "allValue": null,
+          "current": {
+            "text": null,
+            "value": null
+          },
+          "datasource": null,
+          "definition": "select distinct dbname from metrics",
+          "hide": 0,
+          "includeAll": false,
+          "label": null,
+          "multi": false,
+          "name": "dbname",
+          "options": [],
+          "query": "select distinct dbname from metrics",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "tagValuesQuery": null,
+          "tags": [],
+          "tagsQuery": null,
+          "type": "query",
+          "useTags": false
+        }
+      ]
+    },
+    "time": {
+        "from": "now-1h",
+        "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ],
+      "time_options": [
+        "5m",
+        "15m",
+        "1h",
+        "6h",
+        "12h",
+        "24h",
+        "2d",
+        "7d",
+        "30d"
+      ]
+    },
+    "timezone": "browser",
+    "title": "DB overview",
+    "uid": null,
+    "version": 1
+  }
