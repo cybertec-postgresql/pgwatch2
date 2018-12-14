@@ -42,6 +42,9 @@ type MonitoredDatabase struct {
 	User                 string
 	Password             string
 	SslMode              string
+	SslRootCAPath        string
+	SslClientCertPath    string
+	SslClientKeyPath     string
 	Metrics              map[string]float64 `yaml:"custom_metrics"`
 	StmtTimeout          int64
 	DBType               string
@@ -143,7 +146,7 @@ var metricPointsPerMinuteLast5MinAvg int64 = -1 // -1 means the summarization ti
 var gathererStartTime time.Time = time.Now()
 var useConnPooling bool
 
-func GetPostgresDBConnection(libPgConnString, host, port, dbname, user, password, sslmode string) (*sqlx.DB, error) {
+func GetPostgresDBConnection(libPgConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
 	var db *sqlx.DB
 
@@ -161,8 +164,8 @@ func GetPostgresDBConnection(libPgConnString, host, port, dbname, user, password
 			}
 		}
 	} else {
-		db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s user=%s password=%s application_name=%s",
-			host, port, dbname, sslmode, user, password, APPLICATION_NAME))
+		db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s user=%s password=%s application_name=%s sslrootcert=%s sslcert=%s sslkey=%s",
+			host, port, dbname, sslmode, user, password, APPLICATION_NAME, sslrootcert, sslcert, sslkey))
 	}
 
 	if err != nil {
@@ -190,7 +193,8 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password, requir
 	if StringToBoolOrFail(requireSSL) {
 		SSLMode = "require"
 	}
-	configDb, err = GetPostgresDBConnection("", host, port, dbname, user, password, SSLMode) // configDb is used by the main thread only
+	// configDb is used by the main thread only. no verify-ca/verify-full support currently
+	configDb, err = GetPostgresDBConnection("", host, port, dbname, user, password, SSLMode, "", "", "")
 	if err != nil {
 		log.Fatal("could not open configDb connection! exit.")
 	}
@@ -278,7 +282,8 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 			md.DBName = "pgbouncer"
 		}
 
-		conn, err = GetPostgresDBConnection(opts.AdHocConnString, md.Host, md.Port, md.DBName, md.User, md.Password, md.SslMode)
+		conn, err = GetPostgresDBConnection(opts.AdHocConnString, md.Host, md.Port, md.DBName, md.User, md.Password,
+			md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
 		if err != nil {
 			return nil, err, duration
 		}
@@ -309,7 +314,8 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 				md.DBName = "pgbouncer"
 			}
 
-			conn, err = GetPostgresDBConnection(opts.AdHocConnString, md.Host, md.Port, md.DBName, md.User, md.Password, md.SslMode)
+			conn, err = GetPostgresDBConnection(opts.AdHocConnString, md.Host, md.Port, md.DBName, md.User, md.Password,
+				md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
 			if err != nil {
 				return nil, err, duration
 			}
@@ -360,7 +366,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 		  md_unique_name, md_group, md_dbtype, md_hostname, md_port, md_dbname, md_user, coalesce(md_password, '') as md_password,
 		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode, md_is_superuser,
 		  coalesce(md_include_pattern, '') as md_include_pattern, coalesce(md_exclude_pattern, '') as md_exclude_pattern,
-		  coalesce(md_custom_tags::text, '{}') as md_custom_tags
+		  coalesce(md_custom_tags::text, '{}') as md_custom_tags, md_root_ca_path, md_client_cert_path, md_client_key_path
 		from
 		  pgwatch2.monitored_db
 	          left join
@@ -413,6 +419,9 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			User:                 row["md_user"].(string),
 			Password:             row["md_password"].(string),
 			SslMode:              row["md_sslmode"].(string),
+			SslRootCAPath:        row["md_root_ca_path"].(string),
+			SslClientCertPath:    row["md_client_cert_path"].(string),
+			SslClientKeyPath:     row["md_client_key_path"].(string),
 			StmtTimeout:          row["md_statement_timeout_seconds"].(int64),
 			Metrics:              jsonTextToMap(row["md_config"].(string)),
 			DBType:               row["md_dbtype"].(string),
@@ -1781,7 +1790,8 @@ func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatab
 func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase, error) {
 	md := make([]MonitoredDatabase, 0)
 
-	c, err := GetPostgresDBConnection("", ce.Host, ce.Port, "template1", ce.User, ce.Password, ce.SslMode)
+	c, err := GetPostgresDBConnection("", ce.Host, ce.Port, "template1", ce.User, ce.Password,
+		ce.SslMode, ce.SslRootCAPath, ce.SslClientCertPath, ce.SslClientKeyPath)
 	if err != nil {
 		return md, err
 	}

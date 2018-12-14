@@ -143,6 +143,9 @@ def update_monitored_db(params):
           md_password = case when %(md_password)s = '***' then new.md_password else %(md_password)s end,
           md_is_superuser = %(md_is_superuser)s,
           md_sslmode = %(md_sslmode)s,
+          md_root_ca_path = %(md_root_ca_path)s,
+          md_client_cert_path = %(md_client_cert_path)s,
+          md_client_key_path = %(md_client_key_path)s,
           md_dbtype = %(md_dbtype)s,
           md_is_enabled = %(md_is_enabled)s,
           md_preset_config_name = %(md_preset_config_name)s,
@@ -155,24 +158,29 @@ def update_monitored_db(params):
         where
           new.md_id = %(md_id)s
         returning
-          (q_old.md_hostname, q_old.md_port, q_old.md_dbname, q_old.md_user, q_old.md_password, q_old.md_sslmode) is distinct from
+          (q_old.md_hostname, q_old.md_port, q_old.md_dbname, q_old.md_user, q_old.md_password,
+          q_old.md_sslmode, q_old.md_root_ca_path, q_old.md_client_cert_path, q_old.md_client_key_path) is distinct from
             (%(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s,
-            case when %(md_password)s = '***' then q_old.md_password else %(md_password)s end, %(md_sslmode)s
+            case when %(md_password)s = '***' then q_old.md_password else %(md_password)s end, %(md_sslmode)s,
+            %(md_root_ca_path)s, %(md_client_cert_path)s, %(md_client_key_path)s
             ) as connection_data_changed,
             case when %(md_password)s = '***' then q_old.md_password else %(md_password)s end as md_password
     """
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
-    cherrypy_empty_text_to_nulls(
-        params, ['md_preset_config_name', 'md_config', 'md_custom_tags'])
+    cherrypy_empty_text_to_nulls(params, ['md_preset_config_name', 'md_config', 'md_custom_tags'])
+    
     data, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to update "monitored_db": ' + err)
     ret.append('Updated!')
+    
     if data[0]['connection_data_changed'] or params['md_is_enabled']:  # show warning when changing connect data but cannot connect
         data, err = datadb.executeOnRemoteHost('select 1', params['md_hostname'], params['md_port'], params['md_dbname'],
-                                   params['md_user'], data[0]['md_password'], sslmode=params['md_sslmode'], quiet=True)
+                                   params['md_user'], data[0]['md_password'], sslmode=params['md_sslmode'],
+                                   sslrootcert=params['md_root_ca_path'], sslcert=params['md_client_cert_path'],
+                                   sslkey=params['md_client_key_path'], quiet=True)
         if err:
-            ret.append('Could not connect to specified host: ' + str(err))
+            ret.append('Could not connect to specified host (ignore if gatherer daemon runs on another host): ' + str(err))
 
     return ret
 
@@ -182,11 +190,11 @@ def insert_monitored_db(params):
     sql_insert_new_db = """
         insert into
           pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password, md_is_superuser,
-          md_sslmode, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds, md_dbtype,
+          md_sslmode, md_root_ca_path,md_client_cert_path, md_client_key_path, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds, md_dbtype,
           md_include_pattern, md_exclude_pattern, md_custom_tags, md_group)
         values
           (%(md_unique_name)s, %(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s, %(md_password)s, %(md_is_superuser)s,
-          %(md_sslmode)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s, %(md_statement_timeout_seconds)s, %(md_dbtype)s,
+          %(md_sslmode)s, %(md_root_ca_path)s, %(md_client_cert_path)s, %(md_client_key_path)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s, %(md_statement_timeout_seconds)s, %(md_dbtype)s,
           %(md_include_pattern)s, %(md_exclude_pattern)s, %(md_custom_tags)s, %(md_group)s)
         returning
           md_id

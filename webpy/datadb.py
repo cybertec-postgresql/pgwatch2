@@ -53,11 +53,13 @@ def execute(sql, params=None, statement_timeout=None, quiet=False):
     return result, None
 
 
-def executeOnRemoteHost(sql, host, port, dbname, user, password='', sslmode='prefer', params=None, statement_timeout=None, quiet=False):
+def executeOnRemoteHost(sql, host, port, dbname, user, password='', sslmode='prefer', sslrootcert='', sslcert='', sslkey='', params=None, statement_timeout=None, quiet=False):
     result = []
     conn = None
     try:
-        conn = psycopg2.connect(host=host, port=port, dbname=dbname, user=user, password=password, sslmode=sslmode)
+        print('SSL', sslrootcert, sslcert, sslkey)
+        conn = psycopg2.connect(host=host, port=port, dbname=dbname, user=user, password=password,
+            sslmode=sslmode, sslrootcert=sslrootcert, sslcert=sslcert, sslkey=sslkey)
         conn.autocommit = True
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         if statement_timeout:

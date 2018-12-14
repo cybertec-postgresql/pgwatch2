@@ -82,7 +82,10 @@
                 <td>DB user</td>
                 <td title="NB! Password is stored in plain-text in the database">DB password</td>
                 <td title="NB! If checked pgwatch daemon will automatically try to create the CPU load monitoring and stat_statements helper">Is superuser?</td>
-                <td title="libpq 'sslmode' parameter. If 'require' or 'verify-full' then no metrics will be gathered if safe connection cannot be established">SSL Mode</td>
+                <td title="libpq 'sslmode' parameter. If 'require' or 'verify-ca' or 'verify-full' then no metrics will be gathered if safe connection cannot be established">SSL Mode</td>
+                <td title="Path to Root CA file on the gatherer. Relevant for sslmode-s 'verify-ca' and 'verify-full'">Root CA</td>
+                <td title="Path to Client certificate. Relevant for 'sslmode=verify-full'">Client cert</td>
+                <td title="Path to Client key file. Relevant for 'sslmode=verify-full'">Client key</td>
                 <td title="Group name (e.g. 'prod') for logical distinction of monitored databases. Can be used also to run multiple gatherers (sharding), one for each (or multiple) group(s). Required">Group</td>
                 <td title="Preset config OR custom config needs to be specified">Preset config</td>
                 <td title='{"metric":interval_seconds,...}'>Custom config</td>
@@ -119,9 +122,13 @@
                         <select name="md_sslmode">
                             <option value="disable" {% if row['md_sslmode'] == "disable" %}selected{% endif %}>disable</option>
                             <option value="require"{% if row['md_sslmode'] == "require" %}selected{% endif %}>require</option>
+                            <option value="verify-ca"{% if row['md_sslmode'] == "verify-ca" %}selected{% endif %}>verify-ca</option>
                             <option value="verify-full"{% if row['md_sslmode'] == "verify-full" %}selected{% endif %}>verify-full</option>
                         </select>
                     </td>
+                    <td><input type="text" name="md_root_ca_path" value="{{row['md_root_ca_path']|e}}" size="4"></td>
+                    <td><input type="text" name="md_client_cert_path" value="{{row['md_client_cert_path']|e}}" size="4"></td>
+                    <td><input type="text" name="md_client_key_path" value="{{row['md_client_key_path']|e}}" size="4"></td>
                     <td><input type="text" name="md_group" value="{{row['md_group']|e}}" size="4"></td>
                     <td>
                         <select name="md_preset_config_name">
@@ -167,9 +174,13 @@
                         <select name="md_sslmode">
                             <option value="disable">disable</option>
                             <option value="require">require</option>
+                            <option value="verify-ca">verify-ca</option>
                             <option value="verify-full">verify-full</option>
                         </select>
                     </td>
+                    <td><input type="text" name="md_root_ca_path" value="" size="4"></td>
+                    <td><input type="text" name="md_client_cert_path" value="" size="4"></td>
+                    <td><input type="text" name="md_client_key_path" value="" size="4"></td>
                     <td><input type="text" name="md_group" value="default" size="4"></td>
                     <td>
                         <select name="md_preset_config_name" id="md_preset_config_name">
