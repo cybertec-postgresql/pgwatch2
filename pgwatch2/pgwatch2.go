@@ -832,7 +832,7 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 	iterations_done := 0
 
 	for retry_queue.Len() > 0 { // send over the whole re-try queue at once if connection works
-		log.Info("Processing InfluxDB retry_queue", conn_ident, ". Items in retry_queue: ", retry_queue.Len())
+		log.Debug("Processing retry_queue", conn_ident, ". Items in retry_queue: ", retry_queue.Len())
 		msg := retry_queue.Back().Value.([]MetricStoreMessage)
 
 		if data_source == DATASTORE_INFLUX {
@@ -1036,8 +1036,8 @@ func DBGetPGVersion(dbUnique string) (DBVersionMapEntry, error) {
 		log.Debug("determining DB version for", dbUnique)
 		data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
 		if err != nil {
-			log.Error("DBGetPGVersion failed", err)
-			return ver, err
+			log.Info("DBGetPGVersion failed, using old cached value", err)
+			return ver, nil
 		}
 		ver.Version, _ = decimal.NewFromString(data[0]["ver"].(string))
 		ver.IsInRecovery = data[0]["pg_is_in_recovery"].(bool)
