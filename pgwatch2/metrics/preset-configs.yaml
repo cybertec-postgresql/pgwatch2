@@ -23,12 +23,12 @@
     locks_mode: 60
     replication: 120
     replication_slots: 120
-    sproc_stats: 60
-    stat_statements: 120
+    sproc_stats: 180
+    stat_statements: 180
     stat_statements_calls: 60
     table_bloat_approx_summary: 7200
-    table_io_stats: 120
-    table_stats: 120
+    table_io_stats: 180
+    table_stats: 180
     wal: 60
 
 - name: minimal
@@ -48,9 +48,9 @@
     db_stats: 60
     db_size: 300
     index_stats: 300
-    sproc_stats: 120
-    stat_statements: 120
-    table_stats: 120
+    sproc_stats: 180
+    stat_statements: 180
+    table_stats: 180
     wal: 60
 
 - name: full
@@ -68,12 +68,12 @@
     locks_mode: 60
     replication: 120
     replication_slots: 120
-    sproc_stats: 60
-    stat_statements: 120
+    sproc_stats: 180
+    stat_statements: 180
     stat_statements_calls: 60
     table_bloat_approx_summary: 7200
-    table_io_stats: 120
-    table_stats: 120
+    table_io_stats: 180
+    table_stats: 180
     wal: 60
     wal_size: 120
     kpi: 120
@@ -95,8 +95,8 @@
     locks_mode: 60
     replication: 120
     replication_slots: 120
-    sproc_stats: 60
+    sproc_stats: 180
     stat_statements_calls: 60
-    table_io_stats: 120
-    table_stats: 120
+    table_io_stats: 180
+    table_stats: 180
     wal: 60

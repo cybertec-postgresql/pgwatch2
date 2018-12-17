@@ -67,14 +67,12 @@ For more background on the project motivations and design goals see the original
 
 # Limitations / Performance expectations
 
-* Min 1GB RAM
-* Docker default disk size of 10 GB should be enough for monitoring 5 hosts (1 month default metrics retention policy, configurable)
+* Min 1GB RAM required for Docker setup. Just the gatherer needs <50MB if metric strore is up, otherwise metrics are cached in RAM up to a limit of 100k data points.
+* 1 GB of disk space should be enough for monitoring 1 host for 1 month (1 month is the default metrics retention policy for Influx running in Docker, configurable). Depending on the amount of schema objects - tables, indexes, stored procedures and especially on number of unique SQL-s, it could be also more.
 * A low-spec (1 vCPU, 2 GB RAM) cloud machine can easily monitor 100 DBs in "exhaustive" settings (i.e. almost all metrics
 are monitored with 60s interval) without breaking a sweat (<20% load). When a single node where the metrics collector daemon
 is running is becoming a bottleneck, one can also do "sharding" i.e. limit the amount of monitored databases for that node
 based on the Group label(s) (--group), which is just a string for logical grouping.
-* One monitored DB in preset "exhaustive" settings requires about ~250-500 MB of InfluxDB disk storage per month, depending on
-the amount of schema objects - tables, indexes, number of unique SQL-s.
 * A single InfluxDB node should handle thousands of requests per second but if this is not enough having a secondary/mirrored
 InfluxDB is also possible. If more than two needed (e.g. feeding many many Grafana instances or some custom exporting) one
 should look at Influx Enterprise (on-prem or cloud) or Graphite (which is also supported as metrics storage backend).
