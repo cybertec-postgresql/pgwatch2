@@ -46,7 +46,7 @@
         "y": 0
       },
       "id": 1,
-      "interval": null,
+      "interval": "5m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -100,7 +100,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(last(\"xact_commit\"), 1s) + non_negative_derivative(last(\"xact_rollback\"), 1s) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time(5m) fill(none)",
+          "query": "SELECT non_negative_derivative(last(\"xact_commit\"), 1s) + non_negative_derivative(last(\"xact_rollback\"), 1s) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -164,7 +164,7 @@
       },
       "height": "150",
       "id": 2,
-      "interval": null,
+      "interval": "5m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -218,7 +218,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(last(\"calls\"), 1s) FROM \"stat_statements_calls\" WHERE $timeFilter AND \"dbname\" =~ /^$dbname$/ GROUP BY time(5m) fill(none)",
+          "query": "SELECT non_negative_derivative(last(\"calls\"), 1s) FROM \"stat_statements_calls\" WHERE $timeFilter AND \"dbname\" =~ /^$dbname$/ GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -282,7 +282,7 @@
       },
       "height": "150",
       "id": 3,
-      "interval": null,
+      "interval": "5m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -336,7 +336,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select mean(q) from (SELECT non_negative_derivative(mean(\"total_time\")) / non_negative_derivative(mean(\"calls\")) as q FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND \"query\" !~ /(?i)::int8[\\s+]as[\\s]+epoch_ns/ AND $timeFilter GROUP BY queryid, time(5m) fill(none)) group by time(5m) fill(none)",
+          "query": "select mean(q) from (SELECT non_negative_derivative(mean(\"total_time\")) / non_negative_derivative(mean(\"calls\")) as q FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND \"query\" !~ /(?i)::int8[\\s+]as[\\s]+epoch_ns/ AND $timeFilter GROUP BY queryid, time($__interval) fill(none)) group by time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -648,7 +648,7 @@
       },
       "height": "150",
       "id": 6,
-      "interval": null,
+      "interval": "5m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -763,7 +763,7 @@
         "y": 3
       },
       "id": 7,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "alignAsTable": false,
         "avg": true,
@@ -990,7 +990,7 @@
         "y": 3
       },
       "id": 8,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "alignAsTable": false,
         "avg": true,
@@ -1158,7 +1158,7 @@
         "y": 9
       },
       "id": 9,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "avg": false,
         "current": false,
@@ -1369,7 +1369,7 @@
       },
       "height": "",
       "id": 10,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "alignAsTable": false,
         "avg": true,
@@ -1558,7 +1558,7 @@
         "y": 15
       },
       "id": 11,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -1818,7 +1818,7 @@
         "y": 15
       },
       "id": 12,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
