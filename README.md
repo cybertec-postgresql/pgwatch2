@@ -46,13 +46,14 @@ For a complete list of all supported Docker environment variables see [ENV_VARIA
 * Easy extensibility by defining metrics in pure SQL (thus they could also be from business domain)
 * Non-invasive setup, no extensions nor superuser rights required for the base functionality
 * Global or DB level configuration of metrics/intervals
-* Central config DB based operation or local config file based for better automation (Ansible, etc) or ad-hoch/test mode for
-monitoring a single DB. See b
-* Intuitive metrics presentation using the [Grafana](http://grafana.org/) dashboarding engine. Set of dasboards provided
+* Central config DB based operation or local config file based for better automation (Ansible, etc) or ad-hoc/test mode for
+monitoring a single DB. See below for details
+* Intuitive metrics presentation using the [Grafana](http://grafana.org/) dashboarding engine. Set of pre-defined dashboards provided
 * Optional alerting (Email, Slack, PagerDuty) provided by Grafana
 * PgBouncer and AWS RDS graphing/alerting supported in addition to PostgreSQL
 * Possible to monitoring all DBs found in a cluster automatically (with regex pattern matching)
 * Kubernetes/OpenShift ready
+* Multiple metric storage options - InfluxDB, PostgreSQL, Graphite
 
 # Project background
 
@@ -107,7 +108,10 @@ If more complex scenarios/check conditions are required TICK stack and Kapacitor
 
 * pgwatch2 metrics gathering daemon written in Go
 * A PostgreSQL database for holding the configuration about which databases and metrics to gather 
-* [InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/) Time Series Database for storing metrics
+* [InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/) Time Series Database for storing metrics. As an
+alternative to InfluxDB one can also use:
+  - Graphite (no custom_tags support)
+  - PostgreSQL (based on JSONB, 9,4+)
 * [Grafana](http://grafana.org/) for dashboarding (point-and-click, a set of predefined dashboards is provided)
 * A Web UI for administering the monitored DBs and metrics and for showing some custom metric overviews
 
@@ -120,9 +124,9 @@ at all see end of README.
 
 ![Component diagram](https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgwatch2_architecture.png)
 
-### To use an existing Postgres DB
+### To use an existing Postgres DB for storing the monitoring config
 
-Create a new pgwatch2 DB, preferrably also an accroding role who owns it. Then roll out the schema (pgwatch2/sql/datastore_setup/config_store.sql)
+Create a new pgwatch2 DB, preferrably also an accroding role who owns it. Then roll out the schema (pgwatch2/sql/config_store/config_store.sql)
 and set the following parameters when running the image: PW2_PGHOST, PW2_PGPORT, PW2_PGDATABASE, PW2_PGUSER, PW2_PGPASSWORD, PW2_PGSSL (optional).
 
 ### To use an existing Grafana installation
@@ -140,6 +144,14 @@ Set the following env variables: PW2_IHOST, PW2_IPORT, PW2_IDATABASE, PW2_IUSER,
 One can also store the metrics in Graphite instead of InfluxDB (no predefined pgwatch2 dashboards for Graphite though).
 Following parameters needs to be set then: PW2_DATASTORE=graphite, PW2_GRAPHITEHOST, PW2_GRAPHITEPORT
 
+### To use an existing Postgres DB for storing metrics
+
+1. Create the [schema](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/metric_store/metric_store.sql)
+2. Following parameters needs to be set for the gatherer:
+  - --datastore=postgres or PW2_DATASTORE=postgres
+  - --pg-metric-store-conn-str="postgresql://user:pwd@host:port/db" or PW2_PG_METRIC_STORE_CONN_STR="..."
+
+NB! Currently for Postgres though there is only predefined pgwatch2 dashboard (DB Overview), so you need to roll your own.
 
 
 # Usage (Docker based, for file or ad-hoc based see further below)
@@ -348,8 +360,8 @@ All examples assuming Ubuntu.
     1.3 Roll out the pgwatch2 schema (will holds connection strings of DB-s to be monitored + metric definitions)
     
     ```
-    psql -f pgwatch2/sql/datastore_setup/config_store.sql pgwatch2
-    psql -f pgwatch2/sql/datastore_setup/metric_definitions.sql pgwatch2
+    psql -f pgwatch2/sql/config_store/config_store.sql pgwatch2
+    psql -f pgwatch2/sql/config_store/metric_definitions.sql pgwatch2
     ```
 2. Install InfluxDB
     
