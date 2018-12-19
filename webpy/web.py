@@ -15,6 +15,7 @@ import psycopg2
 import requests
 from decorator import decorator
 import subprocess
+import utils
 
 import pgwatch2
 from jinja2 import Environment, FileSystemLoader
@@ -101,9 +102,9 @@ class Root:
         if params:
             try:
                 if params.get('save'):
-                    messages += pgwatch2.update_monitored_db(params)
+                    messages += pgwatch2.update_monitored_db(params, cmd_args)
                 elif params.get('new'):
-                    messages += pgwatch2.insert_monitored_db(params)
+                    messages += pgwatch2.insert_monitored_db(params, cmd_args)
                 elif params.get('delete'):
                     pgwatch2.delete_monitored_db(params)
                     messages.append('Entry with ID {} ("{}") deleted!'.format(
@@ -145,7 +146,7 @@ class Root:
         return tmpl.render(messages=messages, data=data, preset_configs=preset_configs, preset_configs_json=preset_configs_json,
                            metrics_list=metrics_list, influx_active_dbnames=influx_active_dbnames,
                            no_anonymous_access=cmd_args.no_anonymous_access, session=cherrypy.session,
-                           no_component_logs=cmd_args.no_component_logs)
+                           no_component_logs=cmd_args.no_component_logs, aes_gcm_enabled=cmd_args.aes_gcm_keyphrase)
 
     @logged_in
     @cherrypy.expose
@@ -285,6 +286,10 @@ if __name__ == '__main__':
                         default=(os.getenv('PW2_WEBPASSWORD') or 'pgwatch2admin'))
     parser.add_argument('--no-component-logs', help='Don''t expose component logs via the Web UI',
                         action='store_true', default=(str_to_bool_or_fail(os.getenv('PW2_WEBNOCOMPONENTLOGS')) or False))
+    parser.add_argument('--aes-gcm-keyphrase', help='For encrypting password stored to configDB',
+                        default=os.getenv('PW2_AES_GCM_KEYPHRASE'))
+    parser.add_argument('--aes-gcm-keyphrase-file', help='For encrypting password stored to configDB. Read from a file on startup',
+                        default=os.getenv('PW2_AES_GCM_KEYPHRASE_FILE'))
 
     # Postgres
     parser.add_argument('-H', '--host', help='Pgwatch2 Config DB host',
@@ -345,5 +350,9 @@ if __name__ == '__main__':
         config['global']['server.ssl_private_key'] = cmd_args.ssl_key
         if cmd_args.ssl_certificate_chain:
             config['global']['server.ssl_certificate_chain'] = cmd_args.ssl_certificate_chain
-
+    if cmd_args.aes_gcm_keyphrase_file:
+        cmd_args.aes_gcm_keyphrase = utils.fileContentsToString(cmd_args.aes_gcm_keyphrase_file)
+        if cmd_args.aes_gcm_keyphrase[-1] == '\n':
+            logging.warning("removing newline character from keyphrase input string...")
+            cmd_args.aes_gcm_keyphrase = cmd_args.aes_gcm_keyphrase[:-1]
     cherrypy.quickstart(Root(), config=config)

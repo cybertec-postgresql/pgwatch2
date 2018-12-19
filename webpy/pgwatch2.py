@@ -2,6 +2,8 @@ import glob
 import logging
 import os
 import datadb
+import crypto
+import utils
 
 
 SERVICES = {'pgwatch2': {'log_root': '/var/log/supervisor/', 'glob': 'pgwatch2-stderr*'},
@@ -45,6 +47,25 @@ def get_all_monitored_dbs():
     """
     return datadb.execute(sql)[0]
 
+
+def get_monitored_db_by_id(id):
+    sql = """
+        select
+          *,
+          date_trunc('second', md_last_modified_on) as md_last_modified_on,
+          md_config::text,
+          md_custom_tags::text,
+          coalesce(md_include_pattern, '') as md_include_pattern,
+          coalesce(md_exclude_pattern, '') as md_exclude_pattern
+        from
+          pgwatch2.monitored_db
+        where
+          md_id = %s
+    """
+    data, err = datadb.execute(sql, (id,))
+    if not data:
+        return None
+    return data[0]
 
 def get_active_db_uniques():
     sql = """
@@ -122,8 +143,12 @@ def cherrypy_empty_text_to_nulls(param_dict, keys):
             param_dict[k] = None
 
 
-def update_monitored_db(params):
+def update_monitored_db(params, cmd_args=None):
     ret = []
+    password_plain = params['md_password']
+    if params.get('md_password_type') == 'aes-gcm-256' and params['md_password'] != '***':
+        params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, password_plain)
+    old_row_data = get_monitored_db_by_id(params['md_id'])
     sql = """
         with q_old as (
           /* using CTE to be enable detect if connect info is being changed */
@@ -141,6 +166,7 @@ def update_monitored_db(params):
           md_exclude_pattern = %(md_exclude_pattern)s,
           md_user = %(md_user)s,
           md_password = case when %(md_password)s = '***' then new.md_password else %(md_password)s end,
+          md_password_type = %(md_password_type)s,
           md_is_superuser = %(md_is_superuser)s,
           md_sslmode = %(md_sslmode)s,
           md_root_ca_path = %(md_root_ca_path)s,
@@ -173,10 +199,11 @@ def update_monitored_db(params):
     if err:
         raise Exception('Failed to update "monitored_db": ' + err)
     ret.append('Updated!')
-    
-    if data[0]['connection_data_changed'] or params['md_is_enabled']:  # show warning when changing connect data but cannot connect
+
+    # check connection if connect string changed or inactive host activated
+    if data[0]['connection_data_changed'] or (old_row_data and (not old_row_data['md_is_enabled'] and params['md_is_enabled'])):  # show warning when changing connect data but cannot connect
         data, err = datadb.executeOnRemoteHost('select 1', params['md_hostname'], params['md_port'], params['md_dbname'],
-                                   params['md_user'], data[0]['md_password'], sslmode=params['md_sslmode'],
+                                   params['md_user'], password_plain, sslmode=params['md_sslmode'],
                                    sslrootcert=params['md_root_ca_path'], sslcert=params['md_client_cert_path'],
                                    sslkey=params['md_client_key_path'], quiet=True)
         if err:
@@ -185,15 +212,15 @@ def update_monitored_db(params):
     return ret
 
 
-def insert_monitored_db(params):
+def insert_monitored_db(params, cmd_args=None):
     ret = []
     sql_insert_new_db = """
         insert into
-          pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password, md_is_superuser,
+          pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password, md_password_type, md_is_superuser,
           md_sslmode, md_root_ca_path,md_client_cert_path, md_client_key_path, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds, md_dbtype,
           md_include_pattern, md_exclude_pattern, md_custom_tags, md_group)
         values
-          (%(md_unique_name)s, %(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s, %(md_password)s, %(md_is_superuser)s,
+          (%(md_unique_name)s, %(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s, %(md_password)s, %(md_password_type)s, %(md_is_superuser)s,
           %(md_sslmode)s, %(md_root_ca_path)s, %(md_client_cert_path)s, %(md_client_key_path)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s, %(md_statement_timeout_seconds)s, %(md_dbtype)s,
           %(md_include_pattern)s, %(md_exclude_pattern)s, %(md_custom_tags)s, %(md_group)s)
         returning
@@ -203,12 +230,15 @@ def insert_monitored_db(params):
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
     cherrypy_empty_text_to_nulls(
         params, ['md_preset_config_name', 'md_config', 'md_custom_tags'])
+    password_plain = params['md_password']
+    if params.get('md_password_type') == 'aes-gcm-256':
+        params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, password_plain)
 
     if not params['md_dbname']:     # add all DBs found
         if params['md_dbtype'] == 'postgres':
             # get all active non-template DBs from the entered host
             active_dbs_on_host, err = datadb.executeOnRemoteHost(sql_active_dbs, host=params['md_hostname'], port=params['md_port'],
-                                                                 dbname='template1', user=params['md_user'], password=params['md_password'],
+                                                                 dbname='template1', user=params['md_user'], password=password_plain,
                                                                  sslmode=params['md_sslmode'])
             if err:
                 raise Exception("Could not read active DBs from specified host!")
@@ -237,7 +267,7 @@ def insert_monitored_db(params):
             # get all configured pgbouncer DBs
             params['md_dbname'] = 'pgbouncer'
             active_dbs_on_host, err = datadb.executeOnRemoteHost("show databases", host=params['md_hostname'], port=params['md_port'],
-                                                                 dbname='pgbouncer', user=params['md_user'], password=params['md_password'],
+                                                                 dbname='pgbouncer', user=params['md_user'], password=password_plain,
                                                                  sslmode=params['md_sslmode'])
             if err:
                 raise Exception("Could not read active DBs from specified host!")
@@ -269,7 +299,7 @@ def insert_monitored_db(params):
             raise Exception('Failed to insert into "monitored_db": ' + err)
         ret.append('Host with ID {} added!'.format(data[0]['md_id']))
         data, err = datadb.executeOnRemoteHost('select 1', params['md_hostname'], params['md_port'], params['md_dbname'],
-                                               params['md_user'], params['md_password'], sslmode=params['md_sslmode'], quiet=True)
+                                               params['md_user'], password_plain, sslmode=params['md_sslmode'], quiet=True)
         if err:
             ret.append('Could not connect to specified host: ' + str(err))
     return ret

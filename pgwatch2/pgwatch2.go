@@ -2,7 +2,12 @@ package main
 
 import (
 	"container/list"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
 	go_sql "database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,6 +35,7 @@ import (
 	"github.com/marpaia/graphite-golang"
 	"github.com/op/go-logging"
 	"github.com/shopspring/decimal"
+	"golang.org/x/crypto/pbkdf2"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -41,6 +47,7 @@ type MonitoredDatabase struct {
 	DBName               string
 	User                 string
 	Password             string
+	PasswordType         string `yaml:"password_type"`
 	SslMode              string
 	SslRootCAPath        string             `yaml:"sslrootcert"`
 	SslClientCertPath    string             `yaml:"sslcert"`
@@ -396,7 +403,8 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 		  md_unique_name, md_group, md_dbtype, md_hostname, md_port, md_dbname, md_user, coalesce(md_password, '') as md_password,
 		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode, md_is_superuser,
 		  coalesce(md_include_pattern, '') as md_include_pattern, coalesce(md_exclude_pattern, '') as md_exclude_pattern,
-		  coalesce(md_custom_tags::text, '{}') as md_custom_tags, md_root_ca_path, md_client_cert_path, md_client_key_path
+		  coalesce(md_custom_tags::text, '{}') as md_custom_tags, md_root_ca_path, md_client_cert_path, md_client_key_path,
+		  md_password_type
 		from
 		  pgwatch2.monitored_db
 	          left join
@@ -448,6 +456,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			DBName:               row["md_dbname"].(string),
 			User:                 row["md_user"].(string),
 			Password:             row["md_password"].(string),
+			PasswordType:         row["md_password_type"].(string),
 			SslMode:              row["md_sslmode"].(string),
 			SslRootCAPath:        row["md_root_ca_path"].(string),
 			SslClientCertPath:    row["md_client_cert_path"].(string),
@@ -459,6 +468,10 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			DBNameExcludePattern: row["md_exclude_pattern"].(string),
 			Group:                row["md_group"].(string),
 			CustomTags:           jsonTextToStringMap(row["md_custom_tags"].(string))}
+
+		if md.PasswordType == "aes-gcm-256" {
+			md.Password = decrypt(opts.AesGcmKeyphrase, md.Password)
+		}
 
 		if md.DBType == "postgres-continuous-discovery" {
 			resolved, err := ResolveDatabasesFromConfigEntry(md)
@@ -841,7 +854,7 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 			err = SendToPostgres(msg)
 		} else if data_source == DATASTORE_GRAPHITE {
 			for _, m := range msg {
-				err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO
+				err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO add baching
 			}
 		} else {
 			log.Fatal("Invalid datastore:", data_source)
@@ -1986,6 +1999,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 			Port:          ce.Port,
 			User:          ce.User,
 			Password:      ce.Password,
+			PasswordType:  ce.PasswordType,
 			SslMode:       ce.SslMode,
 			StmtTimeout:   ce.StmtTimeout,
 			Metrics:       ce.Metrics,
@@ -2013,6 +2027,9 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 				continue
 			}
 			e.Metrics = mdef
+		}
+		if e.IsEnabled && e.PasswordType == "aes-gcm-256" {
+			e.Password = decrypt(opts.AesGcmKeyphrase, e.Password)
 		}
 		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" {
 			if e.DBType == "postgres-continuous-discovery" {
@@ -2104,6 +2121,28 @@ func FilterMonitoredDatabasesByGroup(monitoredDBs []MonitoredDatabase, group str
 	return ret, len(monitoredDBs) - len(ret)
 }
 
+func deriveKey(passphrase string, salt []byte) ([]byte, []byte) {
+	if salt == nil {
+		salt = make([]byte, 8)
+		rand.Read(salt)
+	}
+	return pbkdf2.Key([]byte(passphrase), salt, 1000, 32, sha256.New), salt
+}
+
+func decrypt(passphrase, ciphertext string) string {
+	//log.Debug("passphrase", passphrase, "ciphertext", ciphertext)
+	arr := strings.Split(ciphertext, "-")
+	salt, _ := hex.DecodeString(arr[0])
+	iv, _ := hex.DecodeString(arr[1])
+	data, _ := hex.DecodeString(arr[2])
+	key, _ := deriveKey(passphrase, salt)
+	b, _ := aes.NewCipher(key)
+	aesgcm, _ := cipher.NewGCM(b)
+	data, _ = aesgcm.Open(nil, iv, data, nil)
+	//log.Debug("decoded", string(data))
+	return string(data)
+}
+
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
@@ -2137,14 +2176,16 @@ type Options struct {
 	GraphitePort         string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
 	JsonStorageFile      string `long:"json-storage-file" description:"Path to file where metrics will be stored when --datastore=json, one metric set per line" env:"PW2_JSON_STORAGE_FILE"`
 	// Params for running based on local config files, enabled distributed "push model" based metrics gathering. Metrics are sent directly to Influx/Graphite.
-	Config            string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
-	MetricsFolder     string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
-	BatchingDelayMs   int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
-	AdHocConnString   string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
-	AdHocConfig       string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
-	AdHocUniqueName   string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
-	InternalStatsPort int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
-	ConnPooling       string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: off]" default:"off" env:"PW2_CONN_POOLING"`
+	Config                 string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
+	MetricsFolder          string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
+	BatchingDelayMs        int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
+	AdHocConnString        string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
+	AdHocConfig            string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
+	AdHocUniqueName        string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
+	InternalStatsPort      int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
+	ConnPooling            string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: off]" default:"off" env:"PW2_CONN_POOLING"`
+	AesGcmKeyphrase     string `long:"aes-gcm-keyphrase" description:"Decryption key for AES-GCM-256 passwords" default:"" env:"PW2_AES_GCM_KEYPHRASE"`
+	AesGcmKeyphraseFile string `long:"aes-gcm-keyphrase-file" description:"File with decryption key for AES-GCM-256 passwords" default:"" env:"PW2_AES_GCM_KEYPHRASE_FILE"`
 }
 
 var opts Options
@@ -2275,6 +2316,19 @@ func main() {
 		log.Infof("Starting the internal statistics interface on port %d...", opts.InternalStatsPort)
 		go StartStatsServer(opts.InternalStatsPort)
 		go StatsSummarizer()
+	}
+
+	if len(opts.AesGcmKeyphraseFile) > 0 {
+		keyBytes, err := ioutil.ReadFile(opts.AesGcmKeyphraseFile)
+		if err != nil {
+			log.Fatal("Failed to read aes_gcm_keyphrase_file:", err)
+		}
+		if keyBytes[len(keyBytes)-1] == 10 {
+			log.Warning("Removing newline character from keyphrase input string...")
+			opts.AesGcmKeyphrase = string(keyBytes[:len(keyBytes)-1]) // remove line feed
+		} else {
+			opts.AesGcmKeyphrase = string(keyBytes)
+		}
 	}
 
 	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
@@ -2427,6 +2481,13 @@ func main() {
 		}
 
 		UpdateMonitoredDBCache(monitored_dbs)
+
+		for _, host := range monitored_dbs {    // Warn if any encrypted hosts found but no keyphrase given
+		    if host.PasswordType != "plain-text" {
+		        log.Error("Encrypted passwords found, but no decryption keyphrase specified. Use --aes-gcm-keyphrase or --aes-gcm-keyphrase-file params")
+		        break
+		    }
+		}
 
 		if first_loop {
 			first_loop = false // only used for failing when 1st config reading fails

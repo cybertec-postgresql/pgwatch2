@@ -25,7 +25,13 @@ def makePrettyCounter(count):
         return sign + str(round(count / float(1000**2), 1)) + ' M'
     return sign + str(round(count / float(1000**3), 1)) + ' B'
 
+def fileContentsToString(filePath):
+    with open(filePath) as f:
+        return f.read()
+
 
 if __name__ == '__main__':
     print(makePrettySize(2.2 * 1e9))
     print(makePrettyCounter(2.2 * 1e9))
+    print(fileContentsToString(__file__))
+

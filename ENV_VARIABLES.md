@@ -44,6 +44,8 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_ADHOC_NAME** Ad-hoc mode. Unique 'dbname' for Influx. Default: adhoc
 - **PW2_INTERNAL_STATS_PORT** Port for inquiring monitoring status in JSON format. Default: 8081
 - **PW2_CONN_POOLING** Enable re-use of metrics fetching connections. "off" means reconnect every time. Default: off
+- **PW2_AES_GCM_KEYPHRASE** Keyphrase for encryption/decpyption of connect string passwords.
+- **PW2_AES_GCM_KEYPHRASE_FILE** File containing a keyphrase for encryption/decpyption of connect string passwords.
 
 
 ## Web UI
@@ -72,7 +74,8 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_IDATABASE** InfluxDB database. Default: pgwatch2
 - **PW2_ISSL** Use SSL for InfluxDB. Default: False
 - **PW2_GRAFANA_BASEURL** For linking to Grafana "Query details" dashboard from "Stat_stmt. overview". Default: http://0.0.0.0:3000
-
+- **PW2_AES_GCM_KEYPHRASE** Keyphrase for encryption/decpyption of connect string passwords.
+- **PW2_AES_GCM_KEYPHRASE_FILE** File containing a keyphrase for encryption/decpyption of connect string passwords.
 
 ## Grafana
 

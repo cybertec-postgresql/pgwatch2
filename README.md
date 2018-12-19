@@ -83,7 +83,10 @@ should look at Influx Enterprise (on-prem or cloud) or Graphite (which is also s
 Settings can be configured for most components, but by default the Docker image doesn't focus on security though but rather
 on being quickly usable for ad-hoc performance troubleshooting. 
 
-* No noticable impact for the monitored DB is expected with the default settings. For some metrics though can happen that the metric reading query (notably "stat_statements") takes some milliseconds, which might be more than an average application query. At any time only 2 metric fetching queries are running in parallel on the monitored DBs, with 5s per default "statement timeout" (configurable).
+* No noticable impact for the monitored DB is expected with the default settings. For some metrics though can happen that
+the metric reading query (notably "stat_statements") takes some milliseconds, which might be more than an average application
+query. At any time only 2 metric fetching queries are running in parallel on the monitored DBs, with 5s per default
+"statement timeout", except for the "bloat" metrics where it is 15min.
 * Starting from v1.3.0 there's a non-root Docker version available (suitable for OpenShift)
 * The administrative Web UI doesn't have by default any security. Configurable via env. variables.
 * Viewing Grafana dashboards by default doesn't require login. Editing needs a password. Configurable via env. variables.
@@ -91,6 +94,8 @@ on being quickly usable for ad-hoc performance troubleshooting.
 * Dashboards based on "pg_stat_statements" (Stat Statement Overview / Top) expose actual queries. They are mostly stripped
 of details though, but if no risks can be taken the dashboards (or at least according panels) should be deleted. As an alternative "pg_stat_statements_calls"
 can be used, which only records total runtimes and call counts.
+* Safe certificate connections to Postgres are supported as of v1.5.0
+* Encrypting/decrypting passwords stored in the config DB or in YAML config files possible from v1.5.0. By default none.
 
 
 # Alerting
@@ -177,7 +182,10 @@ into the docker container under /var/logs/supervisor/
 NB! Though theoretically you can use any username you like, but if not using "pgwatch2" you need to modify the "helper" creation
 scripts accordingly as in those by default only the "pgwatch2" will be granted execute privileges.
 ```
-create role pgwatch2 with login password 'secret';
+CREATE ROLE pgwatch2 WITH LOGIN PASSWORD 'secret';
+-- NB! For very important databases it might make sense to ensure that the user
+-- account used for monitoring can only open a limited number of connections (there are according checks in code also though)
+ALTER ROLE pgwatch2 CONNECTION LIMIT 3;```
 ```
 * Define the helper function to enable the monitoring of sessions, blocking locks, etc by the `pgwatch2` login defined above, if using a superuser login (not recommended) you can skip this step, just ensure that you check the `Is superuser?` check box when configuring Databases
 ```
