@@ -1493,6 +1493,10 @@ func FetchAndStore(msg MetricFetchMessage, host_state map[string]map[string]stri
 			last_sql_fetch_error.Store(msg.MetricName+":"+db_pg_version.String(), time.Now().Unix())
 		}
 		return 0, err
+	} else if sql == "" {
+		// let's ignore dummy SQL-s
+		log.Debugf("Ignoring fetch message - got an empty/dummy SQL string for [%s:%s]", msg.DBUniqueName, msg.MetricName)
+		return 0, nil
 	}
 
 	if msg.MetricName == "change_events" { // special handling, multiple queries + stateful
@@ -1502,10 +1506,6 @@ func FetchAndStore(msg MetricFetchMessage, host_state map[string]map[string]stri
 		data, err, duration := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
 
 		if err != nil {
-			if strings.Contains(err.Error(), "empty SQL") { // empty / dummy SQL is used for metrics that became available at a certain version
-				log.Infof("Ignoring fetch message - got an empty/dummy SQL string for [%s:%s]", msg.DBUniqueName, msg.MetricName)
-				return 0, err
-			}
 			// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
 			if strings.Contains(err.Error(), "recovery is in progress") {
 				db_pg_version_map_lock.RLock()
@@ -1558,7 +1558,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 		t2 := time.Now()
 		if err != nil {
 			if last_error_notification_time.Add(time.Second * time.Duration(600)).Before(time.Now()) {
-				log.Errorf("Total failed fetches for [%s:%s]: %d", failed_fetches)
+				log.Errorf("Total failed fetches for [%s:%s]: %d", dbUniqueName, metricName, failed_fetches)
 				last_error_notification_time = time.Now()
 			}
 			failed_fetches += 1
@@ -2176,14 +2176,14 @@ type Options struct {
 	GraphitePort         string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
 	JsonStorageFile      string `long:"json-storage-file" description:"Path to file where metrics will be stored when --datastore=json, one metric set per line" env:"PW2_JSON_STORAGE_FILE"`
 	// Params for running based on local config files, enabled distributed "push model" based metrics gathering. Metrics are sent directly to Influx/Graphite.
-	Config                 string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
-	MetricsFolder          string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
-	BatchingDelayMs        int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
-	AdHocConnString        string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
-	AdHocConfig            string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
-	AdHocUniqueName        string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
-	InternalStatsPort      int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
-	ConnPooling            string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: off]" default:"off" env:"PW2_CONN_POOLING"`
+	Config              string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
+	MetricsFolder       string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
+	BatchingDelayMs     int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
+	AdHocConnString     string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
+	AdHocConfig         string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
+	AdHocUniqueName     string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
+	InternalStatsPort   int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
+	ConnPooling         string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: off]" default:"off" env:"PW2_CONN_POOLING"`
 	AesGcmKeyphrase     string `long:"aes-gcm-keyphrase" description:"Decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE"`
 	AesGcmKeyphraseFile string `long:"aes-gcm-keyphrase-file" description:"File with decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE_FILE"`
 }
@@ -2482,11 +2482,11 @@ func main() {
 
 		UpdateMonitoredDBCache(monitored_dbs)
 
-		for _, host := range monitored_dbs {    // Warn if any encrypted hosts found but no keyphrase given
-		    if host.PasswordType != "plain-text" && len(opts.AesGcmKeyphrase) == 0 {
-		        log.Error("Encrypted passwords found, but no decryption keyphrase specified. Use --aes-gcm-keyphrase or --aes-gcm-keyphrase-file params")
-		        break
-		    }
+		for _, host := range monitored_dbs { // Warn if any encrypted hosts found but no keyphrase given
+			if host.PasswordType != "plain-text" && len(opts.AesGcmKeyphrase) == 0 {
+				log.Error("Encrypted passwords found, but no decryption keyphrase specified. Use --aes-gcm-keyphrase or --aes-gcm-keyphrase-file params")
+				break
+			}
 		}
 
 		if first_loop {
