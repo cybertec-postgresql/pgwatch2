@@ -1,7 +1,7 @@
 FROM ubuntu:16.04
 
 RUN apt-get -q update \
-    && apt-get -qy install wget apt-transport-https vim git supervisor postgresql postgresql-plpython-9.5 libfontconfig python3-pip python-pip \
+    && apt-get -qy install wget apt-transport-https vim git supervisor postgresql postgresql-plpython-9.5 libfontconfig python3-pip python-pip libssl-dev \
     && locale-gen "en_US.UTF-8" && apt autoremove -y \
     && mkdir -p /var/log/supervisor /pgwatch2 \
     && rm -rf /var/lib/postgresql/9.5/main \
@@ -38,7 +38,7 @@ ADD webpy /pgwatch2/webpy
 
 # Go installation [https://golang.org/dl/]
 # Grafana config customizations, Web UI requirements, compilation of the Go gatherer
-RUN wget -q -O /tmp/go.tar.gz https://storage.googleapis.com/golang/go1.11.4.linux-amd64.tar.gz \
+RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.11.4.linux-amd64.tar.gz \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && export PATH=$PATH:/usr/local/go/bin \
     && cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \

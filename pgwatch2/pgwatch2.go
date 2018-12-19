@@ -2184,8 +2184,8 @@ type Options struct {
 	AdHocUniqueName        string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
 	InternalStatsPort      int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
 	ConnPooling            string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: off]" default:"off" env:"PW2_CONN_POOLING"`
-	AesGcmKeyphrase     string `long:"aes-gcm-keyphrase" description:"Decryption key for AES-GCM-256 passwords" default:"" env:"PW2_AES_GCM_KEYPHRASE"`
-	AesGcmKeyphraseFile string `long:"aes-gcm-keyphrase-file" description:"File with decryption key for AES-GCM-256 passwords" default:"" env:"PW2_AES_GCM_KEYPHRASE_FILE"`
+	AesGcmKeyphrase     string `long:"aes-gcm-keyphrase" description:"Decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE"`
+	AesGcmKeyphraseFile string `long:"aes-gcm-keyphrase-file" description:"File with decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE_FILE"`
 }
 
 var opts Options
@@ -2483,7 +2483,7 @@ func main() {
 		UpdateMonitoredDBCache(monitored_dbs)
 
 		for _, host := range monitored_dbs {    // Warn if any encrypted hosts found but no keyphrase given
-		    if host.PasswordType != "plain-text" {
+		    if host.PasswordType != "plain-text" && len(opts.AesGcmKeyphrase) == 0 {
 		        log.Error("Encrypted passwords found, but no decryption keyphrase specified. Use --aes-gcm-keyphrase or --aes-gcm-keyphrase-file params")
 		        break
 		    }
