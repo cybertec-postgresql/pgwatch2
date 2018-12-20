@@ -129,6 +129,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "table_io_stats": 180,
     "table_stats": 180,
     "wal": 60,
+    "wal_receiver": 120,
     "change_events": 300,
     "table_bloat_approx_summary": 7200
     }'),
@@ -159,7 +160,8 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "psutil_cpu": 120,
     "psutil_mem": 120,
     "psutil_disk": 120,
-    "psutil_disk_io_total": 120
+    "psutil_disk_io_total": 120,
+    "wal_receiver": 120
     }'),
     ('unprivileged', 'no wrappers + only pg_stat_statements extension expected (developer mode)',
     '{

@@ -30,6 +30,7 @@
     table_io_stats: 180
     table_stats: 180
     wal: 60
+    wal_receiver: 120
 
 - name: minimal
   description: single "Key Performance Indicators" query for fast cluster/db overview
@@ -82,6 +83,7 @@
     psutil_mem: 120
     psutil_disk: 120
     psutil_disk_io_total: 120
+    wal_receiver: 120
 
 - name: unprivileged
   description: no wrappers + only pg_stat_statements extension expected (developer mode)
