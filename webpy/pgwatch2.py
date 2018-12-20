@@ -117,7 +117,7 @@ def get_all_metrics():
     sql = """
         select
           m_id, m_name, m_pg_version_from, m_sql, coalesce(m_comment, '') as m_comment, m_is_active, m_is_helper, 
-          date_trunc('second', m_last_modified_on) as m_last_modified_on
+          date_trunc('second', m_last_modified_on) as m_last_modified_on, m_master_only, m_standby_only
         from
           pgwatch2.metric
         order by
@@ -367,11 +367,13 @@ def update_metric(params):
           m_comment = %(m_comment)s,
           m_is_active = %(m_is_active)s,
           m_is_helper = %(m_is_helper)s,
+          m_master_only = %(m_master_only)s,
+          m_standby_only = %(m_standby_only)s,
           m_last_modified_on = now()
         where
           m_id = %(m_id)s
     """
-    cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper'])
+    cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper', 'm_master_only', 'm_standby_only'])
     ret, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to update "metric": ' + err)
@@ -380,12 +382,12 @@ def update_metric(params):
 def insert_metric(params):
     sql = """
         insert into
-          pgwatch2.metric (m_name, m_pg_version_from, m_sql, m_comment, m_is_active, m_is_helper)
+          pgwatch2.metric (m_name, m_pg_version_from, m_sql, m_comment, m_is_active, m_is_helper, m_master_only, m_standby_only)
         values
-          (%(m_name)s, %(m_pg_version_from)s, %(m_sql)s, %(m_comment)s, %(m_is_active)s, %(m_is_helper)s)
+          (%(m_name)s, %(m_pg_version_from)s, %(m_sql)s, %(m_comment)s, %(m_is_active)s, %(m_is_helper)s, %(m_master_only)s, %(m_standby_only)s)
         returning m_id
     """
-    cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper'])
+    cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper', 'm_master_only', 'm_standby_only'])
     ret, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to insert into "metric": ' + err)

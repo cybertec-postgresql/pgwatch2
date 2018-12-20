@@ -130,6 +130,8 @@
                 <td>Comment</td>
                 <td>Is active?</td>
                 <td title="Code for metric fetching helpers. Not to be used for normal metrics gathering">Is helper?</td>
+                <td title="Execute only on masters">Master only?</td>
+                <td title="Execute only on standbys">Standby only?</td>
                 <td>Last modified</td>
                 <td></td>
                 <td></td>
@@ -141,27 +143,31 @@
                 <form action="/metrics" method="post">
                     <td>
                         <input type="hidden" name="m_id" value="{{row['m_id']}}">
-                        <input type="text" name="m_name" value="{{row['m_name']|e}}">
+                        <input type="text" name="m_name" value="{{row['m_name']|e}}" title="Metric name">
                     </td>
-                    <td><input type="text" name="m_pg_version_from" value="{{row['m_pg_version_from']}}"></td>
-                    <td><textarea name="m_sql" cols="50">{{row['m_sql']}}</textarea></td>
-                    <td><input type="text" name="m_comment" value="{{row['m_comment']}}"></td>
-                    <td><input type="checkbox" name="m_is_active" {% if row['m_is_active'] %}checked{% endif %}></td>
-                    <td><input type="checkbox" name="m_is_helper" {% if row['m_is_helper'] %}checked{% endif %}></td>
+                    <td><input type="text" name="m_pg_version_from" value="{{row['m_pg_version_from']}}" title="Version from"></td>
+                    <td><textarea name="m_sql" cols="50" title="SQL for metric">{{row['m_sql']}}</textarea></td>
+                    <td><input type="text" name="m_comment" value="{{row['m_comment']}}" title="Comment"></td>
+                    <td><input type="checkbox" name="m_is_active" {% if row['m_is_active'] %}checked{% endif %} title="Is active?"></td>
+                    <td><input type="checkbox" name="m_is_helper" {% if row['m_is_helper'] %}checked{% endif %} title="Is helper?"></td>
+                    <td><input type="checkbox" name="m_master_only" {% if row['m_master_only'] %}checked{% endif %} title="Master only?"></td>
+                    <td><input type="checkbox" name="m_standby_only" {% if row['m_standby_only'] %}checked{% endif %} title="Standby only?"></td>
                     <td>{{row['m_last_modified_on']}}</td>
-                    <td><input type="submit" name="metric_save" value="Save"></td>
+                    <td><input type="submit" name="metric_save" value="Save" class="metric_save"></td>
                     <td><input type="submit" name="metric_delete" value="Delete" class="delete"></td>
                 </form>
             </tr>
             {% endfor %}
             <tr>
                 <form action="/metrics" method="post">
-                    <td><input type="text" name="m_name" value=""></td>
-                    <td><input type="text" name="m_pg_version_from" value="9.0"></td>
-                    <td><textarea name="m_sql" cols="50">SELECT (extract(epoch from now()) * 1e9)::int8 as epoch_ns, ...</textarea></td>
-                    <td><input type="text" name="m_comment" value=""></td>
-                    <td><input type="checkbox" name="m_is_active" checked></td>
-                    <td><input type="checkbox" name="m_is_helper"></td>
+                    <td><input type="text" name="m_name" value="" title="Metric name"></td>
+                    <td><input type="text" name="m_pg_version_from" value="9.0" title="Version from"></td>
+                    <td><textarea name="m_sql" cols="50" title="SQL for metric">SELECT (extract(epoch from now()) * 1e9)::int8 as epoch_ns, ...</textarea></td>
+                    <td><input type="text" name="m_comment" value=""  title="Comment"></td>
+                    <td><input type="checkbox" name="m_is_active"  title="Is active?" checked></td>
+                    <td><input type="checkbox" name="m_is_helper" title="Is helper?"></td>
+                    <td><input type="checkbox" name="m_master_only" title="Master only?"></td>
+                    <td><input type="checkbox" name="m_standby_only" title="Standby only?"></td>
                     <td></td>
                     <td><input type="submit" name="metric_new" value="New"></td>
                     <td></td>
@@ -185,6 +191,14 @@
         $(".delete").click(function(e){
             var r = confirm("Delete?");
             if (r == false) {
+                e.preventDefault();
+            }
+        });
+        $(".metric_save").click(function(e){
+            var master = $(this).parent().parent().find("[name='m_master_only']");
+            var standby = $(this).parent().parent().find("[name='m_standby_only']");
+            if (master.is(":checked") && standby.is(":checked")) {
+                alert("A metric cannot be both 'Master only' and 'Standby only'!");
                 e.preventDefault();
             }
         });

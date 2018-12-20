@@ -66,7 +66,7 @@ alter table pgwatch2.monitored_db add constraint preset_or_custom_config check
     and not (md_preset_config_name is not null and md_config is not null));
 
 
-create table pgwatch2.metric (
+create table metric (
     m_id                serial primary key,
     m_name              text not null,
     m_pg_version_from   numeric not null,
@@ -75,7 +75,11 @@ create table pgwatch2.metric (
     m_is_active         boolean not null default 't',
     m_is_helper         boolean not null default 'f',
     m_last_modified_on  timestamptz not null default now(),
-    unique (m_name, m_pg_version_from)
+    m_master_only bool default false,
+    m_standby_only bool default false,
+
+    unique (m_name, m_pg_version_from),
+    check (not (m_master_only and m_standby_only))
 );
 
 

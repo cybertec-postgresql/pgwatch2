@@ -104,10 +104,11 @@ $sql$
 
 /* bgwriter */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
 values (
 'bgwriter',
 9.0,
+true,
 $sql$
 select
    (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -363,10 +364,11 @@ $sql$
 
 /* replication */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
 values (
 'replication',
 9.2,
+true,
 $sql$
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -385,10 +387,11 @@ $sql$
 
 /* replication */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
 values (
 'replication',
 10,
+true,
 $sql$
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -732,10 +735,11 @@ $sql$
 
 
 /* pg_stat_database_conflicts */
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_standby_only, m_sql)
 values (
 'pg_stat_database_conflicts',
 9.2,
+true,
 $sql$
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -859,10 +863,11 @@ $sql$
 
 
 /* approx. bloat - needs pgstattuple extension! superuser or pg_stat_scan_tables/pg_monitor builtin role required */
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
 values (
 'table_bloat_approx_stattuple',
 9.5,
+true,
 $sql$
 select
   quote_ident(n.nspname)||'.'||quote_ident(c.relname) as tag_full_table_name,
@@ -925,10 +930,11 @@ true
 );
 
 /* approx. bloat summary */
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
 values (
 'table_bloat_approx_summary',
 9.5,
+true,
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -1218,10 +1224,11 @@ true
 
 /* replication slot info */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
 values (
 'replication_slots',
 9.4,
+true,
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -1237,10 +1244,11 @@ $sql$
 );
 
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
 values (
 'replication_slots',
 10,
+true,
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
