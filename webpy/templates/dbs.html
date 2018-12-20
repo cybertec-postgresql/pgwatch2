@@ -231,25 +231,25 @@
 </div>
 
 <div class="row" style="padding-left: 10px">
-    <h3>InfluxDB metrics data cleanup</h3>
+    <h3>Metrics data cleanup ({{datastore}})</h3>
     <br />
-    <p>Nr. of unique hosts found from Influx: {{influx_active_dbnames|length}}</p>
+    <p>Nr. of unique hosts found: {{active_dbnames|length}}</p>
     <form action="/dbs" method="post">
         <span style="font-weight: bold">DB "Unique name"</span> (NB! It could take up to 3min for background gatherers to stop so no point to click directly after removing a host from monitoring):
         <br />
-        <input type="text" name="influx_single_unique_name" id="influx_single_unique_name" list="influx_active_dbnames" autocomplete="off" title="Start typing to get autocomplete">
+        <input type="text" name="single_unique_name" id="single_unique_name" list="active_dbnames" autocomplete="off" title="Start typing to get autocomplete">
         <br />
-        <input type="submit" id="influx_delete_single" name="influx_delete_single" value="Delete single DB metrics">
+        <input type="submit" id="delete_single" name="delete_single" value="Delete single DB metrics">
         <br />
         <br />
-        <input type="submit" id="influx_delete_all" name="influx_delete_all" value="Delete all metrics for all non-active DBs">
+        <input type="submit" id="delete_all" name="delete_all" value="Delete all metrics for all non-active DBs">
         <br />
         <br />
         <br />
     </form>
 
-    <datalist id="influx_active_dbnames">
-      {% for db in influx_active_dbnames: %}
+    <datalist id="active_dbnames">
+      {% for db in active_dbnames: %}
       <option value="{{db}}">
       {% endfor %}
     </datalist>
@@ -282,16 +282,16 @@
             return confirm('Remove DB "' + $(this).parent().parent().find("[name='md_unique_name']").val() + '" from monitoring? NB! This does not remove gathered metrics data from InfluxDB, see bottom of page for that')
         });
 
-        $("#influx_delete_all").click(function(event){
+        $("#delete_all").click(function(event){
             return confirm('Are you sure you want to delete all gathered metrics data for non-active DB-s?')
         });
 
-        $("#influx_delete_single").click(function(event){
-            if ($("#influx_single_unique_name").val().trim() == '') {
+        $("#delete_single").click(function(event){
+            if ($("#single_unique_name").val().trim() == '') {
                 alert("Unique name empty!");
                 return false;
             }
-            return confirm('Are you sure you want to delete all gathered metrics for DB: "' + $("#influx_single_unique_name").val() + '" ?')
+            return confirm('Are you sure you want to delete all gathered metrics for DB: "' + $("#single_unique_name").val() + '" ?')
         });
 
         $(".save").add('.new').click(function(event){

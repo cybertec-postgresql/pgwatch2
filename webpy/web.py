@@ -96,7 +96,7 @@ class Root:
         data = []
         preset_configs = []
         metrics_list = []
-        influx_active_dbnames = []
+        active_dbnames = []
         preset_configs_json = {}
 
         if params:
@@ -109,21 +109,27 @@ class Root:
                     pgwatch2.delete_monitored_db(params)
                     messages.append('Entry with ID {} ("{}") deleted!'.format(
                         params['md_id'], params['md_unique_name']))
-                elif params.get('influx_delete_single'):
-                    if not params['influx_single_unique_name']:
+                elif params.get('delete_single'):
+                    if not params['single_unique_name']:
                         raise Exception('No "Unique Name" provided!')
-                    pgwatch2_influx.delete_influx_data_single(params['influx_single_unique_name'])
-                    messages.append('InfluxDB data for "{}" deleted!'.format(params['influx_single_unique_name']))
-                elif params.get('influx_delete_all'):
+                    if cmd_args.datastore == 'influx':
+                        pgwatch2_influx.delete_influx_data_single(params['single_unique_name'])
+                    else:
+                        pgwatch2.delete_postgres_metrics_data_single(params['single_unique_name'])
+                    messages.append('Data for "{}" deleted!'.format(params['single_unique_name']))
+                elif params.get('delete_all'):
                     active_dbs = pgwatch2.get_active_db_uniques()
-                    deleted_dbnames = pgwatch2_influx.delete_influx_data_all(active_dbs)
-                    messages.append('InfluxDB data deleted for: {}'.format(','.join(deleted_dbnames)))
+                    if cmd_args.datastore == 'influx':
+                        deleted_dbnames = pgwatch2_influx.delete_influx_data_all(active_dbs)
+                    else:
+                        deleted_dbnames = pgwatch2.delete_postgres_metrics_for_all_inactive_hosts(active_dbs)
+                    messages.append('Data deleted for: {}'.format(','.join(deleted_dbnames)))
             except Exception as e:
                 logging.exception('Changing DBs failed')
                 messages.append('ERROR: ' + str(e))
 
         try:
-            influx_active_dbnames = pgwatch2_influx.get_active_dbnames()
+            active_dbnames = pgwatch2_influx.get_active_dbnames() if cmd_args.datastore == 'influx' else pgwatch2.get_all_dbnames()
         except (requests.exceptions.ConnectionError, influxdb.exceptions.InfluxDBClientError):
             logging.exception('Influx ERROR')
             messages.append('ERROR: Could not connect to InfluxDB')
@@ -144,9 +150,10 @@ class Root:
 
         tmpl = env.get_template('dbs.html')
         return tmpl.render(messages=messages, data=data, preset_configs=preset_configs, preset_configs_json=preset_configs_json,
-                           metrics_list=metrics_list, influx_active_dbnames=influx_active_dbnames,
+                           metrics_list=metrics_list, active_dbnames=active_dbnames,
                            no_anonymous_access=cmd_args.no_anonymous_access, session=cherrypy.session,
-                           no_component_logs=cmd_args.no_component_logs, aes_gcm_enabled=cmd_args.aes_gcm_keyphrase)
+                           no_component_logs=cmd_args.no_component_logs, aes_gcm_enabled=cmd_args.aes_gcm_keyphrase,
+                           datastore=cmd_args.datastore)
 
     @logged_in
     @cherrypy.expose
@@ -290,8 +297,10 @@ if __name__ == '__main__':
                         default=os.getenv('PW2_AES_GCM_KEYPHRASE'))
     parser.add_argument('--aes-gcm-keyphrase-file', help='For encrypting password stored to configDB. Read from a file on startup',
                         default=os.getenv('PW2_AES_GCM_KEYPHRASE_FILE'))
+    parser.add_argument('--datastore', help='In which type of database is metric data stored [influx|postgres]. Default: influx',
+                        default=(os.getenv('PW2_DATASTORE') or 'influx'))
 
-    # Postgres
+    # Postgres config DB
     parser.add_argument('-H', '--host', help='Pgwatch2 Config DB host',
                         default=(os.getenv('PW2_PGHOST') or 'localhost'))
     parser.add_argument('-p', '--port', help='Pgwatch2 Config DB port',
@@ -304,6 +313,11 @@ if __name__ == '__main__':
                         default=(os.getenv('PW2_PGPASSWORD') or 'pgwatch2admin'))
     parser.add_argument('--pg-require-ssl', help='Pgwatch2 Config DB SSL connection only', action='store_true',
                         default=(str_to_bool_or_fail(os.getenv('PW2_PGSSL')) or False))
+
+    # Postgres metrics DB
+    parser.add_argument('--pg-metric-store-conn-str', help='PG Metric Store connection string',
+                        default=os.getenv('PW2_PG_METRIC_STORE_CONN_STR'))
+
     # Influx
     parser.add_argument('--influx-host', help='InfluxDB host',
                         default=(os.getenv('PW2_IHOST') or 'localhost'))
@@ -333,8 +347,14 @@ if __name__ == '__main__':
     if err:
         logging.warning("config DB connection test failed: %s", err)
 
-    pgwatch2_influx.influx_set_connection_params(cmd_args.influx_host, cmd_args.influx_port, cmd_args.influx_user,
-                                                 cmd_args.influx_password, cmd_args.influx_database, cmd_args.influx_require_ssl)
+    if cmd_args.datastore == 'postgres':
+        datadb.setConnectionStringForMetrics(cmd_args.pg_metric_store_conn_str)
+        err = datadb.isMetricStoreConnectionOK()
+        if err:
+            logging.warning("metrics DB connection test failed: %s", err)
+    elif cmd_args.datastore == 'influx':
+        pgwatch2_influx.influx_set_connection_params(cmd_args.influx_host, cmd_args.influx_port, cmd_args.influx_user,
+                                                     cmd_args.influx_password, cmd_args.influx_database, cmd_args.influx_require_ssl)
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     config = {
@@ -342,6 +362,7 @@ if __name__ == '__main__':
         '/static': {'tools.staticdir.root': current_dir, 'tools.staticdir.dir': 'static', 'tools.staticdir.on': True, 'tools.sessions.on': False},
         '/': {'tools.sessions.on': True},
     }
+
     if cmd_args.ssl:
         if not cmd_args.ssl_cert or not cmd_args.ssl_key:
             raise Exception('--ssl-cert and --ssl-cert needed with --ssl!')
@@ -350,9 +371,11 @@ if __name__ == '__main__':
         config['global']['server.ssl_private_key'] = cmd_args.ssl_key
         if cmd_args.ssl_certificate_chain:
             config['global']['server.ssl_certificate_chain'] = cmd_args.ssl_certificate_chain
+
     if cmd_args.aes_gcm_keyphrase_file:
         cmd_args.aes_gcm_keyphrase = utils.fileContentsToString(cmd_args.aes_gcm_keyphrase_file)
         if cmd_args.aes_gcm_keyphrase[-1] == '\n':
             logging.warning("removing newline character from keyphrase input string...")
             cmd_args.aes_gcm_keyphrase = cmd_args.aes_gcm_keyphrase[:-1]
+
     cherrypy.quickstart(Root(), config=config)

@@ -3,12 +3,18 @@ import psycopg2
 import psycopg2.extras
 
 
-connection_string = "host=localhost dbname=pgwatch2 user=pgwatch2 password=pgwatch2 connect_timeout='3'"
+connection_string = "host=localhost dbname=pgwatch2 user=pgwatch2 password=pgwatch2admin connect_timeout='3'"
+connection_string_metrics = "host=localhost dbname=pgwatch2_metrics user=pgwatch2 password=pgwatch2admin connect_timeout='3'"
 
 
 def setConnectionString(conn_string):
     global connection_string
     connection_string = conn_string
+
+
+def setConnectionStringForMetrics(conn_string):
+    global connection_string_metrics
+    connection_string_metrics = conn_string
 
 
 def setConnectionString(host, port, dbname, username, password, require_ssl=False, connect_timeout=10):
@@ -17,18 +23,18 @@ def setConnectionString(host, port, dbname, username, password, require_ssl=Fals
         host, port, dbname, username, password, connect_timeout, '' if not require_ssl else 'sslmode=require')
 
 
-def getDataConnection(autocommit=True):
-    conn = psycopg2.connect(connection_string)
+def getConnection(conn_str=None, autocommit=True):
+    conn = psycopg2.connect(conn_str if conn_str else connection_string)    # default to configDB
     if autocommit:
         conn.autocommit = True
     return conn
 
 
-def execute(sql, params=None, statement_timeout=None, quiet=False):
+def execute(sql, params=None, statement_timeout=None, quiet=False, conn_str=None, on_metric_store=False):
     result = []
     conn = None
     try:
-        conn = getDataConnection()
+        conn = getConnection(connection_string_metrics) if on_metric_store else getConnection(conn_str)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         if statement_timeout:
             cur.execute("SET statement_timeout TO '{}'".format(
@@ -57,7 +63,6 @@ def executeOnRemoteHost(sql, host, port, dbname, user, password='', sslmode='pre
     result = []
     conn = None
     try:
-        print('SSL', sslrootcert, sslcert, sslkey)
         conn = psycopg2.connect(host=host, port=port, dbname=dbname, user=user, password=password,
             sslmode=sslmode, sslrootcert=sslrootcert, sslcert=sslcert, sslkey=sslkey)
         conn.autocommit = True
@@ -90,6 +95,13 @@ def isDataStoreConnectionOK():
     return err
 
 
+def isMetricStoreConnectionOK():
+    data, err = execute('select 1 as x', quiet=True, conn_str=connection_string_metrics)
+    return err
+
+
 if __name__ == '__main__':
     print('execute', execute('select 1 as x'))
-    print('executeOnRemoteHost', executeOnRemoteHost('select 1 as x', 'localhost', 5432, 'pgwatch2', 'postgres'))
+    print('executeOnRemoteHost', executeOnRemoteHost('select 1 as x', 'localhost', 5432, 'postgres', 'pgwatch2', 'pgwatch2admin'))
+    print('isMetricStoreConnectionOK', isMetricStoreConnectionOK())
+

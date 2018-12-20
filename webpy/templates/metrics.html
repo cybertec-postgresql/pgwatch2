@@ -176,8 +176,8 @@
         </tbody>
     </table>
     <div class="alert alert-info">
-      <strong>NB! </strong>Metric fetching SQL-s always need to have the "epoch_ns" column present. Additionally columns with "tag_" prefix will be
-        turned into indexed tags in InfluxDB (fast access) and also "dbname" (DB unique name) column will always be added by the framework
+      <strong>NB! </strong>Metric fetching SQL-s should always have the "epoch_ns" column present (otherwise server time will be used). Additionally columns with "tag_" prefix will be
+        turned into indexed tags in InfluxDB or stored in the indexed "metrics.tag_data" column for Postgres for fast access. Also "dbname" (DB unique name) column will always be added by the framework
     </div>
 </div>
 

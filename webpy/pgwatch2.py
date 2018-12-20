@@ -67,6 +67,7 @@ def get_monitored_db_by_id(id):
         return None
     return data[0]
 
+
 def get_active_db_uniques():
     sql = """
         select
@@ -401,6 +402,37 @@ def delete_metric(params):
     ret, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to delete from "metric": ' + err)
+
+
+def get_all_dbnames():
+    sql = """
+        select distinct dbname from public.metrics
+    """
+    ret, err = datadb.execute(sql, on_metric_store=True)
+    if err:
+        raise Exception('Failed to delete from "metric": ' + err)
+    return [x['dbname'] for x in ret]
+
+
+def delete_postgres_metrics_data_single(dbunique):
+    sql = """
+        delete from public.metrics where dbname = %s
+    """
+    ret, err = datadb.execute(sql, (dbunique,), on_metric_store=True)
+    if err:
+        raise Exception('Failed to delete from "metrics": ' + err)
+
+
+def delete_postgres_metrics_for_all_inactive_hosts(active_dbs):
+    all = get_all_dbnames()
+    to_delete = set(all) - set(active_dbs)
+    sql = """
+        delete from public.metrics where dbname = any(array[%s])
+    """
+    ret, err = datadb.execute(sql, (list(to_delete),), on_metric_store=True)
+    if err:
+        raise Exception('Failed to delete inactive metric data from "metrics": ' + err)
+    return to_delete
 
 
 if __name__ == '__main__':

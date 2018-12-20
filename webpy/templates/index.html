@@ -79,7 +79,7 @@
 
           {% if page == 'index' %}
 
-            <h2 class="sub-header">DB overview {% if dbname %}for "{{dbname}}"{% endif %}</h2>
+            <h2 class="sub-header">DB overview {% if dbname %}for "{{dbname}}"{% endif %} (based on InfluxDB metrics)</h2>
             <form action="/index" method="get">
             <select name="dbname">
               <option></option>
@@ -116,7 +116,7 @@
 
           {% elif page == 'statements' %}
 
-            <h2 class="sub-header">pg_stat_statements Top 50 by {{sort_column}} {% if dbname %}for "{{dbname}}"{% endif %}</h2>
+            <h2 class="sub-header">pg_stat_statements Top 50 by {{sort_column}} {% if dbname %}for "{{dbname}}"{% endif %} (based on InfluxDB metrics)</h2>
             <form action="/index" method="get">
             <input type="hidden" name="page" id="page" value="statements">
             <input type="hidden" name="sort_column" id="sort_column" value="{{sort_column}}">
