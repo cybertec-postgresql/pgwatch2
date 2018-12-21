@@ -406,7 +406,13 @@ def delete_metric(params):
 
 def get_all_dbnames():
     sql = """
-        select distinct dbname from public.metrics
+    WITH RECURSIVE t(dbname) AS (
+       SELECT MIN(dbname) AS dbname FROM metrics
+       UNION
+       SELECT (SELECT MIN(dbname) FROM metrics WHERE dbname > t.dbname)
+       FROM t
+    )
+    SELECT dbname FROM t WHERE dbname NOTNULL ORDER BY 1;
     """
     ret, err = datadb.execute(sql, on_metric_store=True)
     if err:
