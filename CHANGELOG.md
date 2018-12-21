@@ -6,6 +6,26 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+
+## v1.5.0 [DRAFT]
+
+* New feature - password encryption/decryption with AES-GCM-256 (Gatherer + Web UI)
+* New feature - 'verify-ca' and 'verify-full' SSLMODE support (Gatherer + Web UI)
+* New feature - Support for Postgres as metrics storage DB. With only 2 overview dashboards though
+* New feature - standby-only or master-only metrics (less errors in PG and pgwatch2 logs)
+* Gatherer improvement - SystemD support + service file. Thanks @slardiere!
+* Gatherer improvement  - less error messages when monitored DB or metrics store is down 
+* Gatherer improvement - disable "connection pooling" by default 
+* Gatherer improvement - collector logic refactoring, less message passing 
+* Gatherer improvement - correct "complain only 1x per hour about missing metric definitions"
+* Metrics - removing DB size from "db_stats" into own "db_size" as it's apparently slow on some FS
+* Metrics - new "backup_duration_s" field for "db_stats"
+* Docker - "daemon" image runs now also without any parameters 
+* Docker - use "tsi1" disk-based index instead of "inmem" for Influx as it's safer for high-cardinality setups
+* Docker - new image with Postgres for metrics storage (cybertec/pgwatch2-postgres-storage)  
+* Docker component update - InfluxDB 1.7.2, Grafana 5.4.2, Go 1.11.4
+
+
 ## v1.4.5 [2018-11-06]
 
 * Metrics fix - KPI for 9.6 corrected
