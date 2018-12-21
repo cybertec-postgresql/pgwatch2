@@ -150,7 +150,7 @@ $sql$
 insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'db_stats',
-9.0,
+9.3,
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -170,7 +170,8 @@ select
   deadlocks,
   blk_read_time,
   blk_write_time,
-  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
+  extract(epoch from (now() - pg_backup_start_time()))::int8 as backup_duration_s
 from
   pg_stat_database
 where
