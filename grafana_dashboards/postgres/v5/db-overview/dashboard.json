@@ -496,7 +496,7 @@
             "policy": "default",
             "query": "",
             "rawQuery": true,
-            "rawSql": "select\n  time,\n  max(last_value-first_value) as size_diff\nfrom (\n  select\n    date_trunc('hour', time) as time,\n    first_value((data->>'size_b')::int8) over w,\n    last_value((data->>'size_b')::int8) over w\n  from\n    metrics\n  where \n    dbname = '$dbname' and metric = 'db_stats' and $__timeFilter(time)\n  window w as (\n     partition by date_trunc('hour', time) order by time rows BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING\n  )\n) x\ngroup by 1\norder by 1;",
+            "rawSql": "select\n  time,\n  max(last_value-first_value) as size_diff\nfrom (\n  select\n    date_trunc('hour', time) as time,\n    first_value((data->>'size_b')::int8) over w,\n    last_value((data->>'size_b')::int8) over w\n  from\n    metrics\n  where \n    dbname = '$dbname' and metric = 'db_size' and $__timeFilter(time)\n  window w as (\n     partition by date_trunc('hour', time) order by time rows BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING\n  )\n) x\ngroup by 1\norder by 1;",
             "refId": "A",
             "resultFormat": "time_series",
             "select": [
@@ -1413,7 +1413,7 @@
             "group": [],
             "metricColumn": "none",
             "rawQuery": true,
-            "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg(size_b) as \"DB Size\"\nfrom (\n        select \n          (data->>'size_b')::int8 as size_b,\n          time\n        from metrics\n        where dbname = '$dbname' and metric = 'db_stats' and $__timeFilter(time)\n) x\ngroup by 1\norder by 1",
+            "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg(size_b) as \"DB Size\"\nfrom (\n        select \n          (data->>'size_b')::int8 as size_b,\n          time\n        from metrics\n        where dbname = '$dbname' and metric = 'db_size' and $__timeFilter(time)\n) x\ngroup by 1\norder by 1",
             "refId": "B",
             "select": [
               [
