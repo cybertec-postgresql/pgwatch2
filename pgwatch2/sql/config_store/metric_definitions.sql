@@ -405,7 +405,6 @@ SELECT
   case when sync_state in ('sync', 'quorum') then 1 else 0 end as is_sync_int
 from
   pg_stat_replication;
-
 $sql$
 );
 

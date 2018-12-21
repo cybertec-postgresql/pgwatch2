@@ -1,3 +1,9 @@
+REVOKE ALL ON SCHEMA public FROM public;
+
+GRANT ALL ON SCHEMA public TO pgwatch2;
+
+SET role TO pgwatch2;
+
 -- drop table if exists metrics;
 
 create table metrics (
