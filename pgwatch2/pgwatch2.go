@@ -20,6 +20,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -1474,7 +1475,7 @@ func FilterPgbouncerData(data []map[string]interface{}, database_to_keep string)
 	return filtered_data
 }
 
-func FetchAndStore(msg MetricFetchMessage, host_state map[string]map[string]string, storage_ch chan<- []MetricStoreMessage) (int, error) {
+func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]string, storage_ch chan<- []MetricStoreMessage) ([]MetricStoreMessage, error) {
 	var vme DBVersionMapEntry
 	var db_pg_version decimal.Decimal
 	var err error
@@ -1483,7 +1484,7 @@ func FetchAndStore(msg MetricFetchMessage, host_state map[string]map[string]stri
 		vme, err = DBGetPGVersion(msg.DBUniqueName)
 		if err != nil {
 			log.Error("failed to fetch pg version for ", msg.DBUniqueName, msg.MetricName, err)
-			return 0, err
+			return nil, err
 		}
 		db_pg_version = vme.Version
 	} else if msg.DBType == "pgbouncer" {
@@ -1499,16 +1500,16 @@ func FetchAndStore(msg MetricFetchMessage, host_state map[string]map[string]stri
 			log.Warningf("Failed to get SQL for metric '%s', version '%s'", msg.MetricName, db_pg_version)
 			last_sql_fetch_error.Store(msg.MetricName+":"+db_pg_version.String(), time.Now().Unix())
 		}
-		return 0, err
+		return nil, err
 	} else if mvp.Sql == "" {
 		// let's ignore dummy SQL-s
 		log.Debugf("Ignoring fetch message - got an empty/dummy SQL string for [%s:%s]", msg.DBUniqueName, msg.MetricName)
-		return 0, nil
+		return nil, nil
 	}
 
 	if (mvp.MasterOnly && vme.IsInRecovery) || (mvp.StandbyOnly && !vme.IsInRecovery) {
 		log.Debugf("Skipping fetching of [%s:%s] as server not in wanted state (IsInRecovery=%v)", msg.DBUniqueName, msg.MetricName, vme.IsInRecovery)
-		return 0, nil
+		return nil, nil
 	}
 
 	if msg.MetricName == "change_events" { // special handling, multiple queries + stateful
@@ -1525,7 +1526,7 @@ func FetchAndStore(msg MetricFetchMessage, host_state map[string]map[string]stri
 				db_pg_version_map_lock.RUnlock()
 				if ver.IsInRecovery {
 					log.Infof("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err)
-					return 0, err
+					return nil, err
 				}
 			}
 			log.Errorf("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err)
@@ -1533,22 +1534,52 @@ func FetchAndStore(msg MetricFetchMessage, host_state map[string]map[string]stri
 			md, err := GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
 			if err != nil {
 				log.Errorf("could not get monitored DB details for %s: %s", msg.DBUniqueName, err)
-				return len(data), err
+				return nil, err
 			}
 
 			log.Infof("fetched %d rows for [%s:%s] in %.1f ms", len(data), msg.DBUniqueName, msg.MetricName, float64(duration.Nanoseconds())/1000000)
 			if msg.MetricName == "pgbouncer_stats" { // clean unwanted pgbouncer pool stats here as not possible in SQL
 				data = FilterPgbouncerData(data, md.DBName)
 			}
-			if len(data) > 0 {
-				atomic.AddUint64(&totalMetricsFetchedCounter, uint64(len(data)))
-				atomic.AddUint64(&totalDatasetsFetchedCounter, 1)
-				storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags}}
-				return len(data), nil
-			}
+			return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags}}, nil
 		}
 	}
+	return nil, nil
+}
+
+func StoreMetrics(metrics []MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) (int, error) {
+
+	if len(metrics) > 0 {
+		atomic.AddUint64(&totalMetricsFetchedCounter, uint64(len(metrics)))
+		atomic.AddUint64(&totalDatasetsFetchedCounter, 1)
+		storage_ch <- metrics
+		return len(metrics), nil
+	}
+
 	return 0, nil
+}
+
+func deepCopyMetricStoreMessages(metricStoreMessages []MetricStoreMessage) []MetricStoreMessage {
+	new := make([]MetricStoreMessage, 0)
+	for _, msm := range metricStoreMessages {
+		data_new := make([]map[string]interface{}, 0)
+		for _, dr := range msm.Data {
+			dr_new := make(map[string]interface{})
+			for k, v := range dr {
+				dr_new[k] = v
+			}
+			data_new = append(data_new, dr_new)
+		}
+		tag_data_new := make(map[string]string)
+		for k, v := range msm.CustomTags {
+			tag_data_new[k] = v
+		}
+
+		m := MetricStoreMessage{DBUniqueName: msm.DBUniqueName, MetricName: msm.MetricName, DBType: msm.DBType,
+			Data: data_new, CustomTags: tag_data_new}
+		new = append(new, m)
+	}
+	return new
 }
 
 // ControlMessage notifies of shutdown + interval change
@@ -1563,21 +1594,54 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 	for {
 
 		t1 := time.Now()
-		_, err := FetchAndStore(
+		metricStoreMessages, err := FetchMetrics(
 			MetricFetchMessage{DBUniqueName: dbUniqueName, MetricName: metricName, DBType: dbType},
 			host_state,
 			store_ch)
 		t2 := time.Now()
+
+		if t2.Sub(t1) > (time.Second * time.Duration(interval)) {
+			log.Warningf("Total fetching time of %v bigger than %vs interval for [%s:%s]", t2.Sub(t1), interval, dbUniqueName, metricName)
+		}
+
 		if err != nil {
 			if last_error_notification_time.Add(time.Second * time.Duration(600)).Before(time.Now()) {
 				log.Errorf("Total failed fetches for [%s:%s]: %d", dbUniqueName, metricName, failed_fetches)
 				last_error_notification_time = time.Now()
 			}
 			failed_fetches += 1
-		}
+		} else if metricStoreMessages != nil && len(metricStoreMessages[0].Data) > 0 {
 
-		if t2.Sub(t1) > (time.Second * time.Duration(interval)) {
-			log.Warningf("Total fetching time of %v bigger than %vs interval for [%s:%s]", t2.Sub(t1), interval, dbUniqueName, metricName)
+			if opts.TestdataDays > 0 {
+				orig_msms := deepCopyMetricStoreMessages(metricStoreMessages)
+				log.Warningf("Generating %d days of data for [%s:%s]", opts.TestdataDays, dbUniqueName, metricName)
+				simulated_time := t1
+				end_time := t1.Add(time.Hour * time.Duration(opts.TestdataDays*24))
+				test_metrics_stored := 0
+
+				for simulated_time.Before(end_time) {
+					log.Debugf("Metric [%s], simulating time: %v", metricName, simulated_time)
+					for host_nr := 1; host_nr <= opts.TestdataMultiplier; host_nr++ {
+						fake_dbname := fmt.Sprintf("%s-%d", dbUniqueName, host_nr)
+						msgs_copy_tmp := deepCopyMetricStoreMessages(orig_msms)
+
+						for i := 0; i < len(msgs_copy_tmp[0].Data); i++ {
+							(msgs_copy_tmp[0].Data)[i][EPOCH_COLUMN_NAME] = (simulated_time.UnixNano() + int64(1000*i))
+						}
+						msgs_copy_tmp[0].DBUniqueName = fake_dbname
+						log.Debugf("fake data for [%s:%s]: %v", metricName, fake_dbname, msgs_copy_tmp[0].Data)
+						StoreMetrics(msgs_copy_tmp, store_ch)
+						test_metrics_stored += len(msgs_copy_tmp[0].Data)
+						runtime.Gosched() // should help to get natural/even metrics ordering
+					}
+					simulated_time = simulated_time.Add(time.Second * time.Duration(interval))
+				}
+				log.Warningf("exiting MetricGathererLoop for [%s], %d total data points generated for %d hosts",
+					metricName, test_metrics_stored, opts.TestdataMultiplier)
+				return
+			} else {
+				StoreMetrics(metricStoreMessages, store_ch)
+			}
 		}
 
 		select {
@@ -2224,6 +2288,9 @@ type Options struct {
 	ConnPooling         string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: off]" default:"off" env:"PW2_CONN_POOLING"`
 	AesGcmKeyphrase     string `long:"aes-gcm-keyphrase" description:"Decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE"`
 	AesGcmKeyphraseFile string `long:"aes-gcm-keyphrase-file" description:"File with decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE_FILE"`
+	// NB! "Test data" mode needs to be combined with "ad-hoc" mode to get an initial set of metrics from a real source
+	TestdataMultiplier int `long:"testdata-multiplier" description:"For how many hosts to generate data" env:"PW2_TESTDATA_MULTIPLIER"`
+	TestdataDays       int `long:"testdata-days" description:"For how many days to generate data" env:"PW2_TESTDATA_DAYS"`
 }
 
 var opts Options
@@ -2269,6 +2336,14 @@ func main() {
 			log.Warning("In ad-hoc mode: using default unique name 'adhoc' for metrics storage. use --adhoc-unique-name to override.")
 		}
 		adHocMode = true
+	}
+	if opts.TestdataDays > 0 || opts.TestdataMultiplier > 0 {
+		if len(opts.AdHocConnString) == 0 {
+			log.Fatal("Test mode requires --adhoc-conn-str!")
+		}
+		if opts.TestdataMultiplier == 0 {
+			log.Fatal("Test mode requires --testdata-multiplier!")
+		}
 	}
 	// running in config file based mode?
 	if len(opts.Config) > 0 || len(opts.MetricsFolder) > 0 {
