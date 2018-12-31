@@ -616,6 +616,8 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 	metricsToStore := make([]MetricStoreMessagePostgres, 0)
 	rows_batched := 0
 	total_rows := 0
+	pg_part_min_timestamps := make(map[string]time.Time)
+	pg_part_max_timestamps := make(map[string]time.Time)
 
 	for _, msg := range storeMessages {
 		if msg.Data == nil || len(msg.Data) == 0 {
@@ -624,7 +626,6 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		log.Debug("SendToPG data[0] of ", len(msg.Data), ":", msg.Data[0])
 
 		for _, dr := range msg.Data {
-			// Create a point and add to batch
 			var epoch_time time.Time
 			var epoch_ns int64
 
@@ -666,6 +667,23 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 			metricsToStore = append(metricsToStore, MetricStoreMessagePostgres{Time: epoch_time, DBName: msg.DBUniqueName,
 				Metric: msg.MetricName, Data: fields, TagData: tags})
 			rows_batched += 1
+			// set min/max timestamps to check/create partitions
+			min, ok := pg_part_min_timestamps[msg.DBUniqueName]
+			if !ok || (ok && epoch_time.Before(min)) {
+				pg_part_min_timestamps[msg.DBUniqueName] = epoch_time
+			}
+			max, ok := pg_part_max_timestamps[msg.DBUniqueName]
+			if !ok || (ok && epoch_time.After(max)) {
+				pg_part_max_timestamps[msg.DBUniqueName] = epoch_time
+			}
+		}
+	}
+
+	for dbname, min := range pg_part_min_timestamps {
+		max, _ := pg_part_max_timestamps[dbname]
+		err := EnsurePartitions(dbname, min, max)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -737,6 +755,101 @@ stmt_close:
 		lastSuccessfulDatastoreWriteTime = t1
 	}
 	return err
+}
+
+func OldPostgresMetricsDeleter(metricAgeDaysThreshold int64) {
+
+	for {
+		parts_dropped, err := DropOldTimePartitions(metricAgeDaysThreshold)
+
+		if err != nil {
+			log.Errorf("Failed to clean up old (>%d days) metrics from Postgres: %v", metricAgeDaysThreshold, err)
+			time.Sleep(time.Second * 300)
+		} else {
+			log.Infof("Dropped %d old metric partitions...", parts_dropped)
+			time.Sleep(time.Hour * 12)
+		}
+	}
+}
+
+func DropOldTimePartitions(metricAgeDaysThreshold int64) (int, error) {
+	parts_dropped := 0
+	var err error
+	sql_old_part := `
+SELECT partition_name FROM (
+  SELECT
+	(c.oid::pg_catalog.regclass)::text as partition_name,
+	pg_catalog.pg_get_expr(c.relpartbound, c.oid) as limits,
+	(regexp_match(pg_catalog.pg_get_expr(c.relpartbound, c.oid),
+		E'TO \\((''.*?'')'))[1]::timestamp < (current_date  - '1day'::interval * %d) is_old
+  FROM
+	pg_catalog.pg_class c,
+	pg_catalog.pg_inherits i
+  WHERE
+	c.oid=i.inhrelid
+	AND i.inhparent = regclass('public.metrics')::oid
+) x
+WHERE is_old
+ORDER BY 1;
+	`
+	sql_drop := `
+	DROP TABLE %s
+	`
+	old_parts, err := DBExecRead(metricDb, "metricsDB", fmt.Sprintf(sql_old_part, metricAgeDaysThreshold))
+	if err != nil {
+		log.Error("Failed to fetch partition info on 'metrics' table from Postgres:", err)
+		return parts_dropped, err
+	}
+
+	for _, tbl := range old_parts {
+		log.Warning("Dropping old metrics partition:", tbl)
+		_, err = DBExecRead(metricDb, "metricsDB", fmt.Sprintf(sql_drop, tbl["partition_name"].(string)))
+		if err != nil {
+			log.Error("Failed to drop 'metrics' partition from Postgres:", err)
+			continue
+		}
+		parts_dropped++
+	}
+	return parts_dropped, err
+}
+
+type ExistingPartitionInfo struct {
+	StartTime time.Time
+	EndTime   time.Time
+}
+
+var partitionMap = make(map[string]ExistingPartitionInfo)
+
+func EnsurePartitions(dbUnique string, min_timestamp time.Time, max_timestamp time.Time) error {
+	// TODO if less < 1d to part. end, precreate ?
+	sql_drop := `
+	select * from public.ensure_partition('%s', '%s')
+	`
+
+	partInfo, ok := partitionMap[dbUnique]
+	if !ok || (ok && (min_timestamp.Before(partInfo.StartTime))) {
+		ret, err := DBExecRead(metricDb, "metricsDB", fmt.Sprintf(sql_drop, dbUnique, min_timestamp.Format(time.RFC3339)))
+		if err != nil {
+			log.Error("Failed to fetch partition info on 'metrics' table from Postgres:", err)
+			return err
+		}
+		if !ok {
+			partInfo = ExistingPartitionInfo{}
+		}
+		partInfo.StartTime = ret[0]["part_available_from"].(time.Time)
+		partInfo.EndTime = ret[0]["part_available_to"].(time.Time)
+		partitionMap[dbUnique] = partInfo
+	}
+	if max_timestamp.After(partInfo.EndTime) || max_timestamp.Equal(partInfo.EndTime) {
+		ret, err := DBExecRead(metricDb, "metricsDB", fmt.Sprintf(sql_drop, dbUnique, max_timestamp.Format(time.RFC3339)))
+		if err != nil {
+			log.Error("Failed to fetch partition info on 'metrics' table from Postgres:", err)
+			return err
+		}
+		partInfo.EndTime = ret[0]["part_available_to"].(time.Time)
+		partitionMap[dbUnique] = partInfo
+	}
+	return nil
 }
 
 func InitGraphiteConnection(host string, port int) {
@@ -2258,6 +2371,7 @@ type Options struct {
 	Group                string `short:"g" long:"group" description:"Group (or groups, comma separated) for filtering which DBs to monitor. By default all are monitored" env:"PW2_GROUP"`
 	Datastore            string `long:"datastore" description:"[influx|postgres|graphite|json]" default:"influx" env:"PW2_DATASTORE"`
 	PGMetricStoreConnStr string `long:"pg-metric-store-conn-str" description:"PG Metric Store" env:"PW2_PG_METRIC_STORE_CONN_STR"`
+	PGRetentionDays      int64  `long:"pg-retention-days" description:"If set, metrics older than that will be deleted" default:"14" env:"PW2_PG_RETENTION_DAYS"`
 	InfluxHost           string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
 	InfluxPort           string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
 	InfluxDbname         string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
@@ -2512,6 +2626,11 @@ func main() {
 
 		log.Info("starting PostgresPersister...")
 		go MetricsPersister(DATASTORE_POSTGRES, persist_ch)
+
+		if opts.PGRetentionDays > 0 {
+			log.Info("starting old Postgres metrics cleanup job...")
+			go OldPostgresMetricsDeleter(opts.PGRetentionDays)
+		}
 	} else {
 		log.Fatal("Unknown datastore. Check the --datastore param")
 	}
