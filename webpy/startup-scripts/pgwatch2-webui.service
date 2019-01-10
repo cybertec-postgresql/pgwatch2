@@ -3,7 +3,7 @@ Description=PgWatch2 Web UI
 
 [Service]
 
-Environment="PW2_WEBPORT=8008"
+Environment="PW2_WEBPORT=8080"
 Environment="PW2_PGHOST=localhost"
 
 
