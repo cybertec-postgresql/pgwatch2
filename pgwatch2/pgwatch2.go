@@ -136,6 +136,8 @@ const TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS = 1800 // special statement timeout
 const MAX_PG_CONNECTIONS_PER_MONITORED_DB = 2       // for limiting max concurrent queries on a single DB, sql.DB maxPoolSize cannot be fully trusted
 const GATHERER_STATUS_START = "START"
 const GATHERER_STATUS_STOP = "STOP"
+const METRICDB_IDENT = "metricDb"
+const CONFIGDB_IDENT = "configDb"
 
 var configDb *sqlx.DB
 var metricDb *sqlx.DB
@@ -210,7 +212,7 @@ func StringToBoolOrFail(boolAsString string) bool {
 	return val
 }
 
-func InitAndTestConfigStoreConnection(host, port, dbname, user, password, requireSSL string) {
+func InitAndTestConfigStoreConnection(host, port, dbname, user, password, requireSSL string, failOnErr bool) error {
 	var err error
 	SSLMode := "disable"
 
@@ -220,39 +222,60 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password, requir
 	// configDb is used by the main thread only. no verify-ca/verify-full support currently
 	configDb, err = GetPostgresDBConnection("", host, port, dbname, user, password, SSLMode, "", "", "")
 	if err != nil {
-		log.Fatal("could not open configDb connection! exit.")
+		if failOnErr {
+			log.Fatal("could not open configDb connection! exit.")
+		} else {
+			log.Error("could not open configDb connection!")
+			return err
+		}
 	}
 
 	err = configDb.Ping()
 
 	if err != nil {
-		log.Fatal("could not ping configDb! exit.", err)
+		if failOnErr {
+			log.Fatal("could not ping configDb! exit.", err)
+		} else {
+			log.Error("could not ping configDb!", err)
+			return err
+		}
 	} else {
 		log.Info("connect to configDb OK!")
 	}
 	configDb.SetMaxIdleConns(1)
 	configDb.SetMaxOpenConns(2)
 	configDb.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
+	return nil
 }
 
-func InitAndTestMetricStoreConnection(connStr string) {
+func InitAndTestMetricStoreConnection(connStr string, failOnErr bool) error {
 	var err error
 
 	metricDb, err = GetPostgresDBConnection(connStr, "", "", "", "", "", "", "", "", "")
 	if err != nil {
-		log.Fatal("could not open metricDb connection! exit.")
+		if failOnErr {
+			log.Fatal("could not open metricDb connection! exit. err:", err)
+		} else {
+			log.Error("could not open metricDb connection:", err)
+			return err
+		}
 	}
 
 	err = metricDb.Ping()
 
 	if err != nil {
-		log.Fatal("could not ping metricDb! exit.", err)
+		if failOnErr {
+			log.Fatal("could not ping metricDb! exit.", err)
+		} else {
+			return err
+		}
 	} else {
 		log.Info("connect to metricDb OK!")
 	}
 	metricDb.SetMaxIdleConns(1)
 	metricDb.SetMaxOpenConns(2)
 	metricDb.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
+	return nil
 }
 
 func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
@@ -260,17 +283,25 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 	var rows *sqlx.Rows
 	var err error
 
+	if conn == nil {
+		return nil, errors.New("nil connection")
+	}
+
 	rows, err = conn.Queryx(sql, args...)
 
 	if err != nil {
-		conn.Close()
-		monitored_db_conn_cache_lock.Lock()
-		defer monitored_db_conn_cache_lock.Unlock()
-		if _, ok := monitored_db_conn_cache[host_ident]; ok {
-			monitored_db_conn_cache[host_ident] = nil
+		if !(host_ident == METRICDB_IDENT || host_ident == CONFIGDB_IDENT) {
+			if conn != nil {
+				conn.Close()
+			}
+			monitored_db_conn_cache_lock.Lock()
+			defer monitored_db_conn_cache_lock.Unlock()
+			if _, ok := monitored_db_conn_cache[host_ident]; ok {
+				monitored_db_conn_cache[host_ident] = nil
+			}
+			// connection problems or bad queries etc are quite common so caller should decide if to output something
+			log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
 		}
-		// connection problems or bad queries etc are quite common so caller should decide if to output something
-		log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -419,7 +450,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 		where
 		  md_is_enabled
 	`
-	data, err := DBExecRead(configDb, "configDb", sql)
+	data, err := DBExecRead(configDb, CONFIGDB_IDENT, sql)
 	if err != nil {
 		log.Error(err)
 	}
@@ -757,19 +788,64 @@ stmt_close:
 	return err
 }
 
-func OldPostgresMetricsDeleter(metricAgeDaysThreshold int64) {
+func OldPostgresMetricsDeleter(metricAgeDaysThreshold int64, schemaType string) {
 
 	for {
-		parts_dropped, err := DropOldTimePartitions(metricAgeDaysThreshold)
+		// partitioned|simple|custom
+		if schemaType == "simple" {
+			rows_deleted, err := DeleteOldPostgresMetrics(metricAgeDaysThreshold)
+			if err != nil {
+				log.Errorf("Failed to delete old (>%d days) metrics from Postgres: %v", metricAgeDaysThreshold, err)
+				time.Sleep(time.Second * 300)
+			} else {
+				log.Infof("Deleted %d old metrics rows...", rows_deleted)
+				time.Sleep(time.Hour * 12)
+			}
+		} else if schemaType == "partitioned" {
+			parts_dropped, err := DropOldTimePartitions(metricAgeDaysThreshold)
 
-		if err != nil {
-			log.Errorf("Failed to clean up old (>%d days) metrics from Postgres: %v", metricAgeDaysThreshold, err)
-			time.Sleep(time.Second * 300)
-		} else {
-			log.Infof("Dropped %d old metric partitions...", parts_dropped)
-			time.Sleep(time.Hour * 12)
+			if err != nil {
+				log.Errorf("Failed to drop old partitions (>%d days) from Postgres: %v", metricAgeDaysThreshold, err)
+				time.Sleep(time.Second * 300)
+			} else {
+				log.Infof("Dropped %d old metric partitions...", parts_dropped)
+				time.Sleep(time.Hour * 12)
+			}
 		}
 	}
+}
+
+func DeleteOldPostgresMetrics(metricAgeDaysThreshold int64) (int, error) {
+	delete_sql := `
+	with q_deleted as (
+	  delete from public.metrics
+	  where ctid in (
+		  select ctid from public.metrics
+		  where time < (now() - '1day'::interval * %d)
+		  order by ctid
+		  limit 5000
+		)
+	  and time < (now() - '1day'::interval * %d)
+	  returning *
+	)
+	select count(*) from q_deleted
+	`
+	sql := fmt.Sprintf(delete_sql, metricAgeDaysThreshold, metricAgeDaysThreshold)
+	total_dropped := 0
+
+	for {
+		ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql)
+		if err != nil {
+			return total_dropped, err
+		} else {
+			total_dropped += ret[0]["count"].(int)
+			if ret[0]["count"].(int64) == 0 {
+				return total_dropped, nil
+			}
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
+	return total_dropped, nil
 }
 
 func DropOldTimePartitions(metricAgeDaysThreshold int64) (int, error) {
@@ -795,7 +871,7 @@ ORDER BY 1;
 	sql_drop := `
 	DROP TABLE %s
 	`
-	old_parts, err := DBExecRead(metricDb, "metricsDB", fmt.Sprintf(sql_old_part, metricAgeDaysThreshold))
+	old_parts, err := DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_old_part, metricAgeDaysThreshold))
 	if err != nil {
 		log.Error("Failed to fetch partition info on 'metrics' table from Postgres:", err)
 		return parts_dropped, err
@@ -803,7 +879,7 @@ ORDER BY 1;
 
 	for _, tbl := range old_parts {
 		log.Warning("Dropping old metrics partition:", tbl)
-		_, err = DBExecRead(metricDb, "metricsDB", fmt.Sprintf(sql_drop, tbl["partition_name"].(string)))
+		_, err = DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_drop, tbl["partition_name"].(string)))
 		if err != nil {
 			log.Error("Failed to drop 'metrics' partition from Postgres:", err)
 			continue
@@ -825,12 +901,18 @@ func EnsurePartitions(dbUnique string, min_timestamp time.Time, max_timestamp ti
 	sql_drop := `
 	select * from public.ensure_partition('%s', '%s')
 	`
+	if min_timestamp.IsZero() {
+		return errors.New("zero min_timestamp")
+	}
+	if max_timestamp.IsZero() {
+		return errors.New("zero max_timestamp")
+	}
 
 	partInfo, ok := partitionMap[dbUnique]
 	if !ok || (ok && (min_timestamp.Before(partInfo.StartTime))) {
-		ret, err := DBExecRead(metricDb, "metricsDB", fmt.Sprintf(sql_drop, dbUnique, min_timestamp.Format(time.RFC3339)))
+		ret, err := DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_drop, dbUnique, min_timestamp.Format(time.RFC3339)))
 		if err != nil {
-			log.Error("Failed to fetch partition info on 'metrics' table from Postgres:", err)
+			log.Error("Failed to create partition on 'metrics':", err)
 			return err
 		}
 		if !ok {
@@ -841,9 +923,9 @@ func EnsurePartitions(dbUnique string, min_timestamp time.Time, max_timestamp ti
 		partitionMap[dbUnique] = partInfo
 	}
 	if max_timestamp.After(partInfo.EndTime) || max_timestamp.Equal(partInfo.EndTime) {
-		ret, err := DBExecRead(metricDb, "metricsDB", fmt.Sprintf(sql_drop, dbUnique, max_timestamp.Format(time.RFC3339)))
+		ret, err := DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_drop, dbUnique, max_timestamp.Format(time.RFC3339)))
 		if err != nil {
-			log.Error("Failed to fetch partition info on 'metrics' table from Postgres:", err)
+			log.Error("Failed to create partition on 'metrics':", err)
 			return err
 		}
 		partInfo.EndTime = ret[0]["part_available_to"].(time.Time)
@@ -1018,7 +1100,7 @@ func MetricsBatcher(data_store string, batchingMaxDelayMillis int64, buffered_st
 			if len(batch) > 0 {
 				flushed := make([]MetricStoreMessage, len(batch))
 				copy(flushed, batch)
-				log.Infof("Flushing %d metric datasets due to batching timeout", len(batch))
+				log.Debugf("Flushing %d metric datasets due to batching timeout", len(batch))
 				storage_ch <- flushed
 				batch = make([]MetricStoreMessage, 0)
 				datapointCounter = 0
@@ -1030,7 +1112,7 @@ func MetricsBatcher(data_store string, batchingMaxDelayMillis int64, buffered_st
 				if datapointCounter > maxBatchSize { // flush. also set some last_sent_timestamp so that ticker would pass a round?
 					flushed := make([]MetricStoreMessage, len(batch))
 					copy(flushed, batch)
-					log.Infof("Flushing %d metric datasets due to maxBatchSize limit of %d datapoints", len(batch), maxBatchSize)
+					log.Debugf("Flushing %d metric datasets due to maxBatchSize limit of %d datapoints", len(batch), maxBatchSize)
 					storage_ch <- flushed
 					batch = make([]MetricStoreMessage, 0)
 					datapointCounter = 0
@@ -1792,7 +1874,7 @@ func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decim
 	sql := "select m_name, m_pg_version_from::text, m_sql, m_master_only, m_standby_only from pgwatch2.metric where m_is_active"
 
 	log.Info("updating metrics definitons from ConfigDB...")
-	data, err := DBExecRead(configDb, "configDb", sql)
+	data, err := DBExecRead(configDb, CONFIGDB_IDENT, sql)
 	if err != nil {
 		if failOnError {
 			log.Fatal(err)
@@ -1978,7 +2060,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 
 	} else {
 		sql_helpers := "select distinct m_name from pgwatch2.metric where m_is_active and m_is_helper" // m_name is a helper function name
-		data, err := DBExecRead(configDb, "configDb", sql_helpers)
+		data, err := DBExecRead(configDb, CONFIGDB_IDENT, sql_helpers)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -2371,6 +2453,7 @@ type Options struct {
 	Group                string `short:"g" long:"group" description:"Group (or groups, comma separated) for filtering which DBs to monitor. By default all are monitored" env:"PW2_GROUP"`
 	Datastore            string `long:"datastore" description:"[influx|postgres|graphite|json]" default:"influx" env:"PW2_DATASTORE"`
 	PGMetricStoreConnStr string `long:"pg-metric-store-conn-str" description:"PG Metric Store" env:"PW2_PG_METRIC_STORE_CONN_STR"`
+	PGSchemaType         string `long:"pg-schema-type" description:"[partitioned|simple|custom]. In case of 'custom' pgwatch2 doesn't manage partitions/cleanup" default:"partitioned" env:"PW2_PG_SCHEMA_TYPE"`
 	PGRetentionDays      int64  `long:"pg-retention-days" description:"If set, metrics older than that will be deleted" default:"14" env:"PW2_PG_RETENTION_DAYS"`
 	InfluxHost           string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
 	InfluxPort           string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
@@ -2504,7 +2587,7 @@ func main() {
 			return
 		}
 
-		InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password, opts.PgRequireSSL)
+		InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password, opts.PgRequireSSL, true)
 	}
 
 	// validate that input is boolean is set
@@ -2622,14 +2705,19 @@ func main() {
 			log.Fatal("--datastore=postgres requires --pg-metric-store-conn-str to be set")
 		}
 
-		InitAndTestMetricStoreConnection(opts.PGMetricStoreConnStr)
+		if !(opts.PGSchemaType == "partitioned" || opts.PGSchemaType == "simple" || opts.PGSchemaType == "custom") {
+			log.Fatal("--pg-schema-type needs to be one of: [partitioned(*default)|simple|custom]")
+		}
+
+		InitAndTestMetricStoreConnection(opts.PGMetricStoreConnStr, true)
 
 		log.Info("starting PostgresPersister...")
 		go MetricsPersister(DATASTORE_POSTGRES, persist_ch)
 
-		if opts.PGRetentionDays > 0 {
+		if opts.PGRetentionDays > 0 && (opts.PGSchemaType == "partitioned" ||
+			opts.PGSchemaType == "simple") {
 			log.Info("starting old Postgres metrics cleanup job...")
-			go OldPostgresMetricsDeleter(opts.PGRetentionDays)
+			go OldPostgresMetricsDeleter(opts.PGRetentionDays, opts.PGSchemaType)
 		}
 	} else {
 		log.Fatal("Unknown datastore. Check the --datastore param")

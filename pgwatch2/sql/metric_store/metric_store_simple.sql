@@ -1,3 +1,7 @@
+/*
+  NB! When possible the partitioned version ("metric_store_part_time_dbname.sql") for PG11+
+  should be used as less total IO would be then performed.
+*/
 REVOKE ALL ON SCHEMA public FROM public;
 
 GRANT ALL ON SCHEMA public TO pgwatch2;
