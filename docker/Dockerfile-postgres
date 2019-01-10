@@ -1,10 +1,13 @@
 FROM ubuntu:18.04
 
-RUN apt-get -q update \
-    && DEBIAN_FRONTEND=noninteractive apt-get -qy install wget apt-transport-https vim git supervisor postgresql postgresql-plpython-10 libfontconfig python3-pip python-pip libssl-dev \
+RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl ca-certificates gnupg \
+    && echo "deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && curl -s https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && apt-get -q update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -qy install wget apt-transport-https vim git supervisor postgresql-11 \
+       postgresql-plpython-11 libfontconfig python3-pip python-pip libssl-dev \
     && locale-gen "en_US.UTF-8" && apt autoremove -y \
-    && pg_dropcluster 10 main ; pg_createcluster --locale en_US.UTF-8 10 main \
-    && echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/10/main/postgresql.conf
+    && pg_dropcluster 11 main ; pg_createcluster --locale en_US.UTF-8 11 main \
+    && echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/11/main/postgresql.conf
 
 ### Download and install external components
 # Grafana [https://grafana.com/grafana/download]
@@ -42,8 +45,8 @@ COPY .git/refs/heads/master /pgwatch2/build_git_version.txt
 COPY supervisord-postgres.conf /etc/supervisor/supervisord.conf
 
 # NB! When security is a concern one should definitely alter "pgwatch2" password in change_pw.sql and maybe modify pg_hba.conf accordingly
-COPY postgresql.conf /etc/postgresql/10/main/pgwatch_postgresql.conf
-COPY pg_hba.conf /etc/postgresql/10/main/pg_hba.conf
+COPY postgresql.conf /etc/postgresql/11/main/pgwatch_postgresql.conf
+COPY pg_hba.conf /etc/postgresql/11/main/pg_hba.conf
 COPY docker-launcher-postgres.sh postgresql.conf pg_hba.conf /pgwatch2/
 
 ENV PW2_DATASTORE postgres

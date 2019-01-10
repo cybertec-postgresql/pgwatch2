@@ -34,16 +34,16 @@ fi
 
 if [ ! -f /pgwatch2/persistent-config/db-bootstrap-done-marker ] ; then
 
-if [ ! -d /var/lib/postgresql/10 ]; then
-  mkdir /var/lib/postgresql/10 && chown -R postgres:postgres /var/lib/postgresql/10
-  pg_dropcluster 10 main
-  pg_createcluster --locale en_US.UTF-8 10 main
-  echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/10/main/postgresql.conf
-  cp /pgwatch2/postgresql.conf /etc/postgresql/10/main/pgwatch_postgresql.conf
-  cp /pgwatch2/pg_hba.conf /etc/postgresql/10/main/pg_hba.conf
+if [ ! -d /var/lib/postgresql/11 ]; then
+  mkdir /var/lib/postgresql/11 && chown -R postgres:postgres /var/lib/postgresql/11
+  pg_dropcluster 11 main
+  pg_createcluster --locale en_US.UTF-8 11 main
+  echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/11/main/postgresql.conf
+  cp /pgwatch2/postgresql.conf /etc/postgresql/11/main/pgwatch_postgresql.conf
+  cp /pgwatch2/pg_hba.conf /etc/postgresql/11/main/pg_hba.conf
 fi
 
-pg_ctlcluster 10 main start -- --wait
+pg_ctlcluster 11 main start -- --wait
 
 su -c "psql -d postgres -f /pgwatch2/bootstrap/change_pw.sql" postgres
 su -c "psql -d postgres -f /pgwatch2/bootstrap/create_db_pgwatch.sql postgres" postgres
@@ -51,7 +51,8 @@ su -c "psql -d postgres -f /pgwatch2/bootstrap/create_db_grafana.sql postgres" p
 su -c "psql -d postgres -f /pgwatch2/bootstrap/create_db_metric_store.sql postgres" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/config_store/config_store.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/config_store/metric_definitions.sql" postgres
-su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric_store.sql" postgres
+su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric_store_part_time_dbname.sql" postgres
+su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/ensure_partition.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/cpu_load_plpythonu.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/stat_statements_wrapper.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/stat_activity_wrapper.sql" postgres
@@ -70,6 +71,6 @@ touch /pgwatch2/persistent-config/db-bootstrap-done-marker
 
 fi
 
-pg_ctlcluster 10 main start -- --wait
+pg_ctlcluster 11 main start -- --wait
 
 exec /usr/bin/supervisord --configuration=/etc/supervisor/supervisord.conf --nodaemon
