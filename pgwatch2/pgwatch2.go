@@ -644,11 +644,17 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		return nil
 	}
 	ts_warning_printed := false
-	metricsToStore := make([]MetricStoreMessagePostgres, 0)
+	metricsToStorePerMetric := make(map[string][]MetricStoreMessagePostgres)
 	rows_batched := 0
 	total_rows := 0
-	pg_part_min_timestamps := make(map[string]time.Time)
-	pg_part_max_timestamps := make(map[string]time.Time)
+	pg_part_bounds := make(map[string]ExistingPartitionInfo)                   // metric=min/max
+	pg_part_bounds_dbname := make(map[string]map[string]ExistingPartitionInfo) // metric=[dbname=min/max]
+	var err error
+
+	if opts.PGSchemaType == "custom" {
+		metricsToStorePerMetric["metrics"] = make([]MetricStoreMessagePostgres, 0) // everything inserted into "metrics".
+		// TODO  warn about collision if someone really names some new metric "metrics"
+	}
 
 	for _, msg := range storeMessages {
 		if msg.Data == nil || len(msg.Data) == 0 {
@@ -695,30 +701,70 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 				epoch_time = time.Unix(0, epoch_ns)
 			}
 
-			metricsToStore = append(metricsToStore, MetricStoreMessagePostgres{Time: epoch_time, DBName: msg.DBUniqueName,
+			var metricsArr []MetricStoreMessagePostgres
+			var ok bool
+			var metricNameTemp string
+
+			if opts.PGSchemaType == "custom" {
+				metricNameTemp = "metrics"
+			} else {
+				metricNameTemp = msg.MetricName
+			}
+
+			metricsArr, ok = metricsToStorePerMetric[metricNameTemp]
+			if !ok {
+				metricsToStorePerMetric[metricNameTemp] = make([]MetricStoreMessagePostgres, 0)
+			}
+			metricsArr = append(metricsArr, MetricStoreMessagePostgres{Time: epoch_time, DBName: msg.DBUniqueName,
 				Metric: msg.MetricName, Data: fields, TagData: tags})
+			metricsToStorePerMetric[metricNameTemp] = metricsArr
+
 			rows_batched += 1
-			// set min/max timestamps to check/create partitions
-			min, ok := pg_part_min_timestamps[msg.DBUniqueName]
-			if !ok || (ok && epoch_time.Before(min)) {
-				pg_part_min_timestamps[msg.DBUniqueName] = epoch_time
-			}
-			max, ok := pg_part_max_timestamps[msg.DBUniqueName]
-			if !ok || (ok && epoch_time.After(max)) {
-				pg_part_max_timestamps[msg.DBUniqueName] = epoch_time
+
+			if opts.PGSchemaType == "metric" || opts.PGSchemaType == "metric-time" {
+				// set min/max timestamps to check/create partitions
+				bounds, ok := pg_part_bounds[msg.MetricName]
+				if !ok || (ok && epoch_time.Before(bounds.StartTime)) {
+					bounds.StartTime = epoch_time
+					pg_part_bounds[msg.MetricName] = bounds
+				}
+				if !ok || (ok && epoch_time.After(bounds.EndTime)) {
+					bounds.EndTime = epoch_time
+					pg_part_bounds[msg.MetricName] = bounds
+				}
+			} else if opts.PGSchemaType == "metric-dbname-time" {
+				_, ok := pg_part_bounds_dbname[msg.MetricName]
+				if !ok {
+					pg_part_bounds_dbname[msg.MetricName] = make(map[string]ExistingPartitionInfo)
+				}
+				bounds, ok := pg_part_bounds_dbname[msg.MetricName][msg.DBUniqueName]
+				if !ok || (ok && epoch_time.Before(bounds.StartTime)) {
+					bounds.StartTime = epoch_time
+					pg_part_bounds_dbname[msg.MetricName][msg.DBUniqueName] = bounds
+				}
+				if !ok || (ok && epoch_time.After(bounds.EndTime)) {
+					bounds.EndTime = epoch_time
+					pg_part_bounds_dbname[msg.MetricName][msg.DBUniqueName] = bounds
+				}
 			}
 		}
 	}
 
-	for dbname, min := range pg_part_min_timestamps {
-		max, _ := pg_part_max_timestamps[dbname]
-		err := EnsurePartitions(dbname, min, max)
-		if err != nil {
-			return err
-		}
+	if opts.PGSchemaType == "metric" {
+		err = EnsureMetric(pg_part_bounds)
+	} else if opts.PGSchemaType == "metric-time" {
+		err = EnsureMetricTime(pg_part_bounds)
+	} else if opts.PGSchemaType == "metric-dbname-time" {
+		err = EnsureDbnameMetricTime(pg_part_bounds_dbname)
+	} else {
+		log.Fatal("should never happen...")
+	}
+	if err != nil {
+		return err
 	}
 
-	log.Debugf("COPY-ing %d metrics to Postgres metricsDB...", len(metricsToStore))
+	// send data to PG, with a separate COPY for all metrics
+	log.Debugf("COPY-ing %d metrics to Postgres metricsDB...", rows_batched)
 	t1 := time.Now()
 
 	txn, err := metricDb.Begin()
@@ -727,47 +773,68 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		return err
 	}
 
-	stmt, err := txn.Prepare(pq.CopyIn("metrics", "time", "dbname", "metric", "data", "tag_data"))
-	if err != nil {
-		log.Error("Could not prepare COPY to 'metrics' table:", err)
-		return err
-	}
+	for metricName, metrics := range metricsToStorePerMetric {
+		var stmt *go_sql.Stmt
 
-	for _, m := range metricsToStore {
-		jsonBytes, err := mapToJson(m.Data)
-		if err != nil {
-			log.Errorf("Skipping 1 metric for [%s:%s] due to JSON conversion error: %s", m.DBName, m.Metric, err)
-			continue
-		}
-
-		if len(m.TagData) > 0 {
-			jsonBytesTags, err := mapToJson(m.TagData)
+		if opts.PGSchemaType == "custom" {
+			stmt, err = txn.Prepare(pq.CopyIn("metrics", "time", "dbname", "metric", "data", "tag_data"))
 			if err != nil {
-				log.Errorf("Skipping 1 metric for [%s:%s] due to JSON conversion error: %s", m.DBName, m.Metric, err)
-				goto stmt_close
-			}
-			_, err = stmt.Exec(m.Time, m.DBName, m.Metric, string(jsonBytes), string(jsonBytesTags))
-			if err != nil {
-				log.Error("Formatting 1 metric to COPY format failed: ", jsonBytesTags)
-				goto stmt_close
+				log.Error("Could not prepare COPY to 'metrics' table:", err)
+				return err
 			}
 		} else {
-			_, err = stmt.Exec(m.Time, m.DBName, m.Metric, string(jsonBytes), nil)
+			log.Debugf("COPY-ing %d rows into '%s'...", len(metrics), metricName)
+			stmt, err = txn.Prepare(pq.CopyIn(metricName, "time", "dbname", "data", "tag_data"))
 			if err != nil {
-				log.Error("Formatting 1 metric to COPY format failed: ", err)
-				goto stmt_close
+				log.Errorf("Could not prepare COPY to '%s' table: %v", metricName, err)
+				return err
 			}
 		}
-	}
 
-	_, err = stmt.Exec()
-	if err != nil {
-		log.Error("COPY to Postgres failed:", err)
-	}
-stmt_close:
-	err = stmt.Close()
-	if err != nil {
-		log.Error("stmt.Close() failed:", err)
+		for _, m := range metrics {
+			jsonBytes, err := mapToJson(m.Data)
+			if err != nil {
+				log.Errorf("Skipping 1 metric for [%s:%s] due to JSON conversion error: %s", m.DBName, m.Metric, err)
+				continue
+			}
+
+			if len(m.TagData) > 0 {
+				jsonBytesTags, err := mapToJson(m.TagData)
+				if err != nil {
+					log.Errorf("Skipping 1 metric for [%s:%s] due to JSON conversion error: %s", m.DBName, m.Metric, err)
+					goto stmt_close
+				}
+				if opts.PGSchemaType == "custom" {
+					_, err = stmt.Exec(m.Time, m.DBName, m.Metric, string(jsonBytes), string(jsonBytesTags))
+				} else {
+					_, err = stmt.Exec(m.Time, m.DBName, string(jsonBytes), string(jsonBytesTags))
+				}
+				if err != nil {
+					log.Error("Formatting 1 metric to COPY format failed: ", jsonBytesTags)
+					goto stmt_close
+				}
+			} else {
+				if opts.PGSchemaType == "custom" {
+					_, err = stmt.Exec(m.Time, m.DBName, m.Metric, string(jsonBytes), nil)
+				} else {
+					_, err = stmt.Exec(m.Time, m.DBName, string(jsonBytes), nil)
+				}
+				if err != nil {
+					log.Error("Formatting 1 metric to COPY format failed: ", err)
+					goto stmt_close
+				}
+			}
+		}
+
+		_, err = stmt.Exec()
+		if err != nil {
+			log.Error("COPY to Postgres failed:", err)
+		}
+	stmt_close:
+		err = stmt.Close()
+		if err != nil {
+			log.Error("stmt.Close() failed:", err)
+		}
 	}
 	err = txn.Commit()
 	if err != nil {
@@ -791,8 +858,8 @@ stmt_close:
 func OldPostgresMetricsDeleter(metricAgeDaysThreshold int64, schemaType string) {
 
 	for {
-		// partitioned|simple|custom
-		if schemaType == "simple" {
+		// metric|metric-time|metric-dbname-time|custom
+		if schemaType == "metric" {
 			rows_deleted, err := DeleteOldPostgresMetrics(metricAgeDaysThreshold)
 			if err != nil {
 				log.Errorf("Failed to delete old (>%d days) metrics from Postgres: %v", metricAgeDaysThreshold, err)
@@ -801,7 +868,7 @@ func OldPostgresMetricsDeleter(metricAgeDaysThreshold int64, schemaType string) 
 				log.Infof("Deleted %d old metrics rows...", rows_deleted)
 				time.Sleep(time.Hour * 12)
 			}
-		} else if schemaType == "partitioned" {
+		} else if schemaType == "metric-time" || schemaType == "metric-dbname-time" {
 			parts_dropped, err := DropOldTimePartitions(metricAgeDaysThreshold)
 
 			if err != nil {
@@ -815,7 +882,7 @@ func OldPostgresMetricsDeleter(metricAgeDaysThreshold int64, schemaType string) 
 	}
 }
 
-func DeleteOldPostgresMetrics(metricAgeDaysThreshold int64) (int, error) {
+func DeleteOldPostgresMetrics(metricAgeDaysThreshold int64) (int64, error) {
 	delete_sql := `
 	with q_deleted as (
 	  delete from public.metrics
@@ -831,14 +898,14 @@ func DeleteOldPostgresMetrics(metricAgeDaysThreshold int64) (int, error) {
 	select count(*) from q_deleted
 	`
 	sql := fmt.Sprintf(delete_sql, metricAgeDaysThreshold, metricAgeDaysThreshold)
-	total_dropped := 0
+	var total_dropped int64
 
 	for {
 		ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql)
 		if err != nil {
 			return total_dropped, err
 		} else {
-			total_dropped += ret[0]["count"].(int)
+			total_dropped += ret[0]["count"].(int64)
 			if ret[0]["count"].(int64) == 0 {
 				return total_dropped, nil
 			}
@@ -894,42 +961,110 @@ type ExistingPartitionInfo struct {
 	EndTime   time.Time
 }
 
-var partitionMap = make(map[string]ExistingPartitionInfo)
+var partitionMapMetric = make(map[string]ExistingPartitionInfo)                  // metric = min/max bounds
+var partitionMapMetricDbname = make(map[string]map[string]ExistingPartitionInfo) // metric[dbname = min/max bounds]
 
-func EnsurePartitions(dbUnique string, min_timestamp time.Time, max_timestamp time.Time) error {
-	// TODO if less < 1d to part. end, precreate ?
-	sql_drop := `
-	select * from public.ensure_partition('%s', '%s')
+func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo) error {
+
+	sql_ensure := `
+	select * from public.ensure_partition_metric($1)
 	`
-	if min_timestamp.IsZero() {
-		return errors.New("zero min_timestamp")
-	}
-	if max_timestamp.IsZero() {
-		return errors.New("zero max_timestamp")
-	}
+	for metric, _ := range pg_part_bounds {
 
-	partInfo, ok := partitionMap[dbUnique]
-	if !ok || (ok && (min_timestamp.Before(partInfo.StartTime))) {
-		ret, err := DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_drop, dbUnique, min_timestamp.Format(time.RFC3339)))
-		if err != nil {
-			log.Error("Failed to create partition on 'metrics':", err)
-			return err
-		}
+		_, ok := partitionMapMetric[metric]
 		if !ok {
-			partInfo = ExistingPartitionInfo{}
+			_, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric)
+			if err != nil {
+				log.Error("Failed to create partition on 'metrics':", err)
+				return err
+			}
+			partitionMapMetric[metric] = ExistingPartitionInfo{}
 		}
-		partInfo.StartTime = ret[0]["part_available_from"].(time.Time)
-		partInfo.EndTime = ret[0]["part_available_to"].(time.Time)
-		partitionMap[dbUnique] = partInfo
 	}
-	if max_timestamp.After(partInfo.EndTime) || max_timestamp.Equal(partInfo.EndTime) {
-		ret, err := DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_drop, dbUnique, max_timestamp.Format(time.RFC3339)))
-		if err != nil {
-			log.Error("Failed to create partition on 'metrics':", err)
-			return err
+	return nil
+}
+
+func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo) error {
+	// TODO if less < 1d to part. end, precreate ?
+	sql_ensure := `
+	select * from public.ensure_partition_metric_time($1, $2)
+	`
+
+	for metric, pb := range pg_part_bounds {
+
+		if pb.StartTime.IsZero() || pb.EndTime.IsZero() {
+			return errors.New(fmt.Sprintf("zero StartTime/EndTime in partitioning request: [%s:%v]", metric, pb))
 		}
-		partInfo.EndTime = ret[0]["part_available_to"].(time.Time)
-		partitionMap[dbUnique] = partInfo
+
+		partInfo, ok := partitionMapMetric[metric]
+		if !ok || (ok && (pb.StartTime.Before(partInfo.StartTime))) {
+			ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric, pb.StartTime)
+			if err != nil {
+				log.Error("Failed to create partition on 'metrics':", err)
+				return err
+			}
+			if !ok {
+				partInfo = ExistingPartitionInfo{}
+			}
+			partInfo.StartTime = ret[0]["part_available_from"].(time.Time)
+			partInfo.EndTime = ret[0]["part_available_to"].(time.Time)
+			partitionMapMetric[metric] = partInfo
+		}
+		if pb.EndTime.After(partInfo.EndTime) || pb.EndTime.Equal(partInfo.EndTime) {
+			ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric, pb.EndTime)
+			if err != nil {
+				log.Error("Failed to create partition on 'metrics':", err)
+				return err
+			}
+			partInfo.EndTime = ret[0]["part_available_to"].(time.Time)
+			partitionMapMetric[metric] = partInfo
+		}
+	}
+	return nil
+}
+
+func EnsureDbnameMetricTime(metric_dbname_part_bounds map[string]map[string]ExistingPartitionInfo) error {
+	// TODO if less < 1d to part. end, precreate ?
+	sql_ensure := `
+	select * from public.ensure_partition_metric_dbname_time($1, $2, $3)
+	`
+
+	for metric, dbnameTimestampMap := range metric_dbname_part_bounds {
+		_, ok := partitionMapMetricDbname[metric]
+		if !ok {
+			partitionMapMetricDbname[metric] = make(map[string]ExistingPartitionInfo)
+		}
+
+		for dbname, pb := range dbnameTimestampMap {
+
+			if pb.StartTime.IsZero() || pb.EndTime.IsZero() {
+				return errors.New(fmt.Sprintf("zero StartTime/EndTime in partitioning request: [%s:%v]", metric, pb))
+			}
+
+			partInfo, ok := partitionMapMetricDbname[metric][dbname]
+			if !ok || (ok && (pb.StartTime.Before(partInfo.StartTime))) {
+				ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric, dbname, pb.StartTime)
+				if err != nil {
+					log.Errorf("Failed to create partition for [%s:%s]: %v", metric, dbname, err)
+					return err
+				}
+				if !ok {
+					partInfo = ExistingPartitionInfo{}
+				}
+				partInfo.StartTime = ret[0]["part_available_from"].(time.Time)
+				partInfo.EndTime = ret[0]["part_available_to"].(time.Time)
+				partitionMapMetricDbname[metric][dbname] = partInfo
+			}
+			if pb.EndTime.After(partInfo.EndTime) || pb.EndTime.Equal(partInfo.EndTime) {
+				ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric, dbname, pb.EndTime)
+				if err != nil {
+					log.Errorf("Failed to create partition for [%s:%s]: %v", metric, dbname, err)
+					return err
+				}
+				partInfo.EndTime = ret[0]["part_available_to"].(time.Time)
+				partitionMapMetricDbname[metric][dbname] = partInfo
+			}
+		}
 	}
 	return nil
 }
@@ -2453,8 +2588,8 @@ type Options struct {
 	Group                string `short:"g" long:"group" description:"Group (or groups, comma separated) for filtering which DBs to monitor. By default all are monitored" env:"PW2_GROUP"`
 	Datastore            string `long:"datastore" description:"[influx|postgres|graphite|json]" default:"influx" env:"PW2_DATASTORE"`
 	PGMetricStoreConnStr string `long:"pg-metric-store-conn-str" description:"PG Metric Store" env:"PW2_PG_METRIC_STORE_CONN_STR"`
-	PGSchemaType         string `long:"pg-schema-type" description:"[partitioned|simple|custom]. In case of 'custom' pgwatch2 doesn't manage partitions/cleanup" default:"partitioned" env:"PW2_PG_SCHEMA_TYPE"`
-	PGRetentionDays      int64  `long:"pg-retention-days" description:"If set, metrics older than that will be deleted" default:"14" env:"PW2_PG_RETENTION_DAYS"`
+	PGSchemaType         string `long:"pg-schema-type" description:"[metric|metric-time|metric-dbname-time|custom]. In case of 'custom' pgwatch2 doesn't manage partitions/cleanup and inserts all metrics into a 'metrics' table where data should be re-routed with triggers" default:"metric-time" env:"PW2_PG_SCHEMA_TYPE"`
+	PGRetentionDays      int64  `long:"pg-retention-days" description:"If set, metrics older than that will be deleted" default:"30" env:"PW2_PG_RETENTION_DAYS"`
 	InfluxHost           string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
 	InfluxPort           string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
 	InfluxDbname         string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
@@ -2705,8 +2840,8 @@ func main() {
 			log.Fatal("--datastore=postgres requires --pg-metric-store-conn-str to be set")
 		}
 
-		if !(opts.PGSchemaType == "partitioned" || opts.PGSchemaType == "simple" || opts.PGSchemaType == "custom") {
-			log.Fatal("--pg-schema-type needs to be one of: [partitioned(*default)|simple|custom]")
+		if !(opts.PGSchemaType == "metric" || opts.PGSchemaType == "metric-time" || opts.PGSchemaType == "metric-dbname-time" || opts.PGSchemaType == "custom") {
+			log.Fatal("--pg-schema-type needs to be one of: [metric|metric-time(*default)|metric-dbname-time|custom]")
 		}
 
 		InitAndTestMetricStoreConnection(opts.PGMetricStoreConnStr, true)
@@ -2714,8 +2849,8 @@ func main() {
 		log.Info("starting PostgresPersister...")
 		go MetricsPersister(DATASTORE_POSTGRES, persist_ch)
 
-		if opts.PGRetentionDays > 0 && (opts.PGSchemaType == "partitioned" ||
-			opts.PGSchemaType == "simple") {
+		if opts.PGRetentionDays > 0 && (opts.PGSchemaType == "metric" ||
+			opts.PGSchemaType == "metric-time" || opts.PGSchemaType == "metric-dbname-time") {
 			log.Info("starting old Postgres metrics cleanup job...")
 			go OldPostgresMetricsDeleter(opts.PGRetentionDays, opts.PGSchemaType)
 		}

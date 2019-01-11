@@ -1,9 +1,8 @@
-/*
-  NB! When possible the partitioned versions ("metric_store_part_time.sql"
-  or "metric_store_part_dbname_time.sql") (assuming PG10+) should be used
-  as much less IO would be then performed when removing old data.
-  Use the gatherer flag "--pg-schema-type=metric" when using this schema
+/* 
+   NB! PG 11+ only (for lesser PG versions see "metric_store_simple.sql")
+   This schema is recommended for <25 monitored DBs (see "metric_store_part_dbname_time.sql" for 25+)
 */
+
 REVOKE ALL ON SCHEMA public FROM public;
 
 GRANT ALL ON SCHEMA public TO pgwatch2;
@@ -30,7 +29,12 @@ create index on public.metrics_template using gin (dbname, tag_data, time);
 /*
  something like below will be done by the gatherer AUTOMATICALLY:
 
-create table public.some-metric
-  (LIKE public.metrics_template INCLUDING INDEXES);
+create table public."mymetric"
+  (LIKE public.metrics_template INCLUDING INDEXES)
+  PARTITION BY RANGE (time);
+
+create table public."mymetric_y2019w01" -- year/week calculated dynamically of course
+  PARTITION OF public."mymetric"
+  FOR VALUES FROM ('2019-01-01') TO ('2019-01-07');
 
 */
