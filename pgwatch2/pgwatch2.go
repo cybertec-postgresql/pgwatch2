@@ -117,6 +117,11 @@ type DBVersionMapEntry struct {
 	Version       decimal.Decimal
 }
 
+type ExistingPartitionInfo struct {
+	StartTime time.Time
+	EndTime   time.Time
+}
+
 const EPOCH_COLUMN_NAME string = "epoch_ns"      // this column (epoch in nanoseconds) is expected in every metric query
 const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
 const ACTIVE_SERVERS_REFRESH_TIME int64 = 60     // min time before checking for new/changed databases under monitoring i.e. main loop time
@@ -171,6 +176,9 @@ var totalDatasetsFetchedCounter uint64
 var metricPointsPerMinuteLast5MinAvg int64 = -1 // -1 means the summarization ticker has not yet run
 var gathererStartTime time.Time = time.Now()
 var useConnPooling bool
+var partitionMapMetric = make(map[string]ExistingPartitionInfo)                  // metric = min/max bounds
+var partitionMapMetricDbname = make(map[string]map[string]ExistingPartitionInfo) // metric[dbname = min/max bounds]
+var testDataGenerationModeWG sync.WaitGroup
 
 func GetPostgresDBConnection(libPgConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
@@ -883,33 +891,56 @@ func OldPostgresMetricsDeleter(metricAgeDaysThreshold int64, schemaType string) 
 }
 
 func DeleteOldPostgresMetrics(metricAgeDaysThreshold int64) (int64, error) {
+	// for 'metric' schema i.e. no time partitions
+	var total_dropped int64
+	get_top_lvl_tables_sql := `
+	select 'public.' || quote_ident(c.relname) as table_full_name
+	from pg_class c
+	join pg_namespace n on n.oid = c.relnamespace
+	where relkind in ('r', 'p') and nspname = 'public'
+	and exists (select 1 from pg_attribute where attrelid = c.oid and attname = 'time')
+	and pg_catalog.obj_description(c.oid, 'pg_class') = 'pgwatch2-generated-metric-lvl'
+	order by 1
+	`
 	delete_sql := `
-	with q_deleted as (
-	  delete from public.metrics
-	  where ctid in (
-		  select ctid from public.metrics
-		  where time < (now() - '1day'::interval * %d)
-		  order by ctid
+	with q_blocks_range as (
+		select min(ctid), max(ctid) from (
+		  select ctid from %s
+			where time < (now() - '1day'::interval * %d)
+			order by ctid
 		  limit 5000
-		)
+	    ) x
+    ),
+	q_deleted as (
+	  delete from %s
+	  where ctid between (select min from q_blocks_range) and (select max from q_blocks_range)
 	  and time < (now() - '1day'::interval * %d)
 	  returning *
 	)
-	select count(*) from q_deleted
+	select count(*) from q_deleted;
 	`
-	sql := fmt.Sprintf(delete_sql, metricAgeDaysThreshold, metricAgeDaysThreshold)
-	var total_dropped int64
 
-	for {
-		ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql)
-		if err != nil {
-			return total_dropped, err
-		} else {
-			total_dropped += ret[0]["count"].(int64)
-			if ret[0]["count"].(int64) == 0 {
-				return total_dropped, nil
+	top_lvl_tables, err := DBExecRead(metricDb, METRICDB_IDENT, get_top_lvl_tables_sql)
+	if err != nil {
+		return total_dropped, err
+	}
+
+	for _, dr := range top_lvl_tables {
+
+		log.Debugf("Dropping one chunk (max 5000 rows) of old data (if any found) from %v", dr["table_full_name"])
+		sql := fmt.Sprintf(delete_sql, dr["table_full_name"].(string), metricAgeDaysThreshold, dr["table_full_name"].(string), metricAgeDaysThreshold)
+
+		for {
+			ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql)
+			if err != nil {
+				return total_dropped, err
 			}
-			time.Sleep(time.Millisecond * 100)
+			if ret[0]["count"].(int64) == 0 {
+				break
+			}
+			total_dropped += ret[0]["count"].(int64)
+			log.Debugf("Dropped %d rows from %v, sleeping 100ms...", ret[0]["count"].(int64), dr["table_full_name"])
+			time.Sleep(time.Millisecond * 500)
 		}
 	}
 	return total_dropped, nil
@@ -919,50 +950,92 @@ func DropOldTimePartitions(metricAgeDaysThreshold int64) (int, error) {
 	parts_dropped := 0
 	var err error
 	sql_old_part := `
-SELECT partition_name FROM (
-  SELECT
-	(c.oid::pg_catalog.regclass)::text as partition_name,
-	pg_catalog.pg_get_expr(c.relpartbound, c.oid) as limits,
-	(regexp_match(pg_catalog.pg_get_expr(c.relpartbound, c.oid),
-		E'TO \\((''.*?'')'))[1]::timestamp < (current_date  - '1day'::interval * %d) is_old
-  FROM
-	pg_catalog.pg_class c,
-	pg_catalog.pg_inherits i
-  WHERE
-	c.oid=i.inhrelid
-	AND i.inhparent = regclass('public.metrics')::oid
-) x
-WHERE is_old
-ORDER BY 1;
+	SELECT partition_name FROM (
+		SELECT
+			  'subpartitions.' || quote_ident(c.relname) as partition_name,
+			  pg_catalog.pg_get_expr(c.relpartbound, c.oid) as limits,
+			  (regexp_match(pg_catalog.pg_get_expr(c.relpartbound, c.oid),
+					  E'TO \\((''.*?'')'))[1]::timestamp < (current_date  - '1day'::interval * %d) is_old
+		FROM
+			  pg_class c
+		  JOIN
+			  pg_inherits i ON c.oid=i.inhrelid
+			  JOIN
+			  pg_namespace n ON n.oid = relnamespace
+		WHERE
+		  c.relkind IN ('r', 'p')
+			  AND nspname = 'subpartitions'
+			  AND pg_catalog.obj_description(c.oid, 'pg_class') IN (
+				  'pgwatch2-generated-metric-time-lvl',
+				  'pgwatch2-generated-metric-dbname-time-lvl'
+				)
+	  ) x
+	  WHERE is_old
+	  ORDER BY 1;
 	`
 	sql_drop := `
 	DROP TABLE %s
 	`
 	old_parts, err := DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_old_part, metricAgeDaysThreshold))
 	if err != nil {
-		log.Error("Failed to fetch partition info on 'metrics' table from Postgres:", err)
+		log.Error("Failed to fetch partitioned tables from Postgres:", err)
 		return parts_dropped, err
 	}
 
 	for _, tbl := range old_parts {
-		log.Warning("Dropping old metrics partition:", tbl)
+		log.Debugf("Dropping old metrics partition %v ...", tbl["partition_name"])
 		_, err = DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_drop, tbl["partition_name"].(string)))
 		if err != nil {
-			log.Error("Failed to drop 'metrics' partition from Postgres:", err)
+			log.Errorf("Failed to drop old subpartition %s from Postgres:", tbl["partition_name"].(string), err)
 			continue
 		}
+		log.Warning("Dropped old metrics partition:", tbl["partition_name"])
 		parts_dropped++
 	}
 	return parts_dropped, err
 }
 
-type ExistingPartitionInfo struct {
-	StartTime time.Time
-	EndTime   time.Time
-}
+func CheckTemplateTableExistanceOrFail(pgSchemaType string) {
+	var partFuncSignature string
 
-var partitionMapMetric = make(map[string]ExistingPartitionInfo)                  // metric = min/max bounds
-var partitionMapMetricDbname = make(map[string]map[string]ExistingPartitionInfo) // metric[dbname = min/max bounds]
+	if pgSchemaType == "custom" {
+		sql := `
+		SELECT has_table_privilege(session_user, 'public.metrics', 'INSERT') ok;
+		`
+		ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql)
+		if err != nil || (err == nil && !ret[0]["ok"].(bool)) {
+			log.Fatal("public.metrics table not existing or no INSERT privileges")
+		}
+	} else {
+		sql := `
+		SELECT has_table_privilege(session_user, 'public.metrics_template', 'INSERT') ok;
+		`
+		ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql)
+		if err != nil || (err == nil && !ret[0]["ok"].(bool)) {
+			log.Fatal("public.metrics_template table not existing or no INSERT privileges")
+		}
+	}
+
+	if pgSchemaType == "metric" {
+		partFuncSignature = "public.ensure_partition_metric(text)"
+	} else if pgSchemaType == "metric-time" {
+		partFuncSignature = "public.ensure_partition_metric_time(text,timestamp with time zone,integer)"
+	} else if pgSchemaType == "metric-dbname-time" {
+		partFuncSignature = "public.ensure_partition_metric_dbname_time(text,text,timestamp with time zone,integer)"
+	}
+
+	if partFuncSignature != "" {
+		sql := `
+			SELECT has_function_privilege(session_user,
+				'%s',
+				'execute') ok;
+			`
+		ret, err := DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql, partFuncSignature))
+		if err != nil || (err == nil && !ret[0]["ok"].(bool)) {
+			log.Fatalf("%s function not existing or no EXECUTE privileges. Have you rolled out the schema correctly from pgwatch2/sql/metric_store?", partFuncSignature)
+		}
+	}
+}
 
 func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo) error {
 
@@ -1921,6 +1994,10 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 	last_error_notification_time := time.Now()
 	failed_fetches := 0
 
+	if opts.TestdataDays > 0 {
+		testDataGenerationModeWG.Add(1)
+	}
+
 	for {
 
 		t1 := time.Now()
@@ -1968,10 +2045,16 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 				}
 				log.Warningf("exiting MetricGathererLoop for [%s], %d total data points generated for %d hosts",
 					metricName, test_metrics_stored, opts.TestdataMultiplier)
+				testDataGenerationModeWG.Done()
 				return
 			} else {
 				StoreMetrics(metricStoreMessages, store_ch)
 			}
+		}
+
+		if opts.TestdataDays > 0 { // covers errors & no data
+			testDataGenerationModeWG.Done()
+			return
 		}
 
 		select {
@@ -2588,7 +2671,7 @@ type Options struct {
 	Group                string `short:"g" long:"group" description:"Group (or groups, comma separated) for filtering which DBs to monitor. By default all are monitored" env:"PW2_GROUP"`
 	Datastore            string `long:"datastore" description:"[influx|postgres|graphite|json]" default:"influx" env:"PW2_DATASTORE"`
 	PGMetricStoreConnStr string `long:"pg-metric-store-conn-str" description:"PG Metric Store" env:"PW2_PG_METRIC_STORE_CONN_STR"`
-	PGSchemaType         string `long:"pg-schema-type" description:"[metric|metric-time|metric-dbname-time|custom]. In case of 'custom' pgwatch2 doesn't manage partitions/cleanup and inserts all metrics into a 'metrics' table where data should be re-routed with triggers" default:"metric-time" env:"PW2_PG_SCHEMA_TYPE"`
+	PGSchemaType         string `long:"pg-schema-type" description:"[metric|metric-time|metric-dbname-time|custom]. In case of 'custom' pgwatch2 doesn't manage partitions/cleanup and inserts all metrics into a 'metrics' table where data should be re-routed with triggers" env:"PW2_PG_SCHEMA_TYPE"`
 	PGRetentionDays      int64  `long:"pg-retention-days" description:"If set, metrics older than that will be deleted" default:"30" env:"PW2_PG_RETENTION_DAYS"`
 	InfluxHost           string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
 	InfluxPort           string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
@@ -2841,16 +2924,18 @@ func main() {
 		}
 
 		if !(opts.PGSchemaType == "metric" || opts.PGSchemaType == "metric-time" || opts.PGSchemaType == "metric-dbname-time" || opts.PGSchemaType == "custom") {
-			log.Fatal("--pg-schema-type needs to be one of: [metric|metric-time(*default)|metric-dbname-time|custom]")
+			log.Fatal("--pg-schema-type needs to be one of: [metric|metric-time|metric-dbname-time|custom]. Before 1st run schema must be initialized manually!")
 		}
 
 		InitAndTestMetricStoreConnection(opts.PGMetricStoreConnStr, true)
+
+		CheckTemplateTableExistanceOrFail(opts.PGSchemaType)
 
 		log.Info("starting PostgresPersister...")
 		go MetricsPersister(DATASTORE_POSTGRES, persist_ch)
 
 		if opts.PGRetentionDays > 0 && (opts.PGSchemaType == "metric" ||
-			opts.PGSchemaType == "metric-time" || opts.PGSchemaType == "metric-dbname-time") {
+			opts.PGSchemaType == "metric-time" || opts.PGSchemaType == "metric-dbname-time") && opts.TestdataDays == 0 {
 			log.Info("starting old Postgres metrics cleanup job...")
 			go OldPostgresMetricsDeleter(opts.PGRetentionDays, opts.PGSchemaType)
 		}
@@ -3039,6 +3124,20 @@ func main() {
 			}
 		}
 
+		if opts.TestdataDays > 0 {
+			log.Info("Waiting for all metrics generation goroutines to stop ...")
+			time.Sleep(time.Second * 10) // with that time all different metric fetchers should have started
+			testDataGenerationModeWG.Wait()
+			for {
+				pqlen := len(persist_ch)
+				if pqlen == 0 {
+					log.Warning("All generators have exited and data stored. Exit")
+					os.Exit(0)
+				}
+				log.Infof("Waiting for generated metrics to be stored (%d still in queue) ...", pqlen)
+				time.Sleep(time.Second * 1)
+			}
+		}
 		// loop over existing channels and stop workers if DB or metric removed from config
 		log.Debug("checking if any workers need to be shut down...")
 		control_channel_list := make([]string, len(control_channels))

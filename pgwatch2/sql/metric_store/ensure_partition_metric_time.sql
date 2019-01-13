@@ -31,6 +31,7 @@ BEGIN
     l_sql := format($$CREATE TABLE public."%s" (LIKE public.metrics_template INCLUDING INDEXES) PARTITION BY RANGE (time)$$,
                     metric);
     EXECUTE l_sql;
+    EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);
   END IF;
   
   FOR i IN 0..partitions_to_precreate LOOP
@@ -54,12 +55,13 @@ BEGIN
   IF NOT EXISTS (SELECT 1
                    FROM pg_tables
                   WHERE tablename = l_part_name
-                    AND schemaname = 'public')
+                    AND schemaname = 'subpartitions')
   THEN
     --RAISE NOTICE 'creating sub-partition % ...', l_part_name;
-    l_sql := format($$CREATE TABLE public."%s" PARTITION OF public."%s" FOR VALUES FROM ('%s') TO ('%s')$$,
+    l_sql := format($$CREATE TABLE subpartitions."%s" PARTITION OF public."%s" FOR VALUES FROM ('%s') TO ('%s')$$,
                     l_part_name, metric, l_part_start, l_part_end);
     EXECUTE l_sql;
+    EXECUTE format($$COMMENT ON TABLE subpartitions."%s" IS 'pgwatch2-generated-metric-time-lvl'$$, l_part_name);
   END IF;
 
   END LOOP;

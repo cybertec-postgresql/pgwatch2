@@ -20,6 +20,7 @@ BEGIN
     --RAISE NOTICE 'creating partition % ...', metric;
    
     EXECUTE format($$CREATE TABLE public."%s" (LIKE public.metrics_template INCLUDING INDEXES)$$, metric);
+    EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);
   END IF;
 
 END;

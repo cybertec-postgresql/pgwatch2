@@ -2,7 +2,8 @@
   NB! When possible the partitioned versions ("metric_store_part_time.sql"
   or "metric_store_part_dbname_time.sql") (assuming PG10+) should be used
   as much less IO would be then performed when removing old data.
-  Use the gatherer flag "--pg-schema-type=metric" when using this schema
+  Use the gatherer flag "--pg-schema-type=metric" when using this schema.
+  NB! A fresh DB, only for pgwatch2 metrics storage purposes, is assumed.
 */
 REVOKE ALL ON SCHEMA public FROM public;
 
@@ -30,7 +31,8 @@ create index on public.metrics_template using gin (dbname, tag_data, time);
 /*
  something like below will be done by the gatherer AUTOMATICALLY:
 
-create table public.some-metric
+create table public."some-metric"
   (LIKE public.metrics_template INCLUDING INDEXES);
+COMMENT ON TABLE public."some-metric" IS 'pgwatch2-generated-metric-lvl';
 
 */

@@ -1,8 +1,9 @@
 /*
-  NB! Custom schema is for those cases where the available presets are not satisfactory / applicaple.
+  NB! Custom schema is for those cases where the available presets are not satisfactory / applicable.
   Then the metrics gathering daemon will try to insert all metrics into the "metrics" table and the user
   can freely re-route the data however he likes with an according trigger. In that case also data
-  all table creation and data cleanup must be performed by the user.
+  all table creation and data cleanup must be performed by the user. Can be used also when only having
+  a couple of DB-s and performance / minimal storage is no issue.
 */
 REVOKE ALL ON SCHEMA public FROM public;
 
