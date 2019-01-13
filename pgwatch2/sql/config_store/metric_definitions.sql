@@ -712,10 +712,10 @@ $sql$
 );
 
 
-/* pg_stat_ssl */       -- join with backends?
+/* stat_ssl */       -- join with backends?
 insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
-'pg_stat_ssl',
+'stat_ssl',
 9.5,
 $sql$
 SELECT
@@ -734,10 +734,10 @@ $sql$
 );
 
 
-/* pg_stat_database_conflicts */
+/* database_conflicts */
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_standby_only, m_sql)
 values (
-'pg_stat_database_conflicts',
+'database_conflicts',
 9.2,
 true,
 $sql$

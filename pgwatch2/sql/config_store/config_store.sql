@@ -156,7 +156,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "change_events": 300,
     "table_bloat_approx_summary": 7200,
     "kpi": 120,
-    "pg_stat_ssl": 120,
+    "stat_ssl": 120,
     "psutil_cpu": 120,
     "psutil_mem": 120,
     "psutil_disk": 120,
