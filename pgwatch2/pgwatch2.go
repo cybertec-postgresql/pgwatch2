@@ -998,6 +998,18 @@ func DropOldTimePartitions(metricAgeDaysThreshold int64) (int, error) {
 func CheckTemplateTableExistanceOrFail(pgSchemaType string) {
 	var partFuncSignature string
 
+	schema_type_sql := `select schema_type from public.storage_schema_type`
+	ret, err := DBExecRead(metricDb, METRICDB_IDENT, schema_type_sql)
+	if err != nil {
+		log.Fatal("have you initialized the metrics schema, including a row in 'storage_schema_type' table, from schema_base.sql?", err)
+	}
+	if err == nil && len(ret) == 0 {
+		log.Fatal("no metric schema selected, no row in table 'storage_schema_type'. see the README from the 'pgwatch2/sql/metric_store' folder on choosing a schema")
+	}
+	if ret[0]["schema_type"].(string) != pgSchemaType {
+		log.Fatalf("DB initialized schema type (%v) and provided --pg-schema-type param (%s) don't match!", ret[0]["schema_type"], pgSchemaType)
+	}
+
 	if pgSchemaType == "custom" {
 		sql := `
 		SELECT has_table_privilege(session_user, 'public.metrics', 'INSERT') ok;

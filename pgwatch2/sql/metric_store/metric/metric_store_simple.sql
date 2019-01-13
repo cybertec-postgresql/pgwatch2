@@ -5,13 +5,10 @@
   Use the gatherer flag "--pg-schema-type=metric" when using this schema.
   NB! A fresh DB, only for pgwatch2 metrics storage purposes, is assumed.
 */
-REVOKE ALL ON SCHEMA public FROM public;
-
-GRANT ALL ON SCHEMA public TO pgwatch2;
 
 CREATE EXTENSION IF NOT EXISTS btree_gin;
 
-SET role TO pgwatch2;
+SET ROLE TO pgwatch2;
 
 -- drop table if exists metrics_template;
 
@@ -36,3 +33,5 @@ create table public."some-metric"
 COMMENT ON TABLE public."some-metric" IS 'pgwatch2-generated-metric-lvl';
 
 */
+
+RESET ROLE;

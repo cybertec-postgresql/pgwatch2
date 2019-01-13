@@ -7,15 +7,11 @@
    NB! A fresh DB, only for pgwatch2 metrics storage purposes, is assumed.
 */
 
-REVOKE ALL ON SCHEMA public FROM public;
-
-GRANT ALL ON SCHEMA public TO pgwatch2;
-
 CREATE SCHEMA IF NOT EXISTS subpartitions AUTHORIZATION pgwatch2;
 
 CREATE EXTENSION IF NOT EXISTS btree_gin;
 
-SET role TO pgwatch2;
+SET ROLE TO pgwatch2;
 
 -- drop table if exists metrics_template;
 
@@ -51,3 +47,5 @@ create table subpartitions."mymetric_mydbname_y2019m01" -- month calculated dyna
 COMMENT ON TABLE subpartitions."mymetric_mydbname_y2019m01" IS 'pgwatch2-generated-metric-dbname-time-lvl';
 
 */
+
+RESET ROLE;

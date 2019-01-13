@@ -5,13 +5,8 @@
   all table creation and data cleanup must be performed by the user. Can be used also when only having
   a couple of DB-s and performance / minimal storage is no issue.
 */
-REVOKE ALL ON SCHEMA public FROM public;
 
-GRANT ALL ON SCHEMA public TO pgwatch2;
-
-CREATE EXTENSION IF NOT EXISTS btree_gin;
-
-SET role TO pgwatch2;
+SET ROLE TO pgwatch2;
 
 -- drop table if exists metrics;
 
@@ -28,3 +23,5 @@ comment on table public.metrics is 'a master table for "custom" mode';
 /* suggested indexes */
 create index on public.metrics (dbname, metric, time);
 create index on public.metrics using gin (metric, tag_data, time);
+
+RESET ROLE;
