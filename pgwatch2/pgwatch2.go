@@ -1049,6 +1049,75 @@ func CheckTemplateTableExistanceOrFail(pgSchemaType string) {
 	}
 }
 
+func AddDBUniqueToListingTable(db_unique string) error {
+	sql := `insert into public.all_distinct_dbnames
+			select $1
+			where not exists (
+				select * from public.all_distinct_dbnames where dbname = $1
+			)`
+	_, err := DBExecRead(metricDb, METRICDB_IDENT, sql, db_unique)
+	return err
+}
+
+func UniqueDbnamesListingMaintainer() {
+	// due to manual metrics deletion the listing can go out of sync (a trigger not really wanted)
+	sql := `SELECT table_name FROM public.get_top_level_metric_tables()`
+	sql_distinct := `
+	WITH RECURSIVE t(dbname) AS (
+		SELECT MIN(dbname) AS dbname FROM %s
+		UNION
+		SELECT (SELECT MIN(dbname) FROM %s WHERE dbname > t.dbname) FROM t )
+	SELECT dbname FROM t WHERE dbname NOTNULL ORDER BY 1
+	`
+	sql_delete := `DELETE FROM public.all_distinct_dbnames WHERE NOT dbname = ANY($1)`
+	sql_add := `
+		INSERT INTO public.all_distinct_dbnames SELECT u FROM (select unnest($1::text[]) as u) x 
+		WHERE NOT EXISTS (select * from public.all_distinct_dbnames where dbname = u);
+	`
+
+	for {
+		found_dbnames_map := make(map[string]bool)
+		found_dbnames_arr := make([]string, 0)
+
+		time.Sleep(time.Hour * 12)
+
+		data, err := DBExecRead(metricDb, METRICDB_IDENT, sql)
+		if err != nil {
+			log.Error("Could not refresh Postgres dbnames listing table:", err)
+		} else {
+			for _, dr := range data {
+				ret, err := DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_distinct, dr["table_name"], dr["table_name"]))
+				if err != nil {
+					log.Error("Could not refresh Postgres dbnames listing table:", err)
+					break
+				}
+				for _, dr_dbname := range ret {
+					found_dbnames_map[dr_dbname["dbname"].(string)] = true
+				}
+			}
+			if len(found_dbnames_map) == 0 {
+				continue
+			}
+			// delete all that are not known and add all that are not there
+			for k, _ := range found_dbnames_map {
+				found_dbnames_arr = append(found_dbnames_arr, k)
+			}
+			_, err := DBExecRead(metricDb, METRICDB_IDENT, sql_delete, pq.Array(found_dbnames_arr))
+			if err != nil {
+				log.Error("Could not refresh Postgres dbnames listing table:", err)
+			} else {
+				log.Info("Removed stale Postgres dbnames from listing table")
+			}
+			_, err = DBExecRead(metricDb, METRICDB_IDENT, sql_add, pq.Array(found_dbnames_arr))
+			if err != nil {
+				log.Error("Could not refresh Postgres dbnames listing table:", err)
+			} else {
+				log.Info("Added missing dbnames to the Postgres listing table")
+			}
+		}
+	}
+}
+
 func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo) error {
 
 	sql_ensure := `
@@ -1404,6 +1473,12 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg_arr)
 					} else if data_store == DATASTORE_POSTGRES {
 						err = SendToPostgres(msg_arr)
+						if err != nil && strings.Contains(err.Error(), "does not exist") {
+							// in case data was cleaned by user externally
+							log.Warning("re-initializing metric partition cache due to possible external data cleanup...")
+							partitionMapMetric = make(map[string]ExistingPartitionInfo)
+							partitionMapMetricDbname = make(map[string]map[string]ExistingPartitionInfo)
+						}
 					} else if data_store == DATASTORE_GRAPHITE {
 						for _, m := range msg_arr {
 							err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO does Graphite library support batching?
@@ -2946,6 +3021,9 @@ func main() {
 		log.Info("starting PostgresPersister...")
 		go MetricsPersister(DATASTORE_POSTGRES, persist_ch)
 
+		log.Info("starting UniqueDbnamesListingMaintainer...")
+		go UniqueDbnamesListingMaintainer()
+
 		if opts.PGRetentionDays > 0 && (opts.PGSchemaType == "metric" ||
 			opts.PGSchemaType == "metric-time" || opts.PGSchemaType == "metric-dbname-time") && opts.TestdataDays == 0 {
 			log.Info("starting old Postgres metrics cleanup job...")
@@ -3090,6 +3168,12 @@ func main() {
 					TryCreateMetricsFetchingHelpers(db_unique)
 				}
 
+				if opts.Datastore == DATASTORE_POSTGRES {
+					err = AddDBUniqueToListingTable(db_unique)
+					if err != nil {
+						log.Errorf("Could not add newly found DB %s to the (Grafana) listing table: %v", db_unique, err)
+					}
+				}
 				time.Sleep(time.Millisecond * 100) // not to cause a huge load spike when starting the daemon with 100+ monitored DBs
 			}
 

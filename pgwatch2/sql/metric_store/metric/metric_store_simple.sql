@@ -35,3 +35,5 @@ COMMENT ON TABLE public."some-metric" IS 'pgwatch2-generated-metric-lvl';
 */
 
 RESET ROLE;
+
+insert into public.storage_schema_type select 'metric';

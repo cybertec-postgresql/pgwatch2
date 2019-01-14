@@ -49,3 +49,5 @@ COMMENT ON TABLE subpartitions."mymetric_mydbname_y2019m01" IS 'pgwatch2-generat
 */
 
 RESET ROLE;
+
+insert into public.storage_schema_type select 'metric-dbname-time';

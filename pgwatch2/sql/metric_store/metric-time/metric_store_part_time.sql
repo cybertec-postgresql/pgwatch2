@@ -42,3 +42,6 @@ COMMENT ON TABLE subpartitions."mymetric_y2019w01" IS 'pgwatch2-generated-metric
 */
 
 RESET ROLE;
+
+-- NB! default (for the Docker image)
+insert into public.storage_schema_type select 'metric-time';
