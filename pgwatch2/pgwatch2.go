@@ -1118,6 +1118,20 @@ func UniqueDbnamesListingMaintainer() {
 	}
 }
 
+func EnsureMetricDummy(metric string) {
+	sql_ensure := `
+	select public.ensure_dummy_metrics_table($1) as created
+	`
+	ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric)
+	if err != nil {
+		log.Errorf("Failed to create dummy partition of metric '%s': %v", metric, err)
+	} else {
+		if ret[0]["created"].(bool) {
+			log.Infof("Created a dummy partition of metric '%s'", metric)
+		}
+	}
+}
+
 func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo) error {
 
 	sql_ensure := `
@@ -1129,7 +1143,7 @@ func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo) error {
 		if !ok {
 			_, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric)
 			if err != nil {
-				log.Error("Failed to create partition on 'metrics':", err)
+				log.Errorf("Failed to create partition on metric '%s': %v", metric, err)
 				return err
 			}
 			partitionMapMetric[metric] = ExistingPartitionInfo{}
@@ -2137,6 +2151,10 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 			} else {
 				StoreMetrics(metricStoreMessages, store_ch)
 			}
+		}
+
+		if opts.Datastore == DATASTORE_POSTGRES {
+			EnsureMetricDummy(metricName) // ensure that there is at least an empty top-level table not to ugly Grafana notifications
 		}
 
 		if opts.TestdataDays > 0 { // covers errors & no data
