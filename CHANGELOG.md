@@ -9,17 +9,19 @@ or a specific version
 
 ## v1.5.0 [DRAFT]
 
+* New feature - Support Postgres as metrics storage DB (--pg-schema-type, --pg-metric-store-conn-str, --pg-retention-days)
 * New feature - password encryption/decryption with AES-GCM-256 (Gatherer + Web UI)
 * New feature - 'verify-ca' and 'verify-full' SSLMODE support (Gatherer + Web UI)
-* New feature - Support for Postgres as metrics storage DB. With only 2 overview dashboards though
+* New feature - Test data generation. New params --testdata-days and --testdata-multiplier (host count)
 * New feature - standby-only or master-only metrics (less errors in PG and pgwatch2 logs)
 * Gatherer improvement - SystemD support + service file. Thanks @slardiere!
-* Gatherer improvement  - less error messages when monitored DB or metrics store is down 
+* Gatherer improvement - less error messages when monitored DB or metrics store is down
 * Gatherer improvement - disable "connection pooling" by default 
 * Gatherer improvement - collector logic refactoring, less message passing 
 * Gatherer improvement - correct "complain only 1x per hour about missing metric definitions"
 * Metrics - removing DB size from "db_stats" into own "db_size" as it's apparently slow on some FS
 * Metrics - new "backup_duration_s" field for "db_stats"
+* Metrics - "pg_" removed from "pg_stat_ssl" and "pg_stat_database_conflicts" due to problems with Postgres backend
 * Docker - "daemon" image runs now also without any parameters 
 * Docker - use "tsi1" disk-based index instead of "inmem" for Influx as it's safer for high-cardinality setups
 * Docker - new image with Postgres for metrics storage (cybertec/pgwatch2-postgres-storage)  

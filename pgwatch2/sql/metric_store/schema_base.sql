@@ -1,5 +1,11 @@
 GRANT ALL ON SCHEMA public TO pgwatch2;
 
+DO $SQL$
+BEGIN
+  EXECUTE format($$ALTER ROLE pgwatch2 IN DATABASE %s SET statement_timeout TO '5min'$$, current_database());
+END
+$SQL$;
+
 SET ROLE TO pgwatch2;
 
 -- drop table if exists public.storage_schema_type;
@@ -34,17 +40,31 @@ RETURNS boolean AS
   expects the "metrics_template" table to exist.
 */
 $SQL$
+DECLARE
+  l_schema_type text;
 BEGIN
-  IF NOT EXISTS (SELECT 1
-                   FROM pg_tables
-                  WHERE tablename = metric
-                    AND schemaname = 'public')
-  THEN
-    --RAISE NOTICE 'creating partition % ...', metric;
-    EXECUTE format($$CREATE TABLE public."%s" (LIKE public.metrics_template INCLUDING INDEXES)$$, metric);
-    EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);
-    RETURN true;
-  END IF;
+  SELECT schema_type INTO l_schema_type FROM public.storage_schema_type;
+
+    IF NOT EXISTS (SELECT 1
+                    FROM pg_tables
+                    WHERE tablename = metric
+                      AND schemaname = 'public')
+    THEN
+
+      IF l_schema_type = 'metric' THEN
+        EXECUTE format($$CREATE TABLE public."%s" (LIKE public.metrics_template INCLUDING INDEXES)$$, metric);
+      ELSIF l_schema_type = 'metric-time' THEN
+        EXECUTE format($$CREATE TABLE public."%s" (LIKE public.metrics_template INCLUDING INDEXES) PARTITION BY RANGE (time)$$, metric);
+      ELSIF l_schema_type = 'metric-dbname-time' THEN
+        EXECUTE format($$CREATE TABLE public."%s" (LIKE public.metrics_template INCLUDING INDEXES) PARTITION BY LIST (dbname)$$, metric);
+      END IF;
+
+      EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);
+
+      RETURN true;
+
+    END IF;
+
   RETURN false;
 END;
 $SQL$ LANGUAGE plpgsql;

@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-systemd/daemon"
-	"github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/influxdb1-client/v2"
 	"github.com/jessevdk/go-flags"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -179,6 +179,8 @@ var useConnPooling bool
 var partitionMapMetric = make(map[string]ExistingPartitionInfo)                  // metric = min/max bounds
 var partitionMapMetricDbname = make(map[string]map[string]ExistingPartitionInfo) // metric[dbname = min/max bounds]
 var testDataGenerationModeWG sync.WaitGroup
+var PGDummyMetricTables = make(map[string]time.Time)
+var PGDummyMetricTablesLock = sync.RWMutex{}
 
 func GetPostgresDBConnection(libPgConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
@@ -1122,12 +1124,20 @@ func EnsureMetricDummy(metric string) {
 	sql_ensure := `
 	select public.ensure_dummy_metrics_table($1) as created
 	`
-	ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric)
-	if err != nil {
-		log.Errorf("Failed to create dummy partition of metric '%s': %v", metric, err)
+	PGDummyMetricTablesLock.Lock()
+	defer PGDummyMetricTablesLock.Unlock()
+	lastEnsureCall, ok := PGDummyMetricTables[metric]
+	if ok && lastEnsureCall.After(time.Now().Add(-1*time.Hour)) {
+		return
 	} else {
-		if ret[0]["created"].(bool) {
-			log.Infof("Created a dummy partition of metric '%s'", metric)
+		ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric)
+		if err != nil {
+			log.Errorf("Failed to create dummy partition of metric '%s': %v", metric, err)
+		} else {
+			if ret[0]["created"].(bool) {
+				log.Infof("Created a dummy partition of metric '%s'", metric)
+			}
+			PGDummyMetricTables[metric] = time.Now()
 		}
 	}
 }
@@ -1947,7 +1957,7 @@ func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Deci
 	}
 	if message > "" {
 		message = "Detected changes for \"" + dbUnique + "\" [Created/Altered/Dropped]:" + message
-		log.Warning("message", message)
+		log.Warning(message)
 		detected_changes_summary := make([](map[string]interface{}), 0)
 		influx_entry := make(map[string]interface{})
 		influx_entry["details"] = message
@@ -2005,7 +2015,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 			last_sql_fetch_error.Store(msg.MetricName+":"+db_pg_version.String(), time.Now().Unix())
 		}
 		return nil, err
-	} else if mvp.Sql == "" {
+	} else if mvp.Sql == "" && msg.MetricName != "change_events" {
 		// let's ignore dummy SQL-s
 		log.Debugf("Ignoring fetch message - got an empty/dummy SQL string for [%s:%s]", msg.DBUniqueName, msg.MetricName)
 		return nil, nil
@@ -3132,7 +3142,7 @@ func main() {
 
 		for _, host := range monitored_dbs { // Warn if any encrypted hosts found but no keyphrase given
 			if host.PasswordType != "plain-text" && len(opts.AesGcmKeyphrase) == 0 {
-				log.Error("Encrypted passwords found, but no decryption keyphrase specified. Use --aes-gcm-keyphrase or --aes-gcm-keyphrase-file params")
+				log.Warning("Encrypted passwords found, but no decryption keyphrase specified. Use --aes-gcm-keyphrase or --aes-gcm-keyphrase-file params")
 				break
 			}
 		}
