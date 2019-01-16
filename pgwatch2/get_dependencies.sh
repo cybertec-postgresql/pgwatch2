@@ -9,7 +9,7 @@ echo "getting project dependencies..."
 go get -u github.com/lib/pq
 go get -u github.com/op/go-logging
 go get -u github.com/jmoiron/sqlx
-go get -u github.com/influxdata/influxdb/client/v2
+go get -u github.com/influxdata/influxdb1-client
 go get -u github.com/jessevdk/go-flags
 go get -u github.com/marpaia/graphite-golang
 go get -u github.com/shopspring/decimal
