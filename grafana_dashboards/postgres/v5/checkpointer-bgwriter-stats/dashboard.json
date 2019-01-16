@@ -1,0 +1,807 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "decimals": 1,
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "checkpoints_timed",
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "1h"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "bgwriter",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time,\n  ((ct-ct_lag) * 3600 / extract(epoch from time - time_lag))  as \"checkpoints_timed\",\n  ((cr-cr_lag) * 3600 / extract(epoch from time - time_lag))  as \"checkpoints_req\"\nFROM (\nSELECT\n  ct, lag(ct) over w as ct_lag,\n  cr, lag(cr) over w as cr_lag,\n  time, lag(time) over w as time_lag\nFROM (\n  SELECT\n    time, lag(time) over w as time_lag,\n    (data->'checkpoints_timed')::int8 as ct, lag((data->'checkpoints_timed')::int8) over w as ct_lag,\n    (data->'checkpoints_req')::int8 as cr, lag((data->'checkpoints_req')::int8) over w as cr_lag\n  FROM\n    bgwriter\n  WHERE\n    $__timeFilter(time)\n    AND dbname = '$dbname'\n  WINDOW w as (order by time)\n) x\nWHERE ct > ct_lag or cr > cr_lag\nWINDOW w as (order by time)\n) y\nORDER BY 1\n",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "checkpoints_timed"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              },
+              {
+                "params": [
+                  "1h"
+                ],
+                "type": "non_negative_derivative"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Checkpoints (1h rate)",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "decimals": 1,
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 4,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "checkpoint_write_time",
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "1h"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "bgwriter",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time,\n  ((wt-wt_lag) * 3600 / extract(epoch from time - time_lag))  as \"checkpoint_write_time\",\n  ((st-st_lag) * 3600 / extract(epoch from time - time_lag))  as \"checkpoint_sync_time\"\nFROM (\nSELECT\n  wt, wt_lag, st, st_lag,\n  time, lag(time) over w as time_lag\nFROM (\n  SELECT\n    time, lag(time) over w as time_lag,\n    (data->'checkpoint_write_time')::int8 as wt, lag((data->'checkpoint_write_time')::int8) over w as wt_lag,\n    (data->'checkpoint_sync_time')::int8 as st, lag((data->'checkpoint_sync_time')::int8) over w as st_lag\n  FROM\n    bgwriter\n  WHERE\n    $__timeFilter(time)\n    AND dbname = '$dbname'\n  WINDOW w as (order by time)\n) x\nWHERE wt > wt_lag or st > st_lag\nWINDOW w as (order by time)\n) y\nORDER BY 1\n",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "checkpoint_write_time"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "1h"
+                ],
+                "type": "non_negative_derivative"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Checkpointer Write / Sync durations (1h rate)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ms",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 5,
+      "interval": "60m",
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "buffers_checkpoint",
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "5m"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "bgwriter",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  -- TODO query can be probably simplified\n  $__timeGroup(time, $__interval),\n  avg(((checkpoint-checkpoint_lag) * 3600 / extract(epoch from time - time_lag))) as \"buffers_checkpoint\",\n  avg(((clean-clean_lag) * 3600 / extract(epoch from time - time_lag))) as \"buffers_clean\",\n  avg(((backend-backend_lag) * 3600 / extract(epoch from time - time_lag))) as \"buffers_backend\",\n  avg(((fsync-fsync_lag) * 3600 / extract(epoch from time - time_lag))) as \"buffers_backend_fsync\"\nFROM (\nSELECT\n  checkpoint, lag(checkpoint) over w as checkpoint_lag,\n  clean, lag(clean) over w as clean_lag,\n  backend, lag(backend) over w as backend_lag,\n  fsync, lag(fsync) over w as fsync_lag,\n  time, lag(time) over w as time_lag\nFROM (\n  SELECT\n    time, lag(time) over w as time_lag,\n    (data->'buffers_checkpoint')::int8 as checkpoint, lag((data->'buffers_checkpoint')::int8) over w as checkpoint_lag,\n    (data->'buffers_clean')::int8 as clean, lag((data->'buffers_clean')::int8) over w as clean_lag,\n    (data->'buffers_backend')::int8 as backend, lag((data->'buffers_backend')::int8) over w as backend_lag,\n    (data->'buffers_backend_fsync')::int8 as fsync, lag((data->'buffers_backend_fsync')::int8) over w as fsync_lag\n  FROM\n    bgwriter\n  WHERE\n    $__timeFilter(time)\n    AND dbname = '$dbname'\n  WINDOW w as (order by time)\n) x\nWHERE checkpoint > checkpoint_lag or clean > clean_lag or backend > backend_lag or fsync > fsync_lag\nWINDOW w as (order by time)\n) y\nGROUP BY 1\nORDER BY 1\n",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "buffers_checkpoint"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "1h"
+                ],
+                "type": "non_negative_derivative"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Bgwriter Stats (1h rate)",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 10,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "Based on pg_stat_database. Requires \"track_io_timing=on\"",
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 6,
+      "interval": "15m",
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "blk_read_time (backend)",
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "5m"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "db_stats",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  sum((rt-rt_lag) * 3600 / extract(epoch from time - time_lag))  as \"blk_read_time\",\n  sum((wt-wt_lag) * 3600 / extract(epoch from time - time_lag))  as \"blk_write_time\"\nFROM (\n  SELECT\n    time, lag(time) over w as time_lag,\n    (data->'blk_read_time')::float8 as rt, lag((data->'blk_read_time')::float8) over w as rt_lag,\n    (data->'blk_write_time')::float8 as wt, lag((data->'blk_write_time')::float8) over w as wt_lag\n  FROM\n    db_stats\n  WHERE\n    $__timeFilter(time)\n    AND dbname = '$dbname'\n  WINDOW w as (order by time)\n) x\nWHERE rt >= rt_lag or wt >= wt_lag\nGROUP BY 1\nORDER BY 1\n",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "blk_read_time"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "1h"
+                ],
+                "type": "non_negative_derivative"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Backend Read / Write times  (1h rate)",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ms",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "NB! Reads could still be served by the Linux file system cache so they don't necessarily have to come from disk",
+      "fill": 1,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 7,
+      "interval": "60m",
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "heap_blks_read",
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "15m"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "table_io_stats",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  sum((heap-heap_lag) * 3600 / extract(epoch from time - time_lag))  as \"heap_blks_read\",\n  sum((idx-idx_lag) * 3600 / extract(epoch from time - time_lag))  as \"idx_blks_read\",\n  sum((tidx-tidx_lag) * 3600 / extract(epoch from time - time_lag))  as \"tidx_blks_read\",\n  sum((toast-toast) * 3600 / extract(epoch from time - time_lag))  as \"toast_blks_read\"  \nFROM (\n  SELECT\n    time, lag(time) over w as time_lag,\n    (data->'heap_blks_read')::float8 as heap, lag((data->'heap_blks_read')::float8) over w as heap_lag,\n    (data->'idx_blks_read')::float8 as idx, lag((data->'idx_blks_read')::float8) over w as idx_lag,\n    (data->'tidx_blks_read')::float8 as tidx, lag((data->'tidx_blks_read')::float8) over w as tidx_lag,\n    (data->'toast_blks_read')::float8 as toast, lag((data->'toast_blks_read')::float8) over w as toast_lag\n  FROM\n    table_io_stats\n  WHERE\n    $__timeFilter(time)\n    AND dbname = '$dbname'\n  WINDOW w as (order by time)\n) x\nWHERE (heap >= heap_lag or idx >= idx_lag) AND time > time_lag\nGROUP BY 1\nORDER BY 1\n",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "heap_blks_read"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "1h"
+                ],
+                "type": "non_negative_derivative"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Table / Index / Toast Blocks Read (1h rate)",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 10,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2017/11/Cybertec_Logo_2017_300px_slogan_trans.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "editable": true,
+      "error": false,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 25
+      },
+      "id": 9,
+      "links": [],
+      "mode": "html",
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    }
+  ],
+  "schemaVersion": 16,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": null,
+          "value": null
+        },
+        "datasource": null,
+        "definition": "SELECT dbname FROM public.all_distinct_dbnames ORDER BY 1;",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "dbname",
+        "options": [],
+        "query": "SELECT dbname FROM public.all_distinct_dbnames ORDER BY 1;",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "",
+  "title": "Checkpointer / Bgwriter / Block IO Stats",
+  "uid": null,
+  "version": 1
+}
