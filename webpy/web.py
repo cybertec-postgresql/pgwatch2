@@ -38,9 +38,17 @@ def logged_in(f: callable, *args, **kwargs):
     return f(*args, **kwargs)
 
 
-def exec_cmd(args):
-    p = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return p.stdout.decode('utf-8'), p.stderr.decode('utf-8')
+def exec_cmd(args, silent=True):
+    if silent:
+        try:
+            p = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return p.stdout.decode('utf-8'), p.stderr.decode('utf-8')
+        except Exception as e:
+            return '', str(e)
+    else:
+        p = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return p.stdout.decode('utf-8'), p.stderr.decode('utf-8')
+
 
 def str_to_bool_or_fail(bool_str):
     if bool_str is None:

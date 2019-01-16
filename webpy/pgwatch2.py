@@ -406,38 +406,59 @@ def delete_metric(params):
 
 def get_all_dbnames():
     sql = """
-    WITH RECURSIVE t(dbname) AS (
-       SELECT MIN(dbname) AS dbname FROM metrics
-       UNION
-       SELECT (SELECT MIN(dbname) FROM metrics WHERE dbname > t.dbname)
-       FROM t
-    )
-    SELECT dbname FROM t WHERE dbname NOTNULL ORDER BY 1;
+    SELECT dbname FROM all_distinct_dbnames ORDER BY 1;
     """
     ret, err = datadb.execute(sql, on_metric_store=True)
     if err:
-        raise Exception('Failed to delete from "metric": ' + err)
+        raise Exception('Failed to get dbnames listing: ' + err)
     return [x['dbname'] for x in ret]
 
 
 def delete_postgres_metrics_data_single(dbunique):
     sql = """
-        delete from public.metrics where dbname = %s
+        select public.remove_single_dbname_data(%s)
     """
     ret, err = datadb.execute(sql, (dbunique,), on_metric_store=True)
     if err:
-        raise Exception('Failed to delete from "metrics": ' + err)
+        raise Exception('Failed to delete metrics for "{}":'.format(dbunique) + err)
 
+def get_schema_type():
+    sql = """select schema_type from public.storage_schema_type"""
+    ret, err = datadb.execute(sql, on_metric_store=True)
+    if err:
+        raise Exception('Failed to determine storage schema type:' + err)
+    if not ret:
+        raise Exception('public.storage_schema_type needs to have one row in it!')
+    return ret[0]["schema_type"]
+
+def get_all_top_level_metric_tables():
+    sql = """select table_name from public.get_top_level_metric_tables()"""
+    ret, err = datadb.execute(sql, on_metric_store=True)
+    if err:
+        raise Exception('Failed to determine storage schema type:' + err)
+    return [x["table_name"] for x in ret]
 
 def delete_postgres_metrics_for_all_inactive_hosts(active_dbs):
     all = get_all_dbnames()
     to_delete = set(all) - set(active_dbs)
-    sql = """
-        delete from public.metrics where dbname = any(array[%s])
-    """
-    ret, err = datadb.execute(sql, (list(to_delete),), on_metric_store=True)
-    if err:
-        raise Exception('Failed to delete inactive metric data from "metrics": ' + err)
+    schema_type = get_schema_type()
+    all_metric_tables = get_all_top_level_metric_tables()
+
+    if schema_type in ('metric', 'metric-time'):
+        sql = """
+            delete from {} where dbname = any(array[%s])
+        """
+        for tbl in all_metric_tables:
+            ret, err = datadb.execute(sql.format(tbl), (list(to_delete),), on_metric_store=True)
+            if err:
+                logging.exception('Failed to delete inactive metrics from: ' + tbl)
+    elif schema_type == 'metric-dbname-time':
+        sql = "select public.remove_single_dbname_data(%s) x"
+        for dbname_to_delete in to_delete:
+            ret, err = datadb.execute(sql, (dbname_to_delete,), on_metric_store=True)
+            if err:
+                logging.exception('Failed to drop data for: ' + dbname_to_delete)
+
     return to_delete
 
 
