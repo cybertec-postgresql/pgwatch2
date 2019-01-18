@@ -73,7 +73,7 @@
           "policy": "default",
           "query": "SELECT last(\"total_relation_size_b\")  as value FROM \"table_stats\" WHERE \"dbname\" = '$dbname' AND time > now() - 1h GROUP BY time(15m), \"table_name\" fill(0)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'total_relation_size_b')::int8 as total_relation_size_b,\n  tag_data->>'table_full_name' as table_name\nFROM\n  table_stats\nWHERE\n  time = (select max(time) from table_stats WHERE dbname = '$dbname' AND $__timeFilter(time))\n  AND dbname = '$dbname'\nORDER BY\n  2 DESC NULLS LAST",
+          "rawSql": "SELECT\n  time,\n  (data->'total_relation_size_b')::int8 as total_relation_size_b,\n  tag_data->>'table_full_name' as table_name\nFROM\n  table_stats\nWHERE\n  time = (select max(time) from table_stats WHERE dbname = '$dbname' AND $__timeFilter(time))\n  AND dbname = '$dbname'\nORDER BY\n  2 DESC NULLS LAST\nLIMIT 100",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -190,7 +190,7 @@
           "policy": "default",
           "query": "SELECT last(\"table_size_b\")  as value FROM \"table_stats\" WHERE \"dbname\" = '$dbname' AND time > now() - 1h GROUP BY time(15m), \"table_name\" fill(0)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'table_size_b')::int8 as table_size_b,\n  tag_data->>'table_full_name' as table_name\nFROM\n  table_stats\nWHERE\n  time = (select max(time) from table_stats WHERE dbname = '$dbname' AND $__timeFilter(time))\n  AND dbname = '$dbname'\nORDER BY\n  2 DESC NULLS LAST",
+          "rawSql": "SELECT\n  0 as time,\n  (data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0) as table_size_b,\n  tag_data->>'table_full_name' as table_name\nFROM\n  table_stats\nWHERE\n  time = (select max(time) from table_stats WHERE dbname = '$dbname' AND $__timeFilter(time))\n  AND dbname = '$dbname'\nORDER BY\n  2 DESC NULLS LAST\nLIMIT 100",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -305,7 +305,7 @@
           "policy": "default",
           "query": "SELECT last(\"index_size_b\")  as value FROM \"index_stats\" WHERE (\"dbname\" = '$dbname') AND time > now() - 1h GROUP BY time(15m), \"index_name\" fill(0)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'index_size_b')::int8 as index_size_b,\n  data->>'index_full_name_val' as index_full_name_val\nFROM\n  index_stats\nWHERE\n  time = (select max(time) from index_stats WHERE dbname = '$dbname' AND $__timeFilter(time))\n  AND dbname = '$dbname'\nORDER BY\n  2 DESC NULLS LAST",
+          "rawSql": "SELECT\n  0 as time,\n  (data->'index_size_b')::int8 as index_size_b,\n  tag_data->>'index_full_name' as index_full_name\nFROM\n  index_stats\nWHERE\n  time = (select max(time) from index_stats WHERE dbname = '$dbname' AND $__timeFilter(time))\n  AND dbname = '$dbname'\nORDER BY\n  2 DESC NULLS LAST\nLIMIT 100",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -390,14 +390,14 @@
           "value": null
         },
         "datasource": null,
-        "definition": "SELECT dbname FROM public.all_distinct_dbnames ORDER BY 1;",
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": null,
         "multi": false,
         "name": "dbname",
         "options": [],
-        "query": "SELECT dbname FROM public.all_distinct_dbnames ORDER BY 1;",
+        "query": "SELECT dbname FROM public.all_distinct_dbname_metrics WHERE metric = 'table_stats' ORDER BY 1;",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
