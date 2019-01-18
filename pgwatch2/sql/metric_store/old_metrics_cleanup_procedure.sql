@@ -82,7 +82,7 @@ BEGIN
     raise exception 'unsupported schema type: %', l_schema_type;
   END IF;
   
-  EXECUTE 'delete from public.all_distinct_dbnames where dbname = $1' USING dbname;
+  EXECUTE 'delete from public.all_distinct_dbname_metrics where dbname = $1' USING dbname;
   
   RETURN i;
 END;

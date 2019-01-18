@@ -406,7 +406,7 @@ def delete_metric(params):
 
 def get_all_dbnames():
     sql = """
-    SELECT dbname FROM all_distinct_dbnames ORDER BY 1;
+    SELECT dbname FROM public.all_distinct_dbname_metrics ORDER BY 1;
     """
     ret, err = datadb.execute(sql, on_metric_store=True)
     if err:
