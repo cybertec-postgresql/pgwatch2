@@ -17,11 +17,11 @@
 # 2. step - run the pgwatch daemon in the "test data" mode
 # Here we generate 1 week of data for 5 hosts. (could run for a couple of hours!)
 /pgwatch2/pgwatch2 --testdata-days 7 --testdata-multiplier 5 --adhoc-config=exhaustive \
-    --adhoc-conn-str "host=localhost dbname=pgwatch2 user=pgwatch2 sslmode=disable" \   # metrics collection target
-    --pg-metric-store-conn-str="host=localhost port=5434 dbname=postgres sslmode=disable" \ # metrics storage target
+    --adhoc-conn-str "host=localhost dbname=monitored_db user=pgwatch2 sslmode=disable" \   # metrics collection target
+    --pg-metric-store-conn-str="host=localhost port=5434 dbname=metricsdb user=pgwatch2 sslmode=disable" \ # metrics storage target
     --pg-schema-type=metric-time --verbose
 
 # 3. as current implementation of generating test data a bit slow, if wanting to simulate longer retention / dozens
 # of hosts, a python script name "multiply-pg-test-data.py" can be used to quickly multiply metrics on the DB level.
-# i.e. generate 1 day of data for 50 hosts and then modify (connect string, multiplication factor) and rund the python
+# i.e. generate 1 day of data for 50 hosts and then modify (connect string, multiplication factor) and run the python
 # scipt. In general 1 week of data for 1 host for "exhaustive" preset config ~ 1GB data.

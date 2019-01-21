@@ -74,12 +74,16 @@ SQL_GET_TOP_LEVEL_metricS = "select table_name from public.get_top_level_metric_
 SLEEP_SECONDS_BETWEEN_ROUNDS = 5
 
 
-def execute(sql, params=None):
+def execute(sql, params=None, statement_timeout=None):
     result = []
     
     conn = psycopg2.connect(METRICSCONN_STR)
     conn.autocommit = True
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    if statement_timeout:
+        cur.execute('SET statement_timeout TO %s', (statement_timeout,))
+
     cur.execute(sql, params)
 
     if cur.statusmessage.startswith('SELECT') or cur.description:
@@ -126,7 +130,7 @@ if __name__ == '__main__':
                 logging.debug("done")
             
             logging.info("duplicating data for %s...", metric)
-            ret = execute(SQL_TO_DOUBLE_DATA.format(metric=metric))
+            ret = execute(SQL_TO_DOUBLE_DATA.format(metric=metric), statement_timeout=0)
             logging.info("done. rows added: %s", ret[0]['rows_affected'])
         
         logging.info("finished LOOP 1, sleeping %ss...", SLEEP_SECONDS_BETWEEN_ROUNDS)
