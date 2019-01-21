@@ -47,7 +47,7 @@
         "y": 0
       },
       "id": 1,
-      "interval": "2m",
+      "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
@@ -104,7 +104,7 @@
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__time(time),\n  (data->'load_5min')::float8 as \"load_5min\"\nFROM\n  cpu_load\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\n",
+          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  avg((data->'load_5min')::float8) as \"load_5min\"\nFROM\n  cpu_load\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY 1\nORDER BY 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -154,7 +154,7 @@
           "policy": "default",
           "query": "SELECT (non_negative_derivative(mean(\"xact_rollback\")) / (non_negative_derivative(mean(\"xact_commit\")) + non_negative_derivative(mean(\"xact_rollback\"))) * 100) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "select\n  time,\n  case when (xc = xc_lag and xr = xr_lag) then 0 else ((xr - xr_lag)::numeric / ((xc - xc_lag) + (xr - xr_lag))) * 100 end as \"Rollback ratio\"\nfrom (\n  select\n    (data->'xact_rollback')::float8 as xr, lag((data->'xact_rollback')::float8) over w as xr_lag,\n    (data->'xact_commit')::float8 as xc, lag((data->'xact_rollback')::float8) over w as xc_lag,\n    time\n  from db_stats\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n  window w as (order by time)\n) x\nwhere xc >= xc_lag\norder by 1\n\n\n\n\n\n",
+          "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg( case when (xc = xc_lag and xr = xr_lag) then null else ( ((xr - xr_lag)::numeric*100) / ((xc - xc_lag) + (xr - xr_lag)) ) end ) as \"Rollback ratio\"\nfrom (\n  select\n    (data->'xact_rollback')::float8 as xr, lag((data->'xact_rollback')::float8) over w as xr_lag,\n    (data->'xact_commit')::float8 as xc, lag((data->'xact_rollback')::float8) over w as xc_lag,\n    time\n  from db_stats\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n  window w as (order by time)\n) x\nwhere xc >= xc_lag\ngroup by 1\norder by 1\n\n\n\n\n\n",
           "refId": "B",
           "resultFormat": "time_series",
           "select": [
@@ -208,6 +208,7 @@
       },
       "yaxes": [
         {
+          "decimals": 1,
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -216,6 +217,7 @@
           "show": true
         },
         {
+          "decimals": 1,
           "format": "percent",
           "label": null,
           "logBase": 1,
@@ -622,14 +624,14 @@
           "value": null
         },
         "datasource": null,
-        "definition": "",
+        "definition": "SELECT dbname FROM public.all_distinct_dbname_metrics WHERE metric = 'change_events' ORDER BY 1;",
         "hide": 0,
         "includeAll": false,
         "label": null,
         "multi": false,
         "name": "dbname",
         "options": [],
-        "query": "SELECT dbname FROM public.all_distinct_dbname_metrics WHERE metric = 'object_changes' ORDER BY 1;",
+        "query": "SELECT dbname FROM public.all_distinct_dbname_metrics WHERE metric = 'change_events' ORDER BY 1;",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

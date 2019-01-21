@@ -852,7 +852,7 @@
           "policy": "default",
           "query": "select non_negative_derivative(mean(\"xact_commit\")) + non_negative_derivative(mean(\"xact_rollback\")) from \"db_stats\" WHERE \"dbname\" =~ /^$dbname/ AND $timeFilter GROUP BY dbname, time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg(((c - c_lag) + (r - r_lag)) / extract(epoch from time - time_lag)) as \"TPS\"\nfrom (\n        select \n          (data->'xact_commit')::int8 as c, lag((data->'xact_commit')::int8) over w as c_lag,\n          (data->'xact_rollback')::int8 as r, lag((data->'xact_rollback')::int8) over w as r_lag,\n          time, lag(time) over w as time_lag, dbname\n        from db_stats\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)        \n) x\nwhere c >= c_lag and r >= r_lag and time > time_lag\ngroup by 1, 2\norder by 1\n",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  dbname,\n  avg(((c - c_lag) + (r - r_lag)) / extract(epoch from time - time_lag)) as \"TPS\"\nfrom (\n        select \n          (data->'xact_commit')::int8 as c, lag((data->'xact_commit')::int8) over w as c_lag,\n          (data->'xact_rollback')::int8 as r, lag((data->'xact_rollback')::int8) over w as r_lag,\n          time, lag(time) over w as time_lag, dbname\n        from db_stats\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)        \n) x\nwhere c >= c_lag and r >= r_lag and time > time_lag\ngroup by 1, 2\norder by 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -939,7 +939,7 @@
         "y": 2
       },
       "id": 17,
-      "interval": "30m",
+      "interval": "",
       "legend": {
         "avg": true,
         "current": false,
@@ -993,7 +993,7 @@
           "policy": "default",
           "query": "select non_negative_derivative(mean(\"calls\")) from \"stat_statements_calls\" WHERE \"dbname\" =~ /^$dbname/ AND $timeFilter GROUP BY dbname, time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg((c - c_lag) / extract(epoch from time - time_lag)) as \"QPS\"\nfrom (\n        select \n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          time, lag(time) over w as time_lag, dbname\n        from stat_statements_calls\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)        \n) x\nwhere c >= c_lag and time > time_lag\ngroup by 1, 2\norder by 1\n",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  dbname,\n  avg((c - c_lag) / extract(epoch from time - time_lag)) as \"QPS\"\nfrom (\n        select \n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          time, lag(time) over w as time_lag, dbname\n        from stat_statements_calls\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)        \n) x\nwhere c >= c_lag and time > time_lag\ngroup by 1, 2\norder by 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1133,7 +1133,7 @@
           "policy": "default",
           "query": "select non_negative_derivative(last(\"total_time\")) / non_negative_derivative(last(\"calls\")) from \"stat_statements\" WHERE \"dbname\" =~ /^$dbname/ AND $timeFilter AND calls > 100 GROUP BY dbname, time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg((tt-tt_lag)::numeric / (c-c_lag)) as avg_query_runtime\nfrom (\n        select \n          (data->>'total_time')::float8 as tt, lag((data->>'total_time')::float8) over w as tt_lag,\n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          time, dbname\n        from stat_statements_calls\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)\n) x\nwhere c > c_lag and tt >= tt_lag\ngroup by 1, 2\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  dbname,\n  avg((tt-tt_lag)::numeric / (c-c_lag)) as avg_query_runtime\nfrom (\n        select \n          (data->>'total_time')::float8 as tt, lag((data->>'total_time')::float8) over w as tt_lag,\n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          time, dbname\n        from stat_statements_calls\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)\n) x\nwhere c > c_lag and tt >= tt_lag\ngroup by 1, 2\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1272,7 +1272,7 @@
           "policy": "default",
           "query": "SELECT last(\"size_b\")   FROM \"db_size\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY dbname, time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $__interval) as time,\n  dbname,\n  avg((data->'size_b')::int8) db_size\nfrom\n  db_size\nwhere \n  dbname in ($dbname)\n  and $__timeFilter(time)\ngroup by\n  1, 2\norder by\n  1, 2",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval) as time,\n  dbname,\n  avg((data->'size_b')::int8) db_size\nfrom\n  db_size\nwhere \n  dbname in ($dbname)\n  and $__timeFilter(time)\ngroup by\n  1, 2\norder by\n  1, 2",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1410,7 +1410,7 @@
           "policy": "default",
           "query": "SELECT (non_negative_derivative(mean(\"xact_rollback\")) / (non_negative_derivative(mean(\"xact_commit\")) + non_negative_derivative(mean(\"xact_rollback\"))) * 100) FROM \"db_stats\" WHERE $timeFilter GROUP BY dbname, time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg(case when c = c_lag and r = r_lag then 0 else ((r - r_lag)::numeric * 100 / ((c - c_lag) + (r - r_lag)) ) end) as tx_err_ratio\nfrom (\n        select \n          (data->'xact_commit')::int8 as c, lag((data->'xact_commit')::int8) over w as c_lag,\n          (data->'xact_rollback')::int8 as r, lag((data->'xact_rollback')::int8) over w as r_lag,\n          time, dbname\n        from db_stats\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)        \n) x\nwhere c >= c_lag and r >= r_lag\ngroup by 1, 2\norder by 1, 2",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  dbname,\n  avg(case when c = c_lag and r = r_lag then 0 else (((r - r_lag)::numeric * 100) / ((c - c_lag) + (r - r_lag)) ) end) as tx_err_ratio\nfrom (\n        select \n          (data->'xact_commit')::int8 as c, lag((data->'xact_commit')::int8) over w as c_lag,\n          (data->'xact_rollback')::int8 as r, lag((data->'xact_rollback')::int8) over w as r_lag,\n          time, dbname\n        from db_stats\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)        \n) x\nwhere c >= c_lag and r >= r_lag\ngroup by 1, 2\norder by 1, 2",
           "refId": "B",
           "resultFormat": "time_series",
           "select": [
@@ -1464,7 +1464,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -1473,7 +1473,7 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -1557,7 +1557,7 @@
           "policy": "default",
           "query": "SELECT non_negative_derivative(mean(\"temp_bytes\"), 1s) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY dbname, time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg(case when tb-tb_lag > 0 then (tb-tb_lag)::numeric / extract(epoch from (time - time_lag)) else 0 end) as \"Temp bytes (1h rate)\"\nfrom (\n        select \n          (data->>'temp_bytes')::int8 as tb, lag((data->>'temp_bytes')::int8) over w as tb_lag,\n          time, lag(time) over w as time_lag, dbname\n        from db_stats\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)\n) x\nwhere tb >= tb_lag\ngroup by 1, 2\norder by 1, 2\n",
+          "rawSql": "select\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg(((tb-tb_lag)::numeric*3600) / extract(epoch from (time - time_lag)))\nfrom (\n        select \n          (data->>'temp_bytes')::int8 as tb, lag((data->>'temp_bytes')::int8) over w as tb_lag,\n          time, lag(time) over w as time_lag, dbname\n        from db_stats\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)\n) x\nwhere tb >= tb_lag and time > time_lag\ngroup by 1, 2\norder by 1, 2\n",
           "refId": "C",
           "resultFormat": "time_series",
           "select": [
@@ -1589,7 +1589,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Temp bytes written",
+      "title": "Temp bytes written (1h rate)",
       "tooltip": {
         "msResolution": false,
         "shared": true,
@@ -1607,7 +1607,7 @@
       "yaxes": [
         {
           "decimals": 1,
-          "format": "Bps",
+          "format": "bytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1698,7 +1698,7 @@
           "policy": "default",
           "query": "SELECT mean(\"load_5min\") FROM \"cpu_load\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY dbname, time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg((data->'load_5min')::float8)\nFROM\n  cpu_load\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY 1, 2\nORDER BY 1, 2\n",
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  dbname,\n  avg((data->'load_5min')::float8)\nFROM\n  cpu_load\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY 1, 2\nORDER BY 1, 2\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1994,7 +1994,7 @@
           "policy": "default",
           "query": "SELECT mean(\"idleintransaction\") + mean(\"waiting\") + mean(\"active\")  FROM \"backends\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY dbname, time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg((data->'idleintransaction')::int + (data->'waiting')::int + (data->'active')::int) as sessions\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  and dbname in ($dbname)\nGROUP BY\n  1, 2\nORDER BY\n  1, 2\n",
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  dbname,\n  avg((data->'idleintransaction')::int + (data->'waiting')::int + (data->'active')::int) as sessions\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  and dbname in ($dbname)\nGROUP BY\n  1, 2\nORDER BY\n  1, 2\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -2140,7 +2140,7 @@
           "policy": "default",
           "query": "SELECT ( non_negative_derivative(mean(\"blks_hit\")) / (non_negative_derivative(mean(\"blks_hit\")) + non_negative_derivative(mean(\"blks_read\")))) * 100 FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY dbname, time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg((hit-hit_lag)::numeric / ((hit-hit_lag) + (read-read_lag)))*100 as \"Shared buffers hit ratio\"\nfrom (\n        select \n          (data->>'blks_hit')::int8 as hit, lag((data->>'blks_hit')::int8) over w as hit_lag,\n          (data->>'blks_read')::int8 as read, lag((data->>'blks_read')::int8) over w as read_lag,\n          time, dbname\n        from db_stats\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)\n) x\nwhere hit > hit_lag or read > read_lag\ngroup by 1, 2\norder by 1, 2",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  dbname,\n  avg( case when hit=hit_lag and read=read_lag then null else (hit-hit_lag)::numeric / ((hit-hit_lag) + (read-read_lag))*100 end) as \"Shared buffers hit ratio\"\nfrom (\n        select \n          (data->>'blks_hit')::int8 as hit, lag((data->>'blks_hit')::int8) over w as hit_lag,\n          (data->>'blks_read')::int8 as read, lag((data->>'blks_read')::int8) over w as read_lag,\n          time, dbname\n        from db_stats\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)\n) x\nwhere hit >= hit_lag or read >= read_lag\ngroup by 1, 2\norder by 1, 2",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -2192,7 +2192,7 @@
           "format": "percent",
           "label": null,
           "logBase": 1,
-          "max": null,
+          "max": "105",
           "min": null,
           "show": true
         },
@@ -2236,8 +2236,8 @@
       {
         "allValue": null,
         "current": {
-          "text": null,
-          "value": null
+          "text": "All",
+          "value": "$__all"
         },
         "datasource": null,
         "definition": "",
@@ -2257,6 +2257,69 @@
         "tagsQuery": "",
         "type": "query",
         "useTags": false
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "text": "15m",
+          "value": "15m"
+        },
+        "hide": 0,
+        "label": null,
+        "name": "agg_interval",
+        "options": [
+          {
+            "selected": false,
+            "text": "1m",
+            "value": "1m"
+          },
+          {
+            "selected": false,
+            "text": "5m",
+            "value": "5m"
+          },
+          {
+            "selected": false,
+            "text": "10m",
+            "value": "10m"
+          },
+          {
+            "selected": true,
+            "text": "15m",
+            "value": "15m"
+          },
+          {
+            "selected": false,
+            "text": "30m",
+            "value": "30m"
+          },
+          {
+            "selected": false,
+            "text": "1h",
+            "value": "1h"
+          },
+          {
+            "selected": false,
+            "text": "6h",
+            "value": "6h"
+          },
+          {
+            "selected": false,
+            "text": "12h",
+            "value": "12h"
+          },
+          {
+            "selected": false,
+            "text": "1d",
+            "value": "1d"
+          }
+        ],
+        "query": "1m,5m,10m,15m,30m,1h,6h,12h,1d",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
       }
     ]
   },
