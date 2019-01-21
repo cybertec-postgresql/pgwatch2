@@ -20,7 +20,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -1061,7 +1060,7 @@ func AddDBUniqueMetricToListingTable(db_unique, metric string) error {
 	return err
 }
 
-func UniqueDbnamesListingMaintainer() {
+func UniqueDbnamesListingMaintainer(daemonMode bool) {
 	// due to metrics deletion the listing can go out of sync (a trigger not really wanted)
 	sql_top_level_metrics := `SELECT table_name FROM public.get_top_level_metric_tables()`
 	sql_distinct := `
@@ -1079,7 +1078,9 @@ func UniqueDbnamesListingMaintainer() {
 	`
 
 	for {
-		time.Sleep(time.Hour * 12)
+		if daemonMode {
+			time.Sleep(time.Hour * 6)
+		}
 
 		log.Infof("Refreshing public.all_distinct_dbname_metrics listing table...")
 		all_distinct_metric_tables, err := DBExecRead(metricDb, METRICDB_IDENT, sql_top_level_metrics)
@@ -1110,7 +1111,7 @@ func UniqueDbnamesListingMaintainer() {
 				if err != nil {
 					log.Errorf("Could not refresh Postgres all_distinct_dbname_metrics listing table for '%s':", metric_name, err)
 				} else if len(ret) > 0 {
-					log.Info("Removed %d stale dbname from all_distinct_dbname_metrics listing table for metric: %s", len(ret), metric_name)
+					log.Infof("Removed %d stale dbname from all_distinct_dbname_metrics listing table for metric: %s", len(ret), metric_name)
 				}
 				ret, err = DBExecRead(metricDb, METRICDB_IDENT, sql_add, pq.Array(found_dbnames_arr), metric_name)
 				if err != nil {
@@ -1120,10 +1121,16 @@ func UniqueDbnamesListingMaintainer() {
 				}
 			}
 		}
+		if !daemonMode {
+			return
+		}
 	}
 }
 
 func EnsureMetricDummy(metric string) {
+	if opts.Datastore != DATASTORE_POSTGRES {
+		return
+	}
 	sql_ensure := `
 	select public.ensure_dummy_metrics_table($1) as created
 	`
@@ -1406,7 +1413,7 @@ func MetricsBatcher(data_store string, batchingMaxDelayMillis int64, buffered_st
 		log.Fatalf("Check --batching-delay-ms, zero/negative batching delay:", batchingMaxDelayMillis)
 	}
 	var datapointCounter int = 0
-	var maxBatchSize int = 1000            // flush on maxBatchSize or batchingMaxDelayMillis
+	var maxBatchSize int = 5000            // flush on maxBatchSize or batchingMaxDelayMillis
 	batch := make([]MetricStoreMessage, 0) // no size limit here as limited in persister already
 	ticker := time.NewTicker(time.Millisecond * time.Duration(batchingMaxDelayMillis))
 
@@ -1715,6 +1722,8 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
 		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "sproc_changes", Data: detected_changes, CustomTags: md.CustomTags}}
+	} else if opts.Datastore == DATASTORE_POSTGRES {
+		EnsureMetricDummy("sproc_changes")
 	}
 
 	return change_counts
@@ -1798,6 +1807,8 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
 		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "table_changes", Data: detected_changes, CustomTags: md.CustomTags}}
+	} else if opts.Datastore == DATASTORE_POSTGRES {
+		EnsureMetricDummy("table_changes")
 	}
 
 	return change_counts
@@ -1879,6 +1890,8 @@ func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
 		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "index_changes", Data: detected_changes, CustomTags: md.CustomTags}}
+	} else if opts.Datastore == DATASTORE_POSTGRES {
+		EnsureMetricDummy("index_changes")
 	}
 
 	return change_counts
@@ -1933,6 +1946,8 @@ func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, 
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
 		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "configuration_changes", Data: detected_changes, CustomTags: md.CustomTags}}
+	} else if opts.Datastore == DATASTORE_POSTGRES {
+		EnsureMetricDummy("configuration_changes")
 	}
 
 	return change_counts
@@ -1968,6 +1983,8 @@ func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Deci
 		detected_changes_summary = append(detected_changes_summary, influx_entry)
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
 		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, DBType: "postgres", MetricName: "object_changes", Data: detected_changes_summary, CustomTags: md.CustomTags}}
+	} else if opts.Datastore == DATASTORE_POSTGRES {
+		EnsureMetricDummy("object_changes")
 	}
 }
 
@@ -2156,11 +2173,12 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 							(msgs_copy_tmp[0].Data)[i][EPOCH_COLUMN_NAME] = (simulated_time.UnixNano() + int64(1000*i))
 						}
 						msgs_copy_tmp[0].DBUniqueName = fake_dbname
-						log.Debugf("fake data for [%s:%s]: %v", metricName, fake_dbname, msgs_copy_tmp[0].Data)
+						//log.Debugf("fake data for [%s:%s]: %v", metricName, fake_dbname, msgs_copy_tmp[0].Data)
 						StoreMetrics(msgs_copy_tmp, store_ch)
 						test_metrics_stored += len(msgs_copy_tmp[0].Data)
-						runtime.Gosched() // should help to get natural/even metrics ordering
 					}
+					time.Sleep(time.Duration(opts.TestdataMultiplier * 10000000)) // 10ms * multiplier (in nanosec).
+					// would generate more metrics than persister can write and eat up RAM
 					simulated_time = simulated_time.Add(time.Second * time.Duration(interval))
 				}
 				log.Warningf("exiting MetricGathererLoop for [%s], %d total data points generated for %d hosts",
@@ -3059,7 +3077,7 @@ func main() {
 		go MetricsPersister(DATASTORE_POSTGRES, persist_ch)
 
 		log.Info("starting UniqueDbnamesListingMaintainer...")
-		go UniqueDbnamesListingMaintainer()
+		go UniqueDbnamesListingMaintainer(true)
 
 		if opts.PGRetentionDays > 0 && (opts.PGSchemaType == "metric" ||
 			opts.PGSchemaType == "metric-time" || opts.PGSchemaType == "metric-dbname-time") && opts.TestdataDays == 0 {
@@ -3256,6 +3274,9 @@ func main() {
 			for {
 				pqlen := len(persist_ch)
 				if pqlen == 0 {
+					if opts.Datastore == DATASTORE_POSTGRES {
+						UniqueDbnamesListingMaintainer(false) // refresh Grafana listing table
+					}
 					log.Warning("All generators have exited and data stored. Exit")
 					os.Exit(0)
 				}
