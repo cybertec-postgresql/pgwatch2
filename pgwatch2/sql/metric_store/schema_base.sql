@@ -3,6 +3,8 @@ GRANT ALL ON SCHEMA public TO pgwatch2;
 DO $SQL$
 BEGIN
   EXECUTE format($$ALTER ROLE pgwatch2 IN DATABASE %s SET statement_timeout TO '5min'$$, current_database());
+  RAISE WARNING 'NB! Enabling asynchronous commit for pgwatch2 role - revert if possible data loss on crash is not acceptable!';
+  EXECUTE format($$ALTER ROLE pgwatch2 IN DATABASE %s SET synchronous_commit TO off$$, current_database());
 END
 $SQL$;
 

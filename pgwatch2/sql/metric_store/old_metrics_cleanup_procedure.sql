@@ -32,12 +32,36 @@ BEGIN
     i := i + 1;
   END LOOP;
   
-  EXECUTE 'truncate public.all_distinct_dbnames';
+  EXECUTE 'truncate public.all_distinct_dbname_metrics';
   
   RETURN i;
 END;
 $SQL$ LANGUAGE plpgsql;
 GRANT EXECUTE ON FUNCTION public.drop_all_metric_tables() TO pgwatch2;
+
+
+-- DROP FUNCTION IF EXISTS public.truncate_all_metric_tables();
+-- select * from public.truncate_all_metric_tables();
+CREATE OR REPLACE FUNCTION public.truncate_all_metric_tables()
+RETURNS int AS
+$SQL$
+DECLARE
+  r record;
+  i int := 0;
+BEGIN
+  FOR r IN select * from get_top_level_metric_tables()
+  LOOP
+    raise notice 'dropping %', r.table_name;
+    EXECUTE 'TRUNCATE TABLE ' || r.table_name;
+    i := i + 1;
+  END LOOP;
+  
+  EXECUTE 'truncate public.all_distinct_dbname_metrics';
+  
+  RETURN i;
+END;
+$SQL$ LANGUAGE plpgsql;
+GRANT EXECUTE ON FUNCTION public.truncate_all_metric_tables() TO pgwatch2;
 
 
 -- DROP FUNCTION IF EXISTS public.remove_single_dbname_data(text);
