@@ -7,11 +7,30 @@ CREATE OR REPLACE FUNCTION public.get_psutil_cpu(
  LANGUAGE plpythonu
  SECURITY DEFINER
 AS $FUNCTION$
+
 from os import getloadavg
 from psutil import cpu_times_percent, cpu_percent, cpu_count
-ct = cpu_times_percent()
+from threading import Thread
+
+class GetCpuPercentThread(Thread):
+    def __init__(self, interval_seconds):
+        self.interval_seconds = interval_seconds
+        self.cpu_utilization_info = None
+        super(GetCpuPercentThread, self).__init__()
+
+    def run(self):
+        self.cpu_utilization_info = cpu_percent(self.interval_seconds)
+
+t = GetCpuPercentThread(0.5)
+t.start()
+
+ct = cpu_times_percent(0.5)
 la = getloadavg()
-return cpu_percent(1), la[0] / cpu_count(), la[0], la[1] / cpu_count(), la[1], ct.user, ct.system, ct.idle, ct.iowait, ct.irq + ct.softirq, ct.steal + ct.guest + ct.guest_nice
+
+t.join()
+
+return t.cpu_utilization_info, la[0] / cpu_count(), la[0], la[1] / cpu_count(), la[1], ct.user, ct.system, ct.idle, ct.iowait, ct.irq + ct.softirq, ct.steal + ct.guest + ct.guest_nice
+
 $FUNCTION$;
 
 REVOKE EXECUTE ON FUNCTION public.get_psutil_cpu() FROM PUBLIC;
