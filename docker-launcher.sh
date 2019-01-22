@@ -6,6 +6,7 @@ if [ ! -f /pgwatch2/persistent-config/self-signed-ssl.key -o ! -f /pgwatch2/pers
     cp /pgwatch2/persistent-config/self-signed-ssl.key /etc/ssl/private/ssl-cert-snakeoil.key
     chown postgres /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/private/ssl-cert-snakeoil.key
     chmod -R 0600 /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/private/ssl-cert-snakeoil.key
+    chmod -R o+rx /pgwatch2/persistent-config
 fi
 
 if [ -n "$PW2_GRAFANASSL" ] ; then
