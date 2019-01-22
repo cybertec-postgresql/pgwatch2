@@ -181,21 +181,25 @@ var testDataGenerationModeWG sync.WaitGroup
 var PGDummyMetricTables = make(map[string]time.Time)
 var PGDummyMetricTablesLock = sync.RWMutex{}
 
-func GetPostgresDBConnection(libPgConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
+func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
 	var db *sqlx.DB
 
 	//log.Debug("Connecting to: ", host, port, dbname, user, password)
-	if len(libPgConnString) > 0 {
-		if strings.Contains(strings.ToLower(libPgConnString), "sslmode=") {
-			db, err = sqlx.Open("postgres", libPgConnString)
+	if len(libPqConnString) > 0 {
+		if strings.Contains(strings.ToLower(libPqConnString), "sslmode") {
+			db, err = sqlx.Open("postgres", libPqConnString)
 		} else {
-			if strings.Contains(libPgConnString, "?") { // a bit simplistic, regex would be better
-				log.Debug("Adding sslmode", libPgConnString+"&sslmode=disable")
-				db, err = sqlx.Open("postgres", libPgConnString+"&sslmode=disable")
-			} else {
-				log.Debug("Adding sslmode", libPgConnString+"?sslmode=disable")
-				db, err = sqlx.Open("postgres", libPgConnString+"?sslmode=disable")
+			if strings.Contains(libPqConnString, "postgresql://") { // JDBC style
+				if strings.Contains(libPqConnString, "?") { // a bit simplistic, regex would be better
+					//log.Debug("Adding sslmode", libPqConnString+"&sslmode=disable")
+					db, err = sqlx.Open("postgres", libPqConnString+"&sslmode=disable")
+				} else {
+					//log.Debug("Adding sslmode", libPqConnString+"?sslmode=disable")
+					db, err = sqlx.Open("postgres", libPqConnString+"?sslmode=disable")
+				}
+			} else { // LibPQ stype
+				db, err = sqlx.Open("postgres", libPqConnString+" sslmode=disable")
 			}
 		}
 	} else {
@@ -1559,7 +1563,7 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 	}
 }
 
-func DBGetPGVersion(dbUnique string) (DBVersionMapEntry, error) {
+func DBGetPGVersion(dbUnique string, noCache bool) (DBVersionMapEntry, error) {
 	var ver DBVersionMapEntry
 	var ok bool
 	sql := `
@@ -1573,15 +1577,19 @@ func DBGetPGVersion(dbUnique string) (DBVersionMapEntry, error) {
 	ver, ok = db_pg_version_map[dbUnique]
 	db_pg_version_map_lock.RUnlock()
 
-	if ok && ver.LastCheckedOn.After(time.Now().Add(time.Minute*-2)) { // use cached version for 2 min
+	if !noCache && ok && ver.LastCheckedOn.After(time.Now().Add(time.Minute*-2)) { // use cached version for 2 min
 		//log.Debugf("using cached postgres version %s for %s", ver.Version.String(), dbUnique)
 		return ver, nil
 	} else {
 		log.Debug("determining DB version for", dbUnique)
 		data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
 		if err != nil {
-			log.Info("DBGetPGVersion failed, using old cached value", err)
-			return ver, nil
+			if noCache {
+				return ver, err
+			} else {
+				log.Info("DBGetPGVersion failed, using old cached value", err)
+				return ver, nil
+			}
 		}
 		ver.Version, _ = decimal.NewFromString(data[0]["ver"].(string))
 		ver.IsInRecovery = data[0]["pg_is_in_recovery"].(bool)
@@ -2015,7 +2023,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	var err error
 
 	if msg.DBType == "postgres" {
-		vme, err = DBGetPGVersion(msg.DBUniqueName)
+		vme, err = DBGetPGVersion(msg.DBUniqueName, false)
 		if err != nil {
 			log.Error("failed to fetch pg version for ", msg.DBUniqueName, msg.MetricName, err)
 			return nil, err
@@ -2385,7 +2393,7 @@ func DoesFunctionExists(dbUnique, functionName string) bool {
 
 // Called once on daemon startup to try to create "metric fething helper" functions automatically
 func TryCreateMetricsFetchingHelpers(dbUnique string) error {
-	db_pg_version, err := DBGetPGVersion(dbUnique)
+	db_pg_version, err := DBGetPGVersion(dbUnique, false)
 	if err != nil {
 		log.Errorf("Failed to fetch pg version for \"%s\": %s", dbUnique, err)
 		return err
@@ -3205,12 +3213,16 @@ func main() {
 				db_conn_limiting_channel_lock.Unlock()
 
 				if db_type == "postgres" {
-					ver, err = DBGetPGVersion(db_unique)
+					ver, err = DBGetPGVersion(db_unique, true)
 				} else if db_type == "pgbouncer" {
 					_, err, _ = DBExecReadByDbUniqueName(db_unique, "", false, "show version")
 				}
 				if err != nil {
-					log.Errorf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err)
+					if opts.AdHocConnString != "" {
+						log.Fatalf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err)
+					} else {
+						log.Errorf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err)
+					}
 					continue
 				} else {
 					log.Infof("Connect OK. [%s] is on version %s (in recovery: %v)", db_unique, ver.Version, ver.IsInRecovery)
