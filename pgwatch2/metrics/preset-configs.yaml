@@ -18,7 +18,7 @@
     cpu_load: 60
     db_stats: 60
     db_size: 300
-    index_stats: 300
+    index_stats: 600
     locks: 60
     locks_mode: 60
     replication: 120
@@ -48,7 +48,7 @@
     cpu_load: 60
     db_stats: 60
     db_size: 300
-    index_stats: 300
+    index_stats: 600
     sproc_stats: 180
     stat_statements: 180
     table_stats: 180
@@ -64,7 +64,7 @@
     cpu_load: 60
     db_stats: 60
     db_size: 300
-    index_stats: 300
+    index_stats: 600
     locks: 60
     locks_mode: 60
     replication: 120
@@ -92,7 +92,7 @@
     change_events: 300
     db_stats: 60
     db_size: 300
-    index_stats: 300
+    index_stats: 600
     locks: 60
     locks_mode: 60
     replication: 120
