@@ -88,6 +88,7 @@
 - name: unprivileged
   description: no wrappers + only pg_stat_statements extension expected (developer mode)
   metrics:
+    archiver: 60
     bgwriter: 60
     change_events: 300
     db_stats: 60

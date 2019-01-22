@@ -165,6 +165,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     }'),
     ('unprivileged', 'no wrappers + only pg_stat_statements extension expected (developer mode)',
     '{
+    "archiver": 60,
     "bgwriter": 60,
     "db_stats": 60,
     "db_size": 300,
