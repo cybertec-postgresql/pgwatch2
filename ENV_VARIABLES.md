@@ -17,7 +17,9 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_GROUP** Logical grouping/sharding key to monitor a subset of configured hosts. Default: -
 - **PW2_DATASTORE** Backend for metric storage - [influx|postgres|graphite]. Default: influx
 - **PW2_VERBOSE** Logging vebosity. By default warning and errors are logged. Use [-v|-vv] to include [info|debug]. Default: -
-- **PW2_PG_METRIC_STORE_CONN_STR** Postgres metric store connection string. Default: -
+- **PW2_PG_METRIC_STORE_CONN_STR** Postgres metric store connection string. Required when PW2_DATASTORE=postgres. Default: -
+- **PW2_PG_SCHEMA_TYPE** Required when PW2_DATASTORE=postgres. [metric|metric-time|metric-dbname-time|custom]. Default: -
+- **PW2_PG_RETENTION_DAYS** Effective when PW2_DATASTORE=postgres. Default: 30
 - **PW2_IHOST** InfluxDB host. Default: localhost
 - **PW2_IPORT** InfluxDB port. Default: 8086
 - **PW2_IUSER** InfluxDB username. Default: root
@@ -47,6 +49,8 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_CONN_POOLING** Enable re-use of metrics fetching connections. "off" means reconnect every time. Default: off
 - **PW2_AES_GCM_KEYPHRASE** Keyphrase for encryption/decpyption of connect string passwords.
 - **PW2_AES_GCM_KEYPHRASE_FILE** File containing a keyphrase for encryption/decpyption of connect string passwords.
+- **PW2_TESTDATA_DAYS** For how many days to generate data. Requires Ad-hoc params to be set also.
+- **PW2_TESTDATA_MULTIPLIER** For how many hosts to generate data. Requires Ad-hoc params to be set also.
 
 
 ## Web UI
@@ -77,6 +81,9 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_GRAFANA_BASEURL** For linking to Grafana "Query details" dashboard from "Stat_stmt. overview". Default: http://0.0.0.0:3000
 - **PW2_AES_GCM_KEYPHRASE** Keyphrase for encryption/decpyption of connect string passwords.
 - **PW2_AES_GCM_KEYPHRASE_FILE** File containing a keyphrase for encryption/decpyption of connect string passwords.
+- **PW2_DATASTORE** Backend for metric storage - [influx|postgres|graphite]. Default: influx
+- **PW2_PG_METRIC_STORE_CONN_STR** Postgres metric store connection string. Required when PW2_DATASTORE=postgres. Default: -
+
 
 ## Grafana
 
