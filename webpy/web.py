@@ -240,6 +240,7 @@ class Root:
     def index(self, **params):
         return self.dbs(**params)
 
+    @logged_in
     @cherrypy.expose
     def stats_summary(self, **params):
         logging.debug('params: %s', params)
