@@ -1115,13 +1115,13 @@ func UniqueDbnamesListingMaintainer(daemonMode bool) {
 				if err != nil {
 					log.Errorf("Could not refresh Postgres all_distinct_dbname_metrics listing table for '%s':", metric_name, err)
 				} else if len(ret) > 0 {
-					log.Infof("Removed %d stale dbname from all_distinct_dbname_metrics listing table for metric: %s", len(ret), metric_name)
+					log.Infof("Removed %d stale entries from all_distinct_dbname_metrics listing table for metric: %s", len(ret), metric_name)
 				}
 				ret, err = DBExecRead(metricDb, METRICDB_IDENT, sql_add, pq.Array(found_dbnames_arr), metric_name)
 				if err != nil {
 					log.Errorf("Could not refresh Postgres all_distinct_dbname_metrics listing table for '%s':", metric_name, err)
 				} else if len(ret) > 0 {
-					log.Infof("Added %d missing dbnames to the Postgres all_distinct_dbname_metrics listing table for metric: %s", len(ret), metric_name)
+					log.Infof("Added %d entry to the Postgres all_distinct_dbname_metrics listing table for metric: %s", len(ret), metric_name)
 				}
 			}
 		}
@@ -2092,6 +2092,9 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 func StoreMetrics(metrics []MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) (int, error) {
 
 	if len(metrics) > 0 {
+		if metrics[0].DBUniqueName == "adhoc" {
+			log.Fatal(metrics)
+		}
 		atomic.AddUint64(&totalMetricsFetchedCounter, uint64(len(metrics)))
 		atomic.AddUint64(&totalDatasetsFetchedCounter, 1)
 		storage_ch <- metrics
@@ -2136,7 +2139,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 	if opts.TestdataDays > 0 {
 		testDataGenerationModeWG.Add(1)
 	}
-	if opts.Datastore == DATASTORE_POSTGRES {
+	if opts.Datastore == DATASTORE_POSTGRES && opts.TestdataDays == 0 {
 		err := AddDBUniqueMetricToListingTable(dbUniqueName, metricName)
 		if err != nil {
 			log.Errorf("Could not add newly found gatherer [%s:%s] to the 'all_distinct_dbname_metrics' listing table: %v", dbUniqueName, metricName, err)
@@ -2909,6 +2912,9 @@ func main() {
 		}
 		if opts.TestdataMultiplier == 0 {
 			log.Fatal("Test mode requires --testdata-multiplier!")
+		}
+		if opts.TestdataDays == 0 {
+			log.Fatal("Test mode requires --testdata-days!")
 		}
 	}
 	// running in config file based mode?
