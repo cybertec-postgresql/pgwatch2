@@ -3450,11 +3450,48 @@
               "value": "/^$dbname$/"
             }
           ]
+        },
+        {
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT last(\"max_xmin_age_tx\") FROM \"backends\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(1d) fill(none)",
+          "rawQuery": true,
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
         }
       ],
       "thresholds": "10000,100000",
       "timeFrom": null,
-      "title": "Repl. slot max. XMIN horizon",
+      "title": "Max. XMIN horizon",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -3475,10 +3512,9 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
-      "description": "Holds back VACUUM",
-      "format": "short",
+      "description": "Based on pg_stat_database.pg_backup_start_time (9.3+)",
+      "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -3544,18 +3580,18 @@
               "type": "fill"
             }
           ],
-          "measurement": "backends",
+          "measurement": "db_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "",
-          "rawQuery": false,
+          "query": "SELECT last(\"backup_duration_s\") FROM \"db_stats\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(3650d) fill(none)",
+          "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "max_xmin_age_tx"
+                  "backup_duration_s"
                 ],
                 "type": "field"
               },
@@ -3574,9 +3610,9 @@
           ]
         }
       ],
-      "thresholds": "10000,100000",
+      "thresholds": "3600,36000",
       "timeFrom": "$online_interval",
-      "title": "Backend max. XMIN horizon (in TX)",
+      "title": "Backup duration",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [

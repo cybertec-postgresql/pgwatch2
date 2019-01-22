@@ -437,8 +437,8 @@
         "#d44a3a"
       ],
       "decimals": 1,
-      "description": "Assumes get_load_average helper being installed. 25 Warn / 50  Error  thresholds by default",
-      "format": "none",
+      "description": "Assumes get_wal_size helper being installed. 1/10 GB Warn / 50  Error  thresholds by default",
+      "format": "bytes",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -459,7 +459,7 @@
         {
           "dashboard": "DB overview",
           "includeVars": true,
-          "params": "panelId=12&fullscreen",
+          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: CPU load' panel",
           "type": "dashboard",
@@ -522,7 +522,7 @@
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'load_1min')::float8\nFROM\n  cpu_load\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
+          "rawSql": "SELECT\n  time,\n  (data->'wal_size_b')::float8\nFROM\n  wal_size\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -550,9 +550,9 @@
           ]
         }
       ],
-      "thresholds": "25,50",
+      "thresholds": "1000000000,10000000000",
       "timeFrom": null,
-      "title": "CPU load (avg.)",
+      "title": "WAL folder size",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -2530,8 +2530,9 @@
           "includeVars": true,
           "params": "panelId=2&fullscreen",
           "targetBlank": true,
-          "title": "Opens \"Checkpointer / Bgwriter / Block IO Stats :: Checkpoints\" panel",
-          "type": "dashboard"
+          "title": "Checkpointer / Bgwriter / Block IO Stats",
+          "type": "dashboard",
+          "url": "/d/db8d96d1e/checkpointer-bgwriter-stats"
         }
       ],
       "mappingType": 1,
@@ -3716,7 +3717,7 @@
           "policy": "default",
           "query": "select max(\"xmin_age_tx\") from  (SELECT last(\"xmin_age_tx\") as \"xmin_age_tx\" FROM \"replication_slots\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(365d), slot_name fill(none))\n",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 as time,\n  max((data->'xmin_age_tx')::int8)\nFROM\n  replication_slots\nWHERE\n  time = (select max(time) from replication_slots where $__timeFilter(time) AND dbname = '$dbname')\n  and dbname = '$dbname'  ",
+          "rawSql": "select\n  0 as time,\n  max(xmin) from (\nSELECT\n  max((data->'xmin_age_tx')::int8) as xmin\nFROM\n  replication_slots\nWHERE\n  time = (select max(time) from replication_slots where $__timeFilter(time) AND dbname = '$dbname')\n  and dbname = '$dbname'  \nUNION ALL\nSELECT\n  max((data->'max_xmin_age_tx')::int8) as xmin\nFROM\n  backends\nWHERE\n  time = (select max(time) from backends where $__timeFilter(time) AND dbname = '$dbname')\n  and dbname = '$dbname'\n) x",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -3752,7 +3753,7 @@
       ],
       "thresholds": "10000,100000",
       "timeFrom": null,
-      "title": "Repl. slot max. XMIN horizon",
+      "title": "Max. XMIN horizon age",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -3774,8 +3775,8 @@
         "#d44a3a"
       ],
       "decimals": 0,
-      "description": "Holds back VACUUM",
-      "format": "short",
+      "description": "",
+      "format": "s",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -3849,7 +3850,7 @@
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 as time,\n  max((data->'max_xmin_age_tx')::int8)\nFROM\n  backends\nWHERE\n  time = (select max(time) from replication_slots where $__timeFilter(time) AND dbname = '$dbname')\n  and dbname = '$dbname'",
+          "rawSql": "SELECT\n  0 as time,\n  (data->'backup_duration_s')::int8\nFROM\n  backends\nWHERE\n  time > now() - '$online_interval'::interval\n  and dbname = '$dbname'\nORDER BY\n  time DESC\nLIMIT\n  1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -3883,9 +3884,9 @@
           ]
         }
       ],
-      "thresholds": "10000,100000",
+      "thresholds": "3600,36000",
       "timeFrom": "$online_interval",
-      "title": "Backend max. XMIN horizon (in TX)",
+      "title": "Backup duration",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
