@@ -94,7 +94,7 @@ class Root:
     def logout(self, **params):
         if 'logged_in' in cherrypy.session:
             del cherrypy.session['logged_in']
-        raise cherrypy.HTTPRedirect('/index')
+        raise cherrypy.HTTPRedirect('/dbs')
 
     @logged_in
     @cherrypy.expose
@@ -238,12 +238,16 @@ class Root:
 
     @cherrypy.expose
     def index(self, **params):
+        return self.dbs(**params)
+
+    @cherrypy.expose
+    def stats_summary(self, **params):
         logging.debug('params: %s', params)
         messages = []
         data = []
         dbnames = []
         dbname = params.get('dbname')
-        page = params.get('page', 'index')
+        page = params.get('page', 'stats-summary')
         sort_column = params.get('sort_column', 'total_time')
         start_time = params.get('start_time', '')
         end_time = params.get('end_time', '')
@@ -255,7 +259,7 @@ class Root:
             dbnames = [x['md_unique_name']
                        for x in pgwatch2.get_all_monitored_dbs()]
             if dbname:
-                if page == 'index' and dbname:
+                if page == 'stats-summary' and dbname:
                     data = pgwatch2_influx.get_db_overview(dbname)
                 elif page == 'statements' and dbname:
                     data = pgwatch2_influx.find_top_growth_statements(dbname,
@@ -267,7 +271,7 @@ class Root:
         except psycopg2.OperationalError:
             messages.append('ERROR - Could not connect to Postgres')
 
-        tmpl = env.get_template('index.html')
+        tmpl = env.get_template('stats-summary.html')
         return tmpl.render(dbnames=dbnames, dbname=dbname, page=page, data=data, sort_column=sort_column,
                            start_time=start_time, end_time=end_time, grafana_baseurl=cmd_args.grafana_baseurl,
                            messages=messages, no_anonymous_access=cmd_args.no_anonymous_access, session=cherrypy.session,

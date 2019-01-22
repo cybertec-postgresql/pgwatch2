@@ -25,13 +25,15 @@
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
         <!--<li class="active"><a href="#">Home<span class="sr-only">(current)</span></a></li>-->
-        <li><a href="/index"><h4>pgwatch2</h4></a></li>
+        <li><a href="/"><h4>pgwatch2</h4></a></li>
         <li><a href="https://www.cybertec-postgresql.com/en/"><img src="/static/logo.png" alt="Cybertec" height="35px"></a></li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li><a href="/dbs">DBs</a></li>
         <li><a href="#">|</a></li>
-        <li><a href="/metrics">Metrics</a></li>
+        <li><a href="/metrics">Metric definitions</a></li>
+        <li><a href="#">|</a></li>
+        <li class="active"><a href="/stats-summary">Stats summary<span class="sr-only"></span></a></li>
         {% if not no_component_logs %}
         <li><a href="#">|</a></li>
         <li class="dropdown" title="Logs will open in a new window">
@@ -70,17 +72,17 @@
 
         <div class="col-sm-2 sidebar" style="margin-top: 30px">
           <ul class="nav nav-sidebar">
-            <li class="active"><a href="/index">Overview<span class="sr-only"></span></a></li> <!-- TODO highlighting not working -->
-            <li><a href="/index?page=statements">pg_stat_statements report</a></li>
+            <li class="active"><a href="/stats-summary">Overview<span class="sr-only"></span></a></li> <!-- TODO highlighting not working -->
+            <li><a href="/stats-summary?page=statements">pg_stat_statements report</a></li>
           </ul>
         </div>
 
         <div class="col-sm-10 main">
 
-          {% if page == 'index' %}
+          {% if page == 'stats-summary' %}
 
             <h2 class="sub-header">DB overview {% if dbname %}for "{{dbname}}"{% endif %} (based on InfluxDB metrics)</h2>
-            <form action="/index" method="get">
+            <form action="/stats-summary" method="get">
             <select name="dbname">
               <option></option>
               {% for db in dbnames  %}
@@ -117,7 +119,7 @@
           {% elif page == 'statements' %}
 
             <h2 class="sub-header">pg_stat_statements Top 50 by {{sort_column}} {% if dbname %}for "{{dbname}}"{% endif %} (based on InfluxDB metrics)</h2>
-            <form action="/index" method="get">
+            <form action="/stats-summary" method="get">
             <input type="hidden" name="page" id="page" value="statements">
             <input type="hidden" name="sort_column" id="sort_column" value="{{sort_column}}">
             <select name="dbname">

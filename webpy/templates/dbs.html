@@ -22,13 +22,15 @@
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
-        <li><a href="/index"><h4>pgwatch2</h4></a></li>
+        <li><a href="/"><h4>pgwatch2</h4></a></li>
         <li><a href="https://www.cybertec-postgresql.com/en/"><img src="/static/logo.png" alt="Cybertec" height="35px"></a></li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li class="active"><a href="/dbs">DBs<span class="sr-only"></span></a></li>
         <li><a href="#">|</a></li>
-        <li><a href="/metrics">Metrics</a></li>
+        <li><a href="/metrics">Metric definitions</a></li>
+        <li><a href="#">|</a></li>
+        <li><a href="/stats-summary">Stats summary</a></li>
         {% if not no_component_logs %}
         <li><a href="#">|</a></li>
         <li class="dropdown" title="Logs will open in a new window">
