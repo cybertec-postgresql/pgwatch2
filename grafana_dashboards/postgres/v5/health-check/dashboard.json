@@ -104,7 +104,7 @@
           "policy": "default",
           "query": "select last(\"in_recovery_int\") FROM \"wal\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(365d) fill(none)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'in_recovery_int')::int\nFROM\n  wal\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
+          "rawSql": "SELECT\n  time,\n  (data->'in_recovery_int')::int\nFROM\n  wal\nWHERE\n  time > now() - '$online_interval'::interval\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -236,7 +236,7 @@
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'postmaster_uptime_s')::int\nFROM\n  wal\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
+          "rawSql": "SELECT\n  time,\n  (data->'postmaster_uptime_s')::int\nFROM\n  wal\nWHERE\n  time > now() - '$online_interval'::interval\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -461,7 +461,7 @@
           "includeVars": true,
           "params": "panelId=10&fullscreen",
           "targetBlank": true,
-          "title": "'DB overview :: CPU load' panel",
+          "title": "DB overview :: WAL panel",
           "type": "dashboard",
           "url": "/dashboard/db/db-overview"
         }
@@ -522,7 +522,7 @@
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'wal_size_b')::float8\nFROM\n  wal_size\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
+          "rawSql": "SELECT\n  time,\n  (data->'wal_size_b')::float8\nFROM\n  wal_size\nWHERE\n  time > now() - '$online_interval'::interval\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -659,7 +659,7 @@
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'numbackends')::int\nFROM\n  db_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1",
+          "rawSql": "SELECT\n  time,\n  (data->'numbackends')::int\nFROM\n  db_stats\nWHERE\n  time > now() - '$online_interval'::interval\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -800,7 +800,7 @@
           "policy": "default",
           "query": "SELECT last(\"idleintransaction\") FROM \"backends\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(15m) fill(none)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'waiting')::int\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1",
+          "rawSql": "SELECT\n  0 as time,\n  avg((data->'waiting')::int)\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -836,7 +836,7 @@
       ],
       "thresholds": "1,5",
       "timeFrom": "$online_interval",
-      "title": "Blocked backends",
+      "title": "Blocked backends (avg.)",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -942,7 +942,7 @@
           "policy": "default",
           "query": "SELECT last(\"idleintransaction\") FROM \"backends\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(15m) fill(none)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'idleintransaction')::int\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
+          "rawSql": "SELECT\n  time,\n  (data->'idleintransaction')::int\nFROM\n  backends\nWHERE\n  time > now() - '$online_interval'::interval\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1073,7 +1073,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'longest_query_seconds')::int\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
+          "rawSql": "SELECT\n  time,\n  (data->'longest_query_seconds')::int\nFROM\n  backends\nWHERE\n  time > now() - '$online_interval'::interval\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1703,7 +1703,7 @@
           "includeVars": true,
           "params": "panelId=10&fullscreen",
           "targetBlank": true,
-          "title": "'DB overview :: DB size' panel",
+          "title": "DB overview :: DB size panel",
           "type": "dashboard",
           "url": "/dashboard/db/db-overview"
         }
@@ -1794,7 +1794,7 @@
       ],
       "thresholds": "",
       "timeFrom": null,
-      "title": "DB size",
+      "title": "DB size (last)",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -1840,7 +1840,7 @@
           "includeVars": true,
           "params": "panelId=10&fullscreen",
           "targetBlank": true,
-          "title": "'DB overview :: DB size' panel",
+          "title": "DB overview :: DB size panel",
           "type": "dashboard",
           "url": "/dashboard/db/db-overview"
         }
@@ -1931,7 +1931,7 @@
       ],
       "thresholds": "",
       "timeFrom": null,
-      "title": "DB size change",
+      "title": "DB size change (diff.)",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -3358,7 +3358,7 @@
           "includeVars": true,
           "params": "panelId=10&fullscreen",
           "targetBlank": true,
-          "title": "'DB overview :: WAL' panel",
+          "title": "DB overview :: WAL panel",
           "type": "dashboard",
           "url": "/dashboard/db/db-overview"
         }
@@ -3652,11 +3652,11 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Replication",
+          "dashboard": "Replication lag",
           "includeVars": true,
-          "params": "panelId=10&fullscreen",
+          "params": "",
           "targetBlank": true,
-          "title": "'Replication :: XMIN age' panel",
+          "title": "Replication lag panel",
           "type": "dashboard",
           "url": "/dashboard/db/replication"
         }
@@ -3717,7 +3717,7 @@
           "policy": "default",
           "query": "select max(\"xmin_age_tx\") from  (SELECT last(\"xmin_age_tx\") as \"xmin_age_tx\" FROM \"replication_slots\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(365d), slot_name fill(none))\n",
           "rawQuery": true,
-          "rawSql": "select\n  0 as time,\n  max(xmin) from (\nSELECT\n  max((data->'xmin_age_tx')::int8) as xmin\nFROM\n  replication_slots\nWHERE\n  time = (select max(time) from replication_slots where $__timeFilter(time) AND dbname = '$dbname')\n  and dbname = '$dbname'  \nUNION ALL\nSELECT\n  max((data->'max_xmin_age_tx')::int8) as xmin\nFROM\n  backends\nWHERE\n  time = (select max(time) from backends where $__timeFilter(time) AND dbname = '$dbname')\n  and dbname = '$dbname'\n) x",
+          "rawSql": "select\n  0 as time,\n  max(xmin) from (\nSELECT\n  max((data->'xmin_age_tx')::int8) as xmin\nFROM\n  replication_slots\nWHERE\n  time = (select max(time) from replication_slots where time > now() - '$online_interval'::interval AND dbname = '$dbname')\n  and dbname = '$dbname'  \nUNION ALL\nSELECT\n  max((data->'max_xmin_age_tx')::int8) as xmin\nFROM\n  backends\nWHERE\n  time = (select max(time) from backends where time > now() - '$online_interval'::interval AND dbname = '$dbname')\n  and dbname = '$dbname'\n) x",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -3776,7 +3776,7 @@
       ],
       "decimals": 0,
       "description": "",
-      "format": "s",
+      "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -4436,7 +4436,7 @@
           "policy": "default",
           "query": "select sum(last) from (select last(\"non_active_int\") FROM \"replication_slots\" WHERE \"dbname\" =~ /^$dbname$/  AND $timeFilter  group by \"slot_name\")",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 as time,\n  sum((data->'non_active_int')::int)\nFROM\n  replication_slots\nWHERE\n  time = (select max(time) from replication_slots where $__timeFilter(time) AND dbname = '$dbname')\n  AND dbname = '$dbname'\n",
+          "rawSql": "SELECT\n  0 as time,\n  sum((data->'non_active_int')::int)\nFROM\n  replication_slots\nWHERE\n  time = (select max(time) from replication_slots where time > now() - '$online_interval'::interval AND dbname = '$dbname')\n  AND dbname = '$dbname'\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -4529,8 +4529,8 @@
         "auto_count": 30,
         "auto_min": "10s",
         "current": {
-          "text": "5m",
-          "value": "5m"
+          "text": "10m",
+          "value": "10m"
         },
         "hide": 0,
         "label": "Max. age for 'online' metrics",
@@ -4547,12 +4547,12 @@
             "value": "3m"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "5m",
             "value": "5m"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "10m",
             "value": "10m"
           },
