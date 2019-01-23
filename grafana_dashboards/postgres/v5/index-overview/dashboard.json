@@ -632,7 +632,7 @@
         "multi": true,
         "name": "dbname",
         "options": [],
-        "query": "SELECT DISTINCT dbname FROM public.all_distinct_dbname_metrics WHERE metric = 'index_stats' ORDER BY 1;",
+        "query": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics WHERE metric = 'index_stats' ORDER BY 1;",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
