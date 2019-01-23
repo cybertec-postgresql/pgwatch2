@@ -1,4 +1,7 @@
-/* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
+/*  Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil)
+    NB! "psutil" is known to behave differently depending on the used version and operating system, so if getting
+    errors please adjust to your needs. "psutil" documentation here: https://psutil.readthedocs.io/en/latest/
+*/
 
 CREATE OR REPLACE FUNCTION get_psutil_cpu(
 	OUT cpu_utilization float8, OUT load_1m_norm float8, OUT load_1m float8, OUT load_5m_norm float8, OUT load_5m float8,
