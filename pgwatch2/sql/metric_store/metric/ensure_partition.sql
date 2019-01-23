@@ -1,7 +1,7 @@
 -- DROP FUNCTION IF EXISTS public.ensure_partition_metric(text);
 -- select * from public.ensure_partition_metric('wal');
 
-CREATE OR REPLACE FUNCTION public.ensure_partition_metric(
+CREATE OR REPLACE FUNCTION admin.ensure_partition_metric(
     metric text
 )
 RETURNS void AS
@@ -19,11 +19,11 @@ BEGIN
   THEN
     --RAISE NOTICE 'creating partition % ...', metric;
    
-    EXECUTE format($$CREATE TABLE public."%s" (LIKE public.metrics_template INCLUDING INDEXES)$$, metric);
+    EXECUTE format($$CREATE TABLE public."%s" (LIKE admin.metrics_template INCLUDING INDEXES)$$, metric);
     EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);
   END IF;
 
 END;
 $SQL$ LANGUAGE plpgsql;
 
-GRANT EXECUTE ON FUNCTION public.ensure_partition_metric(text) TO pgwatch2;
+GRANT EXECUTE ON FUNCTION admin.ensure_partition_metric(text) TO pgwatch2;

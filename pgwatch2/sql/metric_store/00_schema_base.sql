@@ -1,3 +1,11 @@
+/*
+ "admin" schema - stores schema type, partition templates and data cleanup functions
+ "public" schema - top level metric tables
+ "subpartitions" schema - subpartitions of "public" schema top level metric tables (if using time / dbname-time partitioning)
+*/
+
+CREATE SCHEMA IF NOT EXISTS admin AUTHORIZATION pgwatch2;
+
 GRANT ALL ON SCHEMA public TO pgwatch2;
 
 DO $SQL$
@@ -13,18 +21,18 @@ SET ROLE TO pgwatch2;
 -- drop table if exists public.storage_schema_type;
 
 /* although the gather has a "--pg-storage-type" param, the WebUI might not know about it in a custom setup */
-create table public.storage_schema_type (
+create table admin.storage_schema_type (
   schema_type text not null,
   initialized_on timestamptz not null default now(),
   check (schema_type in ('metric', 'metric-time', 'metric-dbname-time', 'custom'))
 );
 
-comment on table public.storage_schema_type is 'identifies storage schema for other pgwatch2 components';
+comment on table admin.storage_schema_type is 'identifies storage schema for other pgwatch2 components';
 
-create unique index max_one_row on public.storage_schema_type ((1));
+create unique index max_one_row on admin.storage_schema_type ((1));
 
 /* for the Grafana drop-down. managed by the gatherer */
-create table public.all_distinct_dbname_metrics (
+create table admin.all_distinct_dbname_metrics (
   dbname text not null,
   metric text not null,
   created_on timestamptz not null default now(),
@@ -33,9 +41,9 @@ create table public.all_distinct_dbname_metrics (
 
 
 
--- DROP FUNCTION IF EXISTS public.ensure_dummy_metrics_table(text);
--- select * from public.ensure_dummy_metrics_table('wal');
-CREATE OR REPLACE FUNCTION public.ensure_dummy_metrics_table(
+-- DROP FUNCTION IF EXISTS admin.ensure_dummy_metrics_table(text);
+-- select * from admin.ensure_dummy_metrics_table('wal');
+CREATE OR REPLACE FUNCTION admin.ensure_dummy_metrics_table(
     metric text
 )
 RETURNS boolean AS
@@ -47,7 +55,7 @@ $SQL$
 DECLARE
   l_schema_type text;
 BEGIN
-  SELECT schema_type INTO l_schema_type FROM public.storage_schema_type;
+  SELECT schema_type INTO l_schema_type FROM admin.storage_schema_type;
 
     IF NOT EXISTS (SELECT 1
                     FROM pg_tables
@@ -56,11 +64,11 @@ BEGIN
     THEN
 
       IF l_schema_type = 'metric' THEN
-        EXECUTE format($$CREATE TABLE public."%s" (LIKE public.metrics_template INCLUDING INDEXES)$$, metric);
+        EXECUTE format($$CREATE TABLE public."%s" (LIKE admin.metrics_template INCLUDING INDEXES)$$, metric);
       ELSIF l_schema_type = 'metric-time' THEN
-        EXECUTE format($$CREATE TABLE public."%s" (LIKE public.metrics_template INCLUDING INDEXES) PARTITION BY RANGE (time)$$, metric);
+        EXECUTE format($$CREATE TABLE public."%s" (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY RANGE (time)$$, metric);
       ELSIF l_schema_type = 'metric-dbname-time' THEN
-        EXECUTE format($$CREATE TABLE public."%s" (LIKE public.metrics_template INCLUDING INDEXES) PARTITION BY LIST (dbname)$$, metric);
+        EXECUTE format($$CREATE TABLE public."%s" (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY LIST (dbname)$$, metric);
       END IF;
 
       EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);
@@ -72,7 +80,7 @@ BEGIN
   RETURN false;
 END;
 $SQL$ LANGUAGE plpgsql;
-GRANT EXECUTE ON FUNCTION public.ensure_dummy_metrics_table(text) TO pgwatch2;
+GRANT EXECUTE ON FUNCTION admin.ensure_dummy_metrics_table(text) TO pgwatch2;
 
 
 

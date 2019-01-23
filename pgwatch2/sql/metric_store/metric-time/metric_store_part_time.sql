@@ -13,7 +13,7 @@ SET ROLE TO pgwatch2;
 
 -- drop table if exists metrics_template;
 
-create table public.metrics_template (
+create table admin.metrics_template (
   time timestamptz not null default now(),
   dbname text not null,
   data jsonb not null,
@@ -21,16 +21,16 @@ create table public.metrics_template (
   check (false)
 );
 
-comment on table public.metrics_template is 'used as a template for all new metric definitions';
+comment on table admin.metrics_template is 'used as a template for all new metric definitions';
 
-create index on public.metrics_template (dbname, time);
-create index on public.metrics_template using gin (dbname, tag_data, time);
+create index on admin.metrics_template (dbname, time);
+create index on admin.metrics_template using gin (dbname, tag_data, time);
 
 /*
  something like below will be done by the gatherer AUTOMATICALLY:
 
 create table public."mymetric"
-  (LIKE public.metrics_template INCLUDING INDEXES)
+  (LIKE admin.metrics_template INCLUDING INDEXES)
   PARTITION BY RANGE (time);
 COMMENT ON TABLE public."mymetric" IS 'pgwatch2-generated-metric-lvl';
 
@@ -44,4 +44,4 @@ COMMENT ON TABLE subpartitions."mymetric_y2019w01" IS 'pgwatch2-generated-metric
 RESET ROLE;
 
 -- NB! default (for the Docker image)
-insert into public.storage_schema_type select 'metric-time';
+insert into admin.storage_schema_type select 'metric-time';

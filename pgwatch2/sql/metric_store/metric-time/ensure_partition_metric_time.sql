@@ -1,7 +1,7 @@
--- DROP FUNCTION ensure_partition_metric_time(text,timestamp with time zone,integer);
--- select * from public.ensure_partition_metric_time('wal', now(), 1);
+-- DROP FUNCTION admin.ensure_partition_metric_time(text,timestamp with time zone,integer);
+-- select * from admin.ensure_partition_metric_time('wal', now(), 1);
 
-CREATE OR REPLACE FUNCTION public.ensure_partition_metric_time(
+CREATE OR REPLACE FUNCTION admin.ensure_partition_metric_time(
     metric text,
     metric_timestamp timestamptz,
     partitions_to_precreate int default 0,
@@ -28,7 +28,7 @@ BEGIN
                     AND schemaname = 'public')
   THEN
     --RAISE NOTICE 'creating top level metrics partition % ...', metric;   
-    l_sql := format($$CREATE TABLE public."%s" (LIKE public.metrics_template INCLUDING INDEXES) PARTITION BY RANGE (time)$$,
+    l_sql := format($$CREATE TABLE public."%s" (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY RANGE (time)$$,
                     metric);
     EXECUTE l_sql;
     EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);
@@ -70,4 +70,4 @@ BEGIN
 END;
 $SQL$ LANGUAGE plpgsql;
 
-GRANT EXECUTE ON FUNCTION public.ensure_partition_metric_time(text,timestamp with time zone,integer) TO pgwatch2;
+GRANT EXECUTE ON FUNCTION admin.ensure_partition_metric_time(text,timestamp with time zone,integer) TO pgwatch2;

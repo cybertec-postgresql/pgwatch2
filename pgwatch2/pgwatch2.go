@@ -1003,7 +1003,7 @@ func DropOldTimePartitions(metricAgeDaysThreshold int64) (int, error) {
 func CheckTemplateTableExistanceOrFail(pgSchemaType string) {
 	var partFuncSignature string
 
-	schema_type_sql := `select schema_type from public.storage_schema_type`
+	schema_type_sql := `select schema_type from admin.storage_schema_type`
 	ret, err := DBExecRead(metricDb, METRICDB_IDENT, schema_type_sql)
 	if err != nil {
 		log.Fatal("have you initialized the metrics schema, including a row in 'storage_schema_type' table, from schema_base.sql?", err)
@@ -1025,20 +1025,20 @@ func CheckTemplateTableExistanceOrFail(pgSchemaType string) {
 		}
 	} else {
 		sql := `
-		SELECT has_table_privilege(session_user, 'public.metrics_template', 'INSERT') ok;
+		SELECT has_table_privilege(session_user, 'admin.metrics_template', 'INSERT') ok;
 		`
 		ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql)
 		if err != nil || (err == nil && !ret[0]["ok"].(bool)) {
-			log.Fatal("public.metrics_template table not existing or no INSERT privileges")
+			log.Fatal("admin.metrics_template table not existing or no INSERT privileges")
 		}
 	}
 
 	if pgSchemaType == "metric" {
-		partFuncSignature = "public.ensure_partition_metric(text)"
+		partFuncSignature = "admin.ensure_partition_metric(text)"
 	} else if pgSchemaType == "metric-time" {
-		partFuncSignature = "public.ensure_partition_metric_time(text,timestamp with time zone,integer)"
+		partFuncSignature = "admin.ensure_partition_metric_time(text,timestamp with time zone,integer)"
 	} else if pgSchemaType == "metric-dbname-time" {
-		partFuncSignature = "public.ensure_partition_metric_dbname_time(text,text,timestamp with time zone,integer)"
+		partFuncSignature = "admin.ensure_partition_metric_dbname_time(text,text,timestamp with time zone,integer)"
 	}
 
 	if partFuncSignature != "" {
@@ -1055,10 +1055,10 @@ func CheckTemplateTableExistanceOrFail(pgSchemaType string) {
 }
 
 func AddDBUniqueMetricToListingTable(db_unique, metric string) error {
-	sql := `insert into public.all_distinct_dbname_metrics
+	sql := `insert into admin.all_distinct_dbname_metrics
 			select $1, $2
 			where not exists (
-				select * from public.all_distinct_dbname_metrics where dbname = $1 and metric = $2
+				select * from admin.all_distinct_dbname_metrics where dbname = $1 and metric = $2
 			)`
 	_, err := DBExecRead(metricDb, METRICDB_IDENT, sql, db_unique, metric)
 	return err
@@ -1066,7 +1066,7 @@ func AddDBUniqueMetricToListingTable(db_unique, metric string) error {
 
 func UniqueDbnamesListingMaintainer(daemonMode bool) {
 	// due to metrics deletion the listing can go out of sync (a trigger not really wanted)
-	sql_top_level_metrics := `SELECT table_name FROM public.get_top_level_metric_tables()`
+	sql_top_level_metrics := `SELECT table_name FROM admin.get_top_level_metric_tables()`
 	sql_distinct := `
 	WITH RECURSIVE t(dbname) AS (
 		SELECT MIN(dbname) AS dbname FROM %s
@@ -1074,9 +1074,9 @@ func UniqueDbnamesListingMaintainer(daemonMode bool) {
 		SELECT (SELECT MIN(dbname) FROM %s WHERE dbname > t.dbname) FROM t )
 	SELECT dbname FROM t WHERE dbname NOTNULL ORDER BY 1
 	`
-	sql_delete := `DELETE FROM public.all_distinct_dbname_metrics WHERE NOT dbname = ANY($1) and metric = $2 RETURNING *`
+	sql_delete := `DELETE FROM admin.all_distinct_dbname_metrics WHERE NOT dbname = ANY($1) and metric = $2 RETURNING *`
 	sql_add := `
-		INSERT INTO public.all_distinct_dbname_metrics SELECT u, $2 FROM (select unnest($1::text[]) as u) x
+		INSERT INTO admin.all_distinct_dbname_metrics SELECT u, $2 FROM (select unnest($1::text[]) as u) x
 		WHERE NOT EXISTS (select * from all_distinct_dbname_metrics where dbname = u and metric = $2)
 		RETURNING *;
 	`
@@ -1086,7 +1086,7 @@ func UniqueDbnamesListingMaintainer(daemonMode bool) {
 			time.Sleep(time.Hour * 6)
 		}
 
-		log.Infof("Refreshing public.all_distinct_dbname_metrics listing table...")
+		log.Infof("Refreshing admin.all_distinct_dbname_metrics listing table...")
 		all_distinct_metric_tables, err := DBExecRead(metricDb, METRICDB_IDENT, sql_top_level_metrics)
 		if err != nil {
 			log.Error("Could not refresh Postgres dbnames listing table:", err)
@@ -1136,7 +1136,7 @@ func EnsureMetricDummy(metric string) {
 		return
 	}
 	sql_ensure := `
-	select public.ensure_dummy_metrics_table($1) as created
+	select admin.ensure_dummy_metrics_table($1) as created
 	`
 	PGDummyMetricTablesLock.Lock()
 	defer PGDummyMetricTablesLock.Unlock()
@@ -1159,7 +1159,7 @@ func EnsureMetricDummy(metric string) {
 func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo) error {
 
 	sql_ensure := `
-	select * from public.ensure_partition_metric($1)
+	select * from admin.ensure_partition_metric($1)
 	`
 	for metric, _ := range pg_part_bounds {
 
@@ -1179,7 +1179,7 @@ func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo) error {
 func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo) error {
 	// TODO if less < 1d to part. end, precreate ?
 	sql_ensure := `
-	select * from public.ensure_partition_metric_time($1, $2)
+	select * from admin.ensure_partition_metric_time($1, $2)
 	`
 
 	for metric, pb := range pg_part_bounds {
@@ -1218,7 +1218,7 @@ func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo) error {
 func EnsureDbnameMetricTime(metric_dbname_part_bounds map[string]map[string]ExistingPartitionInfo) error {
 	// TODO if less < 1d to part. end, precreate ?
 	sql_ensure := `
-	select * from public.ensure_partition_metric_dbname_time($1, $2, $3)
+	select * from admin.ensure_partition_metric_dbname_time($1, $2, $3)
 	`
 
 	for metric, dbnameTimestampMap := range metric_dbname_part_bounds {
