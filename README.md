@@ -164,6 +164,10 @@ Following parameters needs to be set then: PW2_DATASTORE=graphite, PW2_GRAPHITEH
 3. If using the Web UI also set the first two parameters (--datastore and --pg-metric-store-conn-str) there, if wanting to
 clean up data via the UI.
 
+NB! The schema rollout script activates "asynchronous commiting" feature for the metrics storing user role by default!
+If this is not wanted (no metrics can be lost in case of a crash), then re-enstate normal (synchronous) commits with:
+`ALTER ROLE pgwatch2 IN DATABASE $MY_METRICS_DB SET synchronous_commit TO on`
+
 
 # Usage (Docker based, for file or ad-hoc based see further below)
 
