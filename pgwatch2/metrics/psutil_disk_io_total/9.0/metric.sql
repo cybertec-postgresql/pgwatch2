@@ -5,5 +5,5 @@ SELECT
   read_bytes,
   write_bytes
 from
-  public.get_psutil_disk_io_total()
+  get_psutil_disk_io_total()
 ;

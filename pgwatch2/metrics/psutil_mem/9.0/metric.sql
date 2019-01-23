@@ -3,5 +3,5 @@ SELECT
   total, used, free, buff_cache, available, percent,
   swap_total, swap_used, swap_free, swap_percent
 from
-  public.get_psutil_mem()
+  get_psutil_mem()
 ;

@@ -15,7 +15,7 @@ SELECT
 FROM
     pg_catalog.pg_locks AS waiting
 JOIN
-    public.get_stat_activity() AS waiting_stm
+    get_stat_activity() AS waiting_stm
     ON (
         waiting_stm.pid = waiting.pid
     )
@@ -29,7 +29,7 @@ JOIN
         OR waiting.transactionid = other.transactionid
     )
 JOIN
-    public.get_stat_activity() AS other_stm
+    get_stat_activity() AS other_stm
     ON (
         other_stm.pid = other.pid
     )

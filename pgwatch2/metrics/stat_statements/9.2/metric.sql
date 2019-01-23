@@ -14,7 +14,7 @@ with q_data as (
     sum(blk_read_time)::double precision as blk_read_time,
     sum(blk_write_time)::double precision as blk_write_time
   from
-    public.get_stat_statements() s
+    get_stat_statements() s
   where
     calls > 5
     and total_time > 0

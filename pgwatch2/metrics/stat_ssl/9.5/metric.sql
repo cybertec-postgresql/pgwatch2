@@ -4,7 +4,7 @@ SELECT
   count(*)
 FROM
   pg_stat_ssl AS s,
-  public.get_stat_activity() AS a
+  get_stat_activity() AS a
 WHERE
   a.pid = s.pid
   AND a.datname = current_database()

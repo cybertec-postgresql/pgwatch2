@@ -4,5 +4,5 @@ SELECT
   path as tag_path,
   total, used, free, percent
 from
-  public.get_psutil_disk()
+  get_psutil_disk()
 ;

@@ -8,7 +8,7 @@ select
   dead_tuple_len_b
 from
   pg_class c
-  join lateral public.pgstattuple_approx(c.oid) st on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables,
+  join lateral pgstattuple_approx(c.oid) st on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables,
   join pg_namespace n on n.oid = c.relnamespace
 where
   relkind in ('r', 'm')

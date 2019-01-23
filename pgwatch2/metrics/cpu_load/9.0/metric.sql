@@ -4,4 +4,4 @@ select
   load_5min,
   load_15min
 from
-  public.get_load_average();   -- needs the plpythonu proc from "metric_fetching_helpers" folder
+  get_load_average();   -- needs the plpythonu proc from "metric_fetching_helpers" folder

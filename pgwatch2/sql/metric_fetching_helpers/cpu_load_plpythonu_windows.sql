@@ -5,17 +5,17 @@
  used
  
 */
---DROP TYPE public.load_average;
---DROP FUNCTION public.get_load_average();
---DROP FUNCTION public.cpu();
+--DROP TYPE load_average;
+--DROP FUNCTION get_load_average();
+--DROP FUNCTION cpu();
 
 BEGIN;
 
-DROP TYPE IF EXISTS public.load_average CASCADE;
+DROP TYPE IF EXISTS load_average CASCADE;
 
-CREATE TYPE public.load_average AS ( load_1min real, load_5min real, load_15min real );
+CREATE TYPE load_average AS ( load_1min real, load_5min real, load_15min real );
 
-CREATE OR REPLACE FUNCTION public.cpu() RETURNS real AS
+CREATE OR REPLACE FUNCTION cpu() RETURNS real AS
 $$
 	from ctypes import windll, Structure, sizeof, byref
 	from ctypes.wintypes import DWORD
@@ -47,13 +47,13 @@ $$
 	return min((sys - idl) *100 / sys, 100)
 $$ LANGUAGE plpython3u;
 
-CREATE OR REPLACE FUNCTION public.get_load_average() RETURNS public.load_average AS
+CREATE OR REPLACE FUNCTION get_load_average() RETURNS load_average AS
 $$
-	SELECT val, val, val FROM public.cpu() AS cpu_now(val);
+	SELECT val, val, val FROM cpu() AS cpu_now(val);
 $$ LANGUAGE sql;
 
-GRANT EXECUTE ON FUNCTION public.get_load_average() TO public;
+GRANT EXECUTE ON FUNCTION get_load_average() TO pgwatch2;
 
-COMMENT ON FUNCTION public.get_load_average() is 'created for pgwatch2';
+COMMENT ON FUNCTION get_load_average() is 'created for pgwatch2';
 
 COMMIT;

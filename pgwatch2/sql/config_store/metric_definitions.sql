@@ -6,7 +6,7 @@ values (
 9.0,
 $sql$
 with sa_snapshot as (
-  select * from public.get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
+  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -30,7 +30,7 @@ values (
 9.4,
 $sql$
 with sa_snapshot as (
-  select * from public.get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
+  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -55,7 +55,7 @@ values (
 9.6,
 $sql$
 with sa_snapshot as (
-  select * from public.get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
+  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -80,7 +80,7 @@ values (
 10,
 $sql$
 with sa_snapshot as (
-  select * from public.get_stat_activity()
+  select * from get_stat_activity()
   where pid != pg_backend_pid()
   and datname = current_database()
 )
@@ -140,7 +140,7 @@ select
   load_5min,
   load_15min
 from
-  public.get_load_average();   -- needs the plpythonu proc from "metric_fetching_helpers" folder
+  get_load_average();   -- needs the plpythonu proc from "metric_fetching_helpers" folder
 $sql$
 );
 
@@ -241,7 +241,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM public.get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -286,7 +286,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM public.get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -331,7 +331,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM public.get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -562,7 +562,7 @@ with q_data as (
     sum(blk_read_time)::double precision as blk_read_time,
     sum(blk_write_time)::double precision as blk_write_time
   from
-    public.get_stat_statements() s
+    get_stat_statements() s
   where
     calls > 5
     and total_time > 0
@@ -724,7 +724,7 @@ SELECT
   count(*)
 FROM
   pg_stat_ssl AS s,
-  public.get_stat_activity() AS a
+  get_stat_activity() AS a
 WHERE
   a.pid = s.pid
   AND a.datname = current_database()
@@ -832,7 +832,7 @@ SELECT
 FROM
     pg_catalog.pg_locks AS waiting
 JOIN
-    public.get_stat_activity() AS waiting_stm
+    get_stat_activity() AS waiting_stm
     ON (
         waiting_stm.pid = waiting.pid
     )
@@ -846,7 +846,7 @@ JOIN
         OR waiting.transactionid = other.transactionid
     )
 JOIN
-    public.get_stat_activity() AS other_stm
+    get_stat_activity() AS other_stm
     ON (
         other_stm.pid = other.pid
     )
@@ -878,7 +878,7 @@ select
   dead_tuple_len_b
 from
   pg_class c
-  join lateral public.pgstattuple_approx(c.oid) st on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables,
+  join lateral pgstattuple_approx(c.oid) st on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables,
   join pg_namespace n on n.oid = c.relnamespace
 where
   relkind in ('r', 'm')
@@ -897,9 +897,9 @@ values (
 $sql$
 BEGIN;
 
-CREATE EXTENSION IF NOT EXISTS pgstattuple WITH SCHEMA PUBLIC;
+CREATE EXTENSION IF NOT EXISTS pgstattuple;
 
-CREATE OR REPLACE FUNCTION public.get_table_bloat_approx(
+CREATE OR REPLACE FUNCTION get_table_bloat_approx(
   OUT approx_free_percent double precision, OUT approx_free_space double precision,
   OUT approx_free_percent double precision, OUT approx_free_space double precision
 ) AS
@@ -913,15 +913,15 @@ $$
       pg_class c
       join
       pg_namespace n on n.oid = c.relnamespace
-      join lateral public.pgstattuple_approx(c.oid) on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables
+      join lateral pgstattuple_approx(c.oid) on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables
     where
       relkind in ('r', 'm')
       and c.relpages >= 128 -- tables >1mb
       and not n.nspname like any (array[E'pg\\_%', 'information_schema'])
 $$ LANGUAGE sql SECURITY DEFINER;
 
-GRANT EXECUTE ON FUNCTION public.get_table_bloat_approx() TO public;
-COMMENT ON FUNCTION public.get_table_bloat_approx() is 'created for pgwatch2';
+GRANT EXECUTE ON FUNCTION get_table_bloat_approx() TO pgwatch2;
+COMMENT ON FUNCTION get_table_bloat_approx() is 'created for pgwatch2';
 
 COMMIT;
 $sql$,
@@ -943,7 +943,7 @@ select
   dead_tuple_percent,
   dead_tuple_len as dead_tuple_len_b
 from
-  public.get_table_bloat_approx()
+  get_table_bloat_approx()
 where
   approx_free_space > 0
 $sql$
@@ -1138,19 +1138,19 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS plpythonu;
 
-DROP TYPE IF EXISTS public.load_average CASCADE;
+DROP TYPE IF EXISTS load_average CASCADE;
 
-CREATE TYPE public.load_average AS ( load_1min real, load_5min real, load_15min real );
+CREATE TYPE load_average AS ( load_1min real, load_5min real, load_15min real );
 
-CREATE OR REPLACE FUNCTION public.get_load_average() RETURNS public.load_average AS
+CREATE OR REPLACE FUNCTION get_load_average() RETURNS load_average AS
 $$
 from os import getloadavg
 return getloadavg()
 $$ LANGUAGE plpythonu VOLATILE SECURITY DEFINER;
 
-GRANT EXECUTE ON FUNCTION public.get_load_average() TO public;
+GRANT EXECUTE ON FUNCTION get_load_average() TO pgwatch2;
 
-COMMENT ON FUNCTION public.get_load_average() is 'created for pgwatch2';
+COMMENT ON FUNCTION get_load_average() is 'created for pgwatch2';
 
 COMMIT;
 $sql$,
@@ -1169,7 +1169,7 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 DO $OUTER$
 DECLARE
   l_sproc_text text := $_SQL_$
-CREATE OR REPLACE FUNCTION public.get_stat_statements() RETURNS SETOF pg_stat_statements AS
+CREATE OR REPLACE FUNCTION get_stat_statements() RETURNS SETOF pg_stat_statements AS
 $$
   select s.* from pg_stat_statements s join pg_database d on d.oid = s.dbid and d.datname = current_database()
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
@@ -1180,9 +1180,8 @@ BEGIN
         E'\\d+\\.?\\d+?')
       )[1]::double precision > 9.1 THEN   --parameters normalized only from 9.2
     EXECUTE format(l_sproc_text);
-    EXECUTE 'REVOKE EXECUTE ON FUNCTION public.get_stat_statements() FROM PUBLIC;';
-    EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_stat_statements() TO pgwatch2';
-    EXECUTE 'COMMENT ON FUNCTION public.get_stat_statements() IS ''created for pgwatch2''';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION get_stat_statements() TO pgwatch2';
+    EXECUTE 'COMMENT ON FUNCTION get_stat_statements() IS ''created for pgwatch2''';
   END IF;
 END;
 $OUTER$;
@@ -1208,14 +1207,13 @@ values (
 9.0,
 $sql$
 
-CREATE OR REPLACE FUNCTION public.get_stat_activity() RETURNS SETOF pg_stat_activity AS
+CREATE OR REPLACE FUNCTION get_stat_activity() RETURNS SETOF pg_stat_activity AS
 $$
   select * from pg_stat_activity where datname = current_database()
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
-REVOKE EXECUTE ON FUNCTION public.get_stat_activity() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_stat_activity() TO pgwatch2;
-COMMENT ON FUNCTION public.get_stat_activity() IS 'created for pgwatch2';
+GRANT EXECUTE ON FUNCTION get_stat_activity() TO pgwatch2;
+COMMENT ON FUNCTION get_stat_activity() IS 'created for pgwatch2';
 
 $sql$,
 'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
@@ -1275,7 +1273,7 @@ SELECT
   cpu_utilization, load_1m_norm, load_1m, load_5m_norm, load_5m,
   "user", system, idle, iowait, irqs, other
 from
-  public.get_psutil_cpu();
+  get_psutil_cpu();
 $sql$
 );
 
@@ -1289,7 +1287,7 @@ SELECT
   total, used, free, buff_cache, available, percent,
   swap_total, swap_used, swap_free, swap_percent
 from
-  public.get_psutil_mem();
+  get_psutil_mem();
 $sql$
 );
 
@@ -1304,7 +1302,7 @@ SELECT
   path as tag_path,
   total, used, free, percent
 from
-  public.get_psutil_disk();
+  get_psutil_disk();
 $sql$
 );
 
@@ -1320,7 +1318,7 @@ SELECT
   read_bytes,
   write_bytes
 from
-  public.get_psutil_disk_io_total();
+  get_psutil_disk_io_total();
 $sql$
 );
 
@@ -1349,14 +1347,13 @@ values (
 10,
 $sql$
 
-CREATE OR REPLACE FUNCTION public.get_wal_size() RETURNS int8 AS
+CREATE OR REPLACE FUNCTION get_wal_size() RETURNS int8 AS
 $$
 select (sum((pg_stat_file('pg_wal/' || name)).size))::int8 from pg_ls_waldir()
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
-REVOKE EXECUTE ON FUNCTION public.get_wal_size() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_wal_size() TO pgwatch2;
-COMMENT ON FUNCTION public.get_wal_size() IS 'created for pgwatch2';
+GRANT EXECUTE ON FUNCTION get_wal_size() TO pgwatch2;
+COMMENT ON FUNCTION get_wal_size() IS 'created for pgwatch2';
 
 $sql$,
 'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
@@ -1377,7 +1374,7 @@ values (
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  public.get_wal_size() as wal_size_b;
+  get_wal_size() as wal_size_b;
 $sql$
 );
 

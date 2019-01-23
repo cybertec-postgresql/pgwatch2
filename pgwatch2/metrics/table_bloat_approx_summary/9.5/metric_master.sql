@@ -5,6 +5,6 @@ select
   dead_tuple_percent,
   dead_tuple_len as dead_tuple_len_b
 from
-  public.get_table_bloat_approx()
+  get_table_bloat_approx()
 where
   approx_free_space > 0

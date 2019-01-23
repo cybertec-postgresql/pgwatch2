@@ -5,11 +5,10 @@ Assumes a role has been created named pgwatch2
 */
 
 
-CREATE OR REPLACE FUNCTION public.get_stat_activity() RETURNS SETOF pg_stat_activity AS
+CREATE OR REPLACE FUNCTION get_stat_activity() RETURNS SETOF pg_stat_activity AS
 $$
   select * from pg_stat_activity where datname = current_database()
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
-REVOKE EXECUTE ON FUNCTION public.get_stat_activity() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_stat_activity() TO pgwatch2;
-COMMENT ON FUNCTION public.get_stat_activity() IS 'created for pgwatch2';
+GRANT EXECUTE ON FUNCTION get_stat_activity() TO pgwatch2;
+COMMENT ON FUNCTION get_stat_activity() IS 'created for pgwatch2';

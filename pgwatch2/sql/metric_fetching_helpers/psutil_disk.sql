@@ -1,6 +1,6 @@
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
 
-CREATE OR REPLACE FUNCTION public.get_psutil_disk(
+CREATE OR REPLACE FUNCTION get_psutil_disk(
 	OUT dir_or_tablespace text, OUT path text, OUT total float8, OUT used float8, OUT free float8, OUT percent float8
 )
  RETURNS SETOF record
@@ -56,6 +56,5 @@ return ret_list
 
 $FUNCTION$;
 
-REVOKE EXECUTE ON FUNCTION public.get_psutil_disk() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_psutil_disk() TO pgwatch2;
-COMMENT ON FUNCTION public.get_psutil_disk() IS 'created for pgwatch2';
+GRANT EXECUTE ON FUNCTION get_psutil_disk() TO pgwatch2;
+COMMENT ON FUNCTION get_psutil_disk() IS 'created for pgwatch2';

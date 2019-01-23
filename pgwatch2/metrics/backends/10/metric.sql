@@ -1,5 +1,5 @@
 with sa_snapshot as (
-  select * from public.get_stat_activity()
+  select * from get_stat_activity()
   where pid != pg_backend_pid()
   and datname = current_database()
 )

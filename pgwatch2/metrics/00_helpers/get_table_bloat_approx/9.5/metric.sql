@@ -1,12 +1,12 @@
 BEGIN;
 
-CREATE EXTENSION IF NOT EXISTS pgstattuple WITH SCHEMA PUBLIC;
+CREATE EXTENSION IF NOT EXISTS pgstattuple;
 
 DO $OUTER$
 
 DECLARE
   l_sproc_text text := $_SQL_$
-CREATE OR REPLACE FUNCTION public.get_table_bloat_approx(
+CREATE OR REPLACE FUNCTION get_table_bloat_approx(
   OUT approx_free_percent double precision, OUT approx_free_space double precision,
   OUT dead_tuple_percent double precision, OUT dead_tuple_len double precision) AS
 $$
@@ -19,7 +19,7 @@ $$
       pg_class c
       join
       pg_namespace n on n.oid = c.relnamespace
-      join lateral public.pgstattuple_approx(c.oid) on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables
+      join lateral pgstattuple_approx(c.oid) on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables
     where
       relkind in ('r', 'm')
       and c.relpages >= 128 -- tables >1mb
@@ -34,8 +34,8 @@ BEGIN
       )[1]::double precision > 9.4 THEN
     EXECUTE l_sproc_text;
 
-    EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_table_bloat_approx() TO public;';
-    EXECUTE 'COMMENT ON FUNCTION public.get_table_bloat_approx() is ''created for pgwatch2''';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION get_table_bloat_approx() TO pgwatch2;';
+    EXECUTE 'COMMENT ON FUNCTION get_table_bloat_approx() is ''created for pgwatch2''';
   END IF;
 END;
 $OUTER$;
