@@ -179,22 +179,25 @@ into the docker container under /var/logs/supervisor/
 # Steps to configure your database for monitoring
 
 * As a base requirement you'll need a login user (non-superuser suggested) for connecting to your server and fetching metrics queries.
-NB! Though theoretically you can use any username you like, but if not using "pgwatch2" you need to modify the "helper" creation
-scripts accordingly as in those by default only the "pgwatch2" will be granted execute privileges.
+NB! Though theoretically you can use any username you like, but if not using "pgwatch2" you need to adjust the "helper" creation
+SQL scripts accordingly as in those by default only the "pgwatch2" will be granted execute privileges.
 ```
 CREATE ROLE pgwatch2 WITH LOGIN PASSWORD 'secret';
 -- NB! For very important databases it might make sense to ensure that the user
 -- account used for monitoring can only open a limited number of connections (there are according checks in code also though)
-ALTER ROLE pgwatch2 CONNECTION LIMIT 3;```
+ALTER ROLE pgwatch2 CONNECTION LIMIT 3;
 ```
-* Define the helper function to enable the monitoring of sessions, blocking locks, etc by the `pgwatch2` login defined above, if using a superuser login (not recommended) you can skip this step, just ensure that you check the `Is superuser?` check box when configuring Databases
+* Define the helper function to enable the monitoring of sessions counts, types and durations by the `pgwatch2` login defined above.
+If using a superuser login (not recommended) you can skip this step, just ensure that you check the `Is superuser?` checkbox
+(or "is_superuser: true" in YAML mode) when configuring databases.
 ```
 psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/stat_activity_wrapper.sql mydb
 ```
 
-* Additionally for extra insights ("Stat statements" dashboard and CPU load) it's also recommended to install the pg_stat_statement
-extension (Postgres 9.4+ needed to be useful for pgwatch2) and the PL/Python language. The latter one though is usually disabled by DB-as-a-service providers for security reasons.
-For maximum pg_stat_statement benefit ("Top queries by IO time" dashboard), one should also then enable the [track_io_timing](https://www.postgresql.org/docs/current/static/runtime-config-statistics.html#GUC-TRACK-IO-TIMING) setting.
+* Additionally for extra insights ("Stat statements" dashboard and CPU load) it's also recommended to install the `pg_stat_statement`
+contrib extension (Postgres 9.2+ needed to be useful for pgwatch2) and the PL/Python language. The latter one though is usually disabled
+by DB-as-a-service providers for security reasons. For maximum pg_stat_statement benefit ("Top queries by IO time" dashboard),
+one should also then enable the [track_io_timing](https://www.postgresql.org/docs/current/static/runtime-config-statistics.html#GUC-TRACK-IO-TIMING) setting.
 
 ```
 # add pg_stat_statements to your postgresql.conf and restart the server
@@ -212,12 +215,18 @@ psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/stat_state
 psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/cpu_load_plpythonu.sql mydb
 ```
 
+For more detailed statistics (OS monitoring, table bloat, WAL size, etc) it is recommended to install also all other helpers
+found from the `pgwatch2/sql/metric_fetching_helpers` folder (or `pgwatch2/metrics/00_helpers` for YAML based setup).
+
+NB! When rolling out helpers make sure the `search_path` is set correctly (same as monitoring role's) as metrics using the
+helpers, assume that monitoring role's `search_path` includes everything needed i.e. they don't qualify any schemas.
+
 # Running without helper / wrapper functions
 
 Helpers/wrappers are not needed actually, they just provide a bit more information. For unprivileged users (developers)
 with no means to install any wrappers as superuser it's also possible to benefit from pgwatch2 - for such use cases e.g.
 the "unprivileged" preset metrics profile and the according ["DB overview Unprivileged / Developer" dashboard](https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/overview_developer.png)
-is a good starting point as it only assumes existance of pg_stat_statements.
+is a good starting point as it only assumes existance of `pg_stat_statements` which is available at all cloud providers.
 
 # Screenshot of the "DB overview" dashboard
 !["DB overview" dashboard](https://github.com/cybertec-postgresql/pgwatch2/raw/master/screenshots/overview.png)
@@ -300,7 +309,12 @@ Relevant Gatherer env. vars / flags: --adhoc-conn-str, --adhoc-config, --adhoc-n
 
 ```
 # launching in ad-hoc / test mode
-docker run --rm -p 3000:3000 -p 8080:8080 -e PW2_ADHOC_CONN_STR="postgresql://user:pwd@mydb:5432/mydb1" -e PW2_ADHOC_CONFIG=unprivileged --name pw2 cybertec/pgwatch2
+docker run --rm -p 3000:3000 -p 8080:8080 -e PW2_ADHOC_CONN_STR="postgresql://user:pwd@mydb:5432/mydb1" \
+    -e PW2_ADHOC_CONFIG=unprivileged --name pw2 cybertec/pgwatch2
+
+# launching in ad-hoc / test mode, creating metrics helpers automatically (requires superuser)
+docker run --rm -p 3000:3000 -p 8080:8080 -e PW2_ADHOC_CONN_STR="postgresql://user:pwd@mydb:5432/mydb1" \
+    -e PW2_ADHOC_CONFIG=exhaustive -e PW2_ADHOC_CREATE_HELPERS=true --name pw2 cybertec/pgwatch2
 ```
 NB! In ad-hoc mode pgwatch2 always tries (will succeed if connecting with superuser privileges) to create all of the
 metrics fetching helpers automatically on the monitored DB.

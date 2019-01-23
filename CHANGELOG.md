@@ -19,13 +19,19 @@ or a specific version
 * Gatherer improvement - disable "connection pooling" by default 
 * Gatherer improvement - collector logic refactoring, less message passing 
 * Gatherer improvement - correct "complain only 1x per hour about missing metric definitions"
+* Gatherer improvement - new flag for "ad-hoc" mode to control auto-creation of helpers
+* Metrics improvement - no "public" schema specified in metrics anymore so helpers/extensions can reside anywhere
+* Metrics improvement - no explicit grants to "public" for helpers, only to pgwatch2 role
 * Metrics - removing DB size from "db_stats" into own "db_size" as it's apparently slow on some FS
 * Metrics - new "backup_duration_s" field for "db_stats"
 * Metrics - "pg_" removed from "pg_stat_ssl" and "pg_stat_database_conflicts" due to problems with Postgres backend
 * Docker - "daemon" image runs now also without any parameters 
 * Docker - use "tsi1" disk-based index instead of "inmem" for Influx as it's safer for high-cardinality setups
 * Docker - new image with Postgres for metrics storage (cybertec/pgwatch2-postgres-storage)  
-* Docker component update - InfluxDB 1.7.2, Grafana 5.4.2, Go 1.11.4
+* Docker component update - InfluxDB 1.7.3, Grafana 5.4.3, Go 1.11.4
+
+NB! When migrating old "config DB" based setups, v1.5.0* schema migration
+diffs need to be applied first from the "pgwatch2/sql/migrations/" folder.
 
 
 ## v1.4.5 [2018-11-06]
