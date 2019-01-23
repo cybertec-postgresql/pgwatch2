@@ -1,8 +1,8 @@
 # Rollout sequence
 
-First rollout the below files and then the chosen schema schema type's folder contents.
-* "schema_base.sql" - schema type and listing of all known "dbname"-s are stored here
-* "old_metrics_cleanup_procedures.sql" - used to list all unique dbnames and to delete/drop old metrics by the application (can also be used for manual cleanup).
+First rollout the below files and then the chosen schema type's folder contents.
+* "00_schema_base.sql" - schema type and listing of all known "dbname"-s are stored here
+* "01_old_metrics_cleanup_procedures.sql" - used to list all unique dbnames and to delete/drop old metrics by the application (can also be used for manual cleanup).
 
 # Schema types
 

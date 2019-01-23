@@ -23,13 +23,16 @@ paragraph "Installing without Docker" towards the end of REAME for that.
 
 ```
 for v in pg influx grafana pw2 ; do docker volume create $v ; done
+# with InfluxDB for metrics storage
 docker run -d --name pw2 -v pg:/var/lib/postgresql -v influx:/var/lib/influxdb -v grafana:/var/lib/grafana -v pw2:/pgwatch2/persistent-config -p 8080:8080 -p 3000:3000 cybertec/pgwatch2
+# with Postgres for metrics storage
+docker run -d --name pw2 -v pg:/var/lib/postgresql -v grafana:/var/lib/grafana -v pw2:/pgwatch2/persistent-config -p 8080:8080 -p 3000:3000 cybertec/pgwatch2-postgres
 ```
 
 For more advanced usecases (production setup backups) or for easier problemsolving you can decide to expose all services
 ```
 # run with all ports exposed
-docker run -d -p 3000:3000 -p 5432:5432 -p 8086:8086 -p 8080:8080 -p 8081:8081 -p 8088:8088 --name pw2 cybertec/pgwatch2
+docker run -d --restart unless-stopped -p 3000:3000 -p 5432:5432 -p 8086:8086 -p 8080:8080 -p 8081:8081 -p 8088:8088 --name pw2 cybertec/pgwatch2
 ```
 NB! For production usage make sure you also specify listening IPs explicitly (-p IP:host_port:container_port), by default Docker uses 0.0.0.0 (all network devices).
 
@@ -110,13 +113,17 @@ If more complex scenarios/check conditions are required TICK stack and Kapacitor
 # Components
 
 * pgwatch2 metrics gathering daemon written in Go
-* A PostgreSQL database for holding the configuration about which databases and metrics to gather 
-* [InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/) Time Series Database for storing metrics. As an
-alternative to InfluxDB one can also use:
-  - Graphite (no custom_tags support)
-  - PostgreSQL (based on JSONB, 9,4+)
+* Configuration store saying which databases and metrics to gather (2 options):
+  - A PostgreSQL database
+  - YAML config files + SQL metrics files
+* Metrics storage DB (3 options)
+  - [InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/) Time Series Database for storing metrics.
+  - [PostgreSQL](https://www.postgresql.org/) - world's most advanced Open Source RDBMS (based on JSONB, 9.4+ required)
+  - [Graphite](https://graphiteapp.org/) (no custom_tags and request batching support)
+  - JSON files (for testing / special use cases)
 * [Grafana](http://grafana.org/) for dashboarding (point-and-click, a set of predefined dashboards is provided)
-* A Web UI for administering the monitored DBs and metrics and for showing some custom metric overviews
+* An optional simple Web UI for administering the monitored DBs and metrics and for showing some custom metric overviews,
+if using PostgreSQL for storing config
 
 NB! All component can be also used separately, thus you can decide to make use of an already existing installation of Postgres,
 Grafana or InfluxDB and run the pgwatch2 image for example only with the metrics gatherer and the configuration Web UI.
@@ -149,12 +156,13 @@ Following parameters needs to be set then: PW2_DATASTORE=graphite, PW2_GRAPHITEH
 
 ### To use an existing Postgres DB for storing metrics
 
-1. Create the [schema](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/metric_store/metric_store.sql)
+1. Roll out the metrics storage schema accoding to instructions from [here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/metric_store/README.md)
 2. Following parameters needs to be set for the gatherer:
   - --datastore=postgres or PW2_DATASTORE=postgres
   - --pg-metric-store-conn-str="postgresql://user:pwd@host:port/db" or PW2_PG_METRIC_STORE_CONN_STR="..."
-
-NB! Currently for Postgres though there is only predefined pgwatch2 dashboard (DB Overview), so you need to roll your own.
+  - --pg-schema-type=$bootstrapped_schema_type
+3. If using the Web UI also set the first two parameters (--datastore and --pg-metric-store-conn-str) there, if wanting to
+clean up data via the UI.
 
 
 # Usage (Docker based, for file or ad-hoc based see further below)
