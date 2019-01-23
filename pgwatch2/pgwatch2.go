@@ -2092,9 +2092,6 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 func StoreMetrics(metrics []MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) (int, error) {
 
 	if len(metrics) > 0 {
-		if metrics[0].DBUniqueName == "adhoc" {
-			log.Fatal(metrics)
-		}
 		atomic.AddUint64(&totalMetricsFetchedCounter, uint64(len(metrics)))
 		atomic.AddUint64(&totalDatasetsFetchedCounter, 1)
 		storage_ch <- metrics
