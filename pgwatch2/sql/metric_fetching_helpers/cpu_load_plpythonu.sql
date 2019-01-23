@@ -7,8 +7,6 @@
 
 BEGIN;
 
-DROP TYPE IF EXISTS load_average CASCADE;
-
 CREATE OR REPLACE FUNCTION get_load_average(OUT load_1min float, OUT load_5min float, OUT load_15min float) AS
 $$
 from os import getloadavg
