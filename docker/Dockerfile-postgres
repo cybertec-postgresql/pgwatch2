@@ -5,6 +5,7 @@ RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl
     && curl -s https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && apt-get -q update \
     && DEBIAN_FRONTEND=noninteractive apt-get -qy install wget apt-transport-https vim git supervisor postgresql-11 \
        postgresql-plpython-11 libfontconfig python3-pip python-pip libssl-dev \
+    && pip install -U pip && pip3 install -U pip \
     && locale-gen "en_US.UTF-8" && apt autoremove -y \
     && pg_dropcluster 11 main ; pg_createcluster --locale en_US.UTF-8 11 main \
     && echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/11/main/postgresql.conf
