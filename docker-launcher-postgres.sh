@@ -52,8 +52,8 @@ su -c "psql -d postgres -f /pgwatch2/bootstrap/create_db_grafana.sql postgres" p
 su -c "psql -d postgres -f /pgwatch2/bootstrap/create_db_metric_store.sql postgres" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/config_store/config_store.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/config_store/metric_definitions.sql" postgres
-su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/schema_base.sql" postgres
-su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/old_metrics_cleanup_procedure.sql" postgres
+su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/00_schema_base.sql" postgres
+su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/01_old_metrics_cleanup_procedure.sql" postgres
 su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-time/metric_store_part_time.sql" postgres
 su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-time/ensure_partition_metric_time.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/cpu_load_plpythonu.sql" postgres
