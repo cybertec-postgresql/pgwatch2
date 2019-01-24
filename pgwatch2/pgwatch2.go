@@ -500,6 +500,17 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			log.Infof("Filtered out %d config entries based on --groups input", skippedEntries)
 		}
 
+		metricConfig, err := jsonTextToMap(row["md_config"].(string))
+		if err != nil {
+			log.Warningf("Cannot parse metrics JSON config for \"%s\": %v", row["md_unique_name"].(string), err)
+			continue
+		}
+		customTags, err := jsonTextToStringMap(row["md_custom_tags"].(string))
+		if err != nil {
+			log.Warningf("Cannot parse custom tags JSON for \"%s\". Ignoring custom tags. Error: %v", row["md_unique_name"].(string), err)
+			customTags = nil
+		}
+
 		md := MonitoredDatabase{
 			DBUniqueName:         row["md_unique_name"].(string),
 			Host:                 row["md_hostname"].(string),
@@ -513,12 +524,12 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			SslClientCertPath:    row["md_client_cert_path"].(string),
 			SslClientKeyPath:     row["md_client_key_path"].(string),
 			StmtTimeout:          row["md_statement_timeout_seconds"].(int64),
-			Metrics:              jsonTextToMap(row["md_config"].(string)),
+			Metrics:              metricConfig,
 			DBType:               row["md_dbtype"].(string),
 			DBNameIncludePattern: row["md_include_pattern"].(string),
 			DBNameExcludePattern: row["md_exclude_pattern"].(string),
 			Group:                row["md_group"].(string),
-			CustomTags:           jsonTextToStringMap(row["md_custom_tags"].(string))}
+			CustomTags:           customTags}
 
 		if md.PasswordType == "aes-gcm-256" {
 			md.Password = decrypt(opts.AesGcmKeyphrase, md.Password)
@@ -1077,7 +1088,7 @@ func UniqueDbnamesListingMaintainer(daemonMode bool) {
 	sql_delete := `DELETE FROM admin.all_distinct_dbname_metrics WHERE NOT dbname = ANY($1) and metric = $2 RETURNING *`
 	sql_add := `
 		INSERT INTO admin.all_distinct_dbname_metrics SELECT u, $2 FROM (select unnest($1::text[]) as u) x
-		WHERE NOT EXISTS (select * from all_distinct_dbname_metrics where dbname = u and metric = $2)
+		WHERE NOT EXISTS (select * from admin.all_distinct_dbname_metrics where dbname = u and metric = $2)
 		RETURNING *;
 	`
 
@@ -1098,7 +1109,7 @@ func UniqueDbnamesListingMaintainer(daemonMode bool) {
 
 				ret, err := DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_distinct, dr["table_name"], dr["table_name"]))
 				if err != nil {
-					log.Errorf("Could not refresh Postgres all_distinct_dbname_metrics listing table for '%s':", metric_name, err)
+					log.Errorf("Could not refresh Postgres all_distinct_dbname_metrics listing table for '%s': %s", metric_name, err)
 					break
 				}
 				for _, dr_dbname := range ret {
@@ -2272,30 +2283,34 @@ func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decim
 	return metric_def_map_new, err
 }
 
-func jsonTextToMap(jsonText string) map[string]float64 {
-
+func jsonTextToMap(jsonText string) (map[string]float64, error) {
+	retmap := make(map[string]float64)
+	if jsonText == "" {
+		return retmap, nil
+	}
 	var host_config map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonText), &host_config); err != nil {
-		panic(err)
+		return nil, err
 	}
-	retmap := make(map[string]float64)
 	for k, v := range host_config {
 		retmap[k] = v.(float64)
 	}
-	return retmap
+	return retmap, nil
 }
 
-func jsonTextToStringMap(jsonText string) map[string]string {
-
+func jsonTextToStringMap(jsonText string) (map[string]string, error) {
+	retmap := make(map[string]string)
+	if jsonText == "" {
+		return retmap, nil
+	}
 	var iMap map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonText), &iMap); err != nil {
-		panic(err)
+		return nil, err
 	}
-	retmap := make(map[string]string)
 	for k, v := range iMap {
 		retmap[k] = fmt.Sprintf("%v", v)
 	}
-	return retmap
+	return retmap, nil
 }
 
 func mapToJson(metricsMap map[string]interface{}) ([]byte, error) {
@@ -3139,7 +3154,11 @@ func main() {
 			if adHocMode {
 				config, ok := pmc[opts.AdHocConfig]
 				if !ok {
-					config = jsonTextToMap(opts.AdHocConfig)
+					log.Warningf("Could not find a preset metric config named \"%s\", assuming JSON config...", opts.AdHocConfig)
+					config, err = jsonTextToMap(opts.AdHocConfig)
+					if err != nil {
+						log.Fatalf("Could not parse --adhoc-config(%s): %v", opts.AdHocConfig, err)
+					}
 				}
 				monitored_dbs = []MonitoredDatabase{{DBUniqueName: opts.AdHocUniqueName, DBType: "postgres",
 					Metrics: config}}
