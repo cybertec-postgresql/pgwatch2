@@ -35,7 +35,7 @@ RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.11.4.linux-amd64.tar.
     && export PATH=$PATH:/usr/local/go/bin \
     && cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
     && pip3 install -r /pgwatch2/webpy/requirements.txt \
-    && pip install psutil \
+    && pip2 install psutil \
     && cd /pgwatch2 && bash build_gatherer.sh \
     && rm /tmp/go.tar.gz \
     && rm -rf /usr/local/go /root/go \
