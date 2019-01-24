@@ -1,13 +1,17 @@
 ## Running the latest version
 
-```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2```
+```
+docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2    # InfluxDB version
+# OR
+docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2-postgres   # Postgres version
+```
 
 or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
 
-## v1.5.0 [DRAFT]
+## v1.5.0 [2019-01-24]
 
 * New feature - Support Postgres as metrics storage DB (--pg-schema-type, --pg-metric-store-conn-str, --pg-retention-days)
 * New feature - password encryption/decryption with AES-GCM-256 (Gatherer + Web UI)
@@ -20,11 +24,16 @@ or a specific version
 * Gatherer improvement - collector logic refactoring, less message passing 
 * Gatherer improvement - correct "complain only 1x per hour about missing metric definitions"
 * Gatherer improvement - new flag for "ad-hoc" mode to control auto-creation of helpers
+* New metrics - "wal_receiver" (standby-only), "archiver" (over pg_stat_archiver)
 * Metrics improvement - no "public" schema specified in metrics anymore so helpers/extensions can reside anywhere
 * Metrics improvement - no explicit grants to "public" for helpers, only to pgwatch2 role
 * Metrics - removing DB size from "db_stats" into own "db_size" as it's apparently slow on some FS
 * Metrics - new "backup_duration_s" field for "db_stats"
 * Metrics - "pg_" removed from "pg_stat_ssl" and "pg_stat_database_conflicts" due to problems with Postgres backend
+* Metrics - slight increases to all preset config intervals to be on the conservative side
+* Metrics - more efficient "psutil_cpu" helper and useful also with non-persistent sessions
+* Dashboard improvement - explicit "agg_interval" variable for most PG overview dashboards as a Grafana workaround
+* Web UI improvement - index (default) page set to the "Monitored DBs" page
 * Docker - "daemon" image runs now also without any parameters 
 * Docker - use "tsi1" disk-based index instead of "inmem" for Influx as it's safer for high-cardinality setups
 * Docker - new image with Postgres for metrics storage (cybertec/pgwatch2-postgres-storage)  

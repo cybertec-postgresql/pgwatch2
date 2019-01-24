@@ -119,7 +119,8 @@ If more complex scenarios/check conditions are required TICK stack and Kapacitor
   - A temporary "ad-hoc" config i.e. just a single connect string (JDBC or Libpq type) for "throwaway" usage
 * Metrics storage DB (4 options)
   - [InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/) Time Series Database for storing metrics.
-  - [PostgreSQL](https://www.postgresql.org/) - world's most advanced Open Source RDBMS (based on JSONB, 9.4+ required)
+  - [PostgreSQL](https://www.postgresql.org/) - world's most advanced Open Source RDBMS (based on JSONB, 9.4+ required).
+  See "To use an existing Postgres DB for storing metrics" section below for setup details.
   - [Graphite](https://graphiteapp.org/) (no custom_tags and request batching support)
   - JSON files (for testing / special use cases)
 * [Grafana](http://grafana.org/) for dashboarding (point-and-click, a set of predefined dashboards is provided)
@@ -161,6 +162,7 @@ Following parameters needs to be set then: PW2_DATASTORE=graphite, PW2_GRAPHITEH
 2. Following parameters needs to be set for the gatherer:
   - --datastore=postgres or PW2_DATASTORE=postgres
   - --pg-metric-store-conn-str="postgresql://user:pwd@host:port/db" or PW2_PG_METRIC_STORE_CONN_STR="..."
+  - optionally also adjust the --pg-retention-days parameter. By default 30 days (at least) of metrics are kept
 3. If using the Web UI also set the first two parameters (--datastore and --pg-metric-store-conn-str) there, if wanting to
 clean up data via the UI.
 
@@ -258,7 +260,7 @@ one should to expose ports 5432 (Postgres) and 8088 (InfluxDB backup protocol) a
 
 Ports exposed by the Docker image:
 
-* 5432 - Postgres configuration DB
+* 5432 - Postgres configuration (or metrics storage) DB
 * 8080 - Management Web UI (monitored hosts, metrics, metrics configurations)
 * 8081 - Gatherer healthcheck / statistics on number of gathered metrics (JSON).
 * 3000 - Grafana dashboarding
