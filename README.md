@@ -113,10 +113,11 @@ If more complex scenarios/check conditions are required TICK stack and Kapacitor
 # Components
 
 * pgwatch2 metrics gathering daemon written in Go
-* Configuration store saying which databases and metrics to gather (2 options):
+* Configuration store saying which databases and metrics to gather (3 options):
   - A PostgreSQL database
   - YAML config files + SQL metrics files
-* Metrics storage DB (3 options)
+  - A temporary "ad-hoc" config i.e. just a single connect string (JDBC or Libpq type) for "throwaway" usage
+* Metrics storage DB (4 options)
   - [InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/) Time Series Database for storing metrics.
   - [PostgreSQL](https://www.postgresql.org/) - world's most advanced Open Source RDBMS (based on JSONB, 9.4+ required)
   - [Graphite](https://graphiteapp.org/) (no custom_tags and request batching support)

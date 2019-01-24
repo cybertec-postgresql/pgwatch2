@@ -180,6 +180,7 @@ var partitionMapMetricDbname = make(map[string]map[string]ExistingPartitionInfo)
 var testDataGenerationModeWG sync.WaitGroup
 var PGDummyMetricTables = make(map[string]time.Time)
 var PGDummyMetricTablesLock = sync.RWMutex{}
+var PGSchemaType string
 
 func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
@@ -675,7 +676,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 	pg_part_bounds_dbname := make(map[string]map[string]ExistingPartitionInfo) // metric=[dbname=min/max]
 	var err error
 
-	if opts.PGSchemaType == "custom" {
+	if PGSchemaType == "custom" {
 		metricsToStorePerMetric["metrics"] = make([]MetricStoreMessagePostgres, 0) // everything inserted into "metrics".
 		// TODO  warn about collision if someone really names some new metric "metrics"
 	}
@@ -729,7 +730,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 			var ok bool
 			var metricNameTemp string
 
-			if opts.PGSchemaType == "custom" {
+			if PGSchemaType == "custom" {
 				metricNameTemp = "metrics"
 			} else {
 				metricNameTemp = msg.MetricName
@@ -745,7 +746,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 
 			rows_batched += 1
 
-			if opts.PGSchemaType == "metric" || opts.PGSchemaType == "metric-time" {
+			if PGSchemaType == "metric" || PGSchemaType == "metric-time" {
 				// set min/max timestamps to check/create partitions
 				bounds, ok := pg_part_bounds[msg.MetricName]
 				if !ok || (ok && epoch_time.Before(bounds.StartTime)) {
@@ -756,7 +757,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 					bounds.EndTime = epoch_time
 					pg_part_bounds[msg.MetricName] = bounds
 				}
-			} else if opts.PGSchemaType == "metric-dbname-time" {
+			} else if PGSchemaType == "metric-dbname-time" {
 				_, ok := pg_part_bounds_dbname[msg.MetricName]
 				if !ok {
 					pg_part_bounds_dbname[msg.MetricName] = make(map[string]ExistingPartitionInfo)
@@ -774,11 +775,11 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		}
 	}
 
-	if opts.PGSchemaType == "metric" {
+	if PGSchemaType == "metric" {
 		err = EnsureMetric(pg_part_bounds)
-	} else if opts.PGSchemaType == "metric-time" {
+	} else if PGSchemaType == "metric-time" {
 		err = EnsureMetricTime(pg_part_bounds)
-	} else if opts.PGSchemaType == "metric-dbname-time" {
+	} else if PGSchemaType == "metric-dbname-time" {
 		err = EnsureDbnameMetricTime(pg_part_bounds_dbname)
 	} else {
 		log.Fatal("should never happen...")
@@ -800,7 +801,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 	for metricName, metrics := range metricsToStorePerMetric {
 		var stmt *go_sql.Stmt
 
-		if opts.PGSchemaType == "custom" {
+		if PGSchemaType == "custom" {
 			stmt, err = txn.Prepare(pq.CopyIn("metrics", "time", "dbname", "metric", "data", "tag_data"))
 			if err != nil {
 				log.Error("Could not prepare COPY to 'metrics' table:", err)
@@ -828,7 +829,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 					log.Errorf("Skipping 1 metric for [%s:%s] due to JSON conversion error: %s", m.DBName, m.Metric, err)
 					goto stmt_close
 				}
-				if opts.PGSchemaType == "custom" {
+				if PGSchemaType == "custom" {
 					_, err = stmt.Exec(m.Time, m.DBName, m.Metric, string(jsonBytes), string(jsonBytesTags))
 				} else {
 					_, err = stmt.Exec(m.Time, m.DBName, string(jsonBytes), string(jsonBytesTags))
@@ -838,7 +839,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 					goto stmt_close
 				}
 			} else {
-				if opts.PGSchemaType == "custom" {
+				if PGSchemaType == "custom" {
 					_, err = stmt.Exec(m.Time, m.DBName, m.Metric, string(jsonBytes), nil)
 				} else {
 					_, err = stmt.Exec(m.Time, m.DBName, string(jsonBytes), nil)
@@ -1011,8 +1012,9 @@ func DropOldTimePartitions(metricAgeDaysThreshold int64) (int, error) {
 	return parts_dropped, err
 }
 
-func CheckTemplateTableExistanceOrFail(pgSchemaType string) {
+func CheckIfPGSchemaInitializedOrFail() string {
 	var partFuncSignature string
+	var pgSchemaType string
 
 	schema_type_sql := `select schema_type from admin.storage_schema_type`
 	ret, err := DBExecRead(metricDb, METRICDB_IDENT, schema_type_sql)
@@ -1022,8 +1024,9 @@ func CheckTemplateTableExistanceOrFail(pgSchemaType string) {
 	if err == nil && len(ret) == 0 {
 		log.Fatal("no metric schema selected, no row in table 'storage_schema_type'. see the README from the 'pgwatch2/sql/metric_store' folder on choosing a schema")
 	}
-	if ret[0]["schema_type"].(string) != pgSchemaType {
-		log.Fatalf("DB initialized schema type (%v) and provided --pg-schema-type param (%s) don't match!", ret[0]["schema_type"], pgSchemaType)
+	pgSchemaType = ret[0]["schema_type"].(string)
+	if !(pgSchemaType == "metric" || pgSchemaType == "metric-time" || pgSchemaType == "metric-dbname-time" || pgSchemaType == "custom") {
+		log.Fatalf("Unknow Postgres schema type found from Metrics DB: %s", pgSchemaType)
 	}
 
 	if pgSchemaType == "custom" {
@@ -1063,6 +1066,7 @@ func CheckTemplateTableExistanceOrFail(pgSchemaType string) {
 			log.Fatalf("%s function not existing or no EXECUTE privileges. Have you rolled out the schema correctly from pgwatch2/sql/metric_store?", partFuncSignature)
 		}
 	}
+	return pgSchemaType
 }
 
 func AddDBUniqueMetricToListingTable(db_unique, metric string) error {
@@ -2836,7 +2840,6 @@ type Options struct {
 	Group                string `short:"g" long:"group" description:"Group (or groups, comma separated) for filtering which DBs to monitor. By default all are monitored" env:"PW2_GROUP"`
 	Datastore            string `long:"datastore" description:"[influx|postgres|graphite|json]" default:"influx" env:"PW2_DATASTORE"`
 	PGMetricStoreConnStr string `long:"pg-metric-store-conn-str" description:"PG Metric Store" env:"PW2_PG_METRIC_STORE_CONN_STR"`
-	PGSchemaType         string `long:"pg-schema-type" description:"[metric|metric-time|metric-dbname-time|custom]. In case of 'custom' pgwatch2 doesn't manage partitions/cleanup and inserts all metrics into a 'metrics' table where data should be re-routed with triggers" env:"PW2_PG_SCHEMA_TYPE"`
 	PGRetentionDays      int64  `long:"pg-retention-days" description:"If set, metrics older than that will be deleted" default:"30" env:"PW2_PG_RETENTION_DAYS"`
 	InfluxHost           string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
 	InfluxPort           string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
@@ -3092,13 +3095,9 @@ func main() {
 			log.Fatal("--datastore=postgres requires --pg-metric-store-conn-str to be set")
 		}
 
-		if !(opts.PGSchemaType == "metric" || opts.PGSchemaType == "metric-time" || opts.PGSchemaType == "metric-dbname-time" || opts.PGSchemaType == "custom") {
-			log.Fatal("--pg-schema-type needs to be one of: [metric|metric-time|metric-dbname-time|custom]. Before 1st run schema must be initialized manually!")
-		}
-
 		InitAndTestMetricStoreConnection(opts.PGMetricStoreConnStr, true)
 
-		CheckTemplateTableExistanceOrFail(opts.PGSchemaType)
+		PGSchemaType = CheckIfPGSchemaInitializedOrFail()
 
 		log.Info("starting PostgresPersister...")
 		go MetricsPersister(DATASTORE_POSTGRES, persist_ch)
@@ -3106,10 +3105,10 @@ func main() {
 		log.Info("starting UniqueDbnamesListingMaintainer...")
 		go UniqueDbnamesListingMaintainer(true)
 
-		if opts.PGRetentionDays > 0 && (opts.PGSchemaType == "metric" ||
-			opts.PGSchemaType == "metric-time" || opts.PGSchemaType == "metric-dbname-time") && opts.TestdataDays == 0 {
+		if opts.PGRetentionDays > 0 && (PGSchemaType == "metric" ||
+			PGSchemaType == "metric-time" || PGSchemaType == "metric-dbname-time") && opts.TestdataDays == 0 {
 			log.Info("starting old Postgres metrics cleanup job...")
-			go OldPostgresMetricsDeleter(opts.PGRetentionDays, opts.PGSchemaType)
+			go OldPostgresMetricsDeleter(opts.PGRetentionDays, PGSchemaType)
 		}
 	} else {
 		log.Fatal("Unknown datastore. Check the --datastore param")
