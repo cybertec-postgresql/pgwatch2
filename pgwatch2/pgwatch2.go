@@ -2048,11 +2048,12 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 				ver, _ := db_pg_version_map[msg.DBUniqueName]
 				db_pg_version_map_lock.RUnlock()
 				if ver.IsInRecovery {
-					log.Infof("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err)
+					log.Debugf("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err)
 					return nil, err
 				}
 			}
-			log.Errorf("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err)
+			log.Infof("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err)
+			return nil, err
 		} else {
 			md, err := GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
 			if err != nil {
@@ -2111,7 +2112,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 	interval := config[metricName]
 	ticker := time.NewTicker(time.Millisecond * time.Duration(interval*1000))
 	host_state := make(map[string]map[string]string)
-	last_error_notification_time := time.Now()
+	var last_error_notification_time time.Time
 	failed_fetches := 0
 
 	if opts.TestdataDays > 0 {
@@ -2138,11 +2139,15 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 		}
 
 		if err != nil {
-			if last_error_notification_time.Add(time.Second * time.Duration(600)).Before(time.Now()) {
-				log.Errorf("Total failed fetches for [%s:%s]: %d", dbUniqueName, metricName, failed_fetches)
+			failed_fetches += 1
+			// complain only 1x per 10min per host/metric...
+			if last_error_notification_time.IsZero() || last_error_notification_time.Add(time.Second*time.Duration(600)).Before(time.Now()) {
+				log.Errorf("Failed to fetch metric data for [%s:%s]: %v", dbUniqueName, metricName, err)
+				if failed_fetches > 1 {
+					log.Errorf("Total failed fetches for [%s:%s]: %d", dbUniqueName, metricName, failed_fetches)
+				}
 				last_error_notification_time = time.Now()
 			}
-			failed_fetches += 1
 		} else if metricStoreMessages != nil && len(metricStoreMessages[0].Data) > 0 {
 
 			if opts.TestdataDays > 0 {
