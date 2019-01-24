@@ -157,11 +157,10 @@ Following parameters needs to be set then: PW2_DATASTORE=graphite, PW2_GRAPHITEH
 
 ### To use an existing Postgres DB for storing metrics
 
-1. Roll out the metrics storage schema accoding to instructions from [here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/metric_store/README.md)
+1. Roll out the metrics storage schema according to instructions from [here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/metric_store/README.md)
 2. Following parameters needs to be set for the gatherer:
   - --datastore=postgres or PW2_DATASTORE=postgres
   - --pg-metric-store-conn-str="postgresql://user:pwd@host:port/db" or PW2_PG_METRIC_STORE_CONN_STR="..."
-  - --pg-schema-type=$bootstrapped_schema_type
 3. If using the Web UI also set the first two parameters (--datastore and --pg-metric-store-conn-str) there, if wanting to
 clean up data via the UI.
 

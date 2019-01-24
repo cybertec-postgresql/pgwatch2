@@ -966,49 +966,15 @@ func DeleteOldPostgresMetrics(metricAgeDaysThreshold int64) (int64, error) {
 func DropOldTimePartitions(metricAgeDaysThreshold int64) (int, error) {
 	parts_dropped := 0
 	var err error
-	sql_old_part := `
-	SELECT partition_name FROM (
-		SELECT
-			  'subpartitions.' || quote_ident(c.relname) as partition_name,
-			  pg_catalog.pg_get_expr(c.relpartbound, c.oid) as limits,
-			  (regexp_match(pg_catalog.pg_get_expr(c.relpartbound, c.oid),
-					  E'TO \\((''.*?'')'))[1]::timestamp < (current_date  - '1day'::interval * %d) is_old
-		FROM
-			  pg_class c
-		  JOIN
-			  pg_inherits i ON c.oid=i.inhrelid
-			  JOIN
-			  pg_namespace n ON n.oid = relnamespace
-		WHERE
-		  c.relkind IN ('r', 'p')
-			  AND nspname = 'subpartitions'
-			  AND pg_catalog.obj_description(c.oid, 'pg_class') IN (
-				  'pgwatch2-generated-metric-time-lvl',
-				  'pgwatch2-generated-metric-dbname-time-lvl'
-				)
-	  ) x
-	  WHERE is_old
-	  ORDER BY 1;
-	`
-	sql_drop := `
-	DROP TABLE %s
-	`
-	old_parts, err := DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_old_part, metricAgeDaysThreshold))
+	sql_old_part := `select admin.drop_old_time_partitions($1, $2)`
+
+	ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_old_part, metricAgeDaysThreshold, false)
 	if err != nil {
-		log.Error("Failed to fetch partitioned tables from Postgres:", err)
+		log.Error("Failed to drop old time partitions from Postgres metricDB:", err)
 		return parts_dropped, err
 	}
+	parts_dropped = int(ret[0]["drop_old_time_partitions"].(int64))
 
-	for _, tbl := range old_parts {
-		log.Debugf("Dropping old metrics partition %v ...", tbl["partition_name"])
-		_, err = DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_drop, tbl["partition_name"].(string)))
-		if err != nil {
-			log.Errorf("Failed to drop old subpartition %s from Postgres:", tbl["partition_name"].(string), err)
-			continue
-		}
-		log.Warning("Dropped old metrics partition:", tbl["partition_name"])
-		parts_dropped++
-	}
 	return parts_dropped, err
 }
 
