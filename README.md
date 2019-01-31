@@ -276,11 +276,25 @@ the “pgwatch2” schema directly. Besides managing the metrics gathering confi
 the Web UI would be the possibility to look at the logs of the single components (when using Docker) and at the “Stat
 Statements Overview” page, which will e.g. enable finding out the query with the slowest average runtime for a time period.
 
-By default the Web UI is freely accessible. If some security is needed then following env. variables can be used enforce
-write permissions - PW2_WEBNOANONYMOUS, PW2_WEBUSER, PW2_WEBPASSWORD.
+By default the Web UI is not secured. If some security is needed then the following env. variables can be used to enforce
+password protection - PW2_WEBNOANONYMOUS, PW2_WEBUSER, PW2_WEBPASSWORD.
 
 By default also the Docker component logs (Postgres, Influx, Grafana, Go daemon, Web UI itself) are exposed via the "/logs"
-endpoint. If this is not wanted set the PW2_WEBNOCOMPONENTLOGS env. variable.  
+endpoint. If this is not wanted set the PW2_WEBNOCOMPONENTLOGS env. variable.
+
+### Different Web UI "DB types" explained
+
+* postgres - connect data to a single to-be-monitored DB needs to be specified. If "DB name" field is left empty, then
+as a one time operation, all non-template DB names are fetched, prefixed with "Unique name" field value and added to
+monitoring (if not already monitored). Internally monitoring always happens "per DB" not "per cluster".
+* pg-continuous-discovery - connect data to a Postgres cluster (w/o a DB name) needs to be specified
+and then the metrics daemon will periodically scan the cluster (connecting to the "template1" database,
+which is expected to exist) and add any found and not yet monitored  DBs to monitoring. In this mode it's also possible to
+specify regular expressions to include/exclude some database names.
+* pgbouncer - use to track metrics from PgBouncer's "SHOW STATS" command. In place of the Postgres "DB name"
+the name of a PgBouncer "pool" to be monitored must be inserted.
+
+
 
 # Adding metrics
 
