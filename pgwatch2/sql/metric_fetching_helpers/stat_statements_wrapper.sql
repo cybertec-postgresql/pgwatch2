@@ -45,7 +45,8 @@ BEGIN
       regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'),
         E'\\d+\\.?\\d+?'))[1])::double precision INTO l_pgver;
   IF l_pgver > 9.1 THEN   --parameters normalized only from 9.2
-      EXECUTE format(CASE WHEN l_pgver > 9.3 THEN l_sproc_text ELSE l_sproc_text_queryid END);
+    EXECUTE 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements';
+    EXECUTE format(CASE WHEN l_pgver > 9.3 THEN l_sproc_text ELSE l_sproc_text_queryid END);
     EXECUTE 'GRANT EXECUTE ON FUNCTION get_stat_statements() TO pgwatch2';
     EXECUTE 'COMMENT ON FUNCTION get_stat_statements() IS ''created for pgwatch2''';
   END IF;
