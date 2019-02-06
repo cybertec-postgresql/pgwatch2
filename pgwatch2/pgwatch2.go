@@ -204,7 +204,7 @@ func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password
 			}
 		}
 	} else {
-		db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname=%s sslmode=%s user=%s password=%s application_name=%s sslrootcert=%s sslcert=%s sslkey=%s",
+		db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname='%s' sslmode=%s user=%s password=%s application_name=%s sslrootcert='%s' sslcert='%s' sslkey='%s'",
 			host, port, dbname, sslmode, user, password, APPLICATION_NAME, sslrootcert, sslcert, sslkey))
 	}
 
@@ -2635,7 +2635,8 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 	}
 	defer c.Close()
 
-	sql := `select datname::text
+	sql := `select datname::text as datname,
+		quote_ident(datname)::text as datname_escaped
 		from pg_database
 		where not datistemplate
 		and datallowconn
@@ -2649,7 +2650,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 	}
 
 	for _, d := range data {
-		md = append(md, MonitoredDatabase{DBUniqueName: ce.DBUniqueName + "_" + d["datname"].(string),
+		md = append(md, MonitoredDatabase{DBUniqueName: ce.DBUniqueName + "_" + d["datname_escaped"].(string),
 			DBName:            d["datname"].(string),
 			Host:              ce.Host,
 			Port:              ce.Port,
