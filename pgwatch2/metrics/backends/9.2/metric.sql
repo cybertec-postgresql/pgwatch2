@@ -1,5 +1,5 @@
 with sa_snapshot as (
-  select * from get_stat_activity() where not current_query like 'autovacuum:%'
+  select * from get_stat_activity() where not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,

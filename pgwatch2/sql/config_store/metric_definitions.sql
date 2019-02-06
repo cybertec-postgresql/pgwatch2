@@ -6,7 +6,31 @@ values (
 9.0,
 $sql$
 with sa_snapshot as (
-  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
+  select * from get_stat_activity() where not current_query like 'autovacuum:%'
+)
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  (select count(*) from sa_snapshot) as total,
+  (select count(*) from sa_snapshot where state = 'active') as active,
+  (select count(*) from sa_snapshot where state = 'idle') as idle,
+  (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
+  (select count(*) from sa_snapshot where waiting) as waiting,
+  (select extract(epoch from (now() - backend_start))::int
+    from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
+  (select extract(epoch from (now() - xact_start))::int
+    from sa_snapshot where xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
+  (select extract(epoch from max(now() - query_start))::int
+    from sa_snapshot where state = 'active') as longest_query_seconds;
+$sql$
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+values (
+'backends',
+9.2,
+$sql$
+with sa_snapshot as (
+  select * from get_stat_activity() where not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -30,7 +54,7 @@ values (
 9.4,
 $sql$
 with sa_snapshot as (
-  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
+  select * from get_stat_activity() where not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -55,7 +79,7 @@ values (
 9.6,
 $sql$
 with sa_snapshot as (
-  select * from get_stat_activity() where pid != pg_backend_pid() and not query like 'autovacuum:%'
+  select * from get_stat_activity() where not query like 'autovacuum:%'
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -81,8 +105,6 @@ values (
 $sql$
 with sa_snapshot as (
   select * from get_stat_activity()
-  where pid != pg_backend_pid()
-  and datname = current_database()
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -136,9 +158,9 @@ values (
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  load_1min,
-  load_5min,
-  load_15min
+  round(load_1min::numeric, 2)::float as load_1min,
+  round(load_5min::numeric, 2)::float as load_5min,
+  round(load_15min::numeric, 2)::float as load_15min
 from
   get_load_average();   -- needs the plpythonu proc from "metric_fetching_helpers" folder
 $sql$
@@ -241,7 +263,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM get_stat_activity()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -286,7 +308,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM get_stat_activity()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -331,7 +353,7 @@ WITH q_stat_tables AS (
   AND c.relpages > (1e7 / 8)    -- >10MB
 ),
 q_stat_activity AS (
-  SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
+  SELECT * FROM get_stat_activity()
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -901,7 +923,7 @@ CREATE EXTENSION IF NOT EXISTS pgstattuple;
 
 CREATE OR REPLACE FUNCTION get_table_bloat_approx(
   OUT approx_free_percent double precision, OUT approx_free_space double precision,
-  OUT approx_free_percent double precision, OUT approx_free_space double precision
+  OUT dead_tuple_percent double precision, OUT dead_tuple_len double precision
 ) AS
 $$
     select
@@ -1205,10 +1227,28 @@ values (
 9.0,
 $sql$
 
+DO $OUTER$
+DECLARE
+  l_pgver double precision;
+  l_sproc_text_pre92 text := $SQL$
 CREATE OR REPLACE FUNCTION get_stat_activity() RETURNS SETOF pg_stat_activity AS
 $$
-  select * from pg_stat_activity where datname = current_database()
+  select * from pg_stat_activity where datname = current_database() and procpid != pg_backend_pid()
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+$SQL$;
+  l_sproc_text_92_plus text := $SQL$
+CREATE OR REPLACE FUNCTION get_stat_activity() RETURNS SETOF pg_stat_activity AS
+$$
+  select * from pg_stat_activity where datname = current_database() and pid != pg_backend_pid()
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+$SQL$;
+BEGIN
+  SELECT ((regexp_matches(
+      regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'),
+        E'\\d+\\.?\\d+?'))[1])::double precision INTO l_pgver;
+  EXECUTE format(CASE WHEN l_pgver > 9.1 THEN l_sproc_text_92_plus ELSE l_sproc_text_pre92 END);
+END;
+$OUTER$;
 
 GRANT EXECUTE ON FUNCTION get_stat_activity() TO pgwatch2;
 COMMENT ON FUNCTION get_stat_activity() IS 'created for pgwatch2';
