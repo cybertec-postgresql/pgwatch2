@@ -235,7 +235,7 @@ def insert_monitored_db(params, cmd_args=None):
     if params.get('md_password_type') == 'aes-gcm-256':
         params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, password_plain)
 
-    if not params['md_dbname']:     # add all DBs found
+    if not params['md_dbname'] and params['md_dbtype'] != 'postgres-continuous-discovery':     # add all DBs found
         if params['md_dbtype'] == 'postgres':
             # get all active non-template DBs from the entered host
             active_dbs_on_host, err = datadb.executeOnRemoteHost(sql_active_dbs, host=params['md_hostname'], port=params['md_port'],
@@ -299,6 +299,8 @@ def insert_monitored_db(params, cmd_args=None):
         if err:
             raise Exception('Failed to insert into "monitored_db": ' + err)
         ret.append('Host with ID {} added!'.format(data[0]['md_id']))
+        if params['md_dbtype'] == 'postgres-continuous-discovery':
+            params['md_dbname'] = 'template1'
         data, err = datadb.executeOnRemoteHost('select 1', params['md_hostname'], params['md_port'], params['md_dbname'],
                                                params['md_user'], password_plain, sslmode=params['md_sslmode'], quiet=True)
         if err:
