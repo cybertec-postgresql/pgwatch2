@@ -518,6 +518,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			Port:                 row["md_port"].(string),
 			DBName:               row["md_dbname"].(string),
 			User:                 row["md_user"].(string),
+			IsSuperuser:          row["md_is_superuser"].(bool),
 			Password:             row["md_password"].(string),
 			PasswordType:         row["md_password_type"].(string),
 			SslMode:              row["md_sslmode"].(string),
@@ -2649,19 +2650,22 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 
 	for _, d := range data {
 		md = append(md, MonitoredDatabase{DBUniqueName: ce.DBUniqueName + "_" + d["datname"].(string),
-			DBName:        d["datname"].(string),
-			Host:          ce.Host,
-			Port:          ce.Port,
-			User:          ce.User,
-			Password:      ce.Password,
-			PasswordType:  ce.PasswordType,
-			SslMode:       ce.SslMode,
-			StmtTimeout:   ce.StmtTimeout,
-			Metrics:       ce.Metrics,
-			PresetMetrics: ce.PresetMetrics,
-			IsSuperuser:   ce.IsSuperuser,
-			CustomTags:    ce.CustomTags,
-			DBType:        "postgres"})
+			DBName:            d["datname"].(string),
+			Host:              ce.Host,
+			Port:              ce.Port,
+			User:              ce.User,
+			Password:          ce.Password,
+			PasswordType:      ce.PasswordType,
+			SslMode:           ce.SslMode,
+			SslRootCAPath:     ce.SslRootCAPath,
+			SslClientCertPath: ce.SslClientCertPath,
+			SslClientKeyPath:  ce.SslClientKeyPath,
+			StmtTimeout:       ce.StmtTimeout,
+			Metrics:           ce.Metrics,
+			PresetMetrics:     ce.PresetMetrics,
+			IsSuperuser:       ce.IsSuperuser,
+			CustomTags:        ce.CustomTags,
+			DBType:            "postgres"})
 	}
 
 	return md, err
