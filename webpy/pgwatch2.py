@@ -148,7 +148,10 @@ def update_monitored_db(params, cmd_args=None):
     ret = []
     password_plain = params['md_password']
     if params.get('md_password_type') == 'aes-gcm-256' and params['md_password'] != '***':
-        params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, password_plain)
+        if not cmd_args.aes_gcm_keyphrase:
+            ret.append("FYI - skipping password encryption as keyphrase/keyfile not specified on UI startup (hint: use the PW2_AES_GCM_KEYPHRASE env. variable or --aes-gcm-keyphrase param)")
+        else:
+            params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, password_plain)
     old_row_data = get_monitored_db_by_id(params['md_id'])
     sql = """
         with q_old as (
@@ -233,7 +236,10 @@ def insert_monitored_db(params, cmd_args=None):
         params, ['md_preset_config_name', 'md_config', 'md_custom_tags'])
     password_plain = params['md_password']
     if params.get('md_password_type') == 'aes-gcm-256':
-        params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, password_plain)
+        if not cmd_args.aes_gcm_keyphrase:
+            ret.append("FYI - skipping password encryption as keyphrase/keyfile not specified on UI startup (hint: use the PW2_AES_GCM_KEYPHRASE env. variable or --aes-gcm-keyphrase param)")
+        else:
+            params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, password_plain)
 
     if not params['md_dbname'] and params['md_dbtype'] != 'postgres-continuous-discovery':     # add all DBs found
         if params['md_dbtype'] == 'postgres':
