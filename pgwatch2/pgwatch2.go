@@ -534,7 +534,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			CustomTags:           customTags}
 
 		if md.PasswordType == "aes-gcm-256" {
-			md.Password = decrypt(opts.AesGcmKeyphrase, md.Password)
+			md.Password = decrypt(md.DBUniqueName, opts.AesGcmKeyphrase, md.Password)
 		}
 
 		if md.DBType == "postgres-continuous-discovery" {
@@ -2689,7 +2689,7 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 			e.Metrics = mdef
 		}
 		if e.IsEnabled && e.PasswordType == "aes-gcm-256" {
-			e.Password = decrypt(opts.AesGcmKeyphrase, e.Password)
+			e.Password = decrypt(e.DBUniqueName, opts.AesGcmKeyphrase, e.Password)
 		}
 		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" {
 			if e.DBType == "postgres-continuous-discovery" {
@@ -2789,9 +2789,12 @@ func deriveKey(passphrase string, salt []byte) ([]byte, []byte) {
 	return pbkdf2.Key([]byte(passphrase), salt, 1000, 32, sha256.New), salt
 }
 
-func decrypt(passphrase, ciphertext string) string {
-	//log.Debug("passphrase", passphrase, "ciphertext", ciphertext)
+func decrypt(dbUnique, passphrase, ciphertext string) string {
 	arr := strings.Split(ciphertext, "-")
+	if len(arr) != 3 {
+		log.Warningf("Aes-gcm-256 encrypted password for \"%s\" should consist of 3 parts - using 'as is'", dbUnique)
+		return ciphertext
+	}
 	salt, _ := hex.DecodeString(arr[0])
 	iv, _ := hex.DecodeString(arr[1])
 	data, _ := hex.DecodeString(arr[2])
