@@ -2,6 +2,12 @@
 
 Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution
 
+# Demo
+
+[https://demo.pgwatch.com/](https://demo.pgwatch.com/)
+
+Note: has a self-signed certificate as configured out the box in Docker, so you need to click "Allow / Add exception / Trust" or similar
+
 # Installing
 
 Software is packaged as Docker (for custom setup see the last paragraph below, for a Docker quickstart see
