@@ -45,7 +45,7 @@
       "lines": true,
       "linewidth": 1,
       "links": [],
-      "nullPointMode": "null",
+      "nullPointMode": "connected",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -334,7 +334,7 @@
       "lines": true,
       "linewidth": 1,
       "links": [],
-      "nullPointMode": "null",
+      "nullPointMode": "null as zero",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -481,7 +481,7 @@
       "lines": true,
       "linewidth": 1,
       "links": [],
-      "nullPointMode": "null",
+      "nullPointMode": "connected",
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1158,7 +1158,6 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
           "text": null,
           "value": null
         },
@@ -1185,8 +1184,8 @@
         "allValue": null,
         "current": {
           "tags": [],
-          "text": "-150200973902411390",
-          "value": "-150200973902411390"
+          "text": null,
+          "value": null
         },
         "datasource": null,
         "definition": "select distinct tag_data->>'queryid' from stat_statements WHERE time > current_date -3 and dbname = '$dbname' order by 1;",
@@ -1213,8 +1212,8 @@
         "auto_min": "10s",
         "current": {
           "tags": [],
-          "text": "10m",
-          "value": "10m"
+          "text": "30m",
+          "value": "30m"
         },
         "hide": 0,
         "label": null,
@@ -1231,7 +1230,7 @@
             "value": "5m"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "10m",
             "value": "10m"
           },
@@ -1241,7 +1240,7 @@
             "value": "15m"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "30m",
             "value": "30m"
           },
@@ -1274,7 +1273,7 @@
     ]
   },
   "time": {
-    "from": "now-3h",
+    "from": "now-12h",
     "to": "now"
   },
   "timepicker": {
