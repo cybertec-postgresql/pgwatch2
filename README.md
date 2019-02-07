@@ -19,7 +19,7 @@ For production setups without a container management framework also "--restart u
 (or custom startup scripts) is highly recommended. Also usage of volumes is then recommended to enable
 easier updating to newer pgwatch2 Docker images without going through the backup/restore procedure described towards the
 end of README. For maximum flexibility, security and update simplicity though, best would to do a custom setup - see
-paragraph "Installing without Docker" towards the end of REAME for that. 
+paragraph "Installing without Docker" towards the end of README for that.
 
 ```
 for v in pg influx grafana pw2 ; do docker volume create $v ; done
@@ -55,8 +55,8 @@ monitoring a single DB. See below for details
 * Optional alerting (Email, Slack, PagerDuty) provided by Grafana
 * PgBouncer and AWS RDS graphing/alerting supported in addition to PostgreSQL
 * Possible to monitoring all DBs found in a cluster automatically (with regex pattern matching)
-* Kubernetes/OpenShift ready
-* Multiple metric storage options - InfluxDB, PostgreSQL, Graphite
+* Kubernetes/OpenShift ready with a "non-root" image and a deployment template
+* Multiple metric storage options - PostgreSQL, InfluxDB, Graphite, JSON file
 
 # Project background
 
@@ -67,19 +67,21 @@ For more background on the project motivations and design goals see the original
 * [Feature pack 1](https://www.cybertec-postgresql.com/en/new-features-for-cybertecs-pgwatch2-postgres-monitoring-tool/)
 * [Feature pack 2](https://www.cybertec-postgresql.com/en/updates-for-the-pgwatch2-postgres-monitoring-tool/)
 * [Feature pack 3](https://www.cybertec-postgresql.com/en/pgwatch2-feature-pack-3/)
+* [Feature pack 4](https://www.cybertec-postgresql.com/en/major-feature-update-for-the-pgwatch2-postgres-monitoring-tool/)
 
 # Limitations / Performance expectations
 
-* Min 1GB RAM required for Docker setup. Just the gatherer needs <50MB if metric strore is up, otherwise metrics are cached in RAM up to a limit of 100k data points.
-* 1 GB of disk space should be enough for monitoring 1 host for 1 month (1 month is the default metrics retention policy for Influx running in Docker, configurable). Depending on the amount of schema objects - tables, indexes, stored procedures and especially on number of unique SQL-s, it could be also more.
+* Min 1GB RAM required for Docker setup. Just the gatherer needs <50MB if metric strore is up, otherwise metrics are cached in RAM up to a limit of 10k data points.
+* 1 GB of disk space should be enough for monitoring 1 host for 1 month (1 month is the default metrics retention policy for Influx running in Docker, configurable). Depending on the amount of schema objects - tables, indexes, stored procedures and especially on number of unique SQL-s, it could be also more. With Postgres as metric store multiply it with 3-4x. There's also a "test data generation" mode in the collector to exactly determine disk footprint - see PW2_TESTDATA_DAYS and PW2_TESTDATA_MULTIPLIER params for that (requires also "ad-hoc" mode params).
 * A low-spec (1 vCPU, 2 GB RAM) cloud machine can easily monitor 100 DBs in "exhaustive" settings (i.e. almost all metrics
-are monitored with 60s interval) without breaking a sweat (<20% load). When a single node where the metrics collector daemon
+are monitored in 1-2min intervals) without breaking a sweat (<20% load). When a single node where the metrics collector daemon
 is running is becoming a bottleneck, one can also do "sharding" i.e. limit the amount of monitored databases for that node
 based on the Group label(s) (--group), which is just a string for logical grouping.
 * A single InfluxDB node should handle thousands of requests per second but if this is not enough having a secondary/mirrored
 InfluxDB is also possible. If more than two needed (e.g. feeding many many Grafana instances or some custom exporting) one
-should look at Influx Enterprise (on-prem or cloud) or Graphite (which is also supported as metrics storage backend).
-* When high InfluxDB latency is problematic (e.g. using a DBaaS across the atlantic) then increasing the default maximum batching delay (--batching-delay-ms) of 250ms would give good results
+should look at Influx Enterprise (on-prem or cloud) or Graphite (which is also supported as metrics storage backend). For PostgreSQL
+metrics storage one could use streaming replicas for read scaling or for example Citus for write scaling.
+* When high metrics write latency is problematic (e.g. using a DBaaS across the atlantic) then increasing the default maximum batching delay of 250ms(--batching-delay-ms / PW2_BATCHING_MAX_DELAY_MS) could give good results.
 
 # Security/safety aspects
 
@@ -98,7 +100,7 @@ query. At any time only 2 metric fetching queries are running in parallel on the
 of details though, but if no risks can be taken the dashboards (or at least according panels) should be deleted. As an alternative "pg_stat_statements_calls"
 can be used, which only records total runtimes and call counts.
 * Safe certificate connections to Postgres are supported as of v1.5.0
-* Encrypting/decrypting passwords stored in the config DB or in YAML config files possible from v1.5.0. By default none.
+* Encrypting/decrypting passwords stored in the config DB or in YAML config files possible from v1.5.0. An encryption passphrase/file needs to be specified then via PW2_AES_GCM_KEYPHRASE / PW2_AES_GCM_KEYPHRASE_FILE. By default passwords are stored in plaintext.
 
 
 # Alerting
@@ -112,7 +114,7 @@ If more complex scenarios/check conditions are required TICK stack and Kapacitor
 
 # Components
 
-* pgwatch2 metrics gathering daemon written in Go
+* pgwatch2 metrics gathering daemon / collector written in Go
 * Configuration store saying which databases and metrics to gather (3 options):
   - A PostgreSQL database
   - YAML config files + SQL metrics files
@@ -251,11 +253,11 @@ More screenshots [here](https://github.com/cybertec-postgresql/pgwatch2/tree/mas
 
 * Dynamic management of monitored databases, metrics and their intervals - no need to restart/redeploy
 * Safety
-  - only one concurrent query per monitored database is allowed so side-effects shoud be minimal
-  - configurable statement timeouts
+  - Up to 2 concurrent queries per monitored database (thus more per cluster) are allowed
+  - Configurable statement timeouts per DB
   - SSL connections support for safe over-the-internet monitoring (use "-e PW2_WEBSSL=1 -e PW2_GRAFANASSL=1" when launching Docker)
-  - Optional authentication for the Web UI and Grafana (by default freely accessible!)
-* Backup script (take_backup.sh) provided for taking snapshots of the whole setup. To make it easier (run outside the container)
+  - Optional authentication for the Web UI and Grafana (by default freely accessible)
+* Backup script (take_backup.sh) provided for taking snapshots of the whole Docker setup. To make it easier (run outside the container)
 one should to expose ports 5432 (Postgres) and 8088 (InfluxDB backup protocol) at least for the loopback address.
 
 Ports exposed by the Docker image:
@@ -264,8 +266,8 @@ Ports exposed by the Docker image:
 * 8080 - Management Web UI (monitored hosts, metrics, metrics configurations)
 * 8081 - Gatherer healthcheck / statistics on number of gathered metrics (JSON).
 * 3000 - Grafana dashboarding
-* 8086 - InfluxDB API
-* 8088 - InfluxDB Backup port
+* 8086 - InfluxDB API (when using the InfluxDB version)
+* 8088 - InfluxDB Backup port (when using the InfluxDB version)
 
 # The Admin Web UI
 
@@ -310,10 +312,10 @@ work though as gathering server’s timestamp will be used, you’ll just lose s
 (assuming intra-datacenter monitoring) of precision.
 * Queries can only return text, integer, boolean or floating point (a.k.a. double precision) data.
 * Columns can be optionally “tagged” by prefixing them with “tag_”. By doing this, the column data 
-will be indexed by the InfluxDB giving following advantages:
+will be indexed by the InfluxDB / Postgres giving following advantages:
   * Sophisticated auto-discovery support for indexed keys/values, when building charts with Grafana.
-  * Faster InfluxDB queries for queries on those columns.
-  * Less disk space used for repeating values. Thus when you’re for example returning some longish 
+  * Faster queries for queries on those columns.
+  * Less disk space used for repeating values in InfluxDB. Thus when you’re for example returning some longish 
   and repetitive status strings (possible with Singlestat or Table panels) that you’ll be looking 
   up by some ID column, it might still make sense to prefix the column with “tag_” to reduce disks 
   space.
@@ -333,7 +335,7 @@ From v1.4.0 it's also possible to run the gatherer daemon in ad-hoc / test mode,
 string as input, and optionally also specifying the metrics to monitor (preset config name or a custom JSON string).
 In that case there is no need for the central Postgres "config DB" nor the YAML file specifying which hosts to monitor.
 NB! When using that mode with the default Docker image, the built-in metric definitions can't be changed via the Web UI.
-Relevant Gatherer env. vars / flags: --adhoc-conn-str, --adhoc-config, --adhoc-name, --metrics-folder / PW2_ADHOC_CONN_STR, PW2_ADHOC_CONFIG, PW2_ADHOC_NAME, PW2_METRICS_FOLDER.
+Relevant Gatherer env. vars / flags: --adhoc-conn-str, --adhoc-config, --adhoc-name, --metrics-folder / PW2_ADHOC_CONN_STR, PW2_ADHOC_CONFIG, PW2_ADHOC_NAME, PW2_METRICS_FOLDER, PW2_ADHOC_CREATE_HELPERS.
 
 ```
 # launching in ad-hoc / test mode
@@ -344,8 +346,9 @@ docker run --rm -p 3000:3000 -p 8080:8080 -e PW2_ADHOC_CONN_STR="postgresql://us
 docker run --rm -p 3000:3000 -p 8080:8080 -e PW2_ADHOC_CONN_STR="postgresql://user:pwd@mydb:5432/mydb1" \
     -e PW2_ADHOC_CONFIG=exhaustive -e PW2_ADHOC_CREATE_HELPERS=true --name pw2 cybertec/pgwatch2
 ```
-NB! In ad-hoc mode pgwatch2 always tries (will succeed if connecting with superuser privileges) to create all of the
-metrics fetching helpers automatically on the monitored DB.
+NB! Using PW2_ADHOC_CREATE_HELPERS (tries to create all of the metrics fetching helpers automatically on the monitored DB)
+assumes superuser privileges and does not clean up the helpers on exitings so for a permanent setting one could
+change the user to an unprivileged 'pgwatch2' user.
 
 # Updating to a newer Docker version
 
@@ -411,7 +414,7 @@ All examples assuming Ubuntu.
     psql -f pgwatch2/sql/config_store/config_store.sql pgwatch2
     psql -f pgwatch2/sql/config_store/metric_definitions.sql pgwatch2
     ```
-2. Install InfluxDB
+2. Install InfluxDB (for Postgres as metrics storage DB see instructions [here](https://github.com/cybertec-postgresql/pgwatch2/tree/master/pgwatch2/sql/metric_store))
     
     ```
     INFLUX_LATEST=$(curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1)
@@ -516,5 +519,4 @@ All examples assuming Ubuntu.
 
     Congrats! Now the metrics should start flowing in and after some minutes one should already see some graphs in Grafana.
 
-6. Make sure to hatch up some "init scripts" so that the pgwatch2 daemon and the Web UI would be started automatically
-when the system reboots. For externally packaged components (Grafana, Influx, Postgres) it should be the case already.
+6. Install and configure SystemD init scripts for the Gatherer and the Web UI [here](https://github.com/cybertec-postgresql/pgwatch2/tree/master/pgwatch2/startup-scripts) and [here](https://github.com/cybertec-postgresql/pgwatch2/tree/master/webpy/startup-scripts) or make sure to hatch up some "init scripts" so that the pgwatch2 daemon and the Web UI would be started automatically when the system reboots. For externally packaged components (Grafana, Influx, Postgres) it should be the case already.
