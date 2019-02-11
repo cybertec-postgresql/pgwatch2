@@ -11,6 +11,21 @@ or a specific version
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
 
+## v1.5.1 [2019-02-11]
+
+* Gatherer fix - 'continous discovery' worked only in YAML mode
+* Metrics fix - pre 9.2 'backends' SQL was incorrect
+* Gatherer improvement - 'auto-create helpers' (if "checked") applied to all found DBs now
+* Gatherer improvement - "funny" DB names (spaces etc) can be now monitored also with Postgres as storage DB
+* Gatherer improvement - issue a warning instead of crash when AES encrypted password does not match required format
+* Gatherer improvement - add ability to generate encrypted passwords e.g. for YAML usage, via --aes-gcm-password-to-encrypt param
+* Web UI improvement - allow changing password type from plain to AES and vice-versa without re-entering password
+* Metrics change - restrict metric names to alphanumerics and underscores. All built-in metrics were already obeying that practice
+* Metrics improvement - add a 'create extension if not exists pg_stat_statements' to the get_stat_statements helper SQL
+* Docker image with Postgres metrics storage - possible to enable also the "metric-dbname-time" storage model via PW2_PG_SCHEMA_TYPE env. var
+* Readme - explanations to available "DB type" options
+
+
 ## v1.5.0 [2019-01-24]
 
 * New feature - Support Postgres as metrics storage DB (--pg-schema-type, --pg-metric-store-conn-str, --pg-retention-days)

@@ -5,6 +5,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 ## Docker image specific
 
 - **NOTESTDB** When set, the config DB won't be added to monitoring as "test". Default: -
+- **PW2_PG_SCHEMA_TYPE** Enables to choose different metric storage models for the "pgwatch2-postgres" image - [metric-time|metric-dbname-time]. Default: metric-time
 
 ## Gatherer daemon
 
