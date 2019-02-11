@@ -2475,6 +2475,8 @@ func ReadPresetMetricsConfigFromFolder(folder string, failOnError bool) (map[str
 func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metrics_map := make(map[string]map[decimal.Decimal]MetricVersionProperties)
 	rIsDigitOrPunctuation := regexp.MustCompile("^[\\d\\.]+$")
+	metricNamePattern := "^[a-z0-9_]+$"
+	rMetricNameFilter := regexp.MustCompile(metricNamePattern)
 
 	log.Infof("Searching for metrics from path %s ...", folder)
 	metric_folders, err := ioutil.ReadDir(folder)
@@ -2490,6 +2492,10 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 		if f.IsDir() {
 			if f.Name() == FILE_BASED_METRIC_HELPERS_DIR {
 				continue // helpers are pulled in when needed
+			}
+			if !rMetricNameFilter.MatchString(f.Name()) {
+				log.Warningf("Ignoring metric '%s' as name not fitting pattern: %s", f.Name(), metricNamePattern)
+				continue
 			}
 			log.Debugf("Processing metric: %s", f.Name())
 			pgVers, err := ioutil.ReadDir(path.Join(folder, f.Name()))

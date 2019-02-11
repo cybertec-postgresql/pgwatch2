@@ -75,7 +75,8 @@ create table metric (
     m_standby_only bool default false,
 
     unique (m_name, m_pg_version_from),
-    check (not (m_master_only and m_standby_only))
+    check (not (m_master_only and m_standby_only)),
+    check (m_name ~ '^[a-z0-9_]+$')
 );
 
 

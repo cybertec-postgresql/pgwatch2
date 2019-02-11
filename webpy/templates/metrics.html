@@ -145,7 +145,7 @@
                 <form action="/metrics" method="post">
                     <td>
                         <input type="hidden" name="m_id" value="{{row['m_id']}}">
-                        <input type="text" name="m_name" value="{{row['m_name']|e}}" title="Metric name">
+                        <input type="text" name="m_name" value="{{row['m_name']|e}}" title="Metric name. Lowercase alphanumerics and underscores allowed." pattern="[a-z0-9_]+">
                     </td>
                     <td><input type="text" name="m_pg_version_from" value="{{row['m_pg_version_from']}}" title="Version from"></td>
                     <td><textarea name="m_sql" cols="50" title="SQL for metric">{{row['m_sql']}}</textarea></td>
@@ -162,7 +162,7 @@
             {% endfor %}
             <tr>
                 <form action="/metrics" method="post">
-                    <td><input type="text" name="m_name" value="" title="Metric name"></td>
+                    <td><input type="text" name="m_name" value="" title="Metric name. Lowercase alphanumerics and underscores allowed." pattern="[a-z0-9_]+"></td>
                     <td><input type="text" name="m_pg_version_from" value="9.0" title="Version from"></td>
                     <td><textarea name="m_sql" cols="50" title="SQL for metric">SELECT (extract(epoch from now()) * 1e9)::int8 as epoch_ns, ...</textarea></td>
                     <td><input type="text" name="m_comment" value=""  title="Comment"></td>
