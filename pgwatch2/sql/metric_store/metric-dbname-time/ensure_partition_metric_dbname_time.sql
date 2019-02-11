@@ -31,9 +31,9 @@ BEGIN
                     AND schemaname = 'public')
   THEN
     --RAISE NOTICE 'creating partition % ...', metric; 
-    EXECUTE format($$CREATE TABLE public."%s" (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY LIST (dbname)$$,
-                    metric);
-    EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);
+    EXECUTE format($$CREATE TABLE public.%s (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY LIST (dbname)$$,
+                    quote_ident(metric));
+    EXECUTE format($$COMMENT ON TABLE public.%s IS 'pgwatch2-generated-metric-lvl'$$, quote_ident(metric));
   END IF;
 
   -- 2. level
@@ -44,9 +44,9 @@ BEGIN
                     AND schemaname = 'subpartitions')
   THEN
     --RAISE NOTICE 'creating partition % ...', l_part_name; 
-    EXECUTE format($$CREATE TABLE subpartitions."%s" PARTITION OF public."%s" FOR VALUES IN ('%s') PARTITION BY RANGE (time)$$,
-                    l_part_name_2nd, metric, dbname);
-    EXECUTE format($$COMMENT ON TABLE subpartitions."%s" IS 'pgwatch2-generated-metric-dbname-lvl'$$, l_part_name_2nd);
+    EXECUTE format($$CREATE TABLE subpartitions.%s PARTITION OF public.%s FOR VALUES IN (%s) PARTITION BY RANGE (time)$$,
+                    quote_ident(l_part_name_2nd), quote_ident(metric), quote_literal(dbname));
+    EXECUTE format($$COMMENT ON TABLE subpartitions.%s IS 'pgwatch2-generated-metric-dbname-lvl'$$, quote_ident(l_part_name_2nd));
   END IF;
 
   -- 3. level
@@ -75,10 +75,10 @@ BEGIN
                     AND schemaname = 'subpartitions')
   THEN
     --RAISE NOTICE 'creating time sub-partition % ...', l_part_name;
-    l_sql := format($$CREATE TABLE subpartitions."%s" PARTITION OF subpartitions."%s" FOR VALUES FROM ('%s') TO ('%s')$$,
-                    l_part_name_3rd, l_part_name_2nd, l_part_start, l_part_end);
+    l_sql := format($$CREATE TABLE subpartitions.%s PARTITION OF subpartitions.%s FOR VALUES FROM ('%s') TO ('%s')$$,
+                    quote_ident(l_part_name_3rd), quote_ident(l_part_name_2nd), l_part_start, l_part_end);
     EXECUTE l_sql;
-    EXECUTE format($$COMMENT ON TABLE subpartitions."%s" IS 'pgwatch2-generated-metric-dbname-time-lvl'$$, l_part_name_3rd);
+    EXECUTE format($$COMMENT ON TABLE subpartitions.%s IS 'pgwatch2-generated-metric-dbname-time-lvl'$$, quote_ident(l_part_name_3rd));
   END IF;
 
   END LOOP;

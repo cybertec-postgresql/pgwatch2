@@ -54,8 +54,13 @@ su -c "psql -d pgwatch2 -f /pgwatch2/sql/config_store/config_store.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/config_store/metric_definitions.sql" postgres
 su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/00_schema_base.sql" postgres
 su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/01_old_metrics_cleanup_procedure.sql" postgres
-su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-time/metric_store_part_time.sql" postgres
-su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-time/ensure_partition_metric_time.sql" postgres
+if [ "$PW2_PG_SCHEMA_TYPE" == "metric-dbname-time" ] ; then
+  su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-dbname-time/metric_store_part_dbname_time.sql" postgres
+  su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-dbname-time/ensure_partition_metric_dbname_time.sql" postgres
+else
+  su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-time/metric_store_part_time.sql" postgres
+  su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-time/ensure_partition_metric_time.sql" postgres
+fi
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/cpu_load_plpythonu.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/stat_statements_wrapper.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/stat_activity_wrapper.sql" postgres

@@ -28,10 +28,10 @@ BEGIN
                     AND schemaname = 'public')
   THEN
     --RAISE NOTICE 'creating top level metrics partition % ...', metric;   
-    l_sql := format($$CREATE TABLE public."%s" (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY RANGE (time)$$,
-                    metric);
+    l_sql := format($$CREATE TABLE public.%s (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY RANGE (time)$$,
+                    quote_ident(metric));
     EXECUTE l_sql;
-    EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);
+    EXECUTE format($$COMMENT ON TABLE public.%s IS 'pgwatch2-generated-metric-lvl'$$, quote_ident(metric));
   END IF;
   
   FOR i IN 0..partitions_to_precreate LOOP
@@ -58,10 +58,10 @@ BEGIN
                     AND schemaname = 'subpartitions')
   THEN
     --RAISE NOTICE 'creating sub-partition % ...', l_part_name;
-    l_sql := format($$CREATE TABLE subpartitions."%s" PARTITION OF public."%s" FOR VALUES FROM ('%s') TO ('%s')$$,
-                    l_part_name, metric, l_part_start, l_part_end);
+    l_sql := format($$CREATE TABLE subpartitions.%s PARTITION OF public.%s FOR VALUES FROM ('%s') TO ('%s')$$,
+                    quote_ident(l_part_name), quote_ident(metric), l_part_start, l_part_end);
     EXECUTE l_sql;
-    EXECUTE format($$COMMENT ON TABLE subpartitions."%s" IS 'pgwatch2-generated-metric-time-lvl'$$, l_part_name);
+    EXECUTE format($$COMMENT ON TABLE subpartitions.%s IS 'pgwatch2-generated-metric-time-lvl'$$, quote_ident(l_part_name));
   END IF;
 
   END LOOP;
