@@ -213,6 +213,8 @@ def update_monitored_db(params, cmd_args=None):
     """
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
     cherrypy_empty_text_to_nulls(params, ['md_preset_config_name', 'md_config', 'md_custom_tags'])
+    if params['md_dbtype'] == 'postgres-continuous-discovery':
+        params['md_dbname'] = ''
     
     data, err = datadb.execute(sql, params)
     if err:
@@ -254,9 +256,13 @@ def insert_monitored_db(params, cmd_args=None):
     cherrypy_empty_text_to_nulls(
         params, ['md_preset_config_name', 'md_config', 'md_custom_tags'])
     password_plain = params['md_password']
+    if password_plain == '***':
+        raise Exception("'***' cannot be used as password, denotes unchanged password")
+
     if params.get('md_password_type') == 'aes-gcm-256':
         if not cmd_args.aes_gcm_keyphrase:
             ret.append("FYI - skipping password encryption as keyphrase/keyfile not specified on UI startup (hint: use the PW2_AES_GCM_KEYPHRASE env. variable or --aes-gcm-keyphrase param)")
+            params['md_password_type'] = 'plain-text'
         else:
             params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, password_plain)
 
@@ -320,10 +326,13 @@ def insert_monitored_db(params, cmd_args=None):
             else:
                 ret.append('{} DBs added: {}'.format(len(dbs_to_add), ', '.join(dbs_to_add)))
     else:   # only 1 DB
+        if params['md_dbtype'] == 'postgres-continuous-discovery':
+            params['md_dbname'] = ''
         data, err = datadb.execute(sql_insert_new_db, params)
         if err:
             raise Exception('Failed to insert into "monitored_db": ' + err)
         ret.append('Host with ID {} added!'.format(data[0]['md_id']))
+
         if params['md_dbtype'] == 'postgres-continuous-discovery':
             params['md_dbname'] = 'template1'
         data, err = datadb.executeOnRemoteHost('select 1', params['md_hostname'], params['md_port'], params['md_dbname'],
