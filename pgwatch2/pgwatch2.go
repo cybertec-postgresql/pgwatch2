@@ -123,7 +123,7 @@ type ExistingPartitionInfo struct {
 
 const EPOCH_COLUMN_NAME string = "epoch_ns"      // this column (epoch in nanoseconds) is expected in every metric query
 const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
-const ACTIVE_SERVERS_REFRESH_TIME int64 = 60     // min time before checking for new/changed databases under monitoring i.e. main loop time
+const ACTIVE_SERVERS_REFRESH_TIME int64 = 120    // min time before checking for new/changed databases under monitoring i.e. main loop time
 const GRAPHITE_METRICS_PREFIX string = "pgwatch2"
 const PERSIST_QUEUE_MAX_SIZE = 10000 // storage queue max elements. when reaching the limit, older metrics will be dropped.
 // actual requirements depend a lot of metric type and nr. of obects in schemas,
@@ -533,7 +533,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			Group:                row["md_group"].(string),
 			CustomTags:           customTags}
 
-		if md.PasswordType == "aes-gcm-256" {
+		if md.PasswordType == "aes-gcm-256" && opts.AesGcmKeyphrase != "" {
 			md.Password = decrypt(md.DBUniqueName, opts.AesGcmKeyphrase, md.Password)
 		}
 
@@ -2694,7 +2694,7 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 			}
 			e.Metrics = mdef
 		}
-		if e.IsEnabled && e.PasswordType == "aes-gcm-256" {
+		if e.IsEnabled && e.PasswordType == "aes-gcm-256" && opts.AesGcmKeyphrase != "" {
 			e.Password = decrypt(e.DBUniqueName, opts.AesGcmKeyphrase, e.Password)
 		}
 		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" {
