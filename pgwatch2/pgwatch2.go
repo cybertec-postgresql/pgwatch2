@@ -2787,6 +2787,16 @@ func FilterMonitoredDatabasesByGroup(monitoredDBs []MonitoredDatabase, group str
 	return ret, len(monitoredDBs) - len(ret)
 }
 
+func encrypt(passphrase, plaintext string) string { // called when --password-to-encrypt set
+	key, salt := deriveKey(passphrase, nil)
+	iv := make([]byte, 12)
+	rand.Read(iv)
+	b, _ := aes.NewCipher(key)
+	aesgcm, _ := cipher.NewGCM(b)
+	data := aesgcm.Seal(nil, iv, []byte(plaintext), nil)
+	return hex.EncodeToString(salt) + "-" + hex.EncodeToString(iv) + "-" + hex.EncodeToString(data)
+}
+
 func deriveKey(passphrase string, salt []byte) ([]byte, []byte) {
 	if salt == nil {
 		salt = make([]byte, 8)
@@ -2846,17 +2856,18 @@ type Options struct {
 	GraphitePort         string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
 	JsonStorageFile      string `long:"json-storage-file" description:"Path to file where metrics will be stored when --datastore=json, one metric set per line" env:"PW2_JSON_STORAGE_FILE"`
 	// Params for running based on local config files, enabled distributed "push model" based metrics gathering. Metrics are sent directly to Influx/Graphite.
-	Config              string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
-	MetricsFolder       string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
-	BatchingDelayMs     int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
-	AdHocConnString     string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
-	AdHocConfig         string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
-	AdHocCreateHelpers  string `long:"adhoc-create-helpers" description:"Ad-hoc mode: try to auto-create helpers. Needs superuser to succeed [Default: false]" default:"false" env:"PW2_ADHOC_CREATE_HELPERS"`
-	AdHocUniqueName     string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
-	InternalStatsPort   int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
-	ConnPooling         string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: off]" default:"off" env:"PW2_CONN_POOLING"`
-	AesGcmKeyphrase     string `long:"aes-gcm-keyphrase" description:"Decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE"`
-	AesGcmKeyphraseFile string `long:"aes-gcm-keyphrase-file" description:"File with decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE_FILE"`
+	Config                  string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
+	MetricsFolder           string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
+	BatchingDelayMs         int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
+	AdHocConnString         string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
+	AdHocConfig             string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
+	AdHocCreateHelpers      string `long:"adhoc-create-helpers" description:"Ad-hoc mode: try to auto-create helpers. Needs superuser to succeed [Default: false]" default:"false" env:"PW2_ADHOC_CREATE_HELPERS"`
+	AdHocUniqueName         string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
+	InternalStatsPort       int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
+	ConnPooling             string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: off]" default:"off" env:"PW2_CONN_POOLING"`
+	AesGcmKeyphrase         string `long:"aes-gcm-keyphrase" description:"Decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE"`
+	AesGcmKeyphraseFile     string `long:"aes-gcm-keyphrase-file" description:"File with decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE_FILE"`
+	AesGcmPasswordToEncrypt string `long:"aes-gcm-password-to-encrypt" description:"A special mode, returns the encrypted plain-text string and quits. Keyphrase(file) must be set. Useful for YAML mode" env:"PW2_AES_GCM_PASSWORD_TO_ENCRYPT"`
 	// NB! "Test data" mode needs to be combined with "ad-hoc" mode to get an initial set of metrics from a real source
 	TestdataMultiplier int `long:"testdata-multiplier" description:"For how many hosts to generate data" env:"PW2_TESTDATA_MULTIPLIER"`
 	TestdataDays       int `long:"testdata-days" description:"For how many days to generate data" env:"PW2_TESTDATA_DAYS"`
@@ -2881,6 +2892,27 @@ func main() {
 	logging.SetFormatter(logging.MustStringFormatter(`%{level:.4s} %{shortfunc}: %{message}`))
 
 	log.Debug("opts", opts)
+
+	if len(opts.AesGcmKeyphraseFile) > 0 {
+		keyBytes, err := ioutil.ReadFile(opts.AesGcmKeyphraseFile)
+		if err != nil {
+			log.Fatal("Failed to read aes_gcm_keyphrase_file:", err)
+		}
+		if keyBytes[len(keyBytes)-1] == 10 {
+			log.Warning("Removing newline character from keyphrase input string...")
+			opts.AesGcmKeyphrase = string(keyBytes[:len(keyBytes)-1]) // remove line feed
+		} else {
+			opts.AesGcmKeyphrase = string(keyBytes)
+		}
+	}
+
+	if opts.AesGcmPasswordToEncrypt != "" { // special flag - encrypt and exit
+		if opts.AesGcmKeyphrase == "" {
+			log.Fatal("--aes-gcm-password-to-encrypt requires --aes-gcm-keyphrase(-file)")
+		}
+		fmt.Println(encrypt(opts.AesGcmKeyphrase, opts.AesGcmPasswordToEncrypt))
+		os.Exit(0)
+	}
 
 	// ad-hoc mode
 	if len(opts.AdHocConnString) > 0 {
@@ -3001,19 +3033,6 @@ func main() {
 		log.Infof("Starting the internal statistics interface on port %d...", opts.InternalStatsPort)
 		go StartStatsServer(opts.InternalStatsPort)
 		go StatsSummarizer()
-	}
-
-	if len(opts.AesGcmKeyphraseFile) > 0 {
-		keyBytes, err := ioutil.ReadFile(opts.AesGcmKeyphraseFile)
-		if err != nil {
-			log.Fatal("Failed to read aes_gcm_keyphrase_file:", err)
-		}
-		if keyBytes[len(keyBytes)-1] == 10 {
-			log.Warning("Removing newline character from keyphrase input string...")
-			opts.AesGcmKeyphrase = string(keyBytes[:len(keyBytes)-1]) // remove line feed
-		} else {
-			opts.AesGcmKeyphrase = string(keyBytes)
-		}
 	}
 
 	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan

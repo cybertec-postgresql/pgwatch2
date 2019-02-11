@@ -48,6 +48,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_CONN_POOLING** Enable re-use of metrics fetching connections. "off" means reconnect every time. Default: off
 - **PW2_AES_GCM_KEYPHRASE** Keyphrase for encryption/decpyption of connect string passwords.
 - **PW2_AES_GCM_KEYPHRASE_FILE** File containing a keyphrase for encryption/decpyption of connect string passwords.
+- **PW2_AES_GCM_PASSWORD_TO_ENCRYPT** A special mode, returns the encrypted plain-text string and quits. Keyphrase(file) must be set
 - **PW2_TESTDATA_DAYS** For how many days to generate data. Requires Ad-hoc params to be set also.
 - **PW2_TESTDATA_MULTIPLIER** For how many hosts to generate data. Requires Ad-hoc params to be set also.
 
