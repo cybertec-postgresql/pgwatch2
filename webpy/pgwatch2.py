@@ -147,12 +147,18 @@ def cherrypy_empty_text_to_nulls(param_dict, keys):
 def update_monitored_db(params, cmd_args=None):
     ret = []
     password_plain = params['md_password']
-    if params.get('md_password_type') == 'aes-gcm-256' and params['md_password'] != '***':
+    old_row_data = get_monitored_db_by_id(params['md_id'])
+    if params.get('md_password_type') == 'aes-gcm-256':
         if not cmd_args.aes_gcm_keyphrase:
             ret.append("FYI - skipping password encryption as keyphrase/keyfile not specified on UI startup (hint: use the PW2_AES_GCM_KEYPHRASE env. variable or --aes-gcm-keyphrase param)")
         else:
-            params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, password_plain)
-    old_row_data = get_monitored_db_by_id(params['md_id'])
+            if params['md_password'] != '***':
+                params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, password_plain)
+            elif old_row_data.get('md_password_type') == 'plain-text':
+                params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, old_row_data.get('md_password'))
+    elif params.get('md_password_type') == 'plain-text' and old_row_data.get('md_password_type') == 'aes-gcm-256':
+        params['md_password'] = crypto.decrypt(cmd_args.aes_gcm_keyphrase, old_row_data.get('md_password'))
+
     sql = """
         with q_old as (
           /* using CTE to be enable detect if connect info is being changed */
@@ -169,7 +175,7 @@ def update_monitored_db(params, cmd_args=None):
           md_include_pattern = %(md_include_pattern)s,
           md_exclude_pattern = %(md_exclude_pattern)s,
           md_user = %(md_user)s,
-          md_password = case when %(md_password)s = '***' then new.md_password else %(md_password)s end,
+          md_password = case when %(md_password)s = '***' and %(md_password_type)s = new.md_password_type then new.md_password else %(md_password)s end,
           md_password_type = %(md_password_type)s,
           md_is_superuser = %(md_is_superuser)s,
           md_sslmode = %(md_sslmode)s,
@@ -194,7 +200,7 @@ def update_monitored_db(params, cmd_args=None):
             case when %(md_password)s = '***' then q_old.md_password else %(md_password)s end, %(md_sslmode)s,
             %(md_root_ca_path)s, %(md_client_cert_path)s, %(md_client_key_path)s
             ) as connection_data_changed,
-            case when %(md_password)s = '***' then q_old.md_password else %(md_password)s end as md_password
+            case when %(md_password)s = '***' and %(md_password_type)s = q_old.md_password_type then q_old.md_password else %(md_password)s end as md_password
     """
     cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
     cherrypy_empty_text_to_nulls(params, ['md_preset_config_name', 'md_config', 'md_custom_tags'])
@@ -206,7 +212,11 @@ def update_monitored_db(params, cmd_args=None):
 
     # check connection if connect string changed or inactive host activated
     if data[0]['connection_data_changed'] or (old_row_data and (not old_row_data['md_is_enabled'] and params['md_is_enabled'])):  # show warning when changing connect data but cannot connect
-        data, err = datadb.executeOnRemoteHost('select 1', params['md_hostname'], params['md_port'], params['md_dbname'],
+        if params.get('md_password_type') == 'aes-gcm-256':
+            password_plain = crypto.decrypt(cmd_args.aes_gcm_keyphrase, data[0]['md_password'])
+        else:
+            password_plain = data[0]['md_password']
+        data, err = datadb.executeOnRemoteHost('select 1', params['md_hostname'], params['md_port'], 'template1' if params['md_dbtype'] == 'postgres-continuous-discovery' else params['md_dbname'],
                                    params['md_user'], password_plain, sslmode=params['md_sslmode'],
                                    sslrootcert=params['md_root_ca_path'], sslcert=params['md_client_cert_path'],
                                    sslkey=params['md_client_key_path'], quiet=True)
