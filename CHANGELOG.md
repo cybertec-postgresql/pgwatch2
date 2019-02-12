@@ -25,6 +25,8 @@ or a specific version
 * Docker image with Postgres metrics storage - possible to enable also the "metric-dbname-time" storage model via PW2_PG_SCHEMA_TYPE env. var
 * Readme - explanations to available "DB type" options
 
+NB! When migrating old "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
+applied first from the "pgwatch2/sql/config_store/migrations/" folder.
 
 ## v1.5.0 [2019-01-24]
 
