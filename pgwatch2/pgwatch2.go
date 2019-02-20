@@ -181,6 +181,7 @@ var testDataGenerationModeWG sync.WaitGroup
 var PGDummyMetricTables = make(map[string]time.Time)
 var PGDummyMetricTablesLock = sync.RWMutex{}
 var PGSchemaType string
+var failedInitialConnectHosts = make(map[string]bool) // hosts that couldn't be connected to even once
 
 func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
@@ -3205,7 +3206,7 @@ func main() {
 			first_loop = false // only used for failing when 1st config reading fails
 		}
 
-		log.Info("nr. of active hosts:", len(monitored_dbs))
+		log.Info("host info refreshed, nr. of enabled hosts in configuration:", len(monitored_dbs))
 
 		for _, host := range monitored_dbs {
 			log.Debug("processing database:", host.DBUniqueName, ", config:", host.Metrics, ", custom tags:", host.CustomTags)
@@ -3223,11 +3224,7 @@ func main() {
 			_, exists := db_conn_limiting_channel[db_unique]
 			db_conn_limiting_channel_lock.RUnlock()
 
-			if !exists {
-				var err error
-				var ver DBVersionMapEntry
-
-				log.Infof("new host \"%s\" found, checking connectivity...", db_unique)
+			if !exists { // initialize DB connection limiting structure
 				db_conn_limiting_channel_lock.Lock()
 				db_conn_limiting_channel[db_unique] = make(chan bool, MAX_PG_CONNECTIONS_PER_MONITORED_DB)
 				i := 0
@@ -3237,6 +3234,19 @@ func main() {
 					i++
 				}
 				db_conn_limiting_channel_lock.Unlock()
+			}
+
+			_, connectFailedSoFar := failedInitialConnectHosts[db_unique]
+
+			if !exists || connectFailedSoFar {
+				var err error
+				var ver DBVersionMapEntry
+
+				if connectFailedSoFar {
+					log.Infof("retrying to connect to uninitialized DB \"%s\"...", db_unique)
+				} else {
+					log.Infof("new host \"%s\" found, checking connectivity...", db_unique)
+				}
 
 				if db_type == "postgres" {
 					ver, err = DBGetPGVersion(db_unique, true)
@@ -3249,9 +3259,13 @@ func main() {
 					} else {
 						log.Errorf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err)
 					}
+					failedInitialConnectHosts[db_unique] = true
 					continue
 				} else {
 					log.Infof("Connect OK. [%s] is on version %s (in recovery: %v)", db_unique, ver.Version, ver.IsInRecovery)
+					if connectFailedSoFar {
+						delete(failedInitialConnectHosts, db_unique)
+					}
 				}
 
 				if host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers)) {
