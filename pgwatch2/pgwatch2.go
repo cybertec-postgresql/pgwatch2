@@ -3268,7 +3268,7 @@ func main() {
 					}
 				}
 
-				if host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers)) {
+				if (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers))) && db_type == "postgres" {
 					log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
 					TryCreateMetricsFetchingHelpers(db_unique)
 				}
