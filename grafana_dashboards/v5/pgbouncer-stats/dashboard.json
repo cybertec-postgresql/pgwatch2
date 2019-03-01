@@ -2,7 +2,6 @@
   "annotations": {
     "list": [
       {
-        "$$hashKey": "object:1754",
         "builtIn": 1,
         "datasource": "-- Grafana --",
         "enable": true,
@@ -17,7 +16,6 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1521045747240,
   "links": [],
   "panels": [
     {
@@ -29,11 +27,11 @@
         "#614d93",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
+      "decimals": 1,
       "description": "Current \"Transaction Per Second\" based on total_xact_count",
       "editable": true,
       "error": false,
-      "format": "none",
+      "format": "short",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -50,7 +48,7 @@
       "height": "100",
       "hideTimeOverride": true,
       "id": 1,
-      "interval": null,
+      "interval": "2m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -91,13 +89,13 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "$__interval"
               ],
               "type": "time"
             },
             {
               "params": [
-                "null"
+                "none"
               ],
               "type": "fill"
             }
@@ -119,7 +117,7 @@
               },
               {
                 "params": [],
-                "type": "last"
+                "type": "mean"
               },
               {
                 "params": [
@@ -139,7 +137,7 @@
         }
       ],
       "thresholds": "",
-      "timeFrom": "1h",
+      "timeFrom": "15m",
       "title": "TPS",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -161,11 +159,11 @@
         "#629e51",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
+      "decimals": 1,
       "description": "Current \"Queries Per Second\" based on total_query_count",
       "editable": true,
       "error": false,
-      "format": "none",
+      "format": "short",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -182,7 +180,7 @@
       "height": "100",
       "hideTimeOverride": true,
       "id": 2,
-      "interval": null,
+      "interval": "2m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -223,7 +221,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -251,7 +249,7 @@
               },
               {
                 "params": [],
-                "type": "last"
+                "type": "mean"
               },
               {
                 "params": [
@@ -271,7 +269,7 @@
         }
       ],
       "thresholds": "",
-      "timeFrom": "1h",
+      "timeFrom": "15m",
       "title": "QPS",
       "type": "singlestat",
       "valueFontSize": "80%",
@@ -293,7 +291,6 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "Current value based on derivative of total_query_time /  total_query_count",
       "editable": true,
@@ -315,7 +312,7 @@
       "height": "100",
       "hideTimeOverride": true,
       "id": 3,
-      "interval": null,
+      "interval": "2m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -369,7 +366,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(last(\"total_query_time\"), 1h) / non_negative_derivative(last(\"total_query_count\"), 1h) FROM \"pgbouncer_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1s) fill(none)",
+          "query": "SELECT non_negative_derivative(last(\"total_query_time\"), 1h) / non_negative_derivative(last(\"total_query_count\"), 1h) FROM \"pgbouncer_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -391,7 +388,7 @@
         }
       ],
       "thresholds": "",
-      "timeFrom": "1h",
+      "timeFrom": "15m",
       "timeShift": null,
       "title": "Avg. query runtime",
       "type": "singlestat",
@@ -414,8 +411,7 @@
         "#890f02",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
-      "decimals": null,
+      "decimals": 1,
       "description": "Current avg. wait time to get a connection, per query",
       "editable": true,
       "error": false,
@@ -436,7 +432,7 @@
       "height": "100",
       "hideTimeOverride": true,
       "id": 4,
-      "interval": null,
+      "interval": "2m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -491,7 +487,7 @@
           "measurement": "pgbouncer_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(last(\"total_wait_time\")) / non_negative_derivative(last(\"total_query_count\")) FROM \"pgbouncer_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1s) fill(none)",
+          "query": "SELECT non_negative_derivative(last(\"total_wait_time\")) / non_negative_derivative(last(\"total_query_count\")) FROM \"pgbouncer_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -548,9 +544,8 @@
         "#64b0c8",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
       "decimals": 1,
-      "description": "Current Incoming traffic based on total_received",
+      "description": "Current Incoming traffic  based on total_received.",
       "editable": true,
       "error": false,
       "format": "Bps",
@@ -570,7 +565,7 @@
       "height": "100",
       "hideTimeOverride": true,
       "id": 5,
-      "interval": null,
+      "interval": "2m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -611,7 +606,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -637,7 +632,7 @@
               },
               {
                 "params": [],
-                "type": "last"
+                "type": "mean"
               },
               {
                 "params": [
@@ -657,7 +652,7 @@
         }
       ],
       "thresholds": "",
-      "timeFrom": "5m",
+      "timeFrom": "15m",
       "timeShift": null,
       "title": "Incoming traffic",
       "type": "singlestat",
@@ -680,7 +675,6 @@
         "#e24d42",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "Based on total_sent",
       "editable": true,
@@ -702,7 +696,7 @@
       "height": "100",
       "hideTimeOverride": true,
       "id": 6,
-      "interval": null,
+      "interval": "2m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -742,7 +736,7 @@
           "groupBy": [
             {
               "params": [
-                "1s"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -768,7 +762,7 @@
               },
               {
                 "params": [],
-                "type": "last"
+                "type": "mean"
               },
               {
                 "params": [
@@ -788,7 +782,7 @@
         }
       ],
       "thresholds": "",
-      "timeFrom": "1h",
+      "timeFrom": "15m",
       "timeShift": null,
       "title": "Outgoing traffic",
       "type": "singlestat",
@@ -809,7 +803,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "decimals": null,
       "description": "Based on total_query_count",
       "editable": true,
       "error": false,
@@ -822,6 +816,7 @@
         "y": 3
       },
       "id": 7,
+      "interval": "2m",
       "legend": {
         "alignAsTable": false,
         "avg": true,
@@ -840,24 +835,7 @@
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "db_stats.mean",
-          "yaxis": 2
-        },
-        {
-          "alias": "DB size",
-          "yaxis": 2
-        },
-        {
-          "alias": "blk_read_time",
-          "yaxis": 2
-        },
-        {
-          "alias": "blk_write_time",
-          "yaxis": 2
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -915,6 +893,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "TPS",
       "tooltip": {
@@ -933,8 +912,9 @@
       },
       "yaxes": [
         {
+          "decimals": null,
           "format": "short",
-          "label": null,
+          "label": "",
           "logBase": 1,
           "max": null,
           "min": 0,
@@ -958,8 +938,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
-      "decimals": 1,
+      "decimals": null,
       "editable": true,
       "error": false,
       "fill": 1,
@@ -971,6 +950,7 @@
         "y": 3
       },
       "id": 8,
+      "interval": "2m",
       "legend": {
         "alignAsTable": false,
         "avg": true,
@@ -1015,7 +995,7 @@
           "measurement": "db_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(last(\"total_wait_time\")) / non_negative_derivative(last(\"total_query_count\")) FROM \"pgbouncer_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"total_wait_time\")) / non_negative_derivative(mean(\"total_query_count\")) FROM \"pgbouncer_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1038,6 +1018,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Pool wait time per Query",
       "tooltip": {
@@ -1056,6 +1037,7 @@
       },
       "yaxes": [
         {
+          "decimals": null,
           "format": "µs",
           "label": null,
           "logBase": 1,
@@ -1082,7 +1064,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "decimals": null,
       "editable": true,
       "error": false,
       "fill": 1,
@@ -1094,6 +1076,7 @@
         "y": 9
       },
       "id": 9,
+      "interval": "2m",
       "legend": {
         "avg": true,
         "current": false,
@@ -1172,6 +1155,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "QPS",
       "tooltip": {
@@ -1190,6 +1174,7 @@
       },
       "yaxes": [
         {
+          "decimals": null,
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1217,7 +1202,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "decimals": null,
       "editable": true,
       "error": false,
@@ -1231,6 +1215,7 @@
       },
       "height": "",
       "id": 10,
+      "interval": "2m",
       "legend": {
         "alignAsTable": false,
         "avg": true,
@@ -1249,16 +1234,7 @@
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "WAL rate (bytes/h)",
-          "yaxis": 2
-        },
-        {
-          "alias": "DB Size",
-          "yaxis": 2
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -1310,6 +1286,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Incoming traffic rate",
       "tooltip": {
@@ -1352,8 +1329,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
-      "decimals": 1,
+      "decimals": null,
       "description": "",
       "fill": 1,
       "gridPos": {
@@ -1363,7 +1339,7 @@
         "y": 15
       },
       "id": 11,
-      "interval": ">60s",
+      "interval": "2m",
       "legend": {
         "avg": true,
         "current": false,
@@ -1405,7 +1381,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(last(\"total_query_time\"), 1h) / non_negative_derivative(last(\"total_query_count\"), 1h) FROM \"pgbouncer_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
+          "query": "SELECT non_negative_derivative(mean(\"total_query_time\"), 1h) / non_negative_derivative(mean(\"total_query_count\"), 1h) FROM \"pgbouncer_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1428,6 +1404,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Avg. query runtime",
       "tooltip": {
@@ -1445,6 +1422,7 @@
       },
       "yaxes": [
         {
+          "decimals": null,
           "format": "µs",
           "label": null,
           "logBase": 1,
@@ -1471,7 +1449,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "description": "",
       "fill": 1,
       "gridPos": {
@@ -1481,6 +1458,7 @@
         "y": 15
       },
       "id": 12,
+      "interval": "2m",
       "legend": {
         "avg": true,
         "current": false,
@@ -1498,12 +1476,7 @@
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "avg_query_runtime",
-          "yaxis": 2
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -1555,6 +1528,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Outgoing traffic rate",
       "tooltip": {
@@ -1625,7 +1599,7 @@
         "multi": false,
         "name": "dbname",
         "options": [],
-        "query": "SHOW TAG VALUES WITH KEY = \"dbname\" ",
+        "query": "SHOW TAG VALUES FROM pgbouncer_stats WITH KEY = \"dbname\"",
         "refresh": 1,
         "regex": "",
         "sort": 0,
