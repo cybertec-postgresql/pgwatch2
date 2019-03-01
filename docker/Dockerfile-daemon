@@ -13,7 +13,7 @@ ADD pgwatch2 /pgwatch2
 ### Install Go and compile the gatherer daemon
 ###
 
-RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.11.4.linux-amd64.tar.gz \
+RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.12.linux-amd64.tar.gz \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && export PATH=$PATH:/usr/local/go/bin \
     && cd /pgwatch2 && bash build_gatherer.sh \
