@@ -1400,7 +1400,7 @@ func MetricsBatcher(data_store string, batchingMaxDelayMillis int64, buffered_st
 		log.Fatalf("Check --batching-delay-ms, zero/negative batching delay:", batchingMaxDelayMillis)
 	}
 	var datapointCounter int = 0
-	var maxBatchSize int = 5000            // flush on maxBatchSize or batchingMaxDelayMillis
+	var maxBatchSize int = 1000            // flush on maxBatchSize metric points or batchingMaxDelayMillis passed
 	batch := make([]MetricStoreMessage, 0) // no size limit here as limited in persister already
 	ticker := time.NewTicker(time.Millisecond * time.Duration(batchingMaxDelayMillis))
 
