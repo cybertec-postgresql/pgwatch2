@@ -243,6 +243,13 @@ found from the `pgwatch2/sql/metric_fetching_helpers` folder (or `pgwatch2/metri
 NB! When rolling out helpers make sure the `search_path` is set correctly (same as monitoring role's) as metrics using the
 helpers, assume that monitoring role's `search_path` includes everything needed i.e. they don't qualify any schemas.
 
+
+## Warning / notice on using metric fetching helpers
+
+* When installing some "helpers" and laters doing a binary PostgreSQL upgrade via `pg_upgrade`, this could result in some error messages thrown. Then just drop those failing helpers on the "to be upgraded" cluster and re-create them after the upgrade process.
+
+* Starting from Postgres v10 helpers are mostly not needed (only for PL/Python ones getting OS statistics) - there are available some special monitoring roles like "pg_monitor", that are exactly meant to be used for such cases where we want to give access to all Statistics Collector views without any other "superuser behaviour". See [here](https://www.postgresql.org/docs/current/default-roles.html) for documentation on such special system roles.
+
 # Running without helper / wrapper functions
 
 Helpers/wrappers are not needed actually, they just provide a bit more information. For unprivileged users (developers)
