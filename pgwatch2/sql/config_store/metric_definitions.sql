@@ -404,7 +404,7 @@ SELECT
   sync_state,
   case when sync_state in ('sync', 'quorum') then 1 else 0 end as is_sync_int
 from
-  pg_stat_replication;
+  get_stat_replication();
 $sql$
 );
 
@@ -427,6 +427,9 @@ SELECT
   sync_state,
   case when sync_state in ('sync', 'quorum') then 1 else 0 end as is_sync_int
 from
+  /* NB! when the query fails, grant "pg_monitor" system role (exposing all stats) to the monitoring user
+     or create specifically the "get_stat_replication" helper and use that instead of pg_stat_replication
+  */
   pg_stat_replication;
 $sql$
 );
@@ -1441,4 +1444,25 @@ select
   pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn()) as replay_lag_b,
   extract(epoch from (now() - pg_last_xact_replay_timestamp()))::int8 as last_replay_s;
 $sql$
+);
+
+
+/* from PG10+ it's best to use the "pg_monitor" system role to grant access to this and other pg_stat* views */
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
+values (
+'get_stat_replication',
+9.0,
+$sql$
+
+CREATE OR REPLACE FUNCTION get_stat_replication() RETURNS SETOF pg_stat_replication AS
+$$
+  select * from pg_stat_replication
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION get_stat_replication() TO pgwatch2;
+COMMENT ON FUNCTION get_stat_replication() IS 'created for pgwatch2';
+
+$sql$,
+'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
+true
 );
