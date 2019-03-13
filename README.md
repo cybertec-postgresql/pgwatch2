@@ -250,6 +250,8 @@ helpers, assume that monitoring role's `search_path` includes everything needed 
 
 * Starting from Postgres v10 helpers are mostly not needed (only for PL/Python ones getting OS statistics) - there are available some special monitoring roles like "pg_monitor", that are exactly meant to be used for such cases where we want to give access to all Statistics Collector views without any other "superuser behaviour". See [here](https://www.postgresql.org/docs/current/default-roles.html) for documentation on such special system roles.
 
+* For gathering OS statistics (CPU, IO, disk) there are helpers and metrics provided, based on the "psutil" Python package...but from user reports seems the package behaviour differentiates slightly based on the Linux distro / Kernel version used, so small adjustments might be needed there (e.g. remove a non-existen column). Minimum usable Kernel version required is 3.3. Also note that SQL helpers functions are currently defined for Python 2, so for Python 3 you need to change the `LANGUAGE plpythonu` part.
+
 # Running without helper / wrapper functions
 
 Helpers/wrappers are not needed actually, they just provide a bit more information. For unprivileged users (developers)
