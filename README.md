@@ -315,7 +315,19 @@ the name of a PgBouncer "pool" to be monitored must be inserted.
 
 # Adding metrics
 
-Metric definitions – metrics are named SQL queries that can return pretty much everything you find 
+## Note on built-in metrics
+
+There's a good set of pre-defined metrics & configs provided (and installed when using the Docker image) that should cover most people's needs, but when monitoring dozens of hosts the intervals should be probably adjusted to reduce data amounts.
+
+Things to note:
+
+* Some builtin metrics are marked to be only executed when server is a primary or conversely, a standby. The flags can be inspected on the Web UI Metrics tab.
+* The "change_events" builtin metric used for detecting DDL & config changes uses internally some other "*_hashes" metrics
+which are not meant to be used on their own.
+
+## Metric definitions
+
+Metrics are named SQL queries that can return pretty much everything you find
 useful and which can have different query text versions for different target PostgreSQL versions. 
 Correct version of the metric definition will be chosen automatically by regularly connecting to the 
 target database and checking the version. For defining metrics definitions you should adhere to a 
