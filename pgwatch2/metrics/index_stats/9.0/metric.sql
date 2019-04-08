@@ -1,3 +1,6 @@
+WITH q_locked_rels AS (
+  select relation from pg_locks where mode = 'AccessExclusiveLock' and granted
+)
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   schemaname::text as tag_schema,
@@ -20,7 +23,8 @@ FROM
   pg_index i USING (indexrelid)
 WHERE
   NOT schemaname like E'pg\\_temp%'
-  AND i.indrelid not in (select relation from pg_locks where mode = 'AccessExclusiveLock' and granted)
+  AND i.indrelid not in (select relation from q_locked_rels)
+  AND i.indexrelid not in (select relation from q_locked_rels)
 ORDER BY
   schemaname, relname, indexrelname;
   
