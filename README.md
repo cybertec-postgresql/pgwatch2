@@ -62,7 +62,7 @@ monitoring a single DB. See below for details
 * PgBouncer and AWS RDS graphing/alerting supported in addition to PostgreSQL
 * Possible to monitoring all DBs found in a cluster automatically (with regex pattern matching)
 * Kubernetes/OpenShift ready with a "non-root" image and a deployment template
-* Multiple metric storage options - PostgreSQL, InfluxDB, Graphite, JSON file
+* Multiple metric storage options - PostgreSQL, InfluxDB, Prometheus, Graphite, JSON file
 
 # Project background
 
@@ -337,7 +337,7 @@ couple of basic concepts though:
 precision) column to record the metrics reading time. If the column is not there, things will still 
 work though as gathering server’s timestamp will be used, you’ll just lose some milliseconds 
 (assuming intra-datacenter monitoring) of precision.
-* Queries can only return text, integer, boolean or floating point (a.k.a. double precision) data.
+* Queries can only return text, integer, boolean or floating point (a.k.a. double precision) Postgres data types.
 * Columns can be optionally “tagged” by prefixing them with “tag_”. By doing this, the column data 
 will be indexed by the InfluxDB / Postgres giving following advantages:
   * Sophisticated auto-discovery support for indexed keys/values, when building charts with Grafana.
@@ -348,6 +348,11 @@ will be indexed by the InfluxDB / Postgres giving following advantages:
   space.
 * Fixed per host "custom tags" are also supported - these can contain any key-value data important to user and are
 added to all captured data rows
+* For Prometheus the numerical columns are by default mapped to a Value Type of "Counter" (as most Statistics
+Collector columns are cumulative), but when this is not the case and the column is a "Gauge" then according column
+attributes should be decalared. For YAML based setups this means adding a "column_attrs.yaml" file in the metric's
+top folder and for Config DB based setup an according "column_attrs" JSON column should be filled.
+* NB! For Prometheus all text fields will be turned into tags / labels as only floats can be stored.
 
 # File based operation
 

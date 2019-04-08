@@ -118,7 +118,7 @@ def get_all_metrics():
     sql = """
         select
           m_id, m_name, m_pg_version_from, m_sql, coalesce(m_comment, '') as m_comment, m_is_active, m_is_helper, 
-          date_trunc('second', m_last_modified_on) as m_last_modified_on, m_master_only, m_standby_only
+          date_trunc('second', m_last_modified_on) as m_last_modified_on, m_master_only, m_standby_only, coalesce(m_column_attrs::text, '') as m_column_attrs
         from
           pgwatch2.metric
         order by
@@ -406,6 +406,7 @@ def update_metric(params):
           m_is_helper = %(m_is_helper)s,
           m_master_only = %(m_master_only)s,
           m_standby_only = %(m_standby_only)s,
+          m_column_attrs = %(m_column_attrs)s,
           m_last_modified_on = now()
         where
           m_id = %(m_id)s
@@ -419,9 +420,9 @@ def update_metric(params):
 def insert_metric(params):
     sql = """
         insert into
-          pgwatch2.metric (m_name, m_pg_version_from, m_sql, m_comment, m_is_active, m_is_helper, m_master_only, m_standby_only)
+          pgwatch2.metric (m_name, m_pg_version_from, m_sql, m_comment, m_is_active, m_is_helper, m_master_only, m_standby_only, m_column_attrs)
         values
-          (%(m_name)s, %(m_pg_version_from)s, %(m_sql)s, %(m_comment)s, %(m_is_active)s, %(m_is_helper)s, %(m_master_only)s, %(m_standby_only)s)
+          (%(m_name)s, %(m_pg_version_from)s, %(m_sql)s, %(m_comment)s, %(m_is_active)s, %(m_is_helper)s, %(m_master_only)s, %(m_standby_only)s, , %(m_column_attrs)s)
         returning m_id
     """
     cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper', 'm_master_only', 'm_standby_only'])

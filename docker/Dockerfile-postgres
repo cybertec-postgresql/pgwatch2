@@ -4,7 +4,7 @@ RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl
     && echo "deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && curl -s https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && apt-get -q update \
     && DEBIAN_FRONTEND=noninteractive apt-get -qy install wget apt-transport-https vim git supervisor postgresql-11 \
-       postgresql-plpython-11 libfontconfig python3-pip python-pip libssl-dev \
+       postgresql-plpython-11 libfontconfig python3-pip python-pip libssl-dev libpq-dev \
     && pip install -U pip && pip3 install -U pip \
     && locale-gen "en_US.UTF-8" && apt autoremove -y \
     && pg_dropcluster 11 main ; pg_createcluster --locale en_US.UTF-8 11 main \
@@ -26,7 +26,7 @@ ADD webpy /pgwatch2/webpy
 
 # Go installation [https://golang.org/dl/]
 # Grafana config customizations, Web UI requirements, compilation of the Go gatherer
-RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.12.linux-amd64.tar.gz \
+RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.12.2.linux-amd64.tar.gz \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && export PATH=$PATH:/usr/local/go/bin \
     && cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
@@ -62,7 +62,8 @@ EXPOSE 8081
 EXPOSE 5432
 # Grafana UI
 EXPOSE 3000
-
+# Prometheus scraping port
+EXPOSE 9187
 
 ### Volumes for easier updating to newer to newer pgwatch2 containers
 ### NB! Backwards compatibility is not 100% guaranteed so a backup

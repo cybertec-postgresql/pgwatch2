@@ -8,4 +8,4 @@ fi
 ./get_dependencies.sh
 
 echo "running 'go build pgwatch2.go' ..."
-go build pgwatch2.go
+go build pgwatch2.go prom.go

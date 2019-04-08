@@ -134,6 +134,7 @@
                 <td title="Code for metric fetching helpers. Not to be used for normal metrics gathering">Is helper?</td>
                 <td title="Execute only on masters">Master only?</td>
                 <td title="Execute only on standbys">Standby only?</td>
+                <td title="Column attributes. Use to specify Prometheus Gauge type columns">Column attributes</td>
                 <td>Last modified</td>
                 <td></td>
                 <td></td>
@@ -154,6 +155,7 @@
                     <td><input type="checkbox" name="m_is_helper" {% if row['m_is_helper'] %}checked{% endif %} title="Is helper?"></td>
                     <td><input type="checkbox" name="m_master_only" {% if row['m_master_only'] %}checked{% endif %} title="Master only?"></td>
                     <td><input type="checkbox" name="m_standby_only" {% if row['m_standby_only'] %}checked{% endif %} title="Standby only?"></td>
+                    <td><textarea name="m_column_attrs" cols="30" title="Column attributes. Use to specify Prometheus Gauge type columns">{{row['m_column_attrs']}}</textarea></td>
                     <td>{{row['m_last_modified_on']}}</td>
                     <td><input type="submit" name="metric_save" value="Save" class="metric_save"></td>
                     <td><input type="submit" name="metric_delete" value="Delete" class="delete"></td>
@@ -170,6 +172,7 @@
                     <td><input type="checkbox" name="m_is_helper" title="Is helper?"></td>
                     <td><input type="checkbox" name="m_master_only" title="Master only?"></td>
                     <td><input type="checkbox" name="m_standby_only" title="Standby only?"></td>
+                    <td><textarea name="m_column_attrs" cols="30" title="Column attributes. Use to specify Prometheus Gauge type columns"></textarea></td>
                     <td></td>
                     <td><input type="submit" name="metric_new" value="New"></td>
                     <td></td>

@@ -16,7 +16,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_PGPASSWORD** Config DB password. Default: pgwatch2admin
 - **PW2_PGSSL** Config DB SSL connection only. Default: False
 - **PW2_GROUP** Logical grouping/sharding key to monitor a subset of configured hosts. Default: -
-- **PW2_DATASTORE** Backend for metric storage - [influx|postgres|graphite]. Default: influx
+- **PW2_DATASTORE** Backend for metric storage - [influx|postgres|prometheus|graphite|json]. Default: influx
 - **PW2_VERBOSE** Logging vebosity. By default warning and errors are logged. Use [-v|-vv] to include [info|debug]. Default: -
 - **PW2_PG_METRIC_STORE_CONN_STR** Postgres metric store connection string. Required when PW2_DATASTORE=postgres. Default: -
 - **PW2_PG_RETENTION_DAYS** Effective when PW2_DATASTORE=postgres. Default: 30
@@ -52,6 +52,8 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_AES_GCM_PASSWORD_TO_ENCRYPT** A special mode, returns the encrypted plain-text string and quits. Keyphrase(file) must be set
 - **PW2_TESTDATA_DAYS** For how many days to generate data. Requires Ad-hoc params to be set also.
 - **PW2_TESTDATA_MULTIPLIER** For how many hosts to generate data. Requires Ad-hoc params to be set also.
+- **PW2_PROMETHEUS_PORT** Prometheus port. Effective with --datastore=prometheus. Default: 9187
+- **PW2_PROMETHEUS_LISTEN_ADDR** Network interface to listen on". Default: "0.0.0.0"
 
 
 ## Web UI

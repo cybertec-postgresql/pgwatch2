@@ -69,10 +69,17 @@ type PresetConfig struct {
 	Metrics     map[string]float64
 }
 
+type MetricColumnAttrs struct {
+	PrometheusGaugeColumns    []string `yaml:"prometheus_gauge_columns"`
+	PrometheusIgnoredColumns  []string `yaml:"prometheus_ignored_columns"` // for cases where we don't want some columns to be exposed in Prom mode
+	PrometheusAllGaugeColumns bool     `yaml:"prometheus_all_gauge_columns"`
+}
+
 type MetricVersionProperties struct {
 	Sql         string
 	MasterOnly  bool
 	StandbyOnly bool
+	ColumnAttrs MetricColumnAttrs // Prometheus Metric Type (Counter is default) and ignore list
 }
 
 type ControlMessage struct {
@@ -89,11 +96,12 @@ type MetricFetchMessage struct {
 }
 
 type MetricStoreMessage struct {
-	DBUniqueName string
-	DBType       string
-	MetricName   string
-	CustomTags   map[string]string
-	Data         [](map[string]interface{})
+	DBUniqueName            string
+	DBType                  string
+	MetricName              string
+	CustomTags              map[string]string
+	Data                    [](map[string]interface{})
+	MetricDefinitionDetails MetricVersionProperties
 }
 
 type MetricStoreMessagePostgres struct {
@@ -132,6 +140,7 @@ const DATASTORE_INFLUX = "influx"
 const DATASTORE_GRAPHITE = "graphite"
 const DATASTORE_JSON = "json"
 const DATASTORE_POSTGRES = "postgres"
+const DATASTORE_PROMETHEUS = "prometheus"
 const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
 const FILE_BASED_METRIC_HELPERS_DIR = "00_helpers"
 const PG_CONN_RECYCLE_SECONDS = 1800                // applies for monitored nodes
@@ -142,6 +151,7 @@ const GATHERER_STATUS_START = "START"
 const GATHERER_STATUS_STOP = "STOP"
 const METRICDB_IDENT = "metricDb"
 const CONFIGDB_IDENT = "configDb"
+const CONTEXT_PROMETHEUS_SCRAPE = "prometheus-scrape"
 
 var configDb *sqlx.DB
 var metricDb *sqlx.DB
@@ -182,6 +192,8 @@ var PGDummyMetricTables = make(map[string]time.Time)
 var PGDummyMetricTablesLock = sync.RWMutex{}
 var PGSchemaType string
 var failedInitialConnectHosts = make(map[string]bool) // hosts that couldn't be connected to even once
+var promExporter *Exporter
+var promServer *http.Server
 
 func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
@@ -1290,6 +1302,7 @@ func SendToGraphite(dbname, measurement string, data [](map[string]interface{}))
 				continue
 			} else {
 				var metric graphite.Metric
+
 				if strings.HasPrefix(k, "tag_") { // ignore tags for Graphite
 					metric.Name = metric_base_prefix + k[4:]
 				} else {
@@ -1654,7 +1667,7 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 
 	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "sproc_hashes", useConnPooling, mvp.Sql)
 	if err != nil {
-		log.Error("could not read table_hashes from monitored host: ", dbUnique, ", err:", err)
+		log.Error("could not read sproc_hashes from monitored host: ", dbUnique, ", err:", err)
 		return change_counts
 	}
 
@@ -2000,7 +2013,7 @@ func FilterPgbouncerData(data []map[string]interface{}, database_to_keep string)
 	return filtered_data
 }
 
-func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]string, storage_ch chan<- []MetricStoreMessage) ([]MetricStoreMessage, error) {
+func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]string, storage_ch chan<- []MetricStoreMessage, context string) ([]MetricStoreMessage, error) {
 	var vme DBVersionMapEntry
 	var db_pg_version decimal.Decimal
 	var err error
@@ -2037,8 +2050,8 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 		return nil, nil
 	}
 
-	if msg.MetricName == "change_events" { // special handling, multiple queries + stateful
-		CheckForPGObjectChangesAndStore(msg.DBUniqueName, db_pg_version, storage_ch, host_state)
+	if msg.MetricName == "change_events" && context != CONTEXT_PROMETHEUS_SCRAPE { // special handling, multiple queries + stateful
+		CheckForPGObjectChangesAndStore(msg.DBUniqueName, db_pg_version, storage_ch, host_state) // TODO no host_state for Prometheus
 	} else {
 
 		data, err, duration := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, mvp.Sql)
@@ -2067,7 +2080,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 			if msg.MetricName == "pgbouncer_stats" { // clean unwanted pgbouncer pool stats here as not possible in SQL
 				data = FilterPgbouncerData(data, md.DBName)
 			}
-			return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags}}, nil
+			return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags, MetricDefinitionDetails: mvp}}, nil
 		}
 	}
 	return nil, nil
@@ -2133,7 +2146,8 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 		metricStoreMessages, err := FetchMetrics(
 			MetricFetchMessage{DBUniqueName: dbUniqueName, MetricName: metricName, DBType: dbType},
 			host_state,
-			store_ch)
+			store_ch,
+			"")
 		t2 := time.Now()
 
 		if t2.Sub(t1) > (time.Second * time.Duration(interval)) {
@@ -2227,7 +2241,7 @@ func UpdateMetricDefinitionMap(newMetrics map[string]map[decimal.Decimal]MetricV
 
 func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metric_def_map_new := make(map[string]map[decimal.Decimal]MetricVersionProperties)
-	sql := "select m_name, m_pg_version_from::text, m_sql, m_master_only, m_standby_only from pgwatch2.metric where m_is_active"
+	sql := "select m_name, m_pg_version_from::text, m_sql, m_master_only, m_standby_only, coalesce(m_column_attrs::text, '') as m_column_attrs from pgwatch2.metric where m_is_active"
 
 	log.Info("updating metrics definitons from ConfigDB...")
 	data, err := DBExecRead(configDb, CONFIGDB_IDENT, sql)
@@ -2251,10 +2265,15 @@ func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decim
 			metric_def_map_new[row["m_name"].(string)] = make(map[decimal.Decimal]MetricVersionProperties)
 		}
 		d, _ := decimal.NewFromString(row["m_pg_version_from"].(string))
+		ca := MetricColumnAttrs{}
+		if row["m_column_attrs"].(string) != "" {
+			ca = ParseMetricColumnAttrsFromString(row["m_column_attrs"].(string))
+		}
 		metric_def_map_new[row["m_name"].(string)][d] = MetricVersionProperties{
 			Sql:         row["m_sql"].(string),
 			MasterOnly:  row["m_master_only"].(bool),
 			StandbyOnly: row["m_standby_only"].(bool),
+			ColumnAttrs: ca,
 		}
 	}
 	return metric_def_map_new, err
@@ -2472,6 +2491,32 @@ func ReadPresetMetricsConfigFromFolder(folder string, failOnError bool) (map[str
 	return pmm, err
 }
 
+func ParseMetricColumnAttrsFromYAML(yamlPath string) MetricColumnAttrs {
+	c := MetricColumnAttrs{}
+
+	yamlFile, err := ioutil.ReadFile(yamlPath)
+	if err != nil {
+		log.Errorf("Error reading file %s: %s", yamlFile, err)
+		return c
+	}
+
+	err = yaml.Unmarshal(yamlFile, &c)
+	if err != nil {
+		log.Errorf("Unmarshaling error: %v", err)
+	}
+	return c
+}
+
+func ParseMetricColumnAttrsFromString(jsonAttrs string) MetricColumnAttrs {
+	c := MetricColumnAttrs{}
+
+	err := yaml.Unmarshal([]byte(jsonAttrs), &c)
+	if err != nil {
+		log.Errorf("Unmarshaling error: %v", err)
+	}
+	return c
+}
+
 // expected is following structure: metric_name/pg_ver/metric.sql
 func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metrics_map := make(map[string]map[decimal.Decimal]MetricVersionProperties)
@@ -2505,8 +2550,14 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 				return metrics_map, err
 			}
 
+			var metricColumnAttrs MetricColumnAttrs
+			if _, err = os.Stat(path.Join(folder, f.Name(), "column_attrs.yaml")); err == nil {
+				metricColumnAttrs = ParseMetricColumnAttrsFromYAML(path.Join(folder, f.Name(), "column_attrs.yaml"))
+				log.Debugf("Discovered following column attributes for metric %s: %v", f.Name(), metricColumnAttrs)
+			}
+
 			for _, pgVer := range pgVers {
-				if strings.HasSuffix(pgVer.Name(), ".md") {
+				if strings.HasSuffix(pgVer.Name(), ".md") || pgVer.Name() == "column_attrs.yaml" {
 					continue
 				}
 				if !rIsDigitOrPunctuation.MatchString(pgVer.Name()) {
@@ -2539,7 +2590,8 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 						if validMetricDefs > 1 {
 							log.Warningf("Multiple definitions found for metric [%s:%s], using the last one (%s)...", f.Name(), pgVer.Name(), md.Name())
 						}
-						mvp := MetricVersionProperties{Sql: string(metric_sql[:])}
+						mvp := MetricVersionProperties{Sql: string(metric_sql[:]), ColumnAttrs: metricColumnAttrs}
+
 						//log.Debugf("Metric definition for \"%s\" ver %s: %s", f.Name(), pgVer.Name(), metric_sql)
 						_, ok := metrics_map[f.Name()]
 						if !ok {
@@ -2834,9 +2886,12 @@ type Options struct {
 	Password             string `long:"password" description:"PG config DB password" env:"PW2_PGPASSWORD"`
 	PgRequireSSL         string `long:"pg-require-ssl" description:"PG config DB SSL connection only" default:"false" env:"PW2_PGSSL"`
 	Group                string `short:"g" long:"group" description:"Group (or groups, comma separated) for filtering which DBs to monitor. By default all are monitored" env:"PW2_GROUP"`
-	Datastore            string `long:"datastore" description:"[influx|postgres|graphite|json]" default:"influx" env:"PW2_DATASTORE"`
+	Datastore            string `long:"datastore" description:"[influx|postgres|prometheus|graphite|json]" default:"influx" env:"PW2_DATASTORE"`
 	PGMetricStoreConnStr string `long:"pg-metric-store-conn-str" description:"PG Metric Store" env:"PW2_PG_METRIC_STORE_CONN_STR"`
 	PGRetentionDays      int64  `long:"pg-retention-days" description:"If set, metrics older than that will be deleted" default:"30" env:"PW2_PG_RETENTION_DAYS"`
+	PrometheusPort       int64  `long:"prometheus-port" description:"Prometheus port. Effective with --datastore=prometheus" default:"9187" env:"PW2_PROMETHEUS_PORT"`
+	PrometheusListenAddr string `long:"prometheus-listen-addr" description:"Network interface to listen on" default:"0.0.0.0" env:"PW2_PROMETHEUS_LISTEN_ADDR"`
+	PrometheusNamespace  string `long:"prometheus-namespace" description:"Prefix for all non-process (thus Postgres) metrics" default:"pgwatch2" env:"PW2_PROMETHEUS_NAMESPACE"`
 	InfluxHost           string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
 	InfluxPort           string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
 	InfluxDbname         string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
@@ -3039,7 +3094,7 @@ func main() {
 	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
 	persist_ch := make(chan []MetricStoreMessage, 10000)
 	var buffered_persist_ch chan []MetricStoreMessage
-	if opts.BatchingDelayMs > 0 {
+	if opts.BatchingDelayMs > 0 && opts.Datastore != DATASTORE_PROMETHEUS {
 		buffered_persist_ch = make(chan []MetricStoreMessage, 10000) // "staging area" for metric storage batching, when enabled
 		log.Info("starting MetricsBatcher...")
 		go MetricsBatcher(DATASTORE_INFLUX, opts.BatchingDelayMs, buffered_persist_ch, persist_ch)
@@ -3115,6 +3170,13 @@ func main() {
 			log.Info("starting old Postgres metrics cleanup job...")
 			go OldPostgresMetricsDeleter(opts.PGRetentionDays, PGSchemaType)
 		}
+
+	} else if opts.Datastore == DATASTORE_PROMETHEUS {
+		if opts.TestdataDays > 0 || opts.TestdataMultiplier > 0 {
+			log.Fatal("Test data generation mode cannot be used with Prometheus data store")
+		}
+
+		go StartPrometheusExporter(opts.PrometheusPort)
 	} else {
 		log.Fatal("Unknown datastore. Check the --datastore param")
 	}
@@ -3273,7 +3335,13 @@ func main() {
 					TryCreateMetricsFetchingHelpers(db_unique)
 				}
 
-				time.Sleep(time.Millisecond * 100) // not to cause a huge load spike when starting the daemon with 100+ monitored DBs
+				if opts.Datastore != DATASTORE_PROMETHEUS {
+					time.Sleep(time.Millisecond * 100) // not to cause a huge load spike when starting the daemon with 100+ monitored DBs
+				}
+			}
+
+			if opts.Datastore == DATASTORE_PROMETHEUS {
+				continue
 			}
 
 			for metric := range host_config {
@@ -3317,6 +3385,12 @@ func main() {
 					}
 				}
 			}
+		}
+
+		if opts.Datastore == DATASTORE_PROMETHEUS { // special behaviour, no "ahead of time" metric collection
+			log.Debugf("main sleeping %ds...", ACTIVE_SERVERS_REFRESH_TIME)
+			time.Sleep(time.Second * time.Duration(ACTIVE_SERVERS_REFRESH_TIME))
+			continue
 		}
 
 		if opts.TestdataDays > 0 {

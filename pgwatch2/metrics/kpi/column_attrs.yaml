@@ -1,0 +1,7 @@
+---
+prometheus_gauge_columns:
+  - numbackends
+  - active_backends
+  - blocked_backends
+  - kpi_oldest_tx_s
+prometheus_ignored_columns:

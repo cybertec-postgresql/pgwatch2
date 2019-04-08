@@ -1,6 +1,6 @@
 /* backends */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'backends',
 9.0,
@@ -21,10 +21,11 @@ select
     from sa_snapshot where xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active') as longest_query_seconds;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'backends',
 9.2,
@@ -45,10 +46,11 @@ select
     from sa_snapshot where xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active') as longest_query_seconds;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'backends',
 9.4,
@@ -70,10 +72,11 @@ select
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active') as longest_query_seconds,
   (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'backends',
 9.6,
@@ -95,10 +98,11 @@ select
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active') as longest_query_seconds,
   (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'backends',
 10,
@@ -121,7 +125,8 @@ select
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active' and backend_type = 'client backend') as longest_query_seconds,
   (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
 /* bgwriter */
@@ -151,7 +156,7 @@ $sql$
 
 /* cpu_load */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'cpu_load',
 9.0,
@@ -163,13 +168,14 @@ select
   round(load_15min::numeric, 2)::float as load_15min
 from
   get_load_average();   -- needs the plpythonu proc from "metric_fetching_helpers" folder
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
 
 /* db_stats */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'db_stats',
 9.3,
@@ -198,12 +204,13 @@ from
   pg_stat_database
 where
   datname = current_database();
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s", "backup_duration_s"]}'
 );
 
 /* db_size */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'db_size',
 9.0,
@@ -211,12 +218,13 @@ $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   pg_database_size(current_database()) as size_b;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
 /* index_stats */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'index_stats',
 9.0,
@@ -245,13 +253,14 @@ WHERE
   NOT schemaname like E'pg\\_temp%'
 ORDER BY
   schemaname, relname, indexrelname;
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["index_size_b", "is_invalid_int", "is_pk_int"]}'
 );
 
 
 /* kpi */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'kpi',
 9.0,
@@ -291,12 +300,13 @@ FROM
   pg_stat_database d
 WHERE
   datname = current_database();
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["numbackends", "active_backends", "blocked_backends", "kpi_oldest_tx_s"]}'
 );
 
 /* kpi */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'kpi',
 9.6,
@@ -336,12 +346,13 @@ FROM
   pg_stat_database d
 WHERE
   datname = current_database();
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["numbackends", "active_backends", "blocked_backends", "kpi_oldest_tx_s"]}'
 );
 
 /* kpi */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'kpi',
 10,
@@ -381,13 +392,14 @@ FROM
   pg_stat_database d
 WHERE
   datname = current_database();
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["numbackends", "active_backends", "blocked_backends", "kpi_oldest_tx_s"]}'
 );
 
 
 /* replication */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql, m_column_attrs)
 values (
 'replication',
 9.2,
@@ -405,12 +417,13 @@ SELECT
   case when sync_state in ('sync', 'quorum') then 1 else 0 end as is_sync_int
 from
   get_stat_replication();
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
 /* replication */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql, m_column_attrs)
 values (
 'replication',
 10,
@@ -431,13 +444,14 @@ from
      or create specifically the "get_stat_replication" helper and use that instead of pg_stat_replication
   */
   pg_stat_replication;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
 
 /* sproc_stats */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
 values (
 'sproc_stats',
 9.0,
@@ -460,7 +474,7 @@ $sql$
 
 /* table_io_stats */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
 values (
 'table_io_stats',
 9.0,
@@ -488,7 +502,7 @@ $sql$
 
 /* table_stats */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'table_stats',
 9.0,
@@ -496,9 +510,10 @@ $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   quote_ident(schemaname) as tag_schema,
-  quote_ident(relname) as tag_table_name,
-  quote_ident(schemaname)||'.'||quote_ident(relname) as tag_table_full_name,
-  pg_relation_size(relid) as table_size_b,
+  quote_ident(ut.relname) as tag_table_name,
+  quote_ident(schemaname)||'.'||quote_ident(ut.relname) as tag_table_full_name,
+  pg_table_size(relid) as table_size_b,
+  greatest(ceil(log((pg_table_size(relid)+1) / 10^6)), 0)::text as tag_table_size_cardinality_mb, -- i.e. 0=<1MB, 1=<10MB, 2=<100MB,..
   pg_total_relation_size(relid) as total_relation_size_b,
   pg_total_relation_size((select reltoastrelid from pg_class where oid = ut.relid)) as toast_size_b,
   (extract(epoch from now() - greatest(last_vacuum, last_autovacuum)))::int8 as seconds_since_last_vacuum,
@@ -517,15 +532,19 @@ select
   autoanalyze_count
 from
   pg_stat_user_tables ut
+  join
+  pg_class c on c.oid = ut.relid
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
-  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted);
-$sql$
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
+  and c.relpersistence != 't'; -- and temp tables
+$sql$,
+'{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze"]}'
 );
 
 /* wal */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'wal',
 9.2,
@@ -540,13 +559,14 @@ select
     end as xlog_location_b,
   case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int,
   extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s;
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["in_recovery_int", "postmaster_uptime_s"]}'
 );
 
 
 /* wal */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql,m_column_attrs)
 values (
 'wal',
 10,
@@ -561,12 +581,13 @@ select
     end as xlog_location_b,
   case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int,
   extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s;
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["in_recovery_int", "postmaster_uptime_s"]}'
 );
 
 /* stat_statements */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
 values (
 'stat_statements',
 9.2,
@@ -671,7 +692,7 @@ $sql$
 
 /* stat_statements_calls - enables to show QPS queries per second. "calls" works without the above wrapper also */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
 values (
 'stat_statements_calls',
 9.2,
@@ -684,14 +705,13 @@ from
   pg_stat_statements
 where
   dbid = (select oid from pg_database where datname = current_database())
-  and calls > 10
 ;
 $sql$
 );
 
 
 /* buffercache_by_db */
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'buffercache_by_db',
 9.2,
@@ -707,11 +727,12 @@ WHERE
   d.oid = b.reldatabase
 GROUP BY
   datname;
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["size_b"]}'
 );
 
 /* buffercache_by_type */
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'buffercache_by_type',
 9.2,
@@ -733,7 +754,8 @@ WHERE
   d.oid = b.relfilenode
 GROUP BY 
   relkind;
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["size_b"]}'
 );
 
 
@@ -783,7 +805,7 @@ $sql$
 
 /* locks - counts only */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'locks',
 9.0,
@@ -803,12 +825,13 @@ SELECT
   coalesce((select count(*) FROM q_locks WHERE locktype = locktypes), 0) AS count
 FROM
   unnest('{relation, extend, page, tuple, transactionid, virtualxid, object, userlock, advisory}'::text[]) locktypes;
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["count"]}'
 );
 
 /* locks - counts only */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'locks_mode',
 9.0,
@@ -828,13 +851,14 @@ SELECT
   coalesce((select count(*) FROM q_locks WHERE mode = lockmodes), 0) AS count
 FROM
   unnest('{AccessShareLock, ExclusiveLock, RowShareLock, RowExclusiveLock, ShareLock, ShareRowExclusiveLock,  AccessExclusiveLock, ShareUpdateExclusiveLock}'::text[]) lockmodes;
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["count"]}'
 );
 
 
 /* blocking_locks - based on https://wiki.postgresql.org/wiki/Lock_dependency_information.
  not sure if it makes sense though, locks are quite volatile normally */
-
+-- not usable for Prometheus
 insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
 values (
 'blocking_locks',
@@ -888,7 +912,7 @@ $sql$
 
 
 /* approx. bloat - needs pgstattuple extension! superuser or pg_stat_scan_tables/pg_monitor builtin role required */
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql, m_column_attrs)
 values (
 'table_bloat_approx_stattuple',
 9.5,
@@ -909,7 +933,8 @@ where
   relkind in ('r', 'm')
   and c.relpages >= 128 -- tables > 1mb
   and not n.nspname like any (array[E'pg\\_%', 'information_schema']);
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
 /* Stored procedure needed for fetching stat_statements data - needs pg_stat_statements extension enabled on the machine!
@@ -955,7 +980,7 @@ true
 );
 
 /* approx. bloat summary */
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql, m_column_attrs)
 values (
 'table_bloat_approx_summary',
 9.5,
@@ -971,7 +996,8 @@ from
   get_table_bloat_approx()
 where
   approx_free_space > 0
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
 /* "parent" setting for all of the below "*_hashes" metrics. only this parent "change_events" metric should be used in configs! */
@@ -1263,7 +1289,7 @@ true
 
 /* replication slot info */
 
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql, m_column_attrs)
 values (
 'replication_slots',
 9.4,
@@ -1279,11 +1305,12 @@ select
   greatest(age(xmin), age(catalog_xmin))::int8 as xmin_age_tx
 from
   pg_replication_slots;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
 
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql, m_column_attrs)
 values (
 'replication_slots',
 10,
@@ -1299,11 +1326,12 @@ select
   greatest(age(xmin), age(catalog_xmin))::int8 as xmin_age_tx
 from
   pg_replication_slots;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'psutil_cpu',
 9.0,
@@ -1315,10 +1343,11 @@ SELECT
   "user", system, idle, iowait, irqs, other
 from
   get_psutil_cpu();
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'psutil_mem',
 9.0,
@@ -1329,10 +1358,11 @@ SELECT
   swap_total, swap_used, swap_free, swap_percent
 from
   get_psutil_mem();
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'psutil_disk',
 9.0,
@@ -1344,10 +1374,11 @@ SELECT
   total, used, free, percent
 from
   get_psutil_disk();
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'psutil_disk_io_total',
 9.0,
@@ -1360,10 +1391,11 @@ SELECT
   write_bytes
 from
   get_psutil_disk_io_total();
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'archiver',
 9.4,
@@ -1378,7 +1410,8 @@ from
   pg_stat_archiver
 where
   current_setting('archive_mode') in ('on', 'always');
-$sql$
+$sql$,
+'{"prometheus_gauge_columns": ["is_failing_int", "seconds_since_last_failure"]}'
 );
 
 /* Stored procedure for getting WAL folder size */
@@ -1401,14 +1434,14 @@ $sql$,
 true
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
 values (
 'wal_size',
 9.0,
 $sql$$sql$
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'wal_size',
 10,
@@ -1416,11 +1449,12 @@ $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   get_wal_size() as wal_size_b;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
 
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_standby_only, m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_standby_only, m_sql, m_column_attrs)
 values (
 'wal_receiver',
 9.2,
@@ -1430,10 +1464,11 @@ select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   pg_xlog_location_diff(pg_last_xlog_receive_location(), pg_last_xlog_replay_location()) as replay_lag_b,
   extract(epoch from (now() - pg_last_xact_replay_timestamp()))::int8 as last_replay_s;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_standby_only, m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_standby_only, m_sql, m_column_attrs)
 values (
 'wal_receiver',
 9.6,
@@ -1443,7 +1478,8 @@ select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn()) as replay_lag_b,
   extract(epoch from (now() - pg_last_xact_replay_timestamp()))::int8 as last_replay_s;
-$sql$
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
 );
 
 

@@ -6,5 +6,4 @@ from
   pg_stat_statements
 where
   dbid = (select oid from pg_database where datname = current_database())
-  and calls > 10
 ;

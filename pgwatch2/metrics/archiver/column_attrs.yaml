@@ -1,0 +1,5 @@
+---
+prometheus_gauge_columns:
+  - is_failing_int
+  - seconds_since_last_failure
+prometheus_ignored_columns:

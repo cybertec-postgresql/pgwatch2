@@ -103,3 +103,21 @@
     table_io_stats: 180
     table_stats: 180
     wal: 60
+
+- name: prometheus
+  description: similar to "exhaustive" but without some possibly longer-running metrics and those keeping state
+  metrics:
+    archiver: 1
+    backends: 1
+    bgwriter: 1
+    cpu_load: 1
+    db_stats: 1
+    db_size: 1
+    locks_mode: 1
+    replication: 1
+    replication_slots: 1
+    sproc_stats: 1
+    stat_statements_calls: 1
+    table_stats: 1
+    wal: 1
+    wal_receiver: 1

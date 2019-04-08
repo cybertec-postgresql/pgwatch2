@@ -1,7 +1,7 @@
 FROM ubuntu:16.04
 
 RUN apt-get -q update \
-    && apt-get -qy install wget apt-transport-https vim git supervisor postgresql postgresql-plpython-9.5 libfontconfig python3-pip libssl-dev \
+    && apt-get -qy install wget apt-transport-https vim git supervisor postgresql postgresql-plpython-9.5 libfontconfig python3-pip libssl-dev libpq-dev \
     && pip3 install -U pip \
     && locale-gen "en_US.UTF-8" && apt autoremove -y \
     && mkdir -p /var/log/supervisor /pgwatch2 \
@@ -18,7 +18,7 @@ RUN apt-get -q update \
 #   latest ver.: curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1
 
 RUN wget -q -O grafana.deb https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana_5.4.3_amd64.deb \
-    && wget -q -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.7.4_amd64.deb > influxdb_amd64.deb \
+    && wget -q -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.7.5_amd64.deb > influxdb_amd64.deb \
     && dpkg -i grafana.deb && rm grafana.deb \
     && mkdir -p /var/run/grafana \
     && chgrp -R 0 /etc/grafana/ /usr/share/grafana /var/lib/grafana /var/log/grafana /var/run/grafana \
@@ -39,7 +39,7 @@ ADD webpy /pgwatch2/webpy
 
 # Go installation [https://golang.org/dl/]
 # Grafana config customizations, Web UI requirements, compilation of the Go gatherer
-RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.12.linux-amd64.tar.gz \
+RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.12.2.linux-amd64.tar.gz \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && export PATH=$PATH:/usr/local/go/bin \
     && cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
@@ -80,6 +80,8 @@ EXPOSE 3000
 EXPOSE 8086
 # InfluxDB backup port
 EXPOSE 8088
+# Prometheus scraping port
+EXPOSE 9187
 
 ### Volumes for easier updating to newer to newer pgwatch2 containers
 ### NB! Backwards compatibility is not 100% guaranteed (e.g. InfluxDB has changed index storage format) so a backup

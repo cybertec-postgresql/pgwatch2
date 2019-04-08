@@ -73,6 +73,7 @@ create table metric (
     m_last_modified_on  timestamptz not null default now(),
     m_master_only bool default false,
     m_standby_only bool default false,
+    m_column_attrs      json,  -- currently only useful for Prometheus
 
     unique (m_name, m_pg_version_from),
     check (not (m_master_only and m_standby_only)),
@@ -177,6 +178,23 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "table_stats": 180,
     "wal": 60,
     "change_events": 300
+    }'),
+    ('prometheus', 'similar to "exhaustive" but without some possibly longer-running metrics and those keeping state',
+    '{
+    "archiver": 1,
+    "backends": 1,
+    "bgwriter": 1,
+    "cpu_load": 1,
+    "db_stats": 1,
+    "db_size": 1,
+    "locks_mode": 1,
+    "replication": 1,
+    "replication_slots": 1,
+    "sproc_stats": 1,
+    "stat_statements_calls": 1,
+    "table_stats": 1,
+    "wal": 1,
+    "wal_receiver": 1
     }');
 
 /* one host for demo purposes, so that "docker run" could immediately show some graphs */
