@@ -1394,6 +1394,10 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 					log.Errorf("Dropping %d metric-sets as Influx is unable to parse the data: %s", len(msg), err)
 					atomic.AddUint64(&totalMetricsDroppedCounter, uint64(len(msg)))
 				}
+			} else if data_source == DATASTORE_INFLUX && strings.Contains(err.Error(), "partial write: max-values-per-tag limit exceeded") {
+				log.Errorf("Partial write into Influx for [%s:%s], check / increase the max-values-per-tag in InfluxDB config: %v",
+					msg[0].DBUniqueName, msg[0].MetricName, err)
+				atomic.AddUint64(&totalMetricsDroppedCounter, 1)
 			} else {
 				return err // still gone, retry later
 			}
@@ -1523,14 +1527,24 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 						log.Fatal("Invalid datastore:", data_store)
 					}
 					last_try[i] = time.Now()
+
 					if err != nil {
-						if strings.Contains(err.Error(), "unable to parse") {
-							if len(msg_arr) == 1 {
-								log.Errorf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
-									msg_arr[0].DBUniqueName, msg_arr[0].MetricName, msg_arr[0].Data) // ignore data points consisting of anything else than strings and floats
-							} else {
-								log.Errorf("Dropping %d metric-sets as Influx is unable to parse the data: %s", len(msg_arr), err)
-								// TODO loop over single metrics in case of errors?
+						if opts.Datastore == DATASTORE_INFLUX {
+							if strings.Contains(err.Error(), "unable to parse") { // TODO move to a separate func
+								if len(msg_arr) == 1 {
+									log.Errorf("Dropping metric [%s:%s] as Influx is unable to parse the data: %s",
+										msg_arr[0].DBUniqueName, msg_arr[0].MetricName, msg_arr[0].Data) // ignore data points consisting of anything else than strings and floats
+								} else {
+									log.Errorf("Dropping %d metric-sets as Influx is unable to parse the data: %s", len(msg_arr), err)
+									// TODO loop over single metrics in case of errors?
+								}
+							} else if strings.Contains(err.Error(), "partial write: max-values-per-tag limit exceeded") {
+								if len(msg_arr) == 1 {
+									log.Errorf("Partial write into Influx for [%s:%s], check / increase the max-values-per-tag in InfluxDB config: %v",
+										msg_arr[0].DBUniqueName, msg_arr[0].MetricName, err)
+								} else {
+									log.Errorf("Partial write into Influx, check / increase the max-values-per-tag in InfluxDB config: %v", err)
+								}
 							}
 						} else {
 							log.Errorf("Failed to write into datastore %d: %s", i, err)
