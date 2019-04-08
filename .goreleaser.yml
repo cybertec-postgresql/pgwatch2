@@ -48,6 +48,7 @@ archive:
     - ./pgwatch2/metrics/**/*
     - ./pgwatch2/config/**/*
     - ./pgwatch2/sql/**/*
+    - ./pgwatch2/startup-scripts/**/*
     - ./README.md
 nfpm:
   # You can change the name of the package.
