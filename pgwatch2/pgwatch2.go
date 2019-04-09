@@ -102,6 +102,8 @@ type MetricStoreMessage struct {
 	CustomTags              map[string]string
 	Data                    [](map[string]interface{})
 	MetricDefinitionDetails MetricVersionProperties
+	RealDbname              string
+	SystemIdentifier        string
 }
 
 type MetricStoreMessagePostgres struct {
@@ -119,9 +121,11 @@ type ChangeDetectionResults struct { // for passing around DDL/index/config chan
 }
 
 type DBVersionMapEntry struct {
-	LastCheckedOn time.Time
-	IsInRecovery  bool
-	Version       decimal.Decimal
+	LastCheckedOn    time.Time
+	IsInRecovery     bool
+	Version          decimal.Decimal
+	RealDbname       string
+	SystemIdentifier string
 }
 
 type ExistingPartitionInfo struct {
@@ -194,6 +198,8 @@ var PGSchemaType string
 var failedInitialConnectHosts = make(map[string]bool) // hosts that couldn't be connected to even once
 var promExporter *Exporter
 var promServer *http.Server
+var addRealDbname bool
+var addSystemIdentifier bool
 
 func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
@@ -227,14 +233,19 @@ func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password
 	return db, err
 }
 
-func StringToBoolOrFail(boolAsString string) bool {
+func StringToBoolOrFail(boolAsString, inputParamName string) bool {
 	conversionMap := map[string]bool{
 		"true": true, "t": true, "on": true, "y": true, "yes": true, "require": true, "1": true,
 		"false": false, "f": false, "off": false, "n": false, "no": false, "disable": false, "0": false,
 	}
 	val, ok := conversionMap[strings.TrimSpace(strings.ToLower(boolAsString))]
 	if !ok {
-		log.Fatalf("invalid input for boolean: %s", boolAsString)
+		if inputParamName != "" {
+			log.Fatalf("invalid input for boolean string parameter \"%s\": \"%s\". can be of: 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False", inputParamName, boolAsString)
+		} else {
+			log.Fatalf("invalid input for boolean string: %s. can be of: 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False", boolAsString)
+		}
+
 	}
 	return val
 }
@@ -243,7 +254,7 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password, requir
 	var err error
 	SSLMode := "disable"
 
-	if StringToBoolOrFail(requireSSL) {
+	if StringToBoolOrFail(requireSSL, "--pg-require-ssl") {
 		SSLMode = "require"
 	}
 	// configDb is used by the main thread only. no verify-ca/verify-full support currently
@@ -650,6 +661,13 @@ retry:
 				epoch_time = time.Unix(0, epoch_ns)
 			}
 
+			if addRealDbname && msg.RealDbname != "" {
+				tags[opts.RealDbnameField] = msg.RealDbname
+			}
+			if addSystemIdentifier && msg.SystemIdentifier != "" {
+				tags[opts.SystemIdentifierField] = msg.SystemIdentifier
+			}
+
 			pt, err := client.NewPoint(msg.MetricName, tags, fields, epoch_time)
 
 			if err != nil {
@@ -714,6 +732,13 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 				for k, v := range msg.CustomTags {
 					tags[k] = fmt.Sprintf("%v", v)
 				}
+			}
+
+			if addRealDbname && msg.RealDbname != "" {
+				tags[opts.RealDbnameField] = msg.RealDbname
+			}
+			if addSystemIdentifier && msg.SystemIdentifier != "" {
+				tags[opts.SystemIdentifierField] = msg.SystemIdentifier
 			}
 
 			for k, v := range dr {
@@ -1463,7 +1488,14 @@ func WriteMetricsToJsonFile(msgArr []MetricStoreMessage, jsonPath string) error 
 	log.Infof("Writing %d metric sets to JSON file at \"%s\"...", len(msgArr), jsonPath)
 	enc := json.NewEncoder(jsonOutFile)
 	for _, msg := range msgArr {
-		err = enc.Encode(map[string]interface{}{"metric": msg.MetricName, "data": msg.Data, "dbname": msg.DBUniqueName, "custom_tags": msg.CustomTags})
+		dataRow := map[string]interface{}{"metric": msg.MetricName, "data": msg.Data, "dbname": msg.DBUniqueName, "custom_tags": msg.CustomTags}
+		if addRealDbname && msg.RealDbname != "" {
+			dataRow[opts.RealDbnameField] = msg.RealDbname
+		}
+		if addSystemIdentifier && msg.SystemIdentifier != "" {
+			dataRow[opts.SystemIdentifierField] = msg.SystemIdentifier
+		}
+		err = enc.Encode(dataRow)
 		if err != nil {
 			return err
 		}
@@ -1580,9 +1612,9 @@ func DBGetPGVersion(dbUnique string, noCache bool) (DBVersionMapEntry, error) {
 		select (regexp_matches(
 			regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'),
 			E'\\d+\\.?\\d+?')
-			)[1]::text as ver, pg_is_in_recovery();
+			)[1]::text as ver, pg_is_in_recovery(), current_database()::text;
 	`
-
+	sql_sysid := `select system_identifier::text from pg_control_system();`
 	db_pg_version_map_lock.RLock()
 	ver, ok = db_pg_version_map[dbUnique]
 	db_pg_version_map_lock.RUnlock()
@@ -1604,6 +1636,15 @@ func DBGetPGVersion(dbUnique string, noCache bool) (DBVersionMapEntry, error) {
 		ver.Version, _ = decimal.NewFromString(data[0]["ver"].(string))
 		ver.IsInRecovery = data[0]["pg_is_in_recovery"].(bool)
 		ver.LastCheckedOn = time.Now()
+		ver.RealDbname = data[0]["current_database"].(string)
+
+		if ver.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) {
+			log.Debugf("determining sytem identifier version for %s (ver: %v)", dbUnique, ver.Version)
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_sysid)
+			if err == nil {
+				ver.SystemIdentifier = data[0]["system_identifier"].(string)
+			}
+		}
 
 		db_pg_version_map_lock.Lock()
 		db_pg_version_map[dbUnique] = ver
@@ -2094,7 +2135,9 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 			if msg.MetricName == "pgbouncer_stats" { // clean unwanted pgbouncer pool stats here as not possible in SQL
 				data = FilterPgbouncerData(data, md.DBName)
 			}
-			return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags, MetricDefinitionDetails: mvp}}, nil
+
+			return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags,
+				MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
 		}
 	}
 	return nil, nil
@@ -2939,8 +2982,12 @@ type Options struct {
 	AesGcmKeyphraseFile     string `long:"aes-gcm-keyphrase-file" description:"File with decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE_FILE"`
 	AesGcmPasswordToEncrypt string `long:"aes-gcm-password-to-encrypt" description:"A special mode, returns the encrypted plain-text string and quits. Keyphrase(file) must be set. Useful for YAML mode" env:"PW2_AES_GCM_PASSWORD_TO_ENCRYPT"`
 	// NB! "Test data" mode needs to be combined with "ad-hoc" mode to get an initial set of metrics from a real source
-	TestdataMultiplier int `long:"testdata-multiplier" description:"For how many hosts to generate data" env:"PW2_TESTDATA_MULTIPLIER"`
-	TestdataDays       int `long:"testdata-days" description:"For how many days to generate data" env:"PW2_TESTDATA_DAYS"`
+	TestdataMultiplier    int    `long:"testdata-multiplier" description:"For how many hosts to generate data" env:"PW2_TESTDATA_MULTIPLIER"`
+	TestdataDays          int    `long:"testdata-days" description:"For how many days to generate data" env:"PW2_TESTDATA_DAYS"`
+	AddRealDbname         string `long:"add-real-dbname" description:"Add real DB name to each captured metric" env:"PW2_ADD_REAL_DBNAME" default:"false"`
+	RealDbnameField       string `long:"real-dbname-field" description:"Tag key for real DB name if --add-real-dbname enabled" env:"PW2_REAL_DBNAME_FIELD" default:"real_dbname"`
+	AddSystemIdentifier   string `long:"add-system-identifier" description:"Add system identifier to each captured metric" env:"PW2_ADD_SYSTEM_IDENTIFIER" default:"false"`
+	SystemIdentifierField string `long:"system-identifier-field" description:"Tag key for system identifier value if --add-system-identifier" env:"PW2_SYSTEM_IDENTIFIER_FIELD" default:"sys_id"`
 }
 
 var opts Options
@@ -3019,6 +3066,20 @@ func main() {
 			log.Fatal("Test mode requires --testdata-days!")
 		}
 	}
+
+	if opts.AddRealDbname != "" {
+		addRealDbname = StringToBoolOrFail(opts.AddRealDbname, "--add-real-dbname")
+		if opts.RealDbnameField == "" {
+			log.Fatal("--real-dbname-field cannot be empty when --add-real-dbname enabled")
+		}
+	}
+	if opts.AddSystemIdentifier != "" {
+		addSystemIdentifier = StringToBoolOrFail(opts.AddSystemIdentifier, "--add-system-identifier")
+		if opts.SystemIdentifierField == "" {
+			log.Fatal("--system-identifier-field cannot be empty when --add-system-identifier enabled")
+		}
+	}
+
 	// running in config file based mode?
 	if len(opts.Config) > 0 || len(opts.MetricsFolder) > 0 {
 		if len(opts.Config) > 0 && len(opts.MetricsFolder) == 0 {
@@ -3089,7 +3150,7 @@ func main() {
 		log.Fatal("--batching-delay-ms must be between 0 and 3600000")
 	}
 
-	useConnPooling = StringToBoolOrFail(opts.ConnPooling)
+	useConnPooling = StringToBoolOrFail(opts.ConnPooling, "--conn-pooling")
 
 	if opts.InternalStatsPort > 0 {
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", opts.InternalStatsPort))
@@ -3344,7 +3405,7 @@ func main() {
 					}
 				}
 
-				if (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers))) && db_type == "postgres" {
+				if (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && db_type == "postgres" {
 					log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
 					TryCreateMetricsFetchingHelpers(db_unique)
 				}

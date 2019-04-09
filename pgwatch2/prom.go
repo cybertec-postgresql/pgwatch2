@@ -158,6 +158,13 @@ func MetricStoreMessageToPromMetrics(msg MetricStoreMessage) []prometheus.Metric
 			}
 		}
 
+		if addRealDbname && opts.RealDbnameField != "" && msg.RealDbname != "" {
+			labels[opts.RealDbnameField] = msg.RealDbname
+		}
+		if addSystemIdentifier && opts.SystemIdentifierField != "" && msg.SystemIdentifier != "" {
+			labels[opts.SystemIdentifierField] = msg.SystemIdentifier
+		}
+
 		label_keys := make([]string, 0)
 		label_values := make([]string, 0)
 		for k, v := range labels {
