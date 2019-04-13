@@ -23,6 +23,7 @@
     locks_mode: 60
     replication: 120
     replication_slots: 120
+    settings: 7200
     sproc_stats: 180
     stat_statements: 180
     stat_statements_calls: 60
@@ -69,6 +70,7 @@
     locks_mode: 60
     replication: 120
     replication_slots: 120
+    settings: 7200
     sproc_stats: 180
     stat_statements: 180
     stat_statements_calls: 60
@@ -98,6 +100,7 @@
     locks_mode: 60
     replication: 120
     replication_slots: 120
+    settings: 7200
     sproc_stats: 180
     stat_statements_calls: 60
     table_io_stats: 180
