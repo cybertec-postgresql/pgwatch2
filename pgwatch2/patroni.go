@@ -6,12 +6,19 @@ import (
 	"fmt"
 	"go.etcd.io/etcd/client"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 )
 
 func ParseHostAndPortFromJdbcConnStr(connStr string) (string, string, error) {
-	return "127.0.0.1", "5432", nil
+	r := regexp.MustCompile(`postgres://(.*)+:([0-9]+)/`)
+	matches := r.FindStringSubmatch(connStr)
+	if len(matches) != 3 {
+		log.Errorf("Unexpected regex result groups:", matches)
+		return "", "", errors.New(fmt.Sprintf("unexpected regex result groups: %v", matches))
+	}
+	return matches[1], matches[2], nil
 }
 
 func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, error) {
