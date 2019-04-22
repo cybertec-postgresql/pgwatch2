@@ -1,0 +1,784 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "$hashKey":  null,
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "iteration": null,
+  "links": [],
+  "panels": [
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 1,
+        "desc": true
+      },
+      "styles": [
+        {
+          "$hashKey":  null,
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "total_runtime",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens  'Sproc details' dashboard for that sproc",
+          "linkUrl": "/dashboard/db/sproc-details?var-dbname=$dbname&var-sproc_name=$__cell",
+          "pattern": "function_full_name",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "$hashKey":  null,
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "sproc_stats",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT top(\"spread\", \"function_full_name\", \"oid\", $top) FROM (SELECT spread(\"total_time\") FROM \"sproc_stats\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"function_full_name\", \"oid\" fill(none) ) WHERE spread > 0",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "total_time"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "By Total Runtime",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 5,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 1,
+        "desc": true
+      },
+      "styles": [
+        {
+          "$hashKey":  null,
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "total_runtime",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens  'Sproc details' dashboard for that sproc",
+          "linkUrl": "/dashboard/db/sproc-details?var-dbname=$dbname&var-sproc_name=$__cell",
+          "pattern": "function_full_name",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "$hashKey":  null,
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "sproc_stats",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT top(\"spread\", \"function_full_name\", \"oid\", $top) FROM (SELECT spread(\"self_time\") FROM \"sproc_stats\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"function_full_name\", \"oid\" fill(none) ) WHERE spread > 0",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "total_time"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "By Total Self Runtime",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 4,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 1,
+        "desc": true
+      },
+      "styles": [
+        {
+          "$hashKey":  null,
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "calls",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens  'Sproc details' dashboard for that sproc",
+          "linkUrl": "/dashboard/db/sproc-details?var-dbname=$dbname&var-sproc_name=$__cell",
+          "pattern": "function_full_name",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "$hashKey":  null,
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "sproc_stats",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT top(\"spread\", \"function_full_name\", \"oid\", $top) FROM (SELECT spread(\"sp_calls\") FROM \"sproc_stats\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"function_full_name\", \"oid\" fill(none) ) WHERE spread > 0",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "total_time"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "By Calls",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 3,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 1,
+        "desc": true
+      },
+      "styles": [
+        {
+          "$hashKey":  null,
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "avg_runtime",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens  'Sproc details' dashboard for that sproc",
+          "linkUrl": "/dashboard/db/sproc-details?var-dbname=$dbname&var-sproc_name=$__cell",
+          "pattern": "function_full_name",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "$hashKey":  null,
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "sproc_stats",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select top(avg, \"function_full_name\", \"oid\", $top) AS top from (select mean(t) / mean(c) AS avg from (SELECT spread(\"total_time\") AS t, spread(\"sp_calls\") AS c FROM \"sproc_stats\" WHERE $timeFilter AND dbname = '$dbname' GROUP BY time(3650d), \"function_full_name\", \"oid\" fill(none) )  where $timeFilter AND c > 0 group by time(3650d),  \"function_full_name\", \"oid\" )",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "total_time"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "By Avg. Runtime",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 6,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 1,
+        "desc": true
+      },
+      "styles": [
+        {
+          "$hashKey":  null,
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "avg_runtime",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens  'Sproc details' dashboard for that sproc",
+          "linkUrl": "/dashboard/db/sproc-details?var-dbname=$dbname&var-sproc_name=$__cell",
+          "pattern": "function_full_name",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "$hashKey":  null,
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "$hashKey":  null,
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "sproc_stats",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select top(avg, \"function_full_name\", \"oid\", $top) AS top from (select mean(t) / mean(c) AS avg from (SELECT spread(\"self_time\") AS t, spread(\"sp_calls\") AS c FROM \"sproc_stats\" WHERE $timeFilter AND dbname = '$dbname' GROUP BY time(3650d), \"function_full_name\", \"oid\" fill(none) )  where $timeFilter AND c > 0 group by time(3650d),  \"function_full_name\", \"oid\" )",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "total_time"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "By Avg. Self Runtime",
+      "transform": "table",
+      "type": "table"
+    }
+  ],
+  "schemaVersion": 16,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": null,
+          "value": null
+        },
+        "datasource": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "dbname",
+        "options": [],
+        "query": "show tag values with key = \"dbname\"",
+        "refresh": 1,
+        "regex": "",
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "5",
+          "value": "5"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "top",
+        "options": [
+          {
+            "$hashKey":  null,
+            "selected": false,
+            "text": "1",
+            "value": "1"
+          },
+          {
+            "hashKey":  null,
+            "selected": false,
+            "text": "3",
+            "value": "3"
+          },
+          {
+            "$hashKey":  null,
+            "selected": true,
+            "text": "5",
+            "value": "5"
+          },
+          {
+            "$hashKey":  null,
+            "selected": false,
+            "text": "10",
+            "value": "10"
+          },
+          {
+            "$hashKey":  null,
+            "selected": false,
+            "text": "15",
+            "value": "15"
+          },
+          {
+            "$hashKey":  null,
+            "selected": false,
+            "text": "20",
+            "value": "20"
+          },
+          {
+            "$hashKey":  null,
+            "selected": false,
+            "text": "30",
+            "value": "30"
+          },
+          {
+            "$hashKey":  null,
+            "selected": false,
+            "text": "40",
+            "value": "40"
+          },
+          {
+            "$hashKey":  null,
+            "selected": false,
+            "text": "50",
+            "value": "50"
+          }
+        ],
+        "query": "1,3,5,10,15,20,30,40,50",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "",
+  "title": "Top Sprocs",
+  "uid": null,
+  "version": 1
+}
