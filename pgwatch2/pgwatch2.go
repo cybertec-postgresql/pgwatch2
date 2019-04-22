@@ -36,7 +36,7 @@ import (
 	"github.com/op/go-logging"
 	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/pbkdf2"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 type MonitoredDatabase struct {
@@ -61,6 +61,22 @@ type MonitoredDatabase struct {
 	IsSuperuser          bool              `yaml:"is_superuser"`
 	IsEnabled            bool              `yaml:"is_enabled"`
 	CustomTags           map[string]string `yaml:"custom_tags"` // ignored on graphite
+	HostConfig           HostConfigAttrs   `yaml:"host_config"`
+	//JdbcConnStr          string            `yaml: "jdbc_conn_str"`
+	MasterOnly           bool              `yaml:"master_only"`
+}
+
+type HostConfigAttrs struct {
+	DcsType            string `yaml:"dcs_type"`
+	Scope              string
+	Namespace          string
+}
+
+type PatroniClusterMember struct {
+	Scope              string
+	Name               string
+	ConnUrl            string `yaml:"conn_url"`
+	Role               string
 }
 
 type PresetConfig struct {
@@ -156,6 +172,7 @@ const GATHERER_STATUS_STOP = "STOP"
 const METRICDB_IDENT = "metricDb"
 const CONFIGDB_IDENT = "configDb"
 const CONTEXT_PROMETHEUS_SCRAPE = "prometheus-scrape"
+const DCS_TYPE_ETCD = "etcd"
 
 var configDb *sqlx.DB
 var metricDb *sqlx.DB
@@ -2687,8 +2704,8 @@ func ConfigFileToMonitoredDatabases(configFilePath string) ([]MonitoredDatabase,
 		return hostList, err
 	}
 	for _, v := range c {
-		log.Debugf("Found monitoring config entry: %#v", v)
 		if v.IsEnabled {
+			log.Debugf("Found active monitoring config entry: %#v", v)
 			if v.Group == "" {
 				v.Group = "default"
 			}
@@ -2807,12 +2824,19 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 		if e.IsEnabled && e.PasswordType == "aes-gcm-256" && opts.AesGcmKeyphrase != "" {
 			e.Password = decrypt(e.DBUniqueName, opts.AesGcmKeyphrase, e.Password)
 		}
-		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" {
+		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" || e.DBType == "patroni" {	// TODO patroni?
 			if e.DBType == "postgres-continuous-discovery" {
 				log.Debugf("Adding \"%s\" (host=%s, port=%s) to continuous monitoring ...", e.DBUniqueName, e.Host, e.Port)
 				continuousMonitoringDatabases = append(continuousMonitoringDatabases, e)
 			}
-			found_dbs, err := ResolveDatabasesFromConfigEntry(e)
+			var found_dbs []MonitoredDatabase
+			var err error
+
+			if e.DBType == "patroni" {
+				found_dbs, err = ResolveDatabasesFromPatroni(e)
+			} else {
+				found_dbs, err = ResolveDatabasesFromConfigEntry(e)
+			}
 			if err != nil {
 				log.Errorf("Failed to resolve DBs for \"%s\": %s", e.DBUniqueName, err)
 				continue
