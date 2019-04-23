@@ -46,10 +46,12 @@ create table pgwatch2.monitored_db (
     md_client_cert_path text not null default '',  -- relevant for 'verify-full'
     md_client_key_path text not null default '',   -- relevant for 'verify-full'
     md_password_type text not null default 'plain-text',
+    md_host_config jsonb,
+    md_only_if_master bool not null default false,
     UNIQUE (md_unique_name),
     CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':'),
     CHECK (md_sslmode in ('disable', 'require', 'verify-ca', 'verify-full')),
-    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery')),
+    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery', 'patroni')),
     CHECK (md_group ~ E'\\w+'),
     CHECK (md_password_type in ('plain-text', 'aes-gcm-256'))
 );

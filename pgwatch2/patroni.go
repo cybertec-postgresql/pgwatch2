@@ -7,7 +7,6 @@ import (
 	"go.etcd.io/etcd/client"
 	"path"
 	"regexp"
-	"strings"
 	"time"
 )
 
@@ -23,26 +22,13 @@ func ParseHostAndPortFromJdbcConnStr(connStr string) (string, string, error) {
 
 func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, error) {
 	var ret []PatroniClusterMember
-	//host_config:
-	//dcs: etcd
-	////master_only: true
-	//scope: batman
-	//namespace: /service/
-	var endpoint string
 
-	if database.Host == "" && database.Port == "" {
-		return ret, errors.New("Missing ETCD connect info")
+	if database.HostConfig.DcsConnStr == "" {
+		return ret, errors.New("Missing ETCD connect info, make sure host config has a 'dcs_conn_str' key")
 	}
 
-	if strings.Contains(strings.ToLower(database.Host), "http") && strings.Contains(strings.ToLower(database.Host), ":")  {	// assume full endpoint given
-		endpoint = database.Host
-	} else if strings.Contains(database.Host, "http") && database.Port != "" {
-		endpoint = fmt.Sprintf("%s:%s", database.Host, database.Port)
-	} else {
-		endpoint = fmt.Sprintf("http://%s:%s", database.Host, database.Port)
-	}
 	cfg := client.Config{
-		Endpoints:               []string{endpoint},
+		Endpoints:               []string{database.HostConfig.DcsConnStr},
 		Transport:               client.DefaultTransport,
 		HeaderTimeoutPerRequest: time.Second,
 	}
@@ -60,10 +46,8 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 		return ret, err
 	}
 
-	//log.Errorf("resp: %+v", resp)
-	// print value
 	for _, node := range resp.Node.Nodes {
-		log.Errorf("value: %+v", node.Value)
+		log.Debugf("Found a cluster member from etcd: %+v", node.Value)
 		nodeData, err := jsonTextToStringMap(node.Value)
 		if err != nil {
 			log.Errorf("Could not parse ETCD node data for node \"%s\":", node, err)
@@ -71,11 +55,11 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 		}
 		role, _ := nodeData["role"]
 		connUrl, _ := nodeData["conn_url"]
+		name := path.Base(node.Key)
 
-		ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role})
+		ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})
 	}
 	return ret, nil
-	//return []PatroniClusterMember{{Scope: "batman", ConnUrl: "postgres://127.0.0.1:5432/postgres", State: "active", Role: "master"}}, nil
 }
 
 
@@ -99,14 +83,17 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 	log.Infof("Found %d Patroni members for cluster [%s:%s]", len(cm), ce.DBUniqueName, ce.HostConfig.Scope)
 
 	for _, m := range cm {
-		if ce.MasterOnly && m.Role != "master" {
+		log.Infof("Processing Patroni cluster member [%s:%s]", ce.DBUniqueName, m.Name)
+		if ce.OnlyIfMaster && m.Role != "master" {
+			log.Infof("Skipping over Patroni cluster member [%s:%s] as not a master", ce.DBUniqueName, m.Name)
 			continue
 		}
 		host, port, err := ParseHostAndPortFromJdbcConnStr(m.ConnUrl)
 		if err != nil {
-			log.Error("Could not parse Patroni conn str \"%s\" [%s:%s]: %v", m.ConnUrl, ce.DBUniqueName, m.Scope, err)
+			log.Errorf("Could not parse Patroni conn str \"%s\" [%s:%s]: %v", m.ConnUrl, ce.DBUniqueName, m.Scope, err)
+			continue
 		}
-		if ce.MasterOnly {
+		if ce.OnlyIfMaster {
 			dbUnique = ce.DBUniqueName
 		} else {
 			dbUnique = ce.DBUniqueName + "_" + m.Name
@@ -128,13 +115,15 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 				PresetMetrics:     ce.PresetMetrics,
 				IsSuperuser:       ce.IsSuperuser,
 				CustomTags:        ce.CustomTags,
+				HostConfig:	       ce.HostConfig,
 				DBType:            "postgres"})
 			continue
 		} else {
-			c, err := GetPostgresDBConnection("", ce.Host, ce.Port, "template1", ce.User, ce.Password,
+			c, err := GetPostgresDBConnection("", host, port, "template1", ce.User, ce.Password,
 				ce.SslMode, ce.SslRootCAPath, ce.SslClientCertPath, ce.SslClientKeyPath)
 			if err != nil {
-				return md, err
+				log.Errorf("Could not contact Patroni member [%s:%s]: %v", ce.DBUniqueName, m.Scope, err)
+				continue
 			}
 			defer c.Close()
 			sql := `select datname::text as datname,
@@ -148,14 +137,15 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 
 			data, err := DBExecRead(c, ce.DBUniqueName, sql, ce.DBNameIncludePattern, ce.DBNameIncludePattern, ce.DBNameExcludePattern, ce.DBNameExcludePattern)
 			if err != nil {
-				return md, err
+				log.Errorf("Could not get DB name listing from Patroni member [%s:%s]: %v", ce.DBUniqueName, m.Scope, err)
+				continue
 			}
 
 			for _, d := range data {
 				md = append(md, MonitoredDatabase{DBUniqueName: dbUnique + "_" + d["datname_escaped"].(string),
 					DBName:            d["datname"].(string),
-					Host:              ce.Host,
-					Port:              ce.Port,
+					Host:              host,
+					Port:              port,
 					User:              ce.User,
 					Password:          ce.Password,
 					PasswordType:      ce.PasswordType,
@@ -168,6 +158,7 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 					PresetMetrics:     ce.PresetMetrics,
 					IsSuperuser:       ce.IsSuperuser,
 					CustomTags:        ce.CustomTags,
+					HostConfig:        ce.HostConfig,
 					DBType:            "postgres"})
 			}
 		}

@@ -38,6 +38,7 @@ def get_all_monitored_dbs():
           date_trunc('second', md_last_modified_on) as md_last_modified_on,
           md_config::text,
           md_custom_tags::text,
+          md_host_config::text,
           coalesce(md_include_pattern, '') as md_include_pattern,
           coalesce(md_exclude_pattern, '') as md_exclude_pattern
         from
@@ -55,6 +56,7 @@ def get_monitored_db_by_id(id):
           date_trunc('second', md_last_modified_on) as md_last_modified_on,
           md_config::text,
           md_custom_tags::text,
+          md_host_config::text,
           coalesce(md_include_pattern, '') as md_include_pattern,
           coalesce(md_exclude_pattern, '') as md_exclude_pattern
         from
@@ -195,6 +197,8 @@ def update_monitored_db(params, cmd_args=None):
           md_is_enabled = %(md_is_enabled)s,
           md_preset_config_name = %(md_preset_config_name)s,
           md_config = %(md_config)s,
+          md_host_config = %(md_host_config)s,
+          md_only_if_master = %(md_only_if_master)s,
           md_custom_tags = %(md_custom_tags)s,
           md_statement_timeout_seconds = %(md_statement_timeout_seconds)s,
           md_last_modified_on = now()
@@ -211,8 +215,8 @@ def update_monitored_db(params, cmd_args=None):
             ) as connection_data_changed,
             case when %(md_password)s = '***' and %(md_password_type)s = q_old.md_password_type then q_old.md_password else %(md_password)s end as md_password
     """
-    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
-    cherrypy_empty_text_to_nulls(params, ['md_preset_config_name', 'md_config', 'md_custom_tags'])
+    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser', 'md_only_if_master'])
+    cherrypy_empty_text_to_nulls(params, ['md_preset_config_name', 'md_config', 'md_custom_tags', 'md_host_config'])
     if params['md_dbtype'] == 'postgres-continuous-discovery':
         params['md_dbname'] = ''
     
@@ -243,18 +247,18 @@ def insert_monitored_db(params, cmd_args=None):
         insert into
           pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password, md_password_type, md_is_superuser,
           md_sslmode, md_root_ca_path,md_client_cert_path, md_client_key_path, md_is_enabled, md_preset_config_name, md_config, md_statement_timeout_seconds, md_dbtype,
-          md_include_pattern, md_exclude_pattern, md_custom_tags, md_group)
+          md_include_pattern, md_exclude_pattern, md_custom_tags, md_group, md_host_config, md_only_if_master)
         values
           (%(md_unique_name)s, %(md_hostname)s, %(md_port)s, %(md_dbname)s, %(md_user)s, %(md_password)s, %(md_password_type)s, %(md_is_superuser)s,
           %(md_sslmode)s, %(md_root_ca_path)s, %(md_client_cert_path)s, %(md_client_key_path)s, %(md_is_enabled)s, %(md_preset_config_name)s, %(md_config)s, %(md_statement_timeout_seconds)s, %(md_dbtype)s,
-          %(md_include_pattern)s, %(md_exclude_pattern)s, %(md_custom_tags)s, %(md_group)s)
+          %(md_include_pattern)s, %(md_exclude_pattern)s, %(md_custom_tags)s, %(md_group)s, %(md_host_config)s, %(md_only_if_master)s)
         returning
           md_id
     """
     sql_active_dbs = "select datname from pg_database where not datistemplate and datallowconn"
-    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser'])
+    cherrypy_checkboxes_to_bool(params, ['md_is_enabled', 'md_sslmode', 'md_is_superuser', 'md_only_if_master'])
     cherrypy_empty_text_to_nulls(
-        params, ['md_preset_config_name', 'md_config', 'md_custom_tags'])
+        params, ['md_preset_config_name', 'md_config', 'md_custom_tags', 'md_host_config'])
     password_plain = params['md_password']
     if password_plain == '***':
         raise Exception("'***' cannot be used as password, denotes unchanged password")

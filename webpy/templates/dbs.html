@@ -75,12 +75,12 @@
             <tr>
                 <td>ID</td>
                 <td title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data). Will be used as prefix during DB discovery mode">Unique name</td>
-                <td title="NB! For 'pgbouncer' insert the 'to be monitored' pool name to 'dbname' field. For dbtype='pg-continuous-discovery' one can also specify regex inclusion/exclusion patterns">DB type</td>
+                <td title="NB! For 'pgbouncer' insert the 'to be monitored' pool name to 'dbname' field. For dbtype='pg-continuous-discovery|patroni' one can also specify regex inclusion/exclusion patterns. For 'patroni' host/port are not used as it's read from DCS (specify DCS info under 'Host config')">DB type</td>
                 <td>DB host</td>
                 <td>DB port</td>
                 <td title="If left empty, all non-template DBs found from the cluster will be added to monitoring (if not already monitored), prefixed with the 'Unique name'. For 'pgbouncer' DB type insert the 'pool' name. Not relevant for 'pg-continuous-discovery'">DB dbname <span class="glyphicon glyphicon-info-sign" title="If left empty, all non-template DBs found from the cluster will be added to monitoring (if not already monitored), prefixed with the 'Unique name'. For 'pgbouncer' DB type insert the 'pool' name. Not relevant for 'pg-continuous-discovery'."></span></td>
-                <td title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery">DB name inclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery"></span></td>
-                <td title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery">DB name exclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery"></span></td>
+                <td title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery|patroni">DB name inclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery"></span></td>
+                <td title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery|patroni">DB name exclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery"></span></td>
                 <td>DB user</td>
                 <td title="NB! By default password is stored in plain-text in the database">DB password</td>
                 <td title="NB! To use, an identical cipher key(file) must be used to launch the Web UI and the Gatherer">Password encryption<span class="glyphicon glyphicon-info-sign" title="To use, an identical cipher key(file) must be used to launch the Web UI and the Gatherer"></span></td>
@@ -90,10 +90,12 @@
                 <td title="Path to Client certificate. Relevant for 'sslmode=verify-full'">Client cert</td>
                 <td title="Path to Client key file. Relevant for 'sslmode=verify-full'">Client key</td>
                 <td title="Group name (e.g. 'prod') for logical distinction of monitored databases. Can be used also to run multiple gatherers (sharding), one for each (or multiple) group(s). Required">Group</td>
-                <td title="Preset config OR custom config needs to be specified">Preset config</td>
-                <td title='{"metric":interval_seconds,...}'>Custom config</td>
+                <td title="Preset config OR custom config needs to be specified">Preset metrics config</td>
+                <td title='{"metric":interval_seconds,...}'>Custom metrics config</td>
+                <td title='{"dcs_type": "etcd", "dcs_conn_str": "http://127.0.0.1:2379/", "namespace": "/service/", "scope": "batman"}'>Host config</td>
                 <td title='User defined tags for extra meaning in InfluxDB e.g. {"env": "prod", "app": "xyz"}'>Custom tags</td>
                 <td title='In seconds. Should stay low for critical DBs just in case. NB! For possibly long-running built-in bloat estimation metrics the timeout will be max(30min,$userInput)'>Statement timeout [seconds]</td>
+                <td title='Fetch metrics only if master / primary '>Master mode only?</td>
                 <td>Last modified</td>
                 <td title="A tip - uncheck when leaving 'dbname' empty to review all found DBs before activation">Enabled?</td>
                 <td></td>
@@ -111,6 +113,7 @@
                             <option value="postgres" {% if row['md_dbtype'] == "postgres" %}selected{% endif %}>postgres</option>
                             <option value="pgbouncer"{% if row['md_dbtype'] == "pgbouncer" %}selected{% endif %}>pgbouncer</option>
                             <option value="postgres-continuous-discovery"{% if row['md_dbtype'] == "postgres-continuous-discovery" %}selected{% endif %}>pg-continuous-discovery</option>
+                            <option value="patroni"{% if row['md_dbtype'] == "patroni" %}selected{% endif %}>patroni</option>
                         </select>
                     </td>
                     <td><input type="text" name="md_hostname" value="{{row['md_hostname']|e}}" size="10"></td>
@@ -151,8 +154,10 @@
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
                     <td title='{"metric":interval,...}'><textarea name="md_config" cols="8">{% if row['md_config'] %} {{row['md_config']}} {% endif %}</textarea></td>
+                    <td title='{"dcs_type": "etcd", "dcs_conn_str": "http://127.0.0.1:2379/", "namespace": "/service/", "scope": "batman"}'><textarea name="md_host_config" cols="8">{% if row['md_host_config'] %} {{row['md_host_config']}} {% endif %}</textarea></td>
                     <td title='{"env": "prod", ...}'><textarea name="md_custom_tags" cols="8">{% if row['md_custom_tags'] %} {{row['md_custom_tags']}} {% endif %}</textarea></td>
                     <td title="NB! For possibly long-running built-in bloat estimation metrics the timeout will be max(30min,$userInput)"><input type="text" name="md_statement_timeout_seconds" value="{{row['md_statement_timeout_seconds']}}" size="2"></td>
+                    <td><input type="checkbox" name="md_only_if_master" {% if row['md_only_if_master'] %}checked{% endif %}></td>
                     <td>{{row['md_last_modified_on']}}</td>
                     <td><input type="checkbox" name="md_is_enabled" {% if row['md_is_enabled'] %}checked{% endif %}></td>
                     <td><input type="submit" class="save" name="save" value="Save"></td>
@@ -165,14 +170,15 @@
                     <td></td>
                     <td><input type="text" name="md_unique_name" value="" size="8" title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data)"></td>
                     <td>
-                        <select name="md_dbtype" id="md_dbtype" title="'postgres': Single Postgres DB monitoring, 'pgbouncer': PgBouncer traffic stats for a single pool, 'pg-continuous-discovery': Specified PG cluster will be polled for new DBs to be monitored periodically (with optional pattern matching)">
+                        <select name="md_dbtype" id="md_dbtype" title="'postgres': Single Postgres DB monitoring, 'pgbouncer': PgBouncer traffic stats for a single pool, 'pg-continuous-discovery': Specified PG cluster will be polled for new DBs to be monitored periodically (with optional pattern matching), 'patroni': cluster members will be tracked via DCS. Specify DCS info under 'Host config'">
                             <option value="postgres">postgres</option>
                             <option value="pgbouncer">pgbouncer</option>
                             <option value="postgres-continuous-discovery">pg-continuous-discovery</option>
+                            <option value="patroni">patroni</option>
                         </select>
                     </td>
-                    <td><input type="text" name="md_hostname" value="" size="10"></td>
-                    <td><input type="text" name="md_port" value="5432" size="5"></td>
+                    <td><input type="text" name="md_hostname" id="md_hostname" value="" size="10"></td>
+                    <td><input type="text" name="md_port" id="md_port" value="5432" size="5"></td>
                     <td><input type="text" name="md_dbname" value="" size="10"></td>
                     <td><input type="text" name="md_include_pattern" value="" size="6"></td>
                     <td><input type="text" name="md_exclude_pattern" value="" size="6"></td>
@@ -209,8 +215,10 @@
                         <a class="copy_to_custom" href="" title="Copy JSON to 'Custom config' for editing">copy</a>
                     </td>
                     <td title='{"metric":interval,...}'><textarea name="md_config" id="md_config" value="" cols="8"></textarea></td>
+                    <td title='{"dcs_type": "etcd", "dcs_conn_str": "http://127.0.0.1:2379/", "namespace": "/service/", "scope": "batman"}'><textarea name="md_host_config" id="md_host_config" value='' cols="8"></textarea></td>
                     <td title='{"env": "prod", ...}'><textarea name="md_custom_tags" id="md_custom_tags" value="" cols="8"></textarea></td>
                     <td title="NB! For possibly long-running built-in bloat estimation metrics the timeout will be max(30min,$userInput)"><input type="text" name="md_statement_timeout_seconds" size="2" value="5"></td>
+                    <td><input type="checkbox" name="md_only_if_master"></td>
                     <td></td>
                     <td><input type="checkbox" name="md_is_enabled" checked></td>
                     <td><input type="submit" class="new" name="new" value="New"></td>
@@ -297,15 +305,20 @@
         });
 
         $(".save").add('.new').click(function(event){
-            if ($(this).parent().parent().find("[name='md_unique_name']").val() == null || !($(this).parent().parent().find("[name='md_unique_name']").val().trim() > '')) {
+            var unique_name = $(this).parent().parent().find("[name='md_unique_name']").val()
+            var dbtype = $(this).parent().parent().find("[name='md_dbtype']").val()
+            var hostname = $(this).parent().parent().find("[name='md_hostname']").val()
+            var port = $(this).parent().parent().find("[name='md_port']").val()
+
+            if (unique_name == null || !(unique_name.trim() > '')) {
                 alert("'Unique name' cannot be empty");
                 return false;
             }
-            if ($(this).parent().parent().find("[name='md_hostname']").val() == null || !($(this).parent().parent().find("[name='md_hostname']").val().trim() > '')) {
+            if (hostname == null || !(hostname.trim() > '') && !(db_type == "patroni" || db_type == "patroni-continous-discovery")) {
                 alert("'DB host' cannot be empty");
                 return false;
             }
-            if ($(this).parent().parent().find("[name='md_port']").val() == null || !($(this).parent().parent().find("[name='md_port']").val().trim() > '')) {
+            if (port == null || !(port.trim() > '') && !(db_type == "patroni")) {
                 alert("'DB port' cannot be empty");
                 return false;
             }
@@ -340,6 +353,11 @@
                 alert('NB! Preset Config set to "pgbouncer"');
             } else if ($(this).val() == 'postgres' || $(this).val() == 'postgres-continuous-discovery') {
                 $("#md_preset_config_name").val('');
+            } else if ($(this).val() == 'patroni') {
+                alert('NB! "Host config" pre-filled with Etcd localhost values');
+                $("#md_port").val('');
+                $("#md_hostname").val('');
+                $("#md_host_config").val('{"dcs_type": "etcd", "dcs_conn_str": "http://127.0.0.1:2379/", "namespace": "/service/", "scope": "batman"}');
             }
         });
     });
