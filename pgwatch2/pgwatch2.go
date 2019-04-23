@@ -2819,6 +2819,8 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 			PresetMetrics:     ce.PresetMetrics,
 			IsSuperuser:       ce.IsSuperuser,
 			CustomTags:        ce.CustomTags,
+			HostConfig:        ce.HostConfig,
+			OnlyIfMaster:      ce.OnlyIfMaster,
 			DBType:            "postgres"})
 	}
 
@@ -3308,6 +3310,8 @@ func main() {
 	var metrics map[string]map[decimal.Decimal]MetricVersionProperties
 
 	for { //main loop
+		hostsToShutDownDueToRoleChange := make(map[string]bool)		// hosts went from master to standby and have "only if master" set
+
 		if time.Now().Unix()-last_metrics_refresh_time > METRIC_DEFINITION_REFRESH_TIME {
 			//metrics
 			if fileBased {
@@ -3447,6 +3451,10 @@ func main() {
 					if connectFailedSoFar {
 						delete(failedInitialConnectHosts, db_unique)
 					}
+					if ver.IsInRecovery && host.OnlyIfMaster {
+						log.Infof("[%s] not added to monitoring due to 'master only' property", db_unique)
+						continue
+					}
 				}
 
 				if (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && db_type == "postgres" {
@@ -3461,6 +3469,17 @@ func main() {
 
 			if opts.Datastore == DATASTORE_PROMETHEUS {
 				continue
+			}
+
+			if host.DBType == "postgres" {
+				ver, err := DBGetPGVersion(db_unique, false)
+				if err == nil {	// ok to ignore error, re-tried on next loop
+					if ver.IsInRecovery && host.OnlyIfMaster {
+						log.Infof("[%s] to be removed from monitoring due to 'master only' property and status change", db_unique)
+						hostsToShutDownDueToRoleChange[db_unique] = true
+						continue
+					}
+				}
 			}
 
 			for metric := range metric_config {
@@ -3545,18 +3564,21 @@ func main() {
 			db := splits[0]
 			metric := splits[1]
 
-			for _, host := range monitored_dbs {
-				if host.DBUniqueName == db {
-					host_config := host.Metrics
+			_, ok := hostsToShutDownDueToRoleChange[db]
 
-					for metric_key := range host_config {
-						if metric_key == metric && host_config[metric_key] > 0 {
-							continue next_chan
+			if !ok {	// maybe some single metric was disabled
+				for _, host := range monitored_dbs {
+					if host.DBUniqueName == db {
+						metricConfig := host.Metrics
+
+						for metric_key := range metricConfig {
+							if metric_key == metric && metricConfig[metric_key] > 0 {
+								continue next_chan
+							}
 						}
 					}
 				}
 			}
-
 			log.Infof("shutting down gatherer for [%s:%s] ...", db, metric)
 			control_channels[db_metric] <- ControlMessage{Action: GATHERER_STATUS_STOP}
 			delete(control_channels, db_metric)
