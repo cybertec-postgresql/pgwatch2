@@ -18,7 +18,7 @@
     cpu_load: 60
     db_stats: 60
     db_size: 300
-    index_stats: 600
+    index_stats: 900
     locks: 60
     locks_mode: 60
     replication: 120
@@ -28,8 +28,8 @@
     stat_statements: 180
     stat_statements_calls: 60
     table_bloat_approx_summary: 7200
-    table_io_stats: 180
-    table_stats: 180
+    table_io_stats: 600
+    table_stats: 300
     wal: 60
     wal_receiver: 120
 
@@ -49,10 +49,10 @@
     cpu_load: 60
     db_stats: 60
     db_size: 300
-    index_stats: 600
+    index_stats: 900
     sproc_stats: 180
     stat_statements: 180
-    table_stats: 180
+    table_stats: 300
     wal: 60
 
 - name: full
@@ -65,7 +65,7 @@
     cpu_load: 60
     db_stats: 60
     db_size: 300
-    index_stats: 600
+    index_stats: 900
     locks: 60
     locks_mode: 60
     replication: 120
@@ -75,8 +75,8 @@
     stat_statements: 180
     stat_statements_calls: 60
     table_bloat_approx_summary: 7200
-    table_io_stats: 180
-    table_stats: 180
+    table_io_stats: 600
+    table_stats: 300
     wal: 60
     wal_size: 120
     kpi: 120
@@ -95,7 +95,7 @@
     change_events: 300
     db_stats: 60
     db_size: 300
-    index_stats: 600
+    index_stats: 900
     locks: 60
     locks_mode: 60
     replication: 120
@@ -103,8 +103,8 @@
     settings: 7200
     sproc_stats: 180
     stat_statements_calls: 60
-    table_io_stats: 180
-    table_stats: 180
+    table_io_stats: 600
+    table_stats: 300
     wal: 60
 
 - name: prometheus
