@@ -3440,8 +3440,8 @@ func main() {
 							go MetricGathererLoop(db_unique, db_type, metric, host_config, control_channels[db_metric], persist_ch)
 						}
 					}
-				} else if !metric_def_ok && ch_ok {
-					// metric definition files were recently removed
+				} else if (!metric_def_ok && ch_ok) || interval <= 0 {
+					// metric definition files were recently removed or interval set to zero
 					log.Warning("shutting down metric", metric, "for", host.DBUniqueName)
 					control_channels[db_metric] <- ControlMessage{Action: GATHERER_STATUS_STOP}
 					delete(control_channels, db_metric)
