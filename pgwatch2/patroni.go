@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	consul_api "github.com/hashicorp/consul/api"
 	"github.com/samuel/go-zookeeper/zk"
 	"go.etcd.io/etcd/client"
 	"path"
@@ -23,6 +24,51 @@ func ParseHostAndPortFromJdbcConnStr(connStr string) (string, string, error) {
 		return "", "", errors.New(fmt.Sprintf("unexpected regex result groups: %v", matches))
 	}
 	return matches[1], matches[2], nil
+}
+
+func ConsulGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, error) {
+	var ret []PatroniClusterMember
+
+	if len(database.HostConfig.DcsEndpoints) == 0 {
+		return ret, errors.New("Missing Consul connect info, make sure host config has a 'dcs_endpoints' key")
+	}
+
+	config := consul_api.Config{}
+	config.Address = database.HostConfig.DcsEndpoints[0]
+	if config.Address[0] == '/' {	// Consul doesn't have leading slashes
+		config.Address = config.Address[1:len(config.Address)-1]
+	}
+	client, err := consul_api.NewClient(&config)
+	if err != nil {
+		log.Error("Could not connect to Consul", err)
+		return ret, err
+	}
+
+	kv := client.KV()
+
+	membersPath := path.Join(database.HostConfig.Namespace, database.HostConfig.Scope, "members")
+	members, _, err := kv.List(membersPath, nil)
+	if err != nil {
+		log.Error("Could not read Patroni members from Consul:", err)
+		return ret, err
+	}
+	if members != nil {
+		for _, member:= range members {
+			name := path.Base(member.Key)
+			log.Debugf("Found a cluster member from Consul: %+v", name)
+			nodeData, err := jsonTextToStringMap(string(member.Value))
+			if err != nil {
+				log.Errorf("Could not parse Consul node data for node \"%s\": %s", name, err)
+				continue
+			}
+			role, _ := nodeData["role"]
+			connUrl, _ := nodeData["conn_url"]
+
+			ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})
+		}
+	}
+
+	return ret, nil
 }
 
 func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, error) {
@@ -117,11 +163,13 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 	var ok bool
 	var dbUnique string
 
-	log.Error("ce.HostConfig", ce.HostConfig)
+	log.Debug("Resolving Patroni nodes for %s from HostConfig:", ce.DBUniqueName, ce.HostConfig)
 	if ce.HostConfig.DcsType == DCS_TYPE_ETCD {
 		cm, err = EtcdGetClusterMembers(ce)
 	} else if ce.HostConfig.DcsType == DCS_TYPE_ZOOKEEPER{
 		cm, err = ZookeeperGetClusterMembers(ce)
+	} else if ce.HostConfig.DcsType == DCS_TYPE_CONSUL{
+		cm, err = ConsulGetClusterMembers(ce)
 	} else {
 		log.Error("unknown DCS", ce.HostConfig.DcsType)
 		return md, errors.New("unknown DCS")

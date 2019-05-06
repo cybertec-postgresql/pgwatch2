@@ -175,6 +175,7 @@ const CONFIGDB_IDENT = "configDb"
 const CONTEXT_PROMETHEUS_SCRAPE = "prometheus-scrape"
 const DCS_TYPE_ETCD = "etcd"
 const DCS_TYPE_ZOOKEEPER = "zookeeper"
+const DCS_TYPE_CONSUL = "consul"
 
 var configDb *sqlx.DB
 var metricDb *sqlx.DB
