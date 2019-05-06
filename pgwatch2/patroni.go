@@ -4,12 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.etcd.io/etcd/client"
 	"github.com/samuel/go-zookeeper/zk"
+	"go.etcd.io/etcd/client"
 	"path"
 	"regexp"
 	"time"
 )
+
+var lastFoundClusterMembers = make(map[string][]PatroniClusterMember)	// needed for cases where DCS is temporarily down
+																		// don't want to immediately remove monitoring of DBs
+
 
 func ParseHostAndPortFromJdbcConnStr(connStr string) (string, string, error) {
 	r := regexp.MustCompile(`postgres://(.*)+:([0-9]+)/`)
@@ -35,7 +39,7 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 	}
 	c, err := client.New(cfg)
 	if err != nil {
-		log.Error("Could not connect to DCS", err)
+		log.Error("Could not connect to ETCD", err)
 		return ret, err
 	}
 	kapi := client.NewKeysAPI(c)
@@ -60,9 +64,9 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 
 		ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})
 	}
+	lastFoundClusterMembers[database.DBUniqueName] = ret
 	return ret, nil
 }
-
 
 func ZookeeperGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, error) {
 	var ret []PatroniClusterMember
@@ -71,22 +75,25 @@ func ZookeeperGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMem
 		return ret, errors.New("Missing Zookeeper connect info, make sure host config has a 'dcs_endpoints' key")
 	}
 
-	c, _, err := zk.Connect(database.HostConfig.DcsEndpoints, time.Second)
+	c, _, err := zk.Connect(database.HostConfig.DcsEndpoints, time.Second, zk.WithLogInfo(false))
 	if err != nil {
-		log.Error("Could not connect to DCS", err)
+		log.Error("Could not connect to Zookeeper", err)
 		return ret, err
 	}
+	defer c.Close()
+
 	members, _, err := c.Children(path.Join(database.HostConfig.Namespace, database.HostConfig.Scope, "members"))
 	if err != nil {
 		log.Error("Could not read Patroni members from Zookeeper:", err)
 		return ret, err
 	}
+
 	for _, member := range members {
 		log.Debugf("Found a cluster member from Zookeeper: %+v", member)
 		keyData, _, err := c.Get(path.Join(database.HostConfig.Namespace, database.HostConfig.Scope, "members", member))
 		if err != nil {
 			log.Errorf("Could not read member (%s) info from Zookeeper:", member, err)
-			return ret, err
+			continue
 		}
 		nodeData, err := jsonTextToStringMap(string(keyData))
 		if err != nil {
@@ -107,6 +114,7 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 	md := make([]MonitoredDatabase, 0)
 	cm := make([]PatroniClusterMember, 0)
 	var err error
+	var ok bool
 	var dbUnique string
 
 	log.Error("ce.HostConfig", ce.HostConfig)
@@ -117,6 +125,15 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 	} else {
 		log.Error("unknown DCS", ce.HostConfig.DcsType)
 		return md, errors.New("unknown DCS")
+	}
+	if err != nil {
+		log.Warningf("Failed to get info from DCS for %s, using previous member info if any", ce.DBUniqueName)
+		cm, ok = lastFoundClusterMembers[ce.DBUniqueName]
+		if ok {	// mask error from main loop not to remove monitored DBs due to "jitter"
+			err = nil
+		}
+	} else {
+		lastFoundClusterMembers[ce.DBUniqueName] = cm
 	}
 	if len(cm) == 0 {
 		log.Warningf("No Patroni cluster members found for cluster [%s:%s]", ce.DBUniqueName, ce.HostConfig.Scope)
