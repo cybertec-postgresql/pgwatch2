@@ -68,7 +68,7 @@ type MonitoredDatabase struct {
 
 type HostConfigAttrs struct {
 	DcsType            string `yaml:"dcs_type"`
-	DcsConnStr         string `yaml:"dcs_conn_str"`
+	DcsEndpoints       []string `yaml:"dcs_endpoints"`
 	Scope              string
 	Namespace          string
 }
@@ -174,6 +174,7 @@ const METRICDB_IDENT = "metricDb"
 const CONFIGDB_IDENT = "configDb"
 const CONTEXT_PROMETHEUS_SCRAPE = "prometheus-scrape"
 const DCS_TYPE_ETCD = "etcd"
+const DCS_TYPE_ZOOKEEPER = "zookeeper"
 
 var configDb *sqlx.DB
 var metricDb *sqlx.DB

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go.etcd.io/etcd/client"
+	"github.com/samuel/go-zookeeper/zk"
 	"path"
 	"regexp"
 	"time"
@@ -23,18 +24,18 @@ func ParseHostAndPortFromJdbcConnStr(connStr string) (string, string, error) {
 func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, error) {
 	var ret []PatroniClusterMember
 
-	if database.HostConfig.DcsConnStr == "" {
-		return ret, errors.New("Missing ETCD connect info, make sure host config has a 'dcs_conn_str' key")
+	if len(database.HostConfig.DcsEndpoints) == 0 {
+		return ret, errors.New("Missing ETCD connect info, make sure host config has a 'dcs_endpoints' key")
 	}
 
 	cfg := client.Config{
-		Endpoints:               []string{database.HostConfig.DcsConnStr},
+		Endpoints:               database.HostConfig.DcsEndpoints,
 		Transport:               client.DefaultTransport,
 		HeaderTimeoutPerRequest: time.Second,
 	}
 	c, err := client.New(cfg)
 	if err != nil {
-		log.Error(err)
+		log.Error("Could not connect to DCS", err)
 		return ret, err
 	}
 	kapi := client.NewKeysAPI(c)
@@ -50,7 +51,7 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 		log.Debugf("Found a cluster member from etcd: %+v", node.Value)
 		nodeData, err := jsonTextToStringMap(node.Value)
 		if err != nil {
-			log.Errorf("Could not parse ETCD node data for node \"%s\":", node, err)
+			log.Errorf("Could not parse ETCD node data for node \"%s\": %s", node, err)
 			continue
 		}
 		role, _ := nodeData["role"]
@@ -63,6 +64,45 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 }
 
 
+func ZookeeperGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, error) {
+	var ret []PatroniClusterMember
+
+	if len(database.HostConfig.DcsEndpoints) == 0 {
+		return ret, errors.New("Missing Zookeeper connect info, make sure host config has a 'dcs_endpoints' key")
+	}
+
+	c, _, err := zk.Connect(database.HostConfig.DcsEndpoints, time.Second)
+	if err != nil {
+		log.Error("Could not connect to DCS", err)
+		return ret, err
+	}
+	members, _, err := c.Children(path.Join(database.HostConfig.Namespace, database.HostConfig.Scope, "members"))
+	if err != nil {
+		log.Error("Could not read Patroni members from Zookeeper:", err)
+		return ret, err
+	}
+	for _, member := range members {
+		log.Debugf("Found a cluster member from Zookeeper: %+v", member)
+		keyData, _, err := c.Get(path.Join(database.HostConfig.Namespace, database.HostConfig.Scope, "members", member))
+		if err != nil {
+			log.Errorf("Could not read member (%s) info from Zookeeper:", member, err)
+			return ret, err
+		}
+		nodeData, err := jsonTextToStringMap(string(keyData))
+		if err != nil {
+			log.Errorf("Could not parse Zookeeper node data for node \"%s\": %s", member, err)
+			continue
+		}
+		role, _ := nodeData["role"]
+		connUrl, _ := nodeData["conn_url"]
+		name := path.Base(member)
+
+		ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})
+	}
+
+	return ret, nil
+}
+
 func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, error) {
 	md := make([]MonitoredDatabase, 0)
 	cm := make([]PatroniClusterMember, 0)
@@ -72,6 +112,8 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 	log.Error("ce.HostConfig", ce.HostConfig)
 	if ce.HostConfig.DcsType == DCS_TYPE_ETCD {
 		cm, err = EtcdGetClusterMembers(ce)
+	} else if ce.HostConfig.DcsType == DCS_TYPE_ZOOKEEPER{
+		cm, err = ZookeeperGetClusterMembers(ce)
 	} else {
 		log.Error("unknown DCS", ce.HostConfig.DcsType)
 		return md, errors.New("unknown DCS")
@@ -167,3 +209,4 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 
 	return md, err
 }
+
