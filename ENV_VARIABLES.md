@@ -19,7 +19,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_DATASTORE** Backend for metric storage - [influx|postgres|prometheus|graphite|json]. Default: influx
 - **PW2_VERBOSE** Logging vebosity. By default warning and errors are logged. Use [-v|-vv] to include [info|debug]. Default: -
 - **PW2_PG_METRIC_STORE_CONN_STR** Postgres metric store connection string. Required when PW2_DATASTORE=postgres. Default: -
-- **PW2_PG_RETENTION_DAYS** Effective when PW2_DATASTORE=postgres. Default: 30
+- **PW2_PG_RETENTION_DAYS** Effective when PW2_DATASTORE=postgres. Default: 14
 - **PW2_IHOST** InfluxDB host. Default: localhost
 - **PW2_IPORT** InfluxDB port. Default: 8086
 - **PW2_IUSER** InfluxDB username. Default: root
