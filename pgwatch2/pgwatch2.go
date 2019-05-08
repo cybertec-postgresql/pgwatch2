@@ -36,7 +36,7 @@ import (
 	"github.com/op/go-logging"
 	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/pbkdf2"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 type MonitoredDatabase struct {
@@ -61,6 +61,23 @@ type MonitoredDatabase struct {
 	IsSuperuser          bool              `yaml:"is_superuser"`
 	IsEnabled            bool              `yaml:"is_enabled"`
 	CustomTags           map[string]string `yaml:"custom_tags"` // ignored on graphite
+	HostConfig           HostConfigAttrs   `yaml:"host_config"`
+	//JdbcConnStr          string            `yaml: "jdbc_conn_str"`
+	OnlyIfMaster         bool `yaml:"only_if_master"`
+}
+
+type HostConfigAttrs struct {
+	DcsType            string `yaml:"dcs_type"`
+	DcsEndpoints       []string `yaml:"dcs_endpoints"`
+	Scope              string
+	Namespace          string
+}
+
+type PatroniClusterMember struct {
+	Scope              string
+	Name               string
+	ConnUrl            string `yaml:"conn_url"`
+	Role               string
 }
 
 type PresetConfig struct {
@@ -156,6 +173,9 @@ const GATHERER_STATUS_STOP = "STOP"
 const METRICDB_IDENT = "metricDb"
 const CONFIGDB_IDENT = "configDb"
 const CONTEXT_PROMETHEUS_SCRAPE = "prometheus-scrape"
+const DCS_TYPE_ETCD = "etcd"
+const DCS_TYPE_ZOOKEEPER = "zookeeper"
+const DCS_TYPE_CONSUL = "consul"
 
 var configDb *sqlx.DB
 var metricDb *sqlx.DB
@@ -480,7 +500,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode, md_is_superuser,
 		  coalesce(md_include_pattern, '') as md_include_pattern, coalesce(md_exclude_pattern, '') as md_exclude_pattern,
 		  coalesce(md_custom_tags::text, '{}') as md_custom_tags, md_root_ca_path, md_client_cert_path, md_client_key_path,
-		  md_password_type
+		  md_password_type, md_host_config::text, md_only_if_master
 		from
 		  pgwatch2.monitored_db
 	          left join
@@ -535,6 +555,11 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			log.Warningf("Cannot parse custom tags JSON for \"%s\". Ignoring custom tags. Error: %v", row["md_unique_name"].(string), err)
 			customTags = nil
 		}
+		hostConfigAttrs := HostConfigAttrs{}
+		err = yaml.Unmarshal([]byte(row["md_host_config"].(string)), &hostConfigAttrs)
+		if err != nil {
+			log.Warningf("Cannot parse host config JSON for \"%s\". Ignoring host config. Error: %v", row["md_unique_name"].(string), err)
+		}
 
 		md := MonitoredDatabase{
 			DBUniqueName:         row["md_unique_name"].(string),
@@ -555,6 +580,8 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			DBNameIncludePattern: row["md_include_pattern"].(string),
 			DBNameExcludePattern: row["md_exclude_pattern"].(string),
 			Group:                row["md_group"].(string),
+			HostConfig:           hostConfigAttrs,
+			OnlyIfMaster:         row["md_only_if_master"].(bool),
 			CustomTags:           customTags}
 
 		if md.PasswordType == "aes-gcm-256" && opts.AesGcmKeyphrase != "" {
@@ -563,6 +590,18 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 
 		if md.DBType == "postgres-continuous-discovery" {
 			resolved, err := ResolveDatabasesFromConfigEntry(md)
+			if err != nil {
+				log.Errorf("Failed to resolve DBs for \"%s\": %s", md.DBUniqueName, err)
+				continue
+			}
+			temp_arr := make([]string, 0)
+			for _, rdb := range resolved {
+				monitoredDBs = append(monitoredDBs, rdb)
+				temp_arr = append(temp_arr, rdb.DBName)
+			}
+			log.Debugf("Resolved %d DBs with prefix \"%s\": [%s]", len(resolved), md.DBUniqueName, strings.Join(temp_arr, ", "))
+		} else if md.DBType == "patroni" || md.DBType == "patroni-continous-discovery" {
+			resolved, err := ResolveDatabasesFromPatroni(md)
 			if err != nil {
 				log.Errorf("Failed to resolve DBs for \"%s\": %s", md.DBUniqueName, err)
 				continue
@@ -2687,8 +2726,8 @@ func ConfigFileToMonitoredDatabases(configFilePath string) ([]MonitoredDatabase,
 		return hostList, err
 	}
 	for _, v := range c {
-		log.Debugf("Found monitoring config entry: %#v", v)
 		if v.IsEnabled {
+			log.Debugf("Found active monitoring config entry: %#v", v)
 			if v.Group == "" {
 				v.Group = "default"
 			}
@@ -2782,6 +2821,8 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 			PresetMetrics:     ce.PresetMetrics,
 			IsSuperuser:       ce.IsSuperuser,
 			CustomTags:        ce.CustomTags,
+			HostConfig:        ce.HostConfig,
+			OnlyIfMaster:      ce.OnlyIfMaster,
 			DBType:            "postgres"})
 	}
 
@@ -2807,12 +2848,19 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 		if e.IsEnabled && e.PasswordType == "aes-gcm-256" && opts.AesGcmKeyphrase != "" {
 			e.Password = decrypt(e.DBUniqueName, opts.AesGcmKeyphrase, e.Password)
 		}
-		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" {
+		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" || e.DBType == "patroni" {
 			if e.DBType == "postgres-continuous-discovery" {
 				log.Debugf("Adding \"%s\" (host=%s, port=%s) to continuous monitoring ...", e.DBUniqueName, e.Host, e.Port)
 				continuousMonitoringDatabases = append(continuousMonitoringDatabases, e)
 			}
-			found_dbs, err := ResolveDatabasesFromConfigEntry(e)
+			var found_dbs []MonitoredDatabase
+			var err error
+
+			if e.DBType == "patroni" {
+				found_dbs, err = ResolveDatabasesFromPatroni(e)
+			} else {
+				found_dbs, err = ResolveDatabasesFromConfigEntry(e)
+			}
 			if err != nil {
 				log.Errorf("Failed to resolve DBs for \"%s\": %s", e.DBUniqueName, err)
 				continue
@@ -3264,6 +3312,8 @@ func main() {
 	var metrics map[string]map[decimal.Decimal]MetricVersionProperties
 
 	for { //main loop
+		hostsToShutDownDueToRoleChange := make(map[string]bool)		// hosts went from master to standby and have "only if master" set
+
 		if time.Now().Unix()-last_metrics_refresh_time > METRIC_DEFINITION_REFRESH_TIME {
 			//metrics
 			if fileBased {
@@ -3346,9 +3396,9 @@ func main() {
 		log.Info("host info refreshed, nr. of enabled hosts in configuration:", len(monitored_dbs))
 
 		for _, host := range monitored_dbs {
-			log.Debug("processing database:", host.DBUniqueName, ", config:", host.Metrics, ", custom tags:", host.CustomTags)
+			log.Debugf("processing database: %s, metric config: %v, custom tags: %v, host config: %#v", host.DBUniqueName, host.Metrics, host.CustomTags, host.HostConfig)
 
-			host_config := host.Metrics
+			metric_config := host.Metrics
 			db_unique := host.DBUniqueName
 			db_type := host.DBType
 
@@ -3366,7 +3416,7 @@ func main() {
 				db_conn_limiting_channel[db_unique] = make(chan bool, MAX_PG_CONNECTIONS_PER_MONITORED_DB)
 				i := 0
 				for i < MAX_PG_CONNECTIONS_PER_MONITORED_DB {
-					log.Debugf("initializing db_conn_limiting_channel %d for [%s]", i, db_unique)
+					//log.Debugf("initializing db_conn_limiting_channel %d for [%s]", i, db_unique)
 					db_conn_limiting_channel[db_unique] <- true
 					i++
 				}
@@ -3403,6 +3453,10 @@ func main() {
 					if connectFailedSoFar {
 						delete(failedInitialConnectHosts, db_unique)
 					}
+					if ver.IsInRecovery && host.OnlyIfMaster {
+						log.Infof("[%s] not added to monitoring due to 'master only' property", db_unique)
+						continue
+					}
 				}
 
 				if (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && db_type == "postgres" {
@@ -3419,8 +3473,19 @@ func main() {
 				continue
 			}
 
-			for metric := range host_config {
-				interval := host_config[metric]
+			if host.DBType == "postgres" {
+				ver, err := DBGetPGVersion(db_unique, false)
+				if err == nil {	// ok to ignore error, re-tried on next loop
+					if ver.IsInRecovery && host.OnlyIfMaster {
+						log.Infof("[%s] to be removed from monitoring due to 'master only' property and status change", db_unique)
+						hostsToShutDownDueToRoleChange[db_unique] = true
+						continue
+					}
+				}
+			}
+
+			for metric := range metric_config {
+				interval := metric_config[metric]
 
 				metric_def_map_lock.RLock()
 				_, metric_def_ok := metric_def_map[metric]
@@ -3435,9 +3500,9 @@ func main() {
 						log.Infof("starting gatherer for [%s:%s] with interval %v s", db_unique, metric, interval)
 						control_channels[db_metric] = make(chan ControlMessage, 1)
 						if opts.BatchingDelayMs > 0 {
-							go MetricGathererLoop(db_unique, db_type, metric, host_config, control_channels[db_metric], buffered_persist_ch)
+							go MetricGathererLoop(db_unique, db_type, metric, metric_config, control_channels[db_metric], buffered_persist_ch)
 						} else {
-							go MetricGathererLoop(db_unique, db_type, metric, host_config, control_channels[db_metric], persist_ch)
+							go MetricGathererLoop(db_unique, db_type, metric, metric_config, control_channels[db_metric], persist_ch)
 						}
 					}
 				} else if (!metric_def_ok && ch_ok) || interval <= 0 {
@@ -3455,7 +3520,7 @@ func main() {
 					// check if interval has changed
 					if host_metric_interval_map[db_metric] != interval {
 						log.Warning("sending interval update for", db_unique, metric)
-						control_channels[db_metric] <- ControlMessage{Action: GATHERER_STATUS_START, Config: host_config}
+						control_channels[db_metric] <- ControlMessage{Action: GATHERER_STATUS_START, Config: metric_config}
 						host_metric_interval_map[db_metric] = interval
 					}
 				}
@@ -3501,18 +3566,21 @@ func main() {
 			db := splits[0]
 			metric := splits[1]
 
-			for _, host := range monitored_dbs {
-				if host.DBUniqueName == db {
-					host_config := host.Metrics
+			_, ok := hostsToShutDownDueToRoleChange[db]
 
-					for metric_key := range host_config {
-						if metric_key == metric && host_config[metric_key] > 0 {
-							continue next_chan
+			if !ok {	// maybe some single metric was disabled
+				for _, host := range monitored_dbs {
+					if host.DBUniqueName == db {
+						metricConfig := host.Metrics
+
+						for metric_key := range metricConfig {
+							if metric_key == metric && metricConfig[metric_key] > 0 {
+								continue next_chan
+							}
 						}
 					}
 				}
 			}
-
 			log.Infof("shutting down gatherer for [%s:%s] ...", db, metric)
 			control_channels[db_metric] <- ControlMessage{Action: GATHERER_STATUS_STOP}
 			delete(control_channels, db_metric)
