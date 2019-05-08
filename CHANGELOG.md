@@ -11,6 +11,26 @@ or a specific version
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
 
+## v1.6.0 [DRAFT]
+
+* Gatherer feature - add support for Prometheus scraping
+* Gatherer feature - Patroni (etcd, Zookeeper, Consul) support
+* Gatherer feature - add a flag to monitor DB-s only when they are acting as master / primary
+* Gatherer fix - handle zeroing of running metric intervals
+* Goreleaser support to build DEB, RPM, tarball
+* Gatherer improvement - don't start per metric gatherers until connect check OK
+* Gatherer improvement -revert persistance maxBatchSize from 5k back to 1k points
+* Gatherer improvement - allow partial InfluxDB writes
+* Dashboards - support for Grafana 6.0 plus minor updates for most dashboards
+* Metrics improvement - skip index_stats gathering for locked indexes
+* Metrics - new "settings" metric based on pg_settings + according panel to "Change events"
+* Metrics - increase intervals for index/table stats
+* Metrics - add a sample bash script to push arbitrary metrics to the pgwatch2 metrics DB externally
+* Docker components update -  Grafana 6.1.4, Go 1.12.4, Influx 1.7.6
+
+NB! When migrating old "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
+applied first from the "pgwatch2/sql/config_store/migrations/" folder.
+
 ## v1.5.1 [2019-02-11]
 
 * Gatherer fix - 'continous discovery' worked only in YAML mode
