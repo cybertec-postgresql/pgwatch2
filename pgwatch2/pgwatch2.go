@@ -152,7 +152,6 @@ type ExistingPartitionInfo struct {
 
 const EPOCH_COLUMN_NAME string = "epoch_ns"      // this column (epoch in nanoseconds) is expected in every metric query
 const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
-const ACTIVE_SERVERS_REFRESH_TIME int64 = 120    // min time before checking for new/changed databases under monitoring i.e. main loop time
 const GRAPHITE_METRICS_PREFIX string = "pgwatch2"
 const PERSIST_QUEUE_MAX_SIZE = 10000 // storage queue max elements. when reaching the limit, older metrics will be dropped.
 // actual requirements depend a lot of metric type and nr. of obects in schemas,
@@ -3036,6 +3035,7 @@ type Options struct {
 	RealDbnameField       string `long:"real-dbname-field" description:"Tag key for real DB name if --add-real-dbname enabled" env:"PW2_REAL_DBNAME_FIELD" default:"real_dbname"`
 	AddSystemIdentifier   string `long:"add-system-identifier" description:"Add system identifier to each captured metric" env:"PW2_ADD_SYSTEM_IDENTIFIER" default:"false"`
 	SystemIdentifierField string `long:"system-identifier-field" description:"Tag key for system identifier value if --add-system-identifier" env:"PW2_SYSTEM_IDENTIFIER_FIELD" default:"sys_id"`
+	ServersRefreshLoopSeconds int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERFVERS_REFRESH_LOOP_SECONDS" default:"120"`
 }
 
 var opts Options
@@ -3057,6 +3057,10 @@ func main() {
 	logging.SetFormatter(logging.MustStringFormatter(`%{level:.4s} %{shortfunc}: %{message}`))
 
 	log.Debug("opts", opts)
+
+	if opts.ServersRefreshLoopSeconds <= 1 {
+		log.Fatal("--servers-refresh-loop-seconds must be greater than 1")
+	}
 
 	if len(opts.AesGcmKeyphraseFile) > 0 {
 		keyBytes, err := ioutil.ReadFile(opts.AesGcmKeyphraseFile)
@@ -3370,7 +3374,7 @@ func main() {
 					} else {
 						log.Errorf("Could not read/parse monitoring config from path: %s", opts.Config)
 					}
-					time.Sleep(time.Second * time.Duration(ACTIVE_SERVERS_REFRESH_TIME))
+					time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
 					continue
 				}
 			}
@@ -3381,7 +3385,7 @@ func main() {
 					log.Fatal("could not fetch active hosts - check config!", err)
 				} else {
 					log.Error("could not fetch active hosts:", err)
-					time.Sleep(time.Second * time.Duration(ACTIVE_SERVERS_REFRESH_TIME))
+					time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
 					continue
 				}
 			}
@@ -3528,8 +3532,8 @@ func main() {
 		}
 
 		if opts.Datastore == DATASTORE_PROMETHEUS { // special behaviour, no "ahead of time" metric collection
-			log.Debugf("main sleeping %ds...", ACTIVE_SERVERS_REFRESH_TIME)
-			time.Sleep(time.Second * time.Duration(ACTIVE_SERVERS_REFRESH_TIME))
+			log.Debugf("main sleeping %ds...", opts.ServersRefreshLoopSeconds)
+			time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
 			continue
 		}
 
@@ -3590,8 +3594,8 @@ func main() {
 		if gatherers_shut_down > 0 {
 			log.Warningf("sent STOP message to %d gatherers (it might take some minutes for them to stop though)", gatherers_shut_down)
 		}
-		log.Debugf("main sleeping %ds...", ACTIVE_SERVERS_REFRESH_TIME)
-		time.Sleep(time.Second * time.Duration(ACTIVE_SERVERS_REFRESH_TIME))
+		log.Debugf("main sleeping %ds...", opts.ServersRefreshLoopSeconds)
+		time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
 	}
 
 }
