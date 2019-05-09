@@ -499,7 +499,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode, md_is_superuser,
 		  coalesce(md_include_pattern, '') as md_include_pattern, coalesce(md_exclude_pattern, '') as md_exclude_pattern,
 		  coalesce(md_custom_tags::text, '{}') as md_custom_tags, md_root_ca_path, md_client_cert_path, md_client_key_path,
-		  md_password_type, md_host_config::text, md_only_if_master
+		  md_password_type, coalesce(md_host_config, '{}')::text as md_host_config, md_only_if_master
 		from
 		  pgwatch2.monitored_db
 	          left join
