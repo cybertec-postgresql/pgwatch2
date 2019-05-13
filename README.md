@@ -52,17 +52,20 @@ For a complete list of all supported Docker environment variables see [ENV_VARIA
 
 # Features
 
-* Easy extensibility by defining metrics in pure SQL (thus they could also be from business domain)
 * Non-invasive setup, no extensions nor superuser rights required for the base functionality
+* Intuitive metrics presentation using the Grafana dashboarding engine with optional Alerting
+* Lots of pre-configured dashboards and metric configurations covering all Statistics Collector data
+* Easy extensibility by defining metrics in pure SQL (thus they could also be from business domain)
+* 4 supported data stores for metrics storage (PostgreSQL, InfluxDB, Graphite, Prometheus)
+* Multiple configuration options (YAML, PostgreSQL, ENV) supporting both "push" and "pull" models
+* Possible to monitoring all or a subset of DBs of a PostgreSQL cluster
 * Global or DB level configuration of metrics/intervals
-* Central config DB based operation or local config file based for better automation (Ansible, etc) or ad-hoc/test mode for
-monitoring a single DB. See below for details
-* Intuitive metrics presentation using the [Grafana](http://grafana.org/) dashboarding engine. Set of pre-defined dashboards provided
-* Optional alerting (Email, Slack, PagerDuty) provided by Grafana
-* PgBouncer and AWS RDS graphing/alerting supported in addition to PostgreSQL
-* Possible to monitoring all DBs found in a cluster automatically (with regex pattern matching)
-* Kubernetes/OpenShift ready with a "non-root" image and a deployment template
-* Multiple metric storage options - PostgreSQL, InfluxDB, Prometheus, Graphite, JSON file
+* Kubernetes/OpenShift ready
+* PgBouncer, AWS RDS and Patroni support
+* Internal health-check API to monitor metrics gathering status
+* Built-in security with SSL connections and passwords encryption
+* Very low resource requirements for the collector even when monitoring hundreds of DBs
+
 
 # Project background
 
@@ -314,7 +317,30 @@ which is expected to exist) and add any found and not yet monitored  DBs to moni
 specify regular expressions to include/exclude some database names.
 * pgbouncer - use to track metrics from PgBouncer's "SHOW STATS" command. In place of the Postgres "DB name"
 the name of a PgBouncer "pool" to be monitored must be inserted.
+* patroni - Patroni is a HA / cluster manager for Postgres that relies on a DCS (Distributed Consensus Store) to store
+it's state. Typically in such a setup the nodes come and go and also it should not matter who is currently the master.
+To make it easier to monitor such dynamic constellations pgwatch2 supports reading of cluster node info from all
+supported DCS-s (etcd, Zookeeper, Consul), but currently only for simpler cases with no security applied (which is actually
+the common case in a trusted environment).
 
+
+## Patroni usage
+
+When 'patroni' is selected for "DB type" then the usual host/port fields should be left empty ("dbname" still filled if only
+one database is to be monitored) and instead "Host config" JSON field should be filled with DCS address, type and scope
+(cluster) name) information. A sample config looks like:
+
+```
+{
+"dcs_type": "etcd",
+"dcs_endpoints": ["127.0.0.1:2379"],
+"scope": "batman",
+"namespace": "/service/"
+}
+```
+
+Also if you don't use the replicas actively for queries then it might make sense to decrease the volume of gathered
+metrics and to disable the monitoring of standby-s with the "Master mode only?" checkbox.
 
 
 # Adding metrics

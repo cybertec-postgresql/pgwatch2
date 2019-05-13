@@ -54,6 +54,8 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_TESTDATA_MULTIPLIER** For how many hosts to generate data. Requires Ad-hoc params to be set also.
 - **PW2_PROMETHEUS_PORT** Prometheus port. Effective with --datastore=prometheus. Default: 9187
 - **PW2_PROMETHEUS_LISTEN_ADDR** Network interface to listen on". Default: "0.0.0.0"
+- **PW2_ADD_SYSTEM_IDENTIFIER** Add system identifier to each captured metric (PG10+). Default: false
+- **PW2_SYSTEM_IDENTIFIER_FIELD** Control name of the "system identifier" field. Default: sys_id
 
 
 ## Web UI

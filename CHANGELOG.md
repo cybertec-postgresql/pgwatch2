@@ -14,8 +14,9 @@ or a specific version
 ## v1.6.0 [DRAFT]
 
 * Gatherer feature - add support for Prometheus scraping
-* Gatherer feature - Patroni (etcd, Zookeeper, Consul) support
+* Gatherer feature - Patroni (etcd, Zookeeper, Consul) support (non-password access)
 * Gatherer feature - add a flag to monitor DB-s only when they are acting as master / primary
+* Gatherer feature - a flag (add-system-identifier / system-identifier-field) to save the "system id" with each metric (10+)
 * Gatherer fix - handle zeroing of running metric intervals
 * Goreleaser support to build DEB, RPM, tarball
 * Gatherer improvement - don't start per metric gatherers until connect check OK
