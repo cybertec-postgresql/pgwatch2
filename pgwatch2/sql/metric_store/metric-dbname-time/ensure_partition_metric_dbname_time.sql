@@ -37,7 +37,7 @@ BEGIN
   END IF;
 
   -- 2. level
-  l_part_name_2nd := metric || '_' || dbname;
+  l_part_name_2nd := md5(metric || '_' || dbname);
   IF NOT EXISTS (SELECT 1
                    FROM pg_tables
                   WHERE tablename = l_part_name_2nd
@@ -55,7 +55,7 @@ BEGIN
   l_year := extract(isoyear from (metric_timestamp + '1month'::interval * i));
   l_month := extract(month from (metric_timestamp + '1month'::interval * i));
 
-  l_part_name_3rd := format('%s_%s_y%sm%s', metric, dbname, l_year, to_char(l_month, 'fm00'));
+  l_part_name_3rd := format('%s_y%sm%s', l_part_name_2nd, l_year, to_char(l_month, 'fm00'));
   
   IF i = 0 THEN
       l_part_start := to_date(l_year::text || l_month::text, 'YYYYMM');
