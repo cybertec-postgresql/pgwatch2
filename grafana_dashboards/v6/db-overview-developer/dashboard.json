@@ -28,8 +28,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
-      "description": "Current Transaction Per Second",
+      "description": "Last 5min data",
       "editable": true,
       "error": false,
       "format": "none",
@@ -42,11 +41,12 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 0
       },
-      "id": 1,
+      "hideTimeOverride": true,
+      "id": 17,
       "interval": "",
       "links": [],
       "mappingType": 1,
@@ -63,6 +63,242 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": true,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": true
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "alias": "",
+          "dsType": "influxdb",
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select last(\"in_recovery_int\") FROM \"wal\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(365d) fill(none)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": "5m",
+      "title": "Instance state",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "REPLICA",
+          "value": "1"
+        },
+        {
+          "op": "=",
+          "text": "MASTER",
+          "value": "0"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(245, 54, 54, 0.9)",
+        "rgba(237, 129, 40, 0.89)",
+        "rgba(50, 172, 45, 0.97)"
+      ],
+      "description": "Last 5min data",
+      "editable": true,
+      "error": false,
+      "format": "dtdurations",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 3,
+        "x": 3,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 18,
+      "interval": "",
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": true,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "alias": "",
+          "dsType": "influxdb",
+          "groupBy": [],
+          "measurement": "db_stats",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "postmaster_uptime_s"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": "5m",
+      "title": "Instance uptime",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(245, 54, 54, 0.9)",
+        "rgba(237, 129, 40, 0.89)",
+        "rgba(50, 172, 45, 0.97)"
+      ],
+      "description": "Current Transaction Per Second (5min+ avg) + last 6h history",
+      "editable": true,
+      "error": false,
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 3,
+        "x": 6,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 1,
+      "interval": "5m",
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -145,8 +381,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
-      "description": "Queries Per Second based on pg_stat_statements.calls",
+      "description": "Queries Per Second (5min+ avg and last 6h history) based on pg_stat_statements.calls ",
       "editable": true,
       "error": false,
       "format": "none",
@@ -159,13 +394,14 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 4,
+        "w": 3,
+        "x": 9,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 2,
-      "interval": null,
+      "interval": "5m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -181,6 +417,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -263,8 +500,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
-      "description": "Approximate value based on pg_stat_statements total_time / calls",
+      "description": "Approximate value based on pg_stat_statements total_time / calls. 5min+ avg and last 6h history ",
       "editable": true,
       "error": false,
       "format": "none",
@@ -277,11 +513,12 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 8,
+        "w": 3,
+        "x": 12,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 3,
       "interval": null,
       "links": [],
@@ -299,6 +536,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ms",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -382,7 +620,6 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "Based on pg_stat_activity",
       "editable": true,
@@ -397,11 +634,12 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 12,
+        "w": 3,
+        "x": 15,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 5,
       "interval": null,
       "links": [],
@@ -419,6 +657,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -509,7 +748,6 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
       "decimals": null,
       "description": "",
       "editable": true,
@@ -524,11 +762,12 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 16,
+        "w": 3,
+        "x": 18,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 6,
       "interval": null,
       "links": [],
@@ -546,6 +785,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -642,7 +882,6 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -656,11 +895,12 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 20,
+        "w": 3,
+        "x": 21,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 4,
       "interval": null,
       "links": [],
@@ -678,6 +918,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -757,7 +998,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "description": "",
       "editable": true,
       "error": false,
@@ -785,6 +1025,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -938,6 +1179,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Tuple Ins. / Upd. / Del. statistics (1h rate)",
       "tooltip": {
@@ -984,7 +1226,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -1012,6 +1253,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1105,6 +1347,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Buffer hit ratio + Rollback ratio",
       "tooltip": {
@@ -1152,7 +1395,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "decimals": 1,
       "description": "Approximate value based on pg_stat_statements total_time / calls",
       "fill": 1,
@@ -1177,6 +1419,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1229,6 +1472,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Avg. query runtime",
       "tooltip": {
@@ -1276,7 +1520,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -1305,6 +1548,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1422,6 +1666,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "WAL rate + DB size",
       "tooltip": {
@@ -1471,7 +1716,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "editable": true,
       "error": false,
       "fill": 1,
@@ -1497,6 +1741,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1632,6 +1877,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Sessions + Deadlocks + Temp bytes",
       "tooltip": {
@@ -1676,7 +1922,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "decimals": 1,
       "description": "Transactions per Second / Queries per Second",
       "fill": 1,
@@ -1701,6 +1946,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1789,6 +2035,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "TPS / QPS",
       "tooltip": {
@@ -1833,7 +2080,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "decimals": 1,
       "description": "",
       "fill": 1,
@@ -1858,6 +2104,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1921,6 +2168,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Seq. scans per minute (>10MB tables)",
       "tooltip": {
@@ -1965,7 +2213,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "decimals": 1,
       "description": "",
       "fill": 1,
@@ -1990,6 +2237,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -2057,6 +2305,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Exclusive locks",
       "tooltip": {
@@ -2109,12 +2358,13 @@
       "id": 14,
       "links": [],
       "mode": "html",
+      "options": {},
       "title": "",
       "transparent": true,
       "type": "text"
     }
   ],
-  "schemaVersion": 16,
+  "schemaVersion": 18,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -2127,6 +2377,7 @@
           "value": null
         },
         "datasource": null,
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": null,

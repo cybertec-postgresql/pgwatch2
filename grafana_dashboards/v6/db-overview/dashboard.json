@@ -23,12 +23,12 @@
       "colorBackground": false,
       "colorValue": false,
       "colors": [
-        "rgba(245, 54, 54, 0.9)",
-        "rgba(237, 129, 40, 0.89)",
-        "rgba(50, 172, 45, 0.97)"
+        "rgba(50, 172, 45, 0.97)",
+        "#FF780A",
+        "#F2495C"
       ],
-      "datasource": null,
-      "description": "Current Transaction Per Second",
+      "decimals": 0,
+      "description": "Last 5min data",
       "editable": true,
       "error": false,
       "format": "none",
@@ -41,10 +41,239 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 0
       },
+      "height": "150",
+      "hideTimeOverride": true,
+      "id": 2,
+      "interval": "",
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": true,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "alias": "",
+          "dsType": "influxdb",
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select last(\"in_recovery_int\") FROM \"wal\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(365d) fill(none)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "thresholds": "1,2",
+      "timeFrom": "5m",
+      "title": "Instance state",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "REPLICA",
+          "value": "1"
+        },
+        {
+          "op": "=",
+          "text": "MASTER",
+          "value": "0"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(50, 172, 45, 0.97)",
+        "#FF780A",
+        "#F2495C"
+      ],
+      "decimals": null,
+      "description": "Last 5min data",
+      "editable": true,
+      "error": false,
+      "format": "dtdurations",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 3,
+        "y": 0
+      },
+      "height": "150",
+      "hideTimeOverride": true,
+      "id": 16,
+      "interval": "",
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": true,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "alias": "",
+          "dsType": "influxdb",
+          "groupBy": [],
+          "measurement": "db_stats",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "",
+          "rawQuery": false,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "postmaster_uptime_s"
+                ],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": "5m",
+      "title": "Instance uptime",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(245, 54, 54, 0.9)",
+        "rgba(237, 129, 40, 0.89)",
+        "rgba(50, 172, 45, 0.97)"
+      ],
+      "description": "Current Transaction Per Second + last 6h history",
+      "editable": true,
+      "error": false,
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 6,
+        "y": 0
+      },
+      "hideTimeOverride": true,
       "id": 1,
       "interval": "5m",
       "links": [],
@@ -62,6 +291,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -144,8 +374,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
-      "description": "Queries Per Second based on pg_stat_statements.calls",
+      "description": "Current Queries Per Second (>5min avg) + last 6h history",
       "editable": true,
       "error": false,
       "format": "none",
@@ -158,12 +387,12 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 4,
-        "x": 4,
+        "w": 3,
+        "x": 9,
         "y": 0
       },
-      "height": "150",
-      "id": 2,
+      "hideTimeOverride": true,
+      "id": 15,
       "interval": "5m",
       "links": [],
       "mappingType": 1,
@@ -180,6 +409,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -218,7 +448,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(last(\"calls\"), 1s) FROM \"stat_statements_calls\" WHERE $timeFilter AND \"dbname\" =~ /^$dbname$/ GROUP BY time($__interval) fill(none)",
+          "query": "SELECT non_negative_derivative(last(\"calls\"), 1s) FROM \"stat_statements_calls\" WHERE $timeFilter AND \"dbname\" =~ /^$dbname$/ GROUP BY time(10m) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -262,8 +492,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
-      "description": "Requries pg_stat_statements extension and the \"get_stat_statements\" helper function  from  the \"sql/metric_fetching_helpers\" folder on the monitored DB",
+      "description": "Current (5min+ avg) query runtime + last 6h history. Requires pg_stat_statements extension and the \"get_stat_statements\" helper function  from  the \"sql/metric_fetching_helpers\" folder on the monitored DB",
       "editable": true,
       "error": false,
       "format": "none",
@@ -276,11 +505,12 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 4,
-        "x": 8,
+        "w": 3,
+        "x": 12,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 3,
       "interval": "5m",
       "links": [],
@@ -298,6 +528,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ms",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -381,8 +612,8 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
       "decimals": 1,
+      "description": "For last hour + 6h history",
       "editable": true,
       "error": false,
       "format": "bytes",
@@ -395,11 +626,12 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 4,
-        "x": 12,
+        "w": 3,
+        "x": 15,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 4,
       "interval": null,
       "links": [],
@@ -417,6 +649,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -500,7 +733,6 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "Based on pgstattuple_approx, for tables >800KB",
       "editable": true,
@@ -515,11 +747,12 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 4,
-        "x": 16,
+        "w": 3,
+        "x": 18,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 5,
       "interval": null,
       "links": [],
@@ -537,6 +770,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -627,7 +861,6 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "datasource": null,
       "decimals": null,
       "description": "Last CPU load_5 value. NB! Requires get_load_average() function making use of PL/Pythonu",
       "editable": true,
@@ -642,11 +875,12 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 4,
-        "x": 20,
+        "w": 3,
+        "x": 21,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 6,
       "interval": "5m",
       "links": [],
@@ -664,6 +898,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -750,7 +985,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "description": "",
       "editable": true,
       "error": false,
@@ -778,6 +1012,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -931,6 +1166,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Tuple  ins. / upd. / del. statistics (1h rates)",
       "tooltip": {
@@ -977,7 +1213,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -1005,6 +1240,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1098,6 +1334,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Shared Buffers hit ratio + Rollback ratio",
       "tooltip": {
@@ -1146,7 +1383,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "editable": true,
       "error": false,
       "fill": 1,
@@ -1172,6 +1408,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1308,6 +1545,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Total sessions + Deadlocks + Temp bytes",
       "tooltip": {
@@ -1355,7 +1593,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -1384,6 +1621,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1501,6 +1739,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "WAL rate + DB size",
       "tooltip": {
@@ -1547,7 +1786,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "decimals": 1,
       "description": "Based on get_stat_activity() helper",
       "fill": 1,
@@ -1572,6 +1810,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1762,6 +2001,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Sessions by state",
       "tooltip": {
@@ -1807,7 +2047,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "decimals": 2,
       "description": "Requires according \"metric fetching helpers\" on the monitored server",
       "fill": 1,
@@ -1832,6 +2071,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1929,6 +2169,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "CPU load + avg. query runtime",
       "tooltip": {
@@ -1982,12 +2223,13 @@
       "id": 14,
       "links": [],
       "mode": "html",
+      "options": {},
       "title": "",
       "transparent": true,
       "type": "text"
     }
   ],
-  "schemaVersion": 16,
+  "schemaVersion": 18,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -1999,6 +2241,7 @@
           "value": null
         },
         "datasource": null,
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": null,
@@ -2008,6 +2251,7 @@
         "query": "SHOW TAG VALUES WITH KEY = \"dbname\" ",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": null,
         "tags": [],
