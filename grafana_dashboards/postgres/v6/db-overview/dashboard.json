@@ -27,7 +27,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "description": "Current Transaction Per Second",
+      "description": "Last 5min data",
       "editable": true,
       "error": false,
       "format": "none",
@@ -40,10 +40,276 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 0
       },
+      "hideTimeOverride": true,
+      "id": 16,
+      "interval": "10m",
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": true,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "alias": "TPS",
+          "dsType": "influxdb",
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select\n  time,\n  ((c - c_lag) + (r - r_lag)) / extract(epoch from time - time_lag) as tps\nfrom (\n        select \n          (data->>'xact_commit')::int8 as c, lag((data->>'xact_commit')::int8) over w as c_lag,\n          (data->>'xact_rollback')::int8 as r, lag((data->>'xact_rollback')::int8) over w as r_lag,\n          time, lag(time) over w as time_lag\n        from db_stats \n        where dbname = '$dbname' and time > now() - '30m'::interval\n        window w as (order by time)        \n) x \nwhere c >= c_lag and r >= r_lag\norder by time\n;",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time,\n  (data->'in_recovery_int')::int\nFROM\n  wal\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": "5m",
+      "title": "Instance state",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "MASTER",
+          "value": "0"
+        },
+        {
+          "op": "=",
+          "text": "REPLICA",
+          "value": "1"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(245, 54, 54, 0.9)",
+        "rgba(237, 129, 40, 0.89)",
+        "rgba(50, 172, 45, 0.97)"
+      ],
+      "description": "Last 5min data",
+      "editable": true,
+      "error": false,
+      "format": "dtdurations",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 3,
+        "x": 3,
+        "y": 0
+      },
+      "hideTimeOverride": true,
+      "id": 15,
+      "interval": "",
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": true,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "alias": "TPS",
+          "dsType": "influxdb",
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select\n  time,\n  ((c - c_lag) + (r - r_lag)) / extract(epoch from time - time_lag) as tps\nfrom (\n        select \n          (data->>'xact_commit')::int8 as c, lag((data->>'xact_commit')::int8) over w as c_lag,\n          (data->>'xact_rollback')::int8 as r, lag((data->>'xact_rollback')::int8) over w as r_lag,\n          time, lag(time) over w as time_lag\n        from db_stats \n        where dbname = '$dbname' and time > now() - '30m'::interval\n        window w as (order by time)        \n) x \nwhere c >= c_lag and r >= r_lag\norder by time\n;",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time,\n  (data->'postmaster_uptime_s')::int\nFROM\n  wal\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": "5m",
+      "title": "Instance uptime",
+      "type": "singlestat",
+      "valueFontSize": "50%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "rgba(245, 54, 54, 0.9)",
+        "rgba(237, 129, 40, 0.89)",
+        "rgba(50, 172, 45, 0.97)"
+      ],
+      "description": "Current Transaction Per Second (10min avg.) + 6h history",
+      "editable": true,
+      "error": false,
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 3,
+        "x": 6,
+        "y": 0
+      },
+      "hideTimeOverride": true,
       "id": 1,
       "interval": "10m",
       "links": [],
@@ -61,6 +327,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -155,7 +422,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "description": "Queries Per Second based on pg_stat_statements.calls",
+      "description": "Queries Per Second based on pg_stat_statements.calls. 10min avg. + 6h history",
       "editable": true,
       "error": false,
       "format": "none",
@@ -168,11 +435,12 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 4,
+        "w": 3,
+        "x": 9,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 2,
       "interval": "10m",
       "links": [],
@@ -190,6 +458,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -284,7 +553,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "description": "Requries pg_stat_statements extension and the \"get_stat_statements\" helper function  from  the \"sql/metric_fetching_helpers\" folder on the monitored DB. Not including pgwatch2 generated metrics fetching queries.",
+      "description": "10min avg. + 6h history. Requires pg_stat_statements extension and the \"get_stat_statements\" helper function  from  the \"sql/metric_fetching_helpers\" folder on the monitored DB. Not including pgwatch2 generated metrics fetching queries.",
       "editable": true,
       "error": false,
       "format": "none",
@@ -297,11 +566,12 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 8,
+        "w": 3,
+        "x": 12,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 3,
       "interval": "10m",
       "links": [],
@@ -319,6 +589,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ms",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -427,11 +698,12 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 12,
+        "w": 3,
+        "x": 15,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 4,
       "interval": null,
       "links": [],
@@ -449,6 +721,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -558,11 +831,12 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 16,
+        "w": 3,
+        "x": 18,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 5,
       "interval": null,
       "links": [],
@@ -580,6 +854,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -683,7 +958,7 @@
         "rgba(50, 172, 45, 0.97)"
       ],
       "decimals": 1,
-      "description": "Last CPU load_5 value. NB! Requires get_load_average() function making use of PL/Pythonu",
+      "description": "Last CPU load_5 value + 6h history. NB! Requires get_load_average() function making use of PL/Pythonu",
       "editable": true,
       "error": false,
       "format": "percent",
@@ -696,11 +971,12 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 4,
-        "x": 20,
+        "w": 3,
+        "x": 21,
         "y": 0
       },
       "height": "150",
+      "hideTimeOverride": true,
       "id": 6,
       "interval": "10m",
       "links": [],
@@ -718,6 +994,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -844,6 +1121,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1006,6 +1284,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1147,6 +1426,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1319,6 +1599,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1503,6 +1784,7 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1643,6 +1925,7 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null",
+      "options": {},
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1824,6 +2107,7 @@
       "id": 14,
       "links": [],
       "mode": "html",
+      "options": {},
       "title": "",
       "transparent": true,
       "type": "text"
