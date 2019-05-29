@@ -28,7 +28,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "",
       "format": "none",
@@ -63,6 +62,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -149,7 +149,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#299c46"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "< 5m Error, < 30m Warn thresholds by default",
       "format": "dtdurations",
@@ -184,6 +183,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -271,7 +271,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "Based on pg_stat_archiver. N/A when archiving is not enabled.",
       "format": "none",
@@ -306,6 +305,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -403,7 +403,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "Assumes get_load_average helper being installed. 25 Warn / 50  Error  thresholds by default",
       "format": "none",
@@ -448,6 +447,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -529,7 +529,6 @@
         "#299c46",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "< 1 Warn / > 300 Error thresholds by default",
       "format": "short",
@@ -574,6 +573,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -661,7 +661,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "1 Warn / 5 Err thresholds by default",
       "format": "short",
@@ -704,6 +703,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -791,7 +791,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "format": "short",
       "gauge": {
@@ -835,6 +834,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -922,7 +922,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "format": "dtdurations",
       "gauge": {
@@ -956,6 +955,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -1041,7 +1041,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "0.5% Warn / 1% Error thresholds by default",
       "format": "percent",
@@ -1086,6 +1085,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -1167,7 +1167,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#299c46"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "Transactions per Second.\n<0.1 % Error / < 1.0 Warn thresholds by default",
       "format": "short",
@@ -1212,6 +1211,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -1293,7 +1293,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#299c46"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "Queries per Second.\n< 0.1 Error / < 1 Warning thresholds by default",
       "format": "short",
@@ -1338,6 +1337,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -1419,7 +1419,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "> 0.5s Warning / > 5s  Error thresholds by default",
       "format": "ms",
@@ -1464,6 +1463,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -1545,7 +1545,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "",
       "format": "bytes",
@@ -1590,6 +1589,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -1671,7 +1671,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "",
       "format": "bytes",
@@ -1716,6 +1715,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -1797,7 +1797,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#299c46"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "Assumes get_psutil_disk wrapper being installed. 10/50GB Warn/Error thresholds by default",
       "format": "bytes",
@@ -1841,6 +1840,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -1928,7 +1928,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "For tables and B-tree indexes",
       "format": "bytes",
@@ -1963,6 +1962,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -2044,7 +2044,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": ">1 Warn thresholds by default",
       "format": "short",
@@ -2088,6 +2087,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -2175,7 +2175,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": ">1 Warn thresholds by default",
       "format": "short",
@@ -2219,6 +2218,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -2306,7 +2306,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "",
       "format": "none",
@@ -2350,6 +2349,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -2437,7 +2437,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#299c46"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "",
       "format": "percent",
@@ -2481,6 +2480,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -2568,7 +2568,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "",
       "format": "short",
@@ -2610,6 +2609,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -2685,7 +2685,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "NB! 'N/A' displayed both when no duplicate indexes or no metrics data for index_stats",
       "format": "short",
@@ -2729,6 +2728,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -2810,8 +2810,8 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
+      "description": "Long running AUTOVACUUM processes can hint at workload or configuration  problems",
       "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
@@ -2844,6 +2844,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -2881,7 +2882,7 @@
           "measurement": "table_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"last\") FROM (SELECT last(\"seconds_since_last_vacuum\") FROM \"table_stats\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter AND  table_size_b >  100000000 GROUP BY time(1h) fill(none))",
+          "query": "SELECT max(\"longest_autovacuum_seconds\") FROM \"backends\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -2908,9 +2909,9 @@
           ]
         }
       ],
-      "thresholds": "259200,604800",
-      "timeFrom": "30m",
-      "title": "Avg. time from last autovacuum (tbls > 100MB)",
+      "thresholds": "60,300",
+      "timeFrom": null,
+      "title": "Longest AUTOVACUUM duration",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -2931,7 +2932,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "",
       "format": "short",
@@ -2975,6 +2975,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -3068,7 +3069,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 1,
       "format": "bytes",
       "gauge": {
@@ -3112,6 +3112,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -3205,7 +3206,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 1,
       "description": "10/100 Warn / Error by default",
       "format": "bytes",
@@ -3250,6 +3250,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -3343,7 +3344,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "In TX. Holds back VACUUM",
       "format": "short",
@@ -3388,6 +3388,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -3546,6 +3547,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -3633,7 +3635,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "On non-temporary  tables",
       "format": "short",
@@ -3677,6 +3678,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -3770,7 +3772,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "On non-temporary  tables",
       "format": "short",
@@ -3814,6 +3815,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -3907,7 +3909,6 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "description": "On non-temporary  tables",
       "format": "short",
@@ -3951,6 +3952,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -4044,7 +4046,6 @@
         "#bf1b00",
         "#d44a3a"
       ],
-      "datasource": null,
       "decimals": 0,
       "format": "none",
       "gauge": {
@@ -4088,6 +4089,7 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
+      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -4171,12 +4173,13 @@
       "id": 12,
       "links": [],
       "mode": "html",
+      "options": {},
       "title": "",
       "transparent": true,
       "type": "text"
     }
   ],
-  "schemaVersion": 16,
+  "schemaVersion": 18,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -4184,10 +4187,11 @@
       {
         "allValue": null,
         "current": {
-          "text": "test",
-          "value": "test"
+          "text": null,
+          "value": null
         },
         "datasource": null,
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": null,
