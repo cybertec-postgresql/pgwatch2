@@ -68,6 +68,7 @@ nfpm:
   # Your app's homepage.
   # Default is empty.
   homepage: https://github.com/cybertec-postgresql/pgwatch2
+  maintainer: Kaarel Moppel <open.an.issue@github.com>
 
   # Your app's description.
   # Default is empty.
@@ -112,6 +113,7 @@ nfpm:
     "./pgwatch2/metrics/**/*": "/etc/pgwatch2/metrics"
     "./pgwatch2/config/**/*": "/etc/pgwatch2/config"
     "./pgwatch2/sql/**/*": "/etc/pgwatch2/sql"
+    "./pgwatch2/startup-scripts/pgwatch2.service": "/etc/pgwatch2/startup-scripts/pgwatch2.service"
     "./README.md": "/etc/pgwatch2/README.md"
 
   # Config files to add to your package. They are about the same as
