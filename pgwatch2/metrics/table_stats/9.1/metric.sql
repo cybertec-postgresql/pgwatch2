@@ -6,7 +6,7 @@ select
   pg_table_size(relid) as table_size_b,
   greatest(ceil(log((pg_table_size(relid)+1) / 10^6)), 0)::text as tag_table_size_cardinality_mb, -- i.e. 0=<1MB, 1=<10MB, 2=<100MB,..
   pg_total_relation_size(relid) as total_relation_size_b,
-  case when reltoastrelid != 0 then pg_total_relation_size(reltoastrelid) else 0::int8 end as toast_size_b,
+  pg_total_relation_size(reltoastrelid) as toast_size_b,
   (extract(epoch from now() - greatest(last_vacuum, last_autovacuum)))::int8 as seconds_since_last_vacuum,
   (extract(epoch from now() - greatest(last_analyze, last_autoanalyze)))::int8 as seconds_since_last_analyze,
   seq_scan,
@@ -17,6 +17,10 @@ select
   n_tup_upd,
   n_tup_del,
   n_tup_hot_upd,
+  vacuum_count,
+  autovacuum_count,
+  analyze_count,
+  autoanalyze_count,
   age(relfrozenxid) as tx_freeze_age
 from
   pg_stat_user_tables ut
@@ -25,4 +29,4 @@ from
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
   not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
-  and not relistemp; -- and temp tables
+  and c.relpersistence != 't'; -- and temp tables
