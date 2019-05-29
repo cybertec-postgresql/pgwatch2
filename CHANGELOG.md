@@ -22,9 +22,11 @@ or a specific version
 * Gatherer improvement - don't start per metric gatherers until connect check OK
 * Gatherer improvement -revert persistance maxBatchSize from 5k back to 1k points
 * Gatherer improvement - allow partial InfluxDB writes
+* Gatherer improvement - support SCRAM-SHA-256 password authentication via Go driver update
 * Dashboards - support for Grafana 6.0 plus minor updates for most dashboards
 * Metrics improvement - skip index_stats gathering for locked indexes
 * Metrics - new "settings" metric based on pg_settings + according panel to "Change events"
+* Metrics - capture "server restarted" events when "db_stats" metric enabled (visualized on "Change events" dash)
 * Metrics - increase intervals for index/table stats
 * Metrics - add a sample bash script to push arbitrary metrics to the pgwatch2 metrics DB externally
 * Docker components update -  Grafana 6.1.4, Go 1.12.4, Influx 1.7.6

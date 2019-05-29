@@ -2222,6 +2222,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 	interval := config[metricName]
 	ticker := time.NewTicker(time.Millisecond * time.Duration(interval*1000))
 	host_state := make(map[string]map[string]string)
+	var last_uptime_s int64 = -1		// used for "server restarted" event detection
 	var last_error_notification_time time.Time
 	failed_fetches := 0
 
@@ -2260,6 +2261,26 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 				last_error_notification_time = time.Now()
 			}
 		} else if metricStoreMessages != nil && len(metricStoreMessages[0].Data) > 0 {
+
+			// pick up "server restarted" events here to avoid doing extra selects from CheckForPGObjectChangesAndStore code
+			if metricName == "db_stats" {
+				postmaster_uptime_s, ok := (metricStoreMessages[0].Data)[0]["postmaster_uptime_s"]
+				if ok {
+					if last_uptime_s != -1 {
+						if postmaster_uptime_s.(int64) < last_uptime_s {	// restart (or possibly also failover when host is routed) happened
+							message := "Server restart (or failover) of \"" + dbUniqueName + "\""
+							log.Warning(message)
+							detected_changes_summary := make([](map[string]interface{}), 0)
+							entry := map[string]interface{}{"details": message, "epoch_ns": (metricStoreMessages[0].Data)[0]["epoch_ns"]}
+							detected_changes_summary = append(detected_changes_summary, entry)
+							metricStoreMessages = append(metricStoreMessages,
+								MetricStoreMessage{DBUniqueName: dbUniqueName, DBType: dbType,
+									MetricName: "object_changes", Data: detected_changes_summary, CustomTags: metricStoreMessages[0].CustomTags})
+						}
+					}
+					last_uptime_s = postmaster_uptime_s.(int64)
+				}
+			}
 
 			if opts.TestdataDays > 0 {
 				orig_msms := deepCopyMetricStoreMessages(metricStoreMessages)
