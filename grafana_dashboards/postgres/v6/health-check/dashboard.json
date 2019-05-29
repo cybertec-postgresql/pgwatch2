@@ -291,12 +291,12 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
+        "#C4162A",
+        "#FA6400",
+        "#299c46"
       ],
       "decimals": 0,
-      "description": "Based on pg_stat_archiver. N/A when archiving is not enabled.",
+      "description": "SHOW server_version_num;",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -312,7 +312,7 @@
         "y": 0
       },
       "hideTimeOverride": true,
-      "id": 19,
+      "id": 44,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -355,7 +355,7 @@
           "groupBy": [
             {
               "params": [
-                "365d"
+                "1m"
               ],
               "type": "time"
             },
@@ -366,20 +366,20 @@
               "type": "fill"
             }
           ],
-          "measurement": "archiver",
+          "measurement": "replication_slots",
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "",
+          "query": "select sum(last) from (select last(\"non_active_int\") FROM \"replication_slots\" WHERE \"dbname\" =~ /^$dbname$/  AND $timeFilter  group by \"slot_name\")",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'is_failing_int')::int\nFROM\n  archiver\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
+          "rawSql": "select time, (data->'server_version_num')::int8 as value from settings where dbname = '$dbname' and $__timeFilter(time) order by time desc limit 1;",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "is_failing_int"
+                  "active"
                 ],
                 "type": "field"
               },
@@ -389,13 +389,7 @@
               }
             ]
           ],
-          "tags": [
-            {
-              "key": "dbname",
-              "operator": "=~",
-              "value": "/^$dbname$/"
-            }
-          ],
+          "tags": [],
           "timeColumn": "time",
           "where": [
             {
@@ -406,9 +400,9 @@
           ]
         }
       ],
-      "thresholds": "1,2",
-      "timeFrom": "$online_interval",
-      "title": "WAL archiving status",
+      "thresholds": "90400,90600",
+      "timeFrom": "2h",
+      "title": "PG version num.",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -416,16 +410,6 @@
           "op": "=",
           "text": "N/A",
           "value": "null"
-        },
-        {
-          "op": "=",
-          "text": "OK",
-          "value": "0"
-        },
-        {
-          "op": "=",
-          "text": "FAILING",
-          "value": "1"
         }
       ],
       "valueName": "current"
@@ -435,13 +419,13 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#d44a3a",
         "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
+        "#299c46"
       ],
       "decimals": 1,
-      "description": "Assumes get_wal_size helper being installed. 1/10 GB Warn / 50  Error  thresholds by default",
-      "format": "bytes",
+      "description": "",
+      "format": "percent",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -456,17 +440,16 @@
         "y": 0
       },
       "hideTimeOverride": true,
-      "id": 14,
+      "id": 21,
       "interval": null,
       "links": [
         {
           "dashboard": "DB overview",
           "includeVars": true,
-          "params": "panelId=10&fullscreen",
           "targetBlank": true,
-          "title": "DB overview :: WAL panel",
+          "title": "Open 'DB overview :: share'd buffers ' panel",
           "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/d/2c8964a22/db-overview"
         }
       ],
       "mappingType": 1,
@@ -509,7 +492,7 @@
           "groupBy": [
             {
               "params": [
-                "$__interval"
+                "1h"
               ],
               "type": "time"
             },
@@ -520,30 +503,36 @@
               "type": "fill"
             }
           ],
-          "measurement": "cpu_load",
+          "measurement": "db_stats",
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "",
+          "query": "SELECT ( non_negative_derivative(mean(\"blks_hit\")) / (non_negative_derivative(mean(\"blks_hit\")) + non_negative_derivative(mean(\"blks_read\")))) * 100 FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'wal_size_b')::float8\nFROM\n  wal_size\nWHERE\n  time > now() - '$online_interval'::interval\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
+          "rawSql": "select\n  time,\n  ((hit-hit_lag)::numeric / ((hit-hit_lag) + (read-read_lag)))*100 as \"Shared buffers hit ratio\"\nfrom (\n        select \n          (data->>'blks_hit')::int8 as hit, lag((data->>'blks_hit')::int8) over w as hit_lag,\n          (data->>'blks_read')::int8 as read, lag((data->>'blks_read')::int8) over w as read_lag,\n          (data->>'xact_rollback')::int8 as roll, lag((data->>'xact_rollback')::int8) over w as roll_lag,\n          (data->>'xact_commit')::int8 as comm, lag((data->>'xact_commit')::int8) over w as comm_lag,\n          time\n        from db_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        window w as (order by time)\n) x\nwhere hit > hit_lag or read > read_lag\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "load_5min"
+                  "blks_hit"
                 ],
                 "type": "field"
               },
               {
                 "params": [],
-                "type": "last"
+                "type": "count"
               }
             ]
           ],
-          "tags": [],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
           "timeColumn": "time",
           "where": [
             {
@@ -554,15 +543,15 @@
           ]
         }
       ],
-      "thresholds": "1000000000,10000000000",
+      "thresholds": "50,80",
       "timeFrom": null,
-      "title": "WAL folder size",
+      "title": "Shared Buffers hit pct.",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
         {
           "op": "=",
-          "text": "N/A",
+          "text": "0",
           "value": "null"
         }
       ],
@@ -700,7 +689,151 @@
       ],
       "thresholds": "1,300",
       "timeFrom": "$online_interval",
-      "title": "Backends",
+      "title": "Active connections",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "#FA6400",
+        "#d44a3a"
+      ],
+      "decimals": 0,
+      "description": "500/1000 Warn / Error thresholds by default",
+      "format": "short",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 6,
+        "x": 6,
+        "y": 2
+      },
+      "hideTimeOverride": true,
+      "id": 45,
+      "interval": null,
+      "links": [
+        {
+          "dashboard": "DB overview",
+          "includeVars": true,
+          "params": "panelId=11&fullscreen",
+          "targetBlank": true,
+          "title": "'DB overview :: backends' panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/db-overview"
+        }
+      ],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "1d"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "db_stats",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time,\n  (data->'max_connections')::int\nFROM\n  settings\nWHERE\n  time > now() - '6h'::interval\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "numbackends"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": "500,1000",
+      "timeFrom": null,
+      "title": "Max. connections",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -734,7 +867,7 @@
       "gridPos": {
         "h": 2,
         "w": 6,
-        "x": 6,
+        "x": 12,
         "y": 2
       },
       "hideTimeOverride": true,
@@ -842,7 +975,7 @@
       ],
       "thresholds": "1,5",
       "timeFrom": "$online_interval",
-      "title": "Blocked backends (avg.)",
+      "title": "Blocked sessions (avg.)",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -875,7 +1008,7 @@
       "gridPos": {
         "h": 2,
         "w": 6,
-        "x": 12,
+        "x": 18,
         "y": 2
       },
       "hideTimeOverride": true,
@@ -986,138 +1119,6 @@
       "thresholds": "1,5",
       "timeFrom": "$online_interval",
       "title": "\"Idle in TX\" count",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": true,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "decimals": 0,
-      "format": "dtdurations",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 6,
-        "x": 18,
-        "y": 2
-      },
-      "hideTimeOverride": true,
-      "id": 32,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "format": "time_series",
-          "group": [],
-          "groupBy": [
-            {
-              "params": [
-                "1d"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "none"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "backends",
-          "metricColumn": "none",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'longest_query_seconds')::int\nFROM\n  backends\nWHERE\n  time > now() - '$online_interval'::interval\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "longest_query_seconds"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "dbname",
-              "operator": "=~",
-              "value": "/^$dbname$/"
-            }
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "thresholds": "30,300",
-      "timeFrom": "$online_interval",
-      "title": "Longest query runtime",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -2102,16 +2103,15 @@
     },
     {
       "cacheTimeout": null,
-      "colorBackground": false,
+      "colorBackground": true,
       "colorValue": false,
       "colors": [
         "#299c46",
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "decimals": 1,
-      "description": "For tables and B-tree indexes",
-      "format": "bytes",
+      "decimals": 0,
+      "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -2126,7 +2126,7 @@
         "y": 6
       },
       "hideTimeOverride": true,
-      "id": 27,
+      "id": 32,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -2180,20 +2180,19 @@
               "type": "fill"
             }
           ],
-          "measurement": "table_stats",
+          "measurement": "backends",
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select sum(bloat) from (SELECT last(\"approx_free_space_b\") as bloat FROM \"table_bloat_approx_summary\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1d) fill(none))",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'approx_free_space_b')::int8\nFROM\n  table_bloat_approx_summary\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY 1 DESC\nLIMIT 1\n",
+          "rawSql": "SELECT\n  time,\n  (data->'longest_query_seconds')::int\nFROM\n  backends\nWHERE\n  time > now() - '$online_interval'::interval\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "total_relation_size_b"
+                  "longest_query_seconds"
                 ],
                 "type": "field"
               },
@@ -2203,7 +2202,13 @@
               }
             ]
           ],
-          "tags": [],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
           "timeColumn": "time",
           "where": [
             {
@@ -2214,9 +2219,9 @@
           ]
         }
       ],
-      "thresholds": "",
-      "timeFrom": "1d",
-      "title": "Approx. table bloat",
+      "thresholds": "30,300",
+      "timeFrom": "$online_interval",
+      "title": "Longest query runtime",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -2524,7 +2529,7 @@
         "#d44a3a"
       ],
       "decimals": 0,
-      "description": "",
+      "description": "Based on pg_stat_archiver. N/A when archiving is not enabled.",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -2540,19 +2545,9 @@
         "y": 8
       },
       "hideTimeOverride": true,
-      "id": 26,
+      "id": 19,
       "interval": null,
-      "links": [
-        {
-          "dashboard": "Checkpointer / Bgwriter / Block IO Stats",
-          "includeVars": true,
-          "params": "panelId=2&fullscreen",
-          "targetBlank": true,
-          "title": "Checkpointer / Bgwriter / Block IO Stats",
-          "type": "dashboard",
-          "url": "/d/db8d96d1e/checkpointer-bgwriter-stats"
-        }
-      ],
+      "links": [],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -2604,26 +2599,26 @@
               "type": "fill"
             }
           ],
-          "measurement": "bgwriter",
+          "measurement": "archiver",
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'checkpoints_req')::int\nFROM\n  bgwriter\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time\n",
+          "rawSql": "SELECT\n  time,\n  (data->'is_failing_int')::int\nFROM\n  archiver\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "checkpoints_req"
+                  "is_failing_int"
                 ],
                 "type": "field"
               },
               {
                 "params": [],
-                "type": "spread"
+                "type": "last"
               }
             ]
           ],
@@ -2645,8 +2640,8 @@
         }
       ],
       "thresholds": "1,2",
-      "timeFrom": null,
-      "title": "Checkpoints requested",
+      "timeFrom": "$online_interval",
+      "title": "WAL archiving status",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -2654,22 +2649,32 @@
           "op": "=",
           "text": "N/A",
           "value": "null"
+        },
+        {
+          "op": "=",
+          "text": "OK",
+          "value": "0"
+        },
+        {
+          "op": "=",
+          "text": "FAILING",
+          "value": "1"
         }
       ],
-      "valueName": "diff"
+      "valueName": "current"
     },
     {
       "cacheTimeout": null,
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#d44a3a",
+        "#299c46",
         "rgba(237, 129, 40, 0.89)",
-        "#299c46"
+        "#d44a3a"
       ],
       "decimals": 1,
-      "description": "",
-      "format": "percent",
+      "description": "Assumes get_wal_size helper being installed. 1/10 GB Warn / 50  Error  thresholds by default",
+      "format": "bytes",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -2684,16 +2689,17 @@
         "y": 8
       },
       "hideTimeOverride": true,
-      "id": 21,
+      "id": 14,
       "interval": null,
       "links": [
         {
           "dashboard": "DB overview",
           "includeVars": true,
+          "params": "panelId=10&fullscreen",
           "targetBlank": true,
-          "title": "Open 'DB overview :: share'd buffers ' panel",
+          "title": "DB overview :: WAL panel",
           "type": "dashboard",
-          "url": "/d/2c8964a22/db-overview"
+          "url": "/dashboard/db/db-overview"
         }
       ],
       "mappingType": 1,
@@ -2736,7 +2742,7 @@
           "groupBy": [
             {
               "params": [
-                "1h"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -2747,36 +2753,30 @@
               "type": "fill"
             }
           ],
-          "measurement": "db_stats",
+          "measurement": "cpu_load",
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT ( non_negative_derivative(mean(\"blks_hit\")) / (non_negative_derivative(mean(\"blks_hit\")) + non_negative_derivative(mean(\"blks_read\")))) * 100 FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($__interval) fill(none)",
+          "query": "",
           "rawQuery": true,
-          "rawSql": "select\n  time,\n  ((hit-hit_lag)::numeric / ((hit-hit_lag) + (read-read_lag)))*100 as \"Shared buffers hit ratio\"\nfrom (\n        select \n          (data->>'blks_hit')::int8 as hit, lag((data->>'blks_hit')::int8) over w as hit_lag,\n          (data->>'blks_read')::int8 as read, lag((data->>'blks_read')::int8) over w as read_lag,\n          (data->>'xact_rollback')::int8 as roll, lag((data->>'xact_rollback')::int8) over w as roll_lag,\n          (data->>'xact_commit')::int8 as comm, lag((data->>'xact_commit')::int8) over w as comm_lag,\n          time\n        from db_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        window w as (order by time)\n) x\nwhere hit > hit_lag or read > read_lag\norder by 1",
+          "rawSql": "SELECT\n  time,\n  (data->'wal_size_b')::float8\nFROM\n  wal_size\nWHERE\n  time > now() - '$online_interval'::interval\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "blks_hit"
+                  "load_5min"
                 ],
                 "type": "field"
               },
               {
                 "params": [],
-                "type": "count"
+                "type": "last"
               }
             ]
           ],
-          "tags": [
-            {
-              "key": "dbname",
-              "operator": "=~",
-              "value": "/^$dbname$/"
-            }
-          ],
+          "tags": [],
           "timeColumn": "time",
           "where": [
             {
@@ -2787,15 +2787,15 @@
           ]
         }
       ],
-      "thresholds": "50,80",
+      "thresholds": "1000000000,10000000000",
       "timeFrom": null,
-      "title": "Shared Buffers hit pct.",
+      "title": "WAL folder size",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
         {
           "op": "=",
-          "text": "0",
+          "text": "N/A",
           "value": "null"
         }
       ],
@@ -3077,8 +3077,8 @@
         "#d44a3a"
       ],
       "decimals": 0,
-      "description": "Long running AUTOVACUUM processes can hint at workload or configuration  problems",
-      "format": "dtdurations",
+      "description": "",
+      "format": "none",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -3093,7 +3093,151 @@
         "y": 10
       },
       "hideTimeOverride": true,
-      "id": 35,
+      "id": 26,
+      "interval": null,
+      "links": [
+        {
+          "dashboard": "Checkpointer / Bgwriter / Block IO Stats",
+          "includeVars": true,
+          "params": "panelId=2&fullscreen",
+          "targetBlank": true,
+          "title": "Checkpointer / Bgwriter / Block IO Stats",
+          "type": "dashboard",
+          "url": "/d/db8d96d1e/checkpointer-bgwriter-stats"
+        }
+      ],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "365d"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "bgwriter",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time,\n  (data->'checkpoints_req')::int\nFROM\n  bgwriter\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time\n",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "checkpoints_req"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "spread"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": "1,2",
+      "timeFrom": null,
+      "title": "Checkpoints requested",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "diff"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "decimals": 1,
+      "description": "For tables and B-tree indexes",
+      "format": "bytes",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 6,
+        "x": 18,
+        "y": 10
+      },
+      "hideTimeOverride": true,
+      "id": 27,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -3136,7 +3280,7 @@
           "groupBy": [
             {
               "params": [
-                "15m"
+                "1d"
               ],
               "type": "time"
             },
@@ -3151,16 +3295,16 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"last\") FROM (SELECT last(\"seconds_since_last_vacuum\") FROM \"table_stats\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter AND  table_size_b >  100000000 GROUP BY time(1h) fill(none))",
+          "query": "select sum(bloat) from (SELECT last(\"approx_free_space_b\") as bloat FROM \"table_bloat_approx_summary\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1d) fill(none))",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 as time,\n  max((data->'longest_autovacuum_seconds')::int8) as longest_autovacuum_seconds\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'",
+          "rawSql": "SELECT\n  time,\n  (data->'approx_free_space_b')::int8\nFROM\n  table_bloat_approx_summary\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY 1 DESC\nLIMIT 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "seconds_since_last_vacuum"
+                  "total_relation_size_b"
                 ],
                 "type": "field"
               },
@@ -3170,13 +3314,7 @@
               }
             ]
           ],
-          "tags": [
-            {
-              "key": "dbname",
-              "operator": "=~",
-              "value": "/^$dbname$/"
-            }
-          ],
+          "tags": [],
           "timeColumn": "time",
           "where": [
             {
@@ -3187,9 +3325,9 @@
           ]
         }
       ],
-      "thresholds": "60,300",
-      "timeFrom": null,
-      "title": "Longest AUTOVACUUM duration",
+      "thresholds": "",
+      "timeFrom": "1d",
+      "title": "Approx. table bloat",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -3200,155 +3338,6 @@
         }
       ],
       "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": true,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "decimals": 1,
-      "description": "",
-      "format": "short",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 6,
-        "x": 18,
-        "y": 10
-      },
-      "hideTimeOverride": true,
-      "id": 39,
-      "interval": null,
-      "links": [
-        {
-          "dashboard": "Tables Top",
-          "includeVars": true,
-          "params": "panelId=4&fullscreen",
-          "targetBlank": true,
-          "title": "'Tables Top :: Most scans' panel",
-          "type": "dashboard"
-        }
-      ],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "format": "time_series",
-          "group": [],
-          "groupBy": [
-            {
-              "params": [
-                "5m"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "none"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "table_stats",
-          "metricColumn": "none",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "select sum(\"last\") from (select last(\"scans\") from (SELECT non_negative_derivative(last(\"seq_scan\"), 1m) as \"scans\" FROM \"table_stats\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter AND table_size_b > 100000000 GROUP BY time($__interval), table_full_name fill(none)) group by table_full_name)",
-          "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  sum((scan-scan_lag) * 60 / extract(epoch from (time-time_lag)))\nFROM (\n  SELECT\n    time, lag(time) over w as time_lag,\n    (data->'seq_scan')::int8 as scan, lag((data->'seq_scan')::int8) over w as scan_lag\n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time)\n    AND dbname = '$dbname'\n    AND (data->'table_size_b')::int8 > 100000000\n  WINDOW w AS (partition by tag_data->>'table_full_name' order by time)\n) x\nWHERE scan > scan_lag and time > time_lag\nGROUP BY 1\nORDER BY 1",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "seq_scan"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              },
-              {
-                "params": [
-                  "1m"
-                ],
-                "type": "non_negative_derivative"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "dbname",
-              "operator": "=~",
-              "value": "/^$dbname$/"
-            }
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "thresholds": "10,100",
-      "timeFrom": null,
-      "title": "Seq. scans on >100 MB tables per minute (avg.)",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
     },
     {
       "cacheTimeout": null,
@@ -3659,8 +3648,8 @@
         "#d44a3a"
       ],
       "decimals": 0,
-      "description": "In TX. Holds back VACUUM",
-      "format": "short",
+      "description": "Long running AUTOVACUUM processes can hint at workload or configuration  problems",
+      "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -3675,151 +3664,7 @@
         "y": 12
       },
       "hideTimeOverride": true,
-      "id": 43,
-      "interval": null,
-      "links": [
-        {
-          "dashboard": "Replication lag",
-          "includeVars": true,
-          "params": "",
-          "targetBlank": true,
-          "title": "Replication lag panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/replication"
-        }
-      ],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "format": "time_series",
-          "group": [],
-          "groupBy": [
-            {
-              "params": [
-                "365d"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "none"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "replication_slots",
-          "metricColumn": "none",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "select max(\"xmin_age_tx\") from  (SELECT last(\"xmin_age_tx\") as \"xmin_age_tx\" FROM \"replication_slots\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(365d), slot_name fill(none))\n",
-          "rawQuery": true,
-          "rawSql": "select\n  0 as time,\n  max(xmin) from (\nSELECT\n  max((data->'xmin_age_tx')::int8) as xmin\nFROM\n  replication_slots\nWHERE\n  time = (select max(time) from replication_slots where time > now() - '$online_interval'::interval AND dbname = '$dbname')\n  and dbname = '$dbname'  \nUNION ALL\nSELECT\n  max((data->'max_xmin_age_tx')::int8) as xmin\nFROM\n  backends\nWHERE\n  time = (select max(time) from backends where time > now() - '$online_interval'::interval AND dbname = '$dbname')\n  and dbname = '$dbname'\n) x",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "max_xmin_age_tx"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "dbname",
-              "operator": "=~",
-              "value": "/^$dbname$/"
-            }
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "thresholds": "10000,100000",
-      "timeFrom": null,
-      "title": "Max. XMIN horizon age",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": true,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "decimals": 0,
-      "description": "",
-      "format": "dtdurations",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 6,
-        "x": 18,
-        "y": 12
-      },
-      "hideTimeOverride": true,
-      "id": 42,
+      "id": 35,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -3862,7 +3707,7 @@
           "groupBy": [
             {
               "params": [
-                "1d"
+                "15m"
               ],
               "type": "time"
             },
@@ -3873,20 +3718,20 @@
               "type": "fill"
             }
           ],
-          "measurement": "backends",
+          "measurement": "table_stats",
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "",
+          "query": "SELECT mean(\"last\") FROM (SELECT last(\"seconds_since_last_vacuum\") FROM \"table_stats\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter AND  table_size_b >  100000000 GROUP BY time(1h) fill(none))",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 as time,\n  (data->'backup_duration_s')::int8\nFROM\n  backends\nWHERE\n  time > now() - '$online_interval'::interval\n  and dbname = '$dbname'\nORDER BY\n  time DESC\nLIMIT\n  1",
+          "rawSql": "SELECT\n  0 as time,\n  max((data->'longest_autovacuum_seconds')::int8) as longest_autovacuum_seconds\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "max_xmin_age_tx"
+                  "seconds_since_last_vacuum"
                 ],
                 "type": "field"
               },
@@ -3913,9 +3758,9 @@
           ]
         }
       ],
-      "thresholds": "3600,36000",
-      "timeFrom": "$online_interval",
-      "title": "Backup duration",
+      "thresholds": "60,300",
+      "timeFrom": null,
+      "title": "Longest AUTOVACUUM duration",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -3926,6 +3771,155 @@
         }
       ],
       "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "decimals": 1,
+      "description": "",
+      "format": "short",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 6,
+        "x": 18,
+        "y": 12
+      },
+      "hideTimeOverride": true,
+      "id": 39,
+      "interval": null,
+      "links": [
+        {
+          "dashboard": "Tables Top",
+          "includeVars": true,
+          "params": "panelId=4&fullscreen",
+          "targetBlank": true,
+          "title": "'Tables Top :: Most scans' panel",
+          "type": "dashboard"
+        }
+      ],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "5m"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "table_stats",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select sum(\"last\") from (select last(\"scans\") from (SELECT non_negative_derivative(last(\"seq_scan\"), 1m) as \"scans\" FROM \"table_stats\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter AND table_size_b > 100000000 GROUP BY time($__interval), table_full_name fill(none)) group by table_full_name)",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time,\n  sum((scan-scan_lag) * 60 / extract(epoch from (time-time_lag)))\nFROM (\n  SELECT\n    time, lag(time) over w as time_lag,\n    (data->'seq_scan')::int8 as scan, lag((data->'seq_scan')::int8) over w as scan_lag\n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time)\n    AND dbname = '$dbname'\n    AND (data->'table_size_b')::int8 > 100000000\n  WINDOW w AS (partition by tag_data->>'table_full_name' order by time)\n) x\nWHERE scan > scan_lag and time > time_lag\nGROUP BY 1\nORDER BY 1",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "seq_scan"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              },
+              {
+                "params": [
+                  "1m"
+                ],
+                "type": "non_negative_derivative"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": "10,100",
+      "timeFrom": null,
+      "title": "Seq. scans on >100 MB tables per minute (avg.)",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "avg"
     },
     {
       "cacheTimeout": null,
@@ -4380,6 +4374,418 @@
       "colorValue": false,
       "colors": [
         "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "decimals": 0,
+      "description": "Based on db_stats.backup_duration_s  / pg_backup_start_time() func.",
+      "format": "dtdurations",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 6,
+        "x": 18,
+        "y": 14
+      },
+      "hideTimeOverride": true,
+      "id": 42,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "1d"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "backends",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  0 as time,\n  max((data->'backup_duration_s')::int8)\nFROM\n  db_stats\nWHERE\n  $__timeFilter(time)\n  and dbname = '$dbname'",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "max_xmin_age_tx"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": "3600,36000",
+      "timeFrom": "$online_interval",
+      "title": "Backup duration",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "decimals": 1,
+      "description": "Max. age since last FREEZE. Could hint at problems when going into 100s of millions",
+      "format": "short",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 6,
+        "x": 0,
+        "y": 16
+      },
+      "hideTimeOverride": true,
+      "id": 47,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "365d"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "replication_slots",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select max(\"xmin_age_tx\") from  (SELECT last(\"xmin_age_tx\") as \"xmin_age_tx\" FROM \"replication_slots\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(365d), slot_name fill(none))\n",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  0 as time,\n  max((data->'tx_freeze_age')::int8)\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  and dbname = '$dbname'",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "max_xmin_age_tx"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": "100000000,500000000",
+      "timeFrom": null,
+      "title": "Max. table FREEZE age",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "decimals": 0,
+      "description": "In TX. Holds back VACUUM",
+      "format": "short",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 6,
+        "x": 6,
+        "y": 16
+      },
+      "hideTimeOverride": true,
+      "id": 43,
+      "interval": null,
+      "links": [
+        {
+          "dashboard": "Replication lag",
+          "includeVars": true,
+          "params": "",
+          "targetBlank": true,
+          "title": "Replication lag panel",
+          "type": "dashboard",
+          "url": "/dashboard/db/replication"
+        }
+      ],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "365d"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "replication_slots",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select max(\"xmin_age_tx\") from  (SELECT last(\"xmin_age_tx\") as \"xmin_age_tx\" FROM \"replication_slots\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(365d), slot_name fill(none))\n",
+          "rawQuery": true,
+          "rawSql": "select\n  0 as time,\n  max(xmin) from (\nSELECT\n  max((data->'xmin_age_tx')::int8) as xmin\nFROM\n  replication_slots\nWHERE\n  time = (select max(time) from replication_slots where time > now() - '$online_interval'::interval AND dbname = '$dbname')\n  and dbname = '$dbname'  \nUNION ALL\nSELECT\n  max((data->'max_xmin_age_tx')::int8) as xmin\nFROM\n  backends\nWHERE\n  time = (select max(time) from backends where time > now() - '$online_interval'::interval AND dbname = '$dbname')\n  and dbname = '$dbname'\n) x",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "max_xmin_age_tx"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": "10000,100000",
+      "timeFrom": null,
+      "title": "Max. XMIN horizon age",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
         "#bf1b00",
         "#d44a3a"
       ],
@@ -4395,8 +4801,8 @@
       "gridPos": {
         "h": 2,
         "w": 6,
-        "x": 18,
-        "y": 14
+        "x": 12,
+        "y": 16
       },
       "hideTimeOverride": true,
       "id": 4,
@@ -4512,12 +4918,150 @@
       "valueName": "current"
     },
     {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "#FA6400",
+        "#d44a3a"
+      ],
+      "decimals": null,
+      "description": "Apply lag in bytes",
+      "format": "bytes",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 6,
+        "x": 18,
+        "y": 16
+      },
+      "hideTimeOverride": true,
+      "id": 46,
+      "interval": null,
+      "links": [
+        {
+          "dashboard": "Replication lag",
+          "includeVars": true,
+          "params": "",
+          "targetBlank": true,
+          "title": "'Replication lag' dashboard",
+          "type": "dashboard",
+          "url": "/dashboard/db/replication"
+        }
+      ],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "1m"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "replication_slots",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select sum(last) from (select last(\"non_active_int\") FROM \"replication_slots\" WHERE \"dbname\" =~ /^$dbname$/  AND $timeFilter  group by \"slot_name\")",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  0 as time,\n  max((data->'replay_lag_b')::int8)\nFROM\n  replication\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\n",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "active"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "last"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": "1000000,10000000",
+      "timeFrom": "$online_interval",
+      "title": "Max. replication lag",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2019/05/Cybertec_Logo_wei%C3%9F-transparent_300x80px-01.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
       "gridPos": {
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 18
       },
       "id": 12,
       "links": [],
