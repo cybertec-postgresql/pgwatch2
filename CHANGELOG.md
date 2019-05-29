@@ -23,7 +23,7 @@ or a specific version
 * Gatherer improvement -revert persistance maxBatchSize from 5k back to 1k points
 * Gatherer improvement - allow partial InfluxDB writes
 * Gatherer improvement - support SCRAM-SHA-256 password authentication via Go driver update
-* Dashboards - support for Grafana 6.0 plus minor updates for most dashboards
+* Dashboards - support for Grafana v6 plus minor updates for most dashboards
 * Metrics improvement - skip index_stats gathering for locked indexes
 * Metrics - new "settings" metric based on pg_settings + according panel to "Change events"
 * Metrics - capture "server restarted" events when "db_stats" metric enabled (visualized on "Change events" dash)
