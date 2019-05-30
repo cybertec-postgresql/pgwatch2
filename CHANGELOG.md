@@ -16,20 +16,23 @@ or a specific version
 * Gatherer feature - add support for Prometheus scraping
 * Gatherer feature - Patroni (etcd, Zookeeper, Consul) support (non-password access)
 * Gatherer feature - add a flag to monitor DB-s only when they are acting as master / primary
-* Gatherer feature - a flag (add-system-identifier / system-identifier-field) to save the "system id" with each metric (10+)
+* Gatherer feature - a flag (add-system-identifier / system-identifier-field) to save the "system identifier" with each metric (10+)
 * Gatherer fix - handle zeroing of running metric intervals
-* Goreleaser support to build DEB, RPM, tarball
+* Packaging - Goreleaser support to build DEB, RPM, tarball
 * Gatherer improvement - don't start per metric gatherers until connect check OK
 * Gatherer improvement -revert persistance maxBatchSize from 5k back to 1k points
 * Gatherer improvement - allow partial InfluxDB writes
 * Gatherer improvement - support SCRAM-SHA-256 password authentication via Go driver update
 * Dashboards - support for Grafana v6 plus minor updates for most dashboards
+* Dashboards - "Health-check" overhaul. PG ver, uptime, transaction wraparound, longest autovacuum and other infos
+* Dashboards - a template for alerting with preset thresholds for couple of most important metrics. For PG backend only.
 * Metrics improvement - skip index_stats gathering for locked indexes
 * Metrics - new "settings" metric based on pg_settings + according panel to "Change events"
 * Metrics - capture "server restarted" events when "db_stats" metric enabled (visualized on "Change events" dash)
 * Metrics - increase intervals for index/table stats
 * Metrics - add a sample bash script to push arbitrary metrics to the pgwatch2 metrics DB externally
-* Docker components update -  Grafana 6.1.4, Go 1.12.4, Influx 1.7.6
+* Metrics - add "system identifier" to "wal" to enable auto-grouping of cluster members
+* Docker components update -  Grafana 6.2.1, Go 1.12.5, Influx 1.7.6
 
 NB! When migrating old "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
 applied first from the "pgwatch2/sql/config_store/migrations/" folder.
