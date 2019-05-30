@@ -18,11 +18,13 @@ or a specific version
 * Gatherer feature - add a flag to monitor DB-s only when they are acting as master / primary
 * Gatherer feature - a flag (add-system-identifier / system-identifier-field) to save the "system identifier" with each metric (10+)
 * Gatherer fix - handle zeroing of running metric intervals
+* Gatherer fix - let the PG driver use .pgpass if no password specified in host settings
 * Packaging - Goreleaser support to build DEB, RPM, tarball
 * Gatherer improvement - don't start per metric gatherers until connect check OK
 * Gatherer improvement -revert persistance maxBatchSize from 5k back to 1k points
 * Gatherer improvement - allow partial InfluxDB writes
 * Gatherer improvement - support SCRAM-SHA-256 password authentication via Go driver update
+* Gatherer improvement - support LibPQ style connection strings in YAML configs
 * Dashboards - support for Grafana v6 plus minor updates for most dashboards. v5 dashboards will not get updates any more!
 * Dashboards - "Health-check" overhaul. PG ver, uptime, transaction wraparound, longest autovacuum and other infos
 * Dashboards - a template for alerting with preset thresholds for couple of most important metrics. For PG backend only.

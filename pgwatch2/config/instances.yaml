@@ -3,9 +3,10 @@
   host: localhost
   port: 5432
   dbname: pgwatch2
-  user: krl
-  password: krl
+  user: someuser
+  password: somepass
   sslmode: disable
+#  libpq_conn_str: postgresql://user@localhost:5432/postgres  # overrides single connect params. no pwd encryption possible
   stmt_timeout: 5
   is_superuser: false
   preset_metrics: minimal

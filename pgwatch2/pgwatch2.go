@@ -48,6 +48,7 @@ type MonitoredDatabase struct {
 	User                 string
 	Password             string
 	PasswordType         string `yaml:"password_type"`
+	LibPQConnStr         string `yaml:"libpq_conn_str"`
 	SslMode              string
 	SslRootCAPath        string             `yaml:"sslrootcert"`
 	SslClientCertPath    string             `yaml:"sslcert"`
@@ -237,13 +238,17 @@ func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password
 					//log.Debug("Adding sslmode", libPqConnString+"?sslmode=disable")
 					db, err = sqlx.Open("postgres", libPqConnString+"?sslmode=disable")
 				}
-			} else { // LibPQ stype
+			} else { // LibPQ style
 				db, err = sqlx.Open("postgres", libPqConnString+" sslmode=disable")
 			}
 		}
 	} else {
-		db, err = sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s dbname='%s' sslmode=%s user=%s password=%s application_name=%s sslrootcert='%s' sslcert='%s' sslkey='%s'",
-			host, port, dbname, sslmode, user, password, APPLICATION_NAME, sslrootcert, sslcert, sslkey))
+		conn_str := fmt.Sprintf("host=%s port=%s dbname='%s' sslmode=%s user=%s application_name=%s sslrootcert='%s' sslcert='%s' sslkey='%s'",
+			host, port, dbname, sslmode, user, APPLICATION_NAME, sslrootcert, sslcert, sslkey)
+		if password != "" {	// having empty string as password effectively disables .pgpass so include only if password given
+			conn_str += "password=" + password
+		}
+		db, err = sqlx.Open("postgres", conn_str)
 	}
 
 	if err != nil {
@@ -382,6 +387,7 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 
 func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql string, args ...interface{}) ([](map[string]interface{}), error, time.Duration) {
 	var conn *sqlx.DB
+	var libPQConnStr string
 	var exists bool
 	var md MonitoredDatabase
 	var err error
@@ -409,12 +415,17 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 		conn_limit_channel <- token
 	}()
 
+	libPQConnStr = md.LibPQConnStr
+	if opts.AdHocConnString != "" {
+		libPQConnStr = opts.AdHocConnString
+	}
+
 	if !useCache {
 		if md.DBType == "pgbouncer" {
 			md.DBName = "pgbouncer"
 		}
 
-		conn, err = GetPostgresDBConnection(opts.AdHocConnString, md.Host, md.Port, md.DBName, md.User, md.Password,
+		conn, err = GetPostgresDBConnection(libPQConnStr, md.Host, md.Port, md.DBName, md.User, md.Password,
 			md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
 		if err != nil {
 			return nil, err, duration
@@ -446,7 +457,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 				md.DBName = "pgbouncer"
 			}
 
-			conn, err = GetPostgresDBConnection(opts.AdHocConnString, md.Host, md.Port, md.DBName, md.User, md.Password,
+			conn, err = GetPostgresDBConnection(libPQConnStr, md.Host, md.Port, md.DBName, md.User, md.Password,
 				md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
 			if err != nil {
 				return nil, err, duration
@@ -2803,7 +2814,7 @@ func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatab
 func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase, error) {
 	md := make([]MonitoredDatabase, 0)
 
-	c, err := GetPostgresDBConnection("", ce.Host, ce.Port, "template1", ce.User, ce.Password,
+	c, err := GetPostgresDBConnection(ce.LibPQConnStr, ce.Host, ce.Port, "template1", ce.User, ce.Password,
 		ce.SslMode, ce.SslRootCAPath, ce.SslClientCertPath, ce.SslClientKeyPath)
 	if err != nil {
 		return md, err
