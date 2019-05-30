@@ -633,7 +633,9 @@ select
       pg_wal_lsn_diff(pg_last_wal_replay_lsn(), '0/0')::int8
     end as xlog_location_b,
   case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int,
-  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s;
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
+  system_identifier as sys_id
+from pg_control_system();
 $sql$,
 '{"prometheus_gauge_columns": ["in_recovery_int", "postmaster_uptime_s"]}'
 );
