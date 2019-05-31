@@ -3,66 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <title>Pgwatch2 :: DBs to monitor</title>
-    <link rel="stylesheet" href="/static/bootstrap-3.3.7-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/bootstrap-4.3.1-dist/css/bootstrap.min.css">
 </head>
 <body>
+<div class="container-fluid">
 
-<nav class="navbar navbar-default">
-  <div class="container-fluid">
-    <!-- Brand and toggle get grouped for better mobile display -->
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-    </div>
+    <nav class="navbar navbar-expand-md navbar-light bg-light mb-2">
 
-    <!-- Collect the nav links, forms, and other content for toggling -->
-    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-      <ul class="nav navbar-nav">
-        <li><a href="/"><h4>pgwatch2</h4></a></li>
-        <li><a href="https://www.cybertec-postgresql.com/en/"><img src="/static/logo.png" alt="Cybertec" height="35px"></a></li>
-      </ul>
-      <ul class="nav navbar-nav navbar-right">
-        <li class="active"><a href="/dbs">DBs<span class="sr-only"></span></a></li>
-        <li><a href="#">|</a></li>
-        <li><a href="/metrics">Metric definitions</a></li>
-        <li><a href="#">|</a></li>
-        <li><a href="/stats-summary">Stats summary</a></li>
-        {% if not no_component_logs %}
-        <li><a href="#">|</a></li>
-        <li class="dropdown" title="Logs will open in a new window">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Logs<span class="caret"></span></a>
-          <ul class="dropdown-menu">
-            <li><a href="/logs/pgwatch2/200" target="_blank">Pgwatch2 [last 200 lines]</a></li>
-            <li><a href="/logs/influxdb/200" target="_blank">InfluxDB [last 200 lines]</a></li>
-            <li><a href="/logs/grafana/200" target="_blank">Grafana [last 200 lines]</a></li>
-            <li><a href="/logs/postgres/200" target="_blank">Postgres [last 200 lines]</a></li>
-            <li><a href="/logs/webui/200" target="_blank">Web UI [last 200 lines]</a></li>
-            <li><a href="/versions" target="_blank">Component versions</a></li>
-          </ul>
-        </li>
-        {% endif %}
-        {% if no_anonymous_access and session['logged_in'] %}
-        <li><a href="#">|</a></li>
-        <li><a href="/logout">Log out</a></li>
-        {% endif %}
-      </ul>
-    </div><!-- /.navbar-collapse -->
-  </div><!-- /.container-fluid -->
-</nav>
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="/"><h4>pgwatch2</h4></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="https://www.cybertec-postgresql.com/en/"><img src="/static/logo.png" alt="Cybertec logo" height="40px"></a>
+            </li>
+        </ul>
+
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item active">
+                <a class="nav-link" href="/dbs">DBs</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/metrics">Metric definitions</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/stats-summary" title="Hint - Grafana is the preferred metrics browser">Stats summary</a>
+            </li>
+            {% if not no_component_logs %}
+            <li class="nav-item dropdown" title="Logs will open in a new window">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown">Logs</a>
+                <div class="dropdown-menu dropdown-menu-right">
+                    <a class="dropdown-item" href="/logs/pgwatch2/200" target="_blank">Pgwatch2 [last 200 lines]</a>
+                    <a class="dropdown-item" href="/logs/influxdb/200" target="_blank">InfluxDB [last 200 lines]</a>
+                    <a class="dropdown-item" href="/logs/grafana/200" target="_blank">Grafana [last 200 lines]</a>
+                    <a class="dropdown-item" href="/logs/postgres/200" target="_blank">Postgres [last 200 lines]</a>
+                    <a class="dropdown-item" href="/logs/webui/200" target="_blank">Web UI [last 200 lines]</a>
+                    <a class="dropdown-item" href="/versions" target="_blank">Component versions</a>
+                </div>
+            </li>
+            {% endif %}
+
+            {% if no_anonymous_access and session['logged_in'] %}
+            <li class="nav-item">
+                <a class="nav-link" href="/logout">Logout</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+
+</div>
 
 <div class="container-fluid">
 
-<div class="row" style="padding-left: 10px">
-
 {% if messages %}
     {% for message in messages: %}
-    <div class="alert alert-warning alert-dismissible" role="alert">
-      <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-      {{message}}
+    <div class="row">
+        <div class="col alert alert-warning alert-dismissible fade show" role="alert">
+            {{message}}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
     </div>
     {% endfor %}
 {% endif %}
@@ -230,17 +231,20 @@
 </div>  <!-- table -->
 </div>  <!-- row -->
 
-<div class="row" style="padding-left: 10px">
+<div class="row" style="margin-left: 10px">
+    <div class="col">
     <h3>Active metrics listing</h3>
-    <ul>
+    <ul style="margin-left: 0; padding-left: 0;">
     {% for m in metrics_list: %}
-        <li style="display: inline"><b>{{m['m_name']}}</b> [ver: {{m['versions']}}]</li>
+        <li style="display: inline;"><b>{{m['m_name']}}</b> [ver: {{m['versions']}}]</li>
     {% endfor %}
 
     </ul>
+    </div>
 </div>
 
-<div class="row" style="padding-left: 10px">
+<div class="row" style="margin-left: 10px">
+    <div class="col">
     <h3>Metrics data cleanup ({{datastore}})</h3>
     <br />
     <p>Nr. of unique hosts found: {{active_dbnames|length}}</p>
@@ -263,12 +267,13 @@
       <option value="{{db}}">
       {% endfor %}
     </datalist>
+    </div>
 </div>
 
 </div>  <!-- container -->
 
-<script src="/static/jquery-3.1.1.min.js"></script>
-<script src="/static/bootstrap-3.3.7-dist/js/bootstrap.min.js"></script>
+<script src="/static/jquery-3.4.1.min.js"></script>
+<script src="/static/bootstrap-4.3.1-dist/js/bootstrap.min.js"></script>
 
 <script>
     var preset_configs = {{preset_configs_json}};
