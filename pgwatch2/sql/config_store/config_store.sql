@@ -88,9 +88,8 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     '{
     "kpi": 60
     }'),
-    ('basic', 'only the most important metrics - load, WAL, DB-level statistics (size, tx and backend counts)',
+    ('basic', 'only the most important metrics - WAL, DB-level statistics (size, tx and backend counts)',
     '{
-    "cpu_load": 60,
     "wal": 60,
     "db_stats": 60,
     "db_size": 300

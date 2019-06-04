@@ -1,9 +1,8 @@
 ---
 
 - name: basic
-  description: only the most important metrics - load, WAL, DB-level statistics (size, tx and backend counts)
+  description: only the most important metrics - WAL, DB-level statistics (size, tx and backend counts)
   metrics:
-    cpu_load: 60
     db_stats: 60
     db_size: 300
     wal: 60
