@@ -243,6 +243,14 @@ def update_monitored_db(params, cmd_args=None):
 
 def insert_monitored_db(params, cmd_args=None):
     ret = []
+    # to enable adding DBs via POST requests where nonmandatory fields are not specified
+    expected_monitored_db_params = [ ('md_port', '5432'), ('md_password', ''),
+          ('md_root_ca_path', ''), ('md_client_cert_path', ''), ('md_client_key_path', ''), ('md_config', ''), ('md_statement_timeout_seconds', '5'), ('md_dbtype', 'postgres'),
+          ('md_only_if_master', False), ( 'md_custom_tags', ''), ('md_host_config', ''), ('md_include_pattern', ''), ('md_exclude_pattern', ''), ('md_group', 'default'),
+          ('md_password_type', 'plain-text'), ('md_sslmode', 'disable')]
+    for p, default in expected_monitored_db_params:
+        if not p in params:
+            params[p] = default
     sql_insert_new_db = """
         insert into
           pgwatch2.monitored_db (md_unique_name, md_hostname, md_port, md_dbname, md_user, md_password, md_password_type, md_is_superuser,
