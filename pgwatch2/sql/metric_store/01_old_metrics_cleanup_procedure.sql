@@ -87,13 +87,15 @@ BEGIN
     END LOOP;
   ELSIF l_schema_type = 'metric-dbname-time' THEN
     FOR r IN (
-        select 'subpartitions.'|| quote_ident(c.relname) as table_name
-                from pg_class c
+ select 'subpartitions.'|| quote_ident(c.relname) as table_name
+                 from pg_class c
                 join pg_namespace n on n.oid = c.relnamespace
-                where relkind in ('r', 'p') and nspname = 'subpartitions'
+                join pg_inherits i ON c.oid=i.inhrelid                
+                join pg_class c2 on i.inhparent = c2.oid
+                where c.relkind in ('r', 'p') and nspname = 'subpartitions'
                 and exists (select 1 from pg_attribute where attrelid = c.oid and attname = 'time')
                 and pg_catalog.obj_description(c.oid, 'pg_class') = 'pgwatch2-generated-metric-dbname-lvl'
-                and relname like '%_' || dbname
+                and (regexp_match(pg_catalog.pg_get_expr(c.relpartbound, c.oid), E'FOR VALUES IN \\(''(.*)''\\)'))[1] = dbname
                 order by 1
     )
     LOOP
