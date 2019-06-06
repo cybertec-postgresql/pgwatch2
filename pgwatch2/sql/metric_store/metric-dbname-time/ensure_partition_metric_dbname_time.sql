@@ -22,6 +22,7 @@ DECLARE
   l_part_start date;
   l_part_end date;
   l_sql text;
+  ideal_length int;
 BEGIN
   
   -- 1. level
@@ -30,20 +31,34 @@ BEGIN
                   WHERE tablename = metric
                     AND schemaname = 'public')
   THEN
-    --RAISE NOTICE 'creating partition % ...', metric; 
-    EXECUTE format($$CREATE TABLE public.%s (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY LIST (dbname)$$,
-                    quote_ident(metric));
-    EXECUTE format($$COMMENT ON TABLE public.%s IS 'pgwatch2-generated-metric-lvl'$$, quote_ident(metric));
+    RAISE NOTICE 'creating partition % ...', metric; 
+    --EXECUTE format($$CREATE TABLE public.%s (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY LIST (dbname)$$,
+    --                quote_ident(metric));
+    --EXECUTE format($$COMMENT ON TABLE public.%s IS 'pgwatch2-generated-metric-lvl'$$, quote_ident(metric));
   END IF;
 
   -- 2. level
-  l_part_name_2nd := md5(metric || '_' || dbname);
+  --l_part_name_2nd := md5(metric || '_' || dbname);
+
+  l_year := extract(isoyear from (metric_timestamp + '1month'::interval * 1));
+  l_month := extract(month from (metric_timestamp + '1month'::interval * 1));
+-- raise notice '%_%_y%m%', metric, dbname, l_year, to_char(l_month, 'fm00');
+-- raise notice char_length(format('%s_%s_y%sm%s', metric, dbname, l_year, to_char(l_month, 'fm00')));
+if char_length(format('%s_%s_y%sm%s', metric, dbname, l_year, to_char(l_month, 'fm00'))) > 63 
+then
+  ideal_length = 63 - char_length(format('%s__y%sm%s', metric, l_year, to_char(l_month, 'fm00')));
+  l_part_name_2nd := metric || '_' || substring(md5(dbname) from 1 for ideal_length);
+  --l_part_name_2nd := metric || '_' || crc32(dbname);
+else
+  l_part_name_2nd := metric || '_' || dbname;
+end if;
+
   IF NOT EXISTS (SELECT 1
                    FROM pg_tables
                   WHERE tablename = l_part_name_2nd
                     AND schemaname = 'subpartitions')
   THEN
-    --RAISE NOTICE 'creating partition % ...', l_part_name; 
+    --RAISE NOTICE 'creating partition % ...', l_part_name_2nd; 
     EXECUTE format($$CREATE TABLE subpartitions.%s PARTITION OF public.%s FOR VALUES IN (%s) PARTITION BY RANGE (time)$$,
                     quote_ident(l_part_name_2nd), quote_ident(metric), quote_literal(dbname));
     EXECUTE format($$COMMENT ON TABLE subpartitions.%s IS 'pgwatch2-generated-metric-dbname-lvl'$$, quote_ident(l_part_name_2nd));
@@ -74,7 +89,7 @@ BEGIN
                   WHERE tablename = l_part_name_3rd
                     AND schemaname = 'subpartitions')
   THEN
-    --RAISE NOTICE 'creating time sub-partition % ...', l_part_name;
+    --RAISE NOTICE 'creating time sub-partition % ...', l_part_name_3rd;
     l_sql := format($$CREATE TABLE subpartitions.%s PARTITION OF subpartitions.%s FOR VALUES FROM ('%s') TO ('%s')$$,
                     quote_ident(l_part_name_3rd), quote_ident(l_part_name_2nd), l_part_start, l_part_end);
     EXECUTE l_sql;
