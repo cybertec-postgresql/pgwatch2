@@ -85,4 +85,4 @@ pg_ctlcluster 11 main stop -- --wait
 fi
 
 
-exec /usr/bin/supervisord --configuration=/etc/supervisor/supervisord.conf --nodaemon
+exec /usr/local/bin/supervisord --configuration=/etc/supervisor/supervisord.conf --nodaemon

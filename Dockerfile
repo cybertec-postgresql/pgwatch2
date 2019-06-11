@@ -1,7 +1,7 @@
 FROM ubuntu:16.04
 
 RUN apt-get -q update \
-    && apt-get -qy install wget apt-transport-https vim git supervisor postgresql postgresql-plpython-9.5 libfontconfig python3-pip python-pip libssl-dev libpq-dev \
+    && apt-get -qy install wget apt-transport-https vim git postgresql postgresql-plpython-9.5 libfontconfig python3-pip python-pip libssl-dev libpq-dev \
     && pip install -U pip && pip3 install -U pip \
     && locale-gen "en_US.UTF-8" && apt autoremove -y \
     && pg_dropcluster 9.5 main ; pg_createcluster --locale en_US.UTF-8 9.5 main \
@@ -22,7 +22,9 @@ RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_6.2.1_amd6
     && sed -i 's/\# store-enabled = true/store-enabled = false/' /etc/influxdb/influxdb.conf \
     && sed -i 's/\# \[http\]/\[http\]/' /etc/influxdb/influxdb.conf \
     && sed -i '0,/\# log-enabled = true/{s/\# log-enabled = true/log-enabled = false/}' /etc/influxdb/influxdb.conf \
-    && sed -i 's/\# index-version = \"inmem\"/index-version = \"tsi1\"/' /etc/influxdb/influxdb.conf
+    && sed -i 's/\# index-version = \"inmem\"/index-version = \"tsi1\"/' /etc/influxdb/influxdb.conf \
+    && pip3 install supervisor && mkdir /var/log/supervisor
+
 
 # Add pgwatch2 sources
 ADD pgwatch2 /pgwatch2
