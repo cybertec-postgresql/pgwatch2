@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mkdir /var/run/grafana && chown grafana /var/run/grafana
+
 if [ ! -f /pgwatch2/persistent-config/self-signed-ssl.key -o ! -f /pgwatch2/persistent-config/self-signed-ssl.pem ] ; then
     openssl req -x509 -newkey rsa:4096 -keyout /pgwatch2/persistent-config/self-signed-ssl.key -out /pgwatch2/persistent-config/self-signed-ssl.pem -days 3650 -nodes -sha256 -subj '/CN=pw2'
     cp /pgwatch2/persistent-config/self-signed-ssl.pem /etc/ssl/certs/ssl-cert-snakeoil.pem
@@ -78,8 +80,9 @@ fi
 
 touch /pgwatch2/persistent-config/db-bootstrap-done-marker
 
+pg_ctlcluster 11 main stop -- --wait
+
 fi
 
-pg_ctlcluster 11 main start -- --wait
 
 exec /usr/bin/supervisord --configuration=/etc/supervisor/supervisord.conf --nodaemon
