@@ -20,7 +20,6 @@
   "panels": [
     {
       "columns": [],
-      "datasource": null,
       "description": "NB! If there has been a pg_stat_statement reset or a server crash in the selected timerange, the information is false",
       "fontSize": "90%",
       "gridPos": {
@@ -31,6 +30,7 @@
       },
       "id": 5,
       "links": [],
+      "options": {},
       "pageSize": null,
       "scroll": true,
       "showHeader": true,
@@ -61,7 +61,7 @@
           "link": true,
           "linkTargetBlank": true,
           "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
-          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
           "pattern": "queryid",
           "sanitize": false,
           "thresholds": [],
@@ -148,12 +148,10 @@
       ],
       "title": "Top queries by total runtime",
       "transform": "table",
-      "transparent": false,
       "type": "table"
     },
     {
       "columns": [],
-      "datasource": null,
       "description": "NB! If there has been a pg_stat_statement reset or a server crash in the selected timerange, the information is false",
       "fontSize": "90%",
       "gridPos": {
@@ -164,6 +162,7 @@
       },
       "id": 6,
       "links": [],
+      "options": {},
       "pageSize": null,
       "scroll": true,
       "showHeader": true,
@@ -194,7 +193,7 @@
           "link": true,
           "linkTargetBlank": true,
           "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
-          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
           "pattern": "queryid",
           "sanitize": false,
           "thresholds": [],
@@ -281,12 +280,10 @@
       ],
       "title": "Top queries by avg. runtime",
       "transform": "table",
-      "transparent": false,
       "type": "table"
     },
     {
       "columns": [],
-      "datasource": null,
       "description": "NB! If there has been a pg_stat_statement reset or a server crash in the selected timerange, the information is false",
       "fontSize": "90%",
       "gridPos": {
@@ -297,6 +294,7 @@
       },
       "id": 7,
       "links": [],
+      "options": {},
       "pageSize": null,
       "scroll": true,
       "showHeader": true,
@@ -327,7 +325,7 @@
           "link": true,
           "linkTargetBlank": true,
           "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
-          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
           "pattern": "queryid",
           "sanitize": false,
           "thresholds": [],
@@ -414,12 +412,10 @@
       ],
       "title": "Top queries by calls",
       "transform": "table",
-      "transparent": false,
       "type": "table"
     },
     {
       "columns": [],
-      "datasource": null,
       "description": "NB! If there has been a pg_stat_statement reset or a server crash in the selected timerange, the information is false",
       "fontSize": "100%",
       "gridPos": {
@@ -430,6 +426,7 @@
       },
       "id": 8,
       "links": [],
+      "options": {},
       "pageSize": null,
       "scroll": true,
       "showHeader": true,
@@ -469,11 +466,12 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "link": true,
+          "linkTargetBlank": true,
           "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
-          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
           "pattern": "queryid",
           "thresholds": [],
-          "type": "number",
+          "type": "string",
           "unit": "short"
         },
         {
@@ -554,12 +552,13 @@
       "id": 4,
       "links": [],
       "mode": "html",
+      "options": {},
       "title": "",
       "transparent": true,
       "type": "text"
     }
   ],
-  "schemaVersion": 16,
+  "schemaVersion": 18,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -571,6 +570,7 @@
           "value": "test"
         },
         "datasource": null,
+        "definition": "",
         "hide": 0,
         "includeAll": false,
         "label": null,
