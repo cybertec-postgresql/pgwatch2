@@ -115,6 +115,7 @@
                             <option value="pgbouncer"{% if row['md_dbtype'] == "pgbouncer" %}selected{% endif %}>pgbouncer</option>
                             <option value="postgres-continuous-discovery"{% if row['md_dbtype'] == "postgres-continuous-discovery" %}selected{% endif %}>pg-continuous-discovery</option>
                             <option value="patroni"{% if row['md_dbtype'] == "patroni" %}selected{% endif %}>patroni</option>
+                            <option value="patroni-continuous-discovery"{% if row['md_dbtype'] == "patroni-continuous-discovery" %}selected{% endif %}>patroni-continuous-discovery</option>
                         </select>
                     </td>
                     <td><input type="text" name="md_hostname" value="{{row['md_hostname']|e}}" size="10"></td>
@@ -176,6 +177,7 @@
                             <option value="pgbouncer">pgbouncer</option>
                             <option value="postgres-continuous-discovery">pg-continuous-discovery</option>
                             <option value="patroni">patroni</option>
+                            <option value="patroni-continuous-discovery">patroni-continuous-discovery</option>
                         </select>
                     </td>
                     <td><input type="text" name="md_hostname" id="md_hostname" value="" size="10"></td>
@@ -314,16 +316,25 @@
             var dbtype = $(this).parent().parent().find("[name='md_dbtype']").val()
             var hostname = $(this).parent().parent().find("[name='md_hostname']").val()
             var port = $(this).parent().parent().find("[name='md_port']").val()
+            var dbname = $(this).parent().parent().find("[name='md_dbname']").val()
 
             if (unique_name == null || !(unique_name.trim() > '')) {
                 alert("'Unique name' cannot be empty");
                 return false;
             }
-            if (hostname == null || !(hostname.trim() > '') && !(db_type == "patroni" || db_type == "patroni-continous-discovery")) {
+            if (hostname == null || !(hostname.trim() > '') && !(dbtype == "patroni" || dbtype == "patroni-continuous-discovery")) {
                 alert("'DB host' cannot be empty");
                 return false;
             }
-            if (port == null || !(port.trim() > '') && !(db_type == "patroni")) {
+            if (dbname == null || !(dbname.trim() > '') && dbtype == "patroni") {
+                alert("'DB name' cannot be empty for 'patroni'. Use 'patroni-continuous-discovery' (with patterns) if multiple DBs needed");
+                return false;
+            }
+            if (dbname.trim() > '' && dbtype == "patroni-continuous-discovery") {
+                alert("'DB name' cannot be filled for 'patroni-continuous-discovery'. Use regex patterns for limiting DB-s to be monitored");
+                return false;
+            }
+            if (port == null || !(port.trim() > '') && !(dbtype == "patroni"  || dbtype == "patroni-continuous-discovery")) {
                 alert("'DB port' cannot be empty");
                 return false;
             }

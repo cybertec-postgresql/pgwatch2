@@ -163,7 +163,7 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 	var ok bool
 	var dbUnique string
 
-	log.Debug("Resolving Patroni nodes for %s from HostConfig:", ce.DBUniqueName, ce.HostConfig)
+	log.Debugf("Resolving Patroni nodes for \"%s\" from HostConfig: %+v", ce.DBUniqueName, ce.HostConfig)
 	if ce.HostConfig.DcsType == DCS_TYPE_ETCD {
 		cm, err = EtcdGetClusterMembers(ce)
 	} else if ce.HostConfig.DcsType == DCS_TYPE_ZOOKEEPER{

@@ -610,7 +610,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 				temp_arr = append(temp_arr, rdb.DBName)
 			}
 			log.Debugf("Resolved %d DBs with prefix \"%s\": [%s]", len(resolved), md.DBUniqueName, strings.Join(temp_arr, ", "))
-		} else if md.DBType == "patroni" || md.DBType == "patroni-continous-discovery" {
+		} else if md.DBType == "patroni" || md.DBType == "patroni-continuous-discovery" {
 			resolved, err := ResolveDatabasesFromPatroni(md)
 			if err != nil {
 				log.Errorf("Failed to resolve DBs for \"%s\": %s", md.DBUniqueName, err)
@@ -2680,7 +2680,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 			var metricColumnAttrs MetricColumnAttrs
 			if _, err = os.Stat(path.Join(folder, f.Name(), "column_attrs.yaml")); err == nil {
 				metricColumnAttrs = ParseMetricColumnAttrsFromYAML(path.Join(folder, f.Name(), "column_attrs.yaml"))
-				log.Debugf("Discovered following column attributes for metric %s: %v", f.Name(), metricColumnAttrs)
+				//log.Debugf("Discovered following column attributes for metric %s: %v", f.Name(), metricColumnAttrs)
 			}
 
 			for _, pgVer := range pgVers {
@@ -2879,7 +2879,7 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 		if e.IsEnabled && e.PasswordType == "aes-gcm-256" && opts.AesGcmKeyphrase != "" {
 			e.Password = decrypt(e.DBUniqueName, opts.AesGcmKeyphrase, e.Password)
 		}
-		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" || e.DBType == "patroni" {
+		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" || e.DBType == "patroni" || e.DBType == "patroni-continuous-discovery" {
 			if e.DBType == "postgres-continuous-discovery" {
 				log.Debugf("Adding \"%s\" (host=%s, port=%s) to continuous monitoring ...", e.DBUniqueName, e.Host, e.Port)
 				continuousMonitoringDatabases = append(continuousMonitoringDatabases, e)
@@ -2887,7 +2887,7 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 			var found_dbs []MonitoredDatabase
 			var err error
 
-			if e.DBType == "patroni" {
+			if e.DBType == "patroni" || e.DBType == "patroni-continuous-discovery" {
 				found_dbs, err = ResolveDatabasesFromPatroni(e)
 			} else {
 				found_dbs, err = ResolveDatabasesFromConfigEntry(e)
