@@ -176,7 +176,14 @@ const CONTEXT_PROMETHEUS_SCRAPE = "prometheus-scrape"
 const DCS_TYPE_ETCD = "etcd"
 const DCS_TYPE_ZOOKEEPER = "zookeeper"
 const DCS_TYPE_CONSUL = "consul"
+const DBTYPE_PG = "postgres"
+const DBTYPE_PG_CONT = "postgres-continuous-discovery"
+const DBTYPE_BOUNCER = "pgbouncer"
+const DBTYPE_PATRONI = "patroni"
+const DBTYPE_PATRONI_CONT = "patroni-continuous-discovery"
 
+var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true}
+var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT}	// used for informational purposes
 var configDb *sqlx.DB
 var metricDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
@@ -199,7 +206,6 @@ var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently sup
 // secondary Influx meant for HA or Grafana load balancing for 100+ instances with lots of alerts
 var fileBased = false
 var adHocMode = false
-var continuousMonitoringDatabases = make([]MonitoredDatabase, 0) // TODO
 var preset_metric_def_map map[string]map[string]float64          // read from metrics folder in "file mode"
 /// internal statistics calculation
 var lastSuccessfulDatastoreWriteTime time.Time
@@ -421,7 +427,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 	}
 
 	if !useCache {
-		if md.DBType == "pgbouncer" {
+		if md.DBType == DBTYPE_BOUNCER {
 			md.DBName = "pgbouncer"
 		}
 
@@ -432,7 +438,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 		}
 		defer conn.Close()
 
-		if !adHocMode && md.DBType == "postgres" {
+		if !adHocMode && md.DBType == DBTYPE_PG {
 			stmtTimeout := md.StmtTimeout
 			if (metricName == "table_bloat_approx_summary" || metricName == "table_bloat_approx_stattuple") && md.StmtTimeout < TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS {
 				stmtTimeout = TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS
@@ -453,7 +459,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 
 		if !exists || conn == nil || dbStats.OpenConnections == 0 {
 
-			if md.DBType == "pgbouncer" {
+			if md.DBType == DBTYPE_BOUNCER {
 				md.DBName = "pgbouncer"
 			}
 
@@ -462,7 +468,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 			if err != nil {
 				return nil, err, duration
 			}
-			if !adHocMode && md.DBType == "postgres" {
+			if !adHocMode && md.DBType == DBTYPE_PG {
 				log.Debugf("Setting statement_timeout to %ds for the new PG connection to %s...", md.StmtTimeout, dbUnique)
 				_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
 				if err != nil {
@@ -481,7 +487,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 		}
 
 		// special override for possibly long running bloat queries
-		if md.DBType == "postgres" && (metricName == "table_bloat_approx_summary" || metricName == "table_bloat_approx_stattuple") && md.StmtTimeout < TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS {
+		if md.DBType == DBTYPE_PG && (metricName == "table_bloat_approx_summary" || metricName == "table_bloat_approx_stattuple") && md.StmtTimeout < TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS {
 			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS))
 			if err != nil {
 				return nil, err, duration
@@ -492,7 +498,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 	data, err := DBExecRead(conn, dbUnique, sql, args...)
 	t2 := time.Now()
 
-	if err == nil && md.DBType == "postgres" && useCache && (metricName == "table_bloat_approx_summary" || metricName == "table_bloat_approx_stattuple") {
+	if err == nil && md.DBType == DBTYPE_PG && useCache && (metricName == "table_bloat_approx_summary" || metricName == "table_bloat_approx_stattuple") {
 		// restore general statement timeout
 		_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
 		if err != nil {
@@ -594,11 +600,16 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			OnlyIfMaster:         row["md_only_if_master"].(bool),
 			CustomTags:           customTags}
 
+		if _, ok := dbTypeMap[md.DBType]; !ok {
+			log.Warningf("Ignoring host \"%s\" - unknown dbtype: %s. Expected one of: %+v", md.DBUniqueName, md.DBType, dbTypes)
+			continue
+		}
+
 		if md.PasswordType == "aes-gcm-256" && opts.AesGcmKeyphrase != "" {
 			md.Password = decrypt(md.DBUniqueName, opts.AesGcmKeyphrase, md.Password)
 		}
 
-		if md.DBType == "postgres-continuous-discovery" {
+		if md.DBType == DBTYPE_PG_CONT {
 			resolved, err := ResolveDatabasesFromConfigEntry(md)
 			if err != nil {
 				log.Errorf("Failed to resolve DBs for \"%s\": %s", md.DBUniqueName, err)
@@ -610,7 +621,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 				temp_arr = append(temp_arr, rdb.DBName)
 			}
 			log.Debugf("Resolved %d DBs with prefix \"%s\": [%s]", len(resolved), md.DBUniqueName, strings.Join(temp_arr, ", "))
-		} else if md.DBType == "patroni" || md.DBType == "patroni-continuous-discovery" {
+		} else if md.DBType == DBTYPE_PATRONI || md.DBType == DBTYPE_PATRONI_CONT {
 			resolved, err := ResolveDatabasesFromPatroni(md)
 			if err != nil {
 				log.Errorf("Failed to resolve DBs for \"%s\": %s", md.DBUniqueName, err)
@@ -2090,7 +2101,7 @@ func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Deci
 		influx_entry["epoch_ns"] = time.Now().UnixNano()
 		detected_changes_summary = append(detected_changes_summary, influx_entry)
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, DBType: "postgres", MetricName: "object_changes", Data: detected_changes_summary, CustomTags: md.CustomTags}}
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, DBType: DBTYPE_PG, MetricName: "object_changes", Data: detected_changes_summary, CustomTags: md.CustomTags}}
 	} else if opts.Datastore == DATASTORE_POSTGRES {
 		EnsureMetricDummy("object_changes")
 	}
@@ -2122,14 +2133,14 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	var db_pg_version decimal.Decimal
 	var err error
 
-	if msg.DBType == "postgres" {
+	if msg.DBType == DBTYPE_PG {
 		vme, err = DBGetPGVersion(msg.DBUniqueName, false)
 		if err != nil {
 			log.Error("failed to fetch pg version for ", msg.DBUniqueName, msg.MetricName, err)
 			return nil, err
 		}
 		db_pg_version = vme.Version
-	} else if msg.DBType == "pgbouncer" {
+	} else if msg.DBType == DBTYPE_BOUNCER {
 		db_pg_version = decimal.Decimal{} // version is 0.0 for all pgbouncer sql per convention
 		// as surprisingly pgbouncer 'show version' outputs it as 'NOTICE'
 		// which cannot be accessed from Go lib/pg
@@ -2854,7 +2865,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 			CustomTags:        ce.CustomTags,
 			HostConfig:        ce.HostConfig,
 			OnlyIfMaster:      ce.OnlyIfMaster,
-			DBType:            "postgres"})
+			DBType:            DBTYPE_PG})
 	}
 
 	return md, err
@@ -2876,18 +2887,29 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 			}
 			e.Metrics = mdef
 		}
+		if _, ok := dbTypeMap[e.DBType]; !ok {
+			log.Warningf("Ignoring host \"%s\" - unknown dbtype: %s. Expected one of: %+v", e.DBUniqueName, e.DBType, dbTypes)
+			continue
+		}
 		if e.IsEnabled && e.PasswordType == "aes-gcm-256" && opts.AesGcmKeyphrase != "" {
 			e.Password = decrypt(e.DBUniqueName, opts.AesGcmKeyphrase, e.Password)
 		}
-		if len(e.DBName) == 0 || e.DBType == "postgres-continuous-discovery" || e.DBType == "patroni" || e.DBType == "patroni-continuous-discovery" {
-			if e.DBType == "postgres-continuous-discovery" {
+		if e.DBType == DBTYPE_PATRONI && e.DBName == ""{
+			log.Warningf("Ignoring host \"%s\" as \"dbname\" attribute not specified but required by dbtype=patroni", e.DBUniqueName)
+			continue
+		}
+		if e.DBType == DBTYPE_PG && e.DBName == ""{
+			log.Warningf("Ignoring host \"%s\" as \"dbname\" attribute not specified but required by dbtype=postgres", e.DBUniqueName)
+			continue
+		}
+		if len(e.DBName) == 0 || e.DBType == DBTYPE_PG_CONT || e.DBType == DBTYPE_PATRONI || e.DBType == DBTYPE_PATRONI_CONT {
+			if e.DBType == DBTYPE_PG_CONT {
 				log.Debugf("Adding \"%s\" (host=%s, port=%s) to continuous monitoring ...", e.DBUniqueName, e.Host, e.Port)
-				continuousMonitoringDatabases = append(continuousMonitoringDatabases, e)
 			}
 			var found_dbs []MonitoredDatabase
 			var err error
 
-			if e.DBType == "patroni" || e.DBType == "patroni-continuous-discovery" {
+			if e.DBType == DBTYPE_PATRONI || e.DBType == DBTYPE_PATRONI_CONT {
 				found_dbs, err = ResolveDatabasesFromPatroni(e)
 			} else {
 				found_dbs, err = ResolveDatabasesFromConfigEntry(e)
@@ -3387,7 +3409,7 @@ func main() {
 						log.Fatalf("Could not parse --adhoc-config(%s): %v", opts.AdHocConfig, err)
 					}
 				}
-				monitored_dbs = []MonitoredDatabase{{DBUniqueName: opts.AdHocUniqueName, DBType: "postgres",
+				monitored_dbs = []MonitoredDatabase{{DBUniqueName: opts.AdHocUniqueName, DBType: DBTYPE_PG,
 					Metrics: config}}
 			} else {
 				mc, err := ReadMonitoringConfigFromFileOrFolder(opts.Config)
@@ -3471,9 +3493,9 @@ func main() {
 					log.Infof("new host \"%s\" found, checking connectivity...", db_unique)
 				}
 
-				if db_type == "postgres" {
+				if db_type == DBTYPE_PG {
 					ver, err = DBGetPGVersion(db_unique, true)
-				} else if db_type == "pgbouncer" {
+				} else if db_type == DBTYPE_BOUNCER {
 					_, err, _ = DBExecReadByDbUniqueName(db_unique, "", false, "show version")
 				}
 				if err != nil {
@@ -3495,7 +3517,7 @@ func main() {
 					}
 				}
 
-				if (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && db_type == "postgres" {
+				if (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && db_type == DBTYPE_PG {
 					log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
 					TryCreateMetricsFetchingHelpers(db_unique)
 				}
@@ -3509,7 +3531,7 @@ func main() {
 				continue
 			}
 
-			if host.DBType == "postgres" {
+			if host.DBType == DBTYPE_PG {
 				ver, err := DBGetPGVersion(db_unique, false)
 				if err == nil {	// ok to ignore error, re-tried on next loop
 					if ver.IsInRecovery && host.OnlyIfMaster {
