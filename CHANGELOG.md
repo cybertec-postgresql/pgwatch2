@@ -29,6 +29,7 @@ or a specific version
 * Dashboards - "Health-check" overhaul. PG ver, uptime, transaction wraparound, longest autovacuum and other infos
 * Dashboards - a template for alerting with preset thresholds for couple of most important metrics. For PG backend only.
 * Metrics improvement - skip index_stats gathering for locked indexes
+* Metrics - support upcoming PG v12
 * Metrics - new "settings" metric based on pg_settings + according panel to "Change events"
 * Metrics - capture "server restarted" events when "db_stats" metric enabled (visualized on "Change events" dash)
 * Metrics - increase intervals for index/table stats
