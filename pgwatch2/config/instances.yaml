@@ -1,5 +1,5 @@
 - unique_name: test1  # functions also as prefix for found DBs if using patterns/continous discovery
-  dbtype: postgres    # postgres|pgbouncer|postgres-continuous-discovery
+  dbtype: postgres    # postgres|pgbouncer|postgres-continuous-discovery|patroni|patroni-continuous-discovery
   host: localhost
   port: 5432
   dbname: pgwatch2
@@ -30,6 +30,11 @@
   user: krl
   password: krl
   sslmode: disable
+  host_config:    # host_config used only for dbtype=patroni|patroni-continuous-discovery currently
+    dcs_type: etcd
+    dcs_endpoints: ["http://localhost:2379"]
+    scope: batman
+    namespace: /service/
   stmt_timeout: 5
   preset_metrics:
   custom_metrics:
