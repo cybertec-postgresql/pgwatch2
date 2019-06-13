@@ -76,12 +76,12 @@
             <tr>
                 <td>ID</td>
                 <td title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data). Will be used as prefix during DB discovery mode">Unique name</td>
-                <td title="NB! For 'pgbouncer' insert the 'to be monitored' pool name to 'dbname' field. For dbtype='pg-continuous-discovery|patroni' one can also specify regex inclusion/exclusion patterns. For 'patroni' host/port are not used as it's read from DCS (specify DCS info under 'Host config')">DB type</td>
+                <td title="NB! For 'pgbouncer' insert the 'to be monitored' pool name to 'dbname' field. For dbtype='postgres-continuous-discovery|patroni-continuous-discovery' one can also specify regex inclusion/exclusion patterns. For 'patroni' host/port are not used as it's read from DCS (specify DCS info under 'Host config')">DB type</td>
                 <td>DB host</td>
                 <td>DB port</td>
-                <td title="If left empty, all non-template DBs found from the cluster will be added to monitoring (if not already monitored), prefixed with the 'Unique name'. For 'pgbouncer' DB type insert the 'pool' name. Not relevant for 'pg-continuous-discovery'">DB dbname <span class="glyphicon glyphicon-info-sign" title="If left empty, all non-template DBs found from the cluster will be added to monitoring (if not already monitored), prefixed with the 'Unique name'. For 'pgbouncer' DB type insert the 'pool' name. Not relevant for 'pg-continuous-discovery'."></span></td>
-                <td title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery|patroni">DB name inclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery"></span></td>
-                <td title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery|patroni">DB name exclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=pg-continuous-discovery"></span></td>
+                <td title="If left empty, all non-template DBs found from the cluster will be added to monitoring (if not already monitored), prefixed with the 'Unique name'. For 'pgbouncer' DB type insert the 'pool' name. Not relevant for 'postgres-continuous-discovery'">DB dbname <span class="glyphicon glyphicon-info-sign" title="If left empty, all non-template DBs found from the cluster will be added to monitoring (if not already monitored), prefixed with the 'Unique name'. For 'pgbouncer' DB type insert the 'pool' name. Not relevant for 'postgres-continuous-discovery'."></span></td>
+                <td title="POSIX regex input. Relevant only for dbtype=postgres-continuous-discovery|patroni-continuous-discovery">DB name inclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=postgres-continuous-discovery"></span></td>
+                <td title="POSIX regex input. Relevant only for dbtype=postgres-continuous-discovery|patroni-continuous-discovery">DB name exclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=postgres-continuous-discovery"></span></td>
                 <td>DB user</td>
                 <td title="NB! By default password is stored in plain-text in the database">DB password</td>
                 <td title="NB! To use, an identical cipher key(file) must be used to launch the Web UI and the Gatherer">Password encryption<span class="glyphicon glyphicon-info-sign" title="To use, an identical cipher key(file) must be used to launch the Web UI and the Gatherer"></span></td>
@@ -113,7 +113,7 @@
                         <select name="md_dbtype">
                             <option value="postgres" {% if row['md_dbtype'] == "postgres" %}selected{% endif %}>postgres</option>
                             <option value="pgbouncer"{% if row['md_dbtype'] == "pgbouncer" %}selected{% endif %}>pgbouncer</option>
-                            <option value="postgres-continuous-discovery"{% if row['md_dbtype'] == "postgres-continuous-discovery" %}selected{% endif %}>pg-continuous-discovery</option>
+                            <option value="postgres-continuous-discovery"{% if row['md_dbtype'] == "postgres-continuous-discovery" %}selected{% endif %}>postgres-continuous-discovery</option>
                             <option value="patroni"{% if row['md_dbtype'] == "patroni" %}selected{% endif %}>patroni</option>
                             <option value="patroni-continuous-discovery"{% if row['md_dbtype'] == "patroni-continuous-discovery" %}selected{% endif %}>patroni-continuous-discovery</option>
                         </select>
@@ -172,10 +172,10 @@
                     <td></td>
                     <td><input type="text" name="md_unique_name" value="" size="8" title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data)"></td>
                     <td>
-                        <select name="md_dbtype" id="md_dbtype" title="'postgres': Single Postgres DB monitoring, 'pgbouncer': PgBouncer traffic stats for a single pool, 'pg-continuous-discovery': Specified PG cluster will be polled for new DBs to be monitored periodically (with optional pattern matching), 'patroni': cluster members will be tracked via DCS. Specify DCS info under 'Host config'">
+                        <select name="md_dbtype" id="md_dbtype" title="'postgres': Single Postgres DB monitoring, 'pgbouncer': PgBouncer traffic stats for a single pool, 'postgres-continuous-discovery': Specified PG cluster will be polled for new DBs to be monitored periodically (with optional pattern matching), 'patroni': cluster members will be tracked via DCS. Specify DCS info under 'Host config'">
                             <option value="postgres">postgres</option>
                             <option value="pgbouncer">pgbouncer</option>
-                            <option value="postgres-continuous-discovery">pg-continuous-discovery</option>
+                            <option value="postgres-continuous-discovery">postgres-continuous-discovery</option>
                             <option value="patroni">patroni</option>
                             <option value="patroni-continuous-discovery">patroni-continuous-discovery</option>
                         </select>

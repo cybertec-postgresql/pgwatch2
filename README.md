@@ -306,12 +306,12 @@ password protection - PW2_WEBNOANONYMOUS, PW2_WEBUSER, PW2_WEBPASSWORD.
 By default also the Docker component logs (Postgres, Influx, Grafana, Go daemon, Web UI itself) are exposed via the "/logs"
 endpoint. If this is not wanted set the PW2_WEBNOCOMPONENTLOGS env. variable.
 
-### Different Web UI "DB types" explained
+### Different "DB types" explained
 
-* postgres - connect data to a single to-be-monitored DB needs to be specified. If "DB name" field is left empty, then
+* postgres - connect data to a single to-be-monitored DB needs to be specified. When using the Web UI and "DB name" field is left empty, then
 as a one time operation, all non-template DB names are fetched, prefixed with "Unique name" field value and added to
 monitoring (if not already monitored). Internally monitoring always happens "per DB" not "per cluster".
-* pg-continuous-discovery - connect data to a Postgres cluster (w/o a DB name) needs to be specified
+* postgres-continuous-discovery - connect data to a Postgres cluster (w/o a DB name) needs to be specified
 and then the metrics daemon will periodically scan the cluster (connecting to the "template1" database,
 which is expected to exist) and add any found and not yet monitored  DBs to monitoring. In this mode it's also possible to
 specify regular expressions to include/exclude some database names.
@@ -322,6 +322,9 @@ it's state. Typically in such a setup the nodes come and go and also it should n
 To make it easier to monitor such dynamic constellations pgwatch2 supports reading of cluster node info from all
 supported DCS-s (etcd, Zookeeper, Consul), but currently only for simpler cases with no security applied (which is actually
 the common case in a trusted environment).
+* patroni-continuous-discovery - as normal Patroni but all DB (or only those matching regex patterns) are monitored.
+
+NB! "continuous" modes expect / need access to the "template1" DB of the specified cluster. 
 
 
 ## Patroni usage
