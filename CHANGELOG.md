@@ -25,6 +25,7 @@ or a specific version
 * Gatherer improvement - allow partial InfluxDB writes
 * Gatherer improvement - support SCRAM-SHA-256 password authentication via Go driver update
 * Gatherer improvement - support LibPQ style connection strings in YAML configs
+* Gatherer improvement - don't try to auto-create helpers on standbys
 * Dashboards - support for Grafana v6 plus minor updates for most dashboards. v5 dashboards will not get updates any more!
 * Dashboards - "Health-check" overhaul. PG ver, uptime, transaction wraparound, longest autovacuum and other infos
 * Dashboards - a template for alerting with preset thresholds for couple of most important metrics. For PG backend only.
