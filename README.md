@@ -14,7 +14,7 @@ Software is packaged as Docker (for custom setup see the last paragraph below, f
 [here](https://docs.docker.com/get-started/)) for getting started quickly.
 ```
 # fetch and run the latest Docker image, exposing Grafana on port 3000 and administrative web UI on 8080
-docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2
+docker run -d -p 3000:3000 -p 8080:8080 -e PW2_TESTDB=true --name pw2 cybertec/pgwatch2
 ```
 After some minutes you could open the ["db-overview"](http://127.0.0.1:3000/dashboard/db/db-overview) dashboard and start
 looking at metrics. For defining your own dashboards you need to log in as admin (admin/pgwatch2admin).
@@ -30,9 +30,9 @@ paragraph "Installing without Docker" towards the end of README for that.
 ```
 for v in pg influx grafana pw2 ; do docker volume create $v ; done
 # with InfluxDB for metrics storage
-docker run -d --name pw2 -v pg:/var/lib/postgresql -v influx:/var/lib/influxdb -v grafana:/var/lib/grafana -v pw2:/pgwatch2/persistent-config -p 8080:8080 -p 3000:3000 cybertec/pgwatch2
+docker run -d --name pw2 -v pg:/var/lib/postgresql -v influx:/var/lib/influxdb -v grafana:/var/lib/grafana -v pw2:/pgwatch2/persistent-config -p 8080:8080 -p 3000:3000 -e PW2_TESTDB=true cybertec/pgwatch2
 # with Postgres for metrics storage
-docker run -d --name pw2 -v pg:/var/lib/postgresql -v grafana:/var/lib/grafana -v pw2:/pgwatch2/persistent-config -p 8080:8080 -p 3000:3000 cybertec/pgwatch2-postgres
+docker run -d --name pw2 -v pg:/var/lib/postgresql -v grafana:/var/lib/grafana -v pw2:/pgwatch2/persistent-config -p 8080:8080 -p 3000:3000 -e PW2_TESTDB=true cybertec/pgwatch2-postgres
 ```
 
 For more advanced usecases (production setup backups) or for easier problemsolving you can decide to expose all services
