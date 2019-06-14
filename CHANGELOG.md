@@ -29,6 +29,7 @@ or a specific version
 * Dashboards - support for Grafana v6 plus minor updates for most dashboards. v5 dashboards will not get updates any more!
 * Dashboards - "Health-check" overhaul. PG ver, uptime, transaction wraparound, longest autovacuum and other infos
 * Dashboards - a template for alerting with preset thresholds for couple of most important metrics. For PG backend only.
+* Dashboards - links going out from "Top stms/table/sproc" dashboards now preserve the selected timerange
 * Metrics improvement - skip index_stats gathering for locked indexes
 * Metrics - support upcoming PG v12
 * Metrics - new "settings" metric based on pg_settings + according panel to "Change events"
