@@ -1728,12 +1728,12 @@ func GetMetricVersionProperties(metric string, pgVer decimal.Decimal, metricDefM
 	if metricDefMap != nil {
 		mdm = metricDefMap
 	} else {
+		metric_def_map_lock.RLock()
 		mdm = metric_def_map // global cache
+		defer metric_def_map_lock.RUnlock()
 	}
 
-	metric_def_map_lock.RLock()
 
-	defer metric_def_map_lock.RUnlock()
 
 	_, ok := mdm[metric]
 	if !ok || len(mdm[metric]) == 0 {
