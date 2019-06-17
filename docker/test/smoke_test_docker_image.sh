@@ -16,17 +16,18 @@ METRICDBTYPE=$1
 IMAGE=$2
 CONTAINER_NAME="smoke_test_$METRICDBTYPE"
 PGHOST=localhost
-PGPORT=9433
+PGPORT=$(shuf -i 10000-65000 -n 1)
 PGUSER=pgwatch2
 PGPASSWORD=pgwatch2admin
 PGDATABASE=pgwatch2_metrics
-WEBUIPORT=9081
-INFLUXPORT=9086
+WEBUIPORT=$(shuf -i 10000-65000 -n 1)
+INFLUXPORT=$(shuf -i 10000-65000 -n 1)
+GRAFANAPORT=$(shuf -i 10000-65000 -n 1)
 
 echo "starting smoke test of Postgres image $IMAGE ..."
 
-echo "launching docker container ..."
-DOCKER_RUN=$(docker run -d --rm --cpus=2 -p 9081:8080 -p 9001:3000 -p 9433:5432 -p 9086:8086 --name "$CONTAINER_NAME" $IMAGE)
+echo "launching docker container using ports GRAFANA=$GRAFANAPORT, PG=$PGPORT, WEBUI=$WEBUIPORT, INFLUX=$INFLUXPORT..."
+DOCKER_RUN=$(docker run -d --rm --cpus=2 -p $WEBUIPORT:8080 -p $GRAFANAPORT:3000 -p $PGPORT:5432 -p $INFLUXPORT:8086 --name "$CONTAINER_NAME" $IMAGE)
 echo "OK. container $CONTAINER_NAME started"
 
 
@@ -35,7 +36,7 @@ sleep 30
 
 
 echo "checking Web UI response ..."
-curl -s localhost:9081/dbs >/dev/null
+curl -s localhost:$WEBUIPORT/dbs >/dev/null
 echo "OK"
 
 
@@ -51,7 +52,7 @@ sleep 120
 
 echo "checking if metrics exists for added DB..."
 if [ $METRICDBTYPE == "pg" ]; then
-    ROWS=$(psql -qXAtc "select count(*) from db_stats where dbname = 'smoke1'")
+    ROWS=$(psql -p $PGPORT -qXAtc "select count(*) from db_stats where dbname = 'smoke1'")
 else
   ROWS=$(curl -sG http://localhost:$INFLUXPORT/query?pretty=true --data-urlencode "db=pgwatch2" \
   --data-urlencode "q=SELECT count(xlog_location_b) FROM wal WHERE dbname='smoke1'" \
