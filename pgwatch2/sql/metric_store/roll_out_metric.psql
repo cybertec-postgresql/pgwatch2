@@ -1,0 +1,8 @@
+begin;
+
+\i 00_schema_base.sql
+\i 01_old_metrics_cleanup_procedure.sql
+\i metric/ensure_partition.sql
+\i metric/metric_store_simple.sql
+
+commit;

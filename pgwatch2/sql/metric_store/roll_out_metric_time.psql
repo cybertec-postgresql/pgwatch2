@@ -1,0 +1,8 @@
+begin;
+
+\i 00_schema_base.sql
+\i 01_old_metrics_cleanup_procedure.sql
+\i metric-time/ensure_partition_metric_time.sql
+\i metric-time/metric_store_part_time.sql
+
+commit;
