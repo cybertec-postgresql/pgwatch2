@@ -31,27 +31,24 @@ BEGIN
                   WHERE tablename = metric
                     AND schemaname = 'public')
   THEN
-    RAISE NOTICE 'creating partition % ...', metric; 
-    --EXECUTE format($$CREATE TABLE public.%s (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY LIST (dbname)$$,
-    --                quote_ident(metric));
-    --EXECUTE format($$COMMENT ON TABLE public.%s IS 'pgwatch2-generated-metric-lvl'$$, quote_ident(metric));
+    -- RAISE NOTICE 'creating partition % ...', metric;
+    EXECUTE format($$CREATE TABLE public.%s (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY LIST (dbname)$$,
+                    quote_ident(metric));
+    EXECUTE format($$COMMENT ON TABLE public.%s IS 'pgwatch2-generated-metric-lvl'$$, quote_ident(metric));
   END IF;
 
   -- 2. level
-  --l_part_name_2nd := md5(metric || '_' || dbname);
 
   l_year := extract(isoyear from (metric_timestamp + '1month'::interval * 1));
   l_month := extract(month from (metric_timestamp + '1month'::interval * 1));
 -- raise notice '%_%_y%m%', metric, dbname, l_year, to_char(l_month, 'fm00');
--- raise notice char_length(format('%s_%s_y%sm%s', metric, dbname, l_year, to_char(l_month, 'fm00')));
-if char_length(format('%s_%s_y%sm%s', metric, dbname, l_year, to_char(l_month, 'fm00'))) > 63 
-then
-  ideal_length = 63 - char_length(format('%s__y%sm%s', metric, l_year, to_char(l_month, 'fm00')));
-  l_part_name_2nd := metric || '_' || substring(md5(dbname) from 1 for ideal_length);
-  --l_part_name_2nd := metric || '_' || crc32(dbname);
-else
-  l_part_name_2nd := metric || '_' || dbname;
-end if;
+  IF char_length(format('%s_%s_y%sm%s', metric, dbname, l_year, to_char(l_month, 'fm00'))) > 63     -- use "dbname" hash instead of name for overly long ones
+  THEN
+    ideal_length = 63 - char_length(format('%s__y%sm%s', metric, l_year, to_char(l_month, 'fm00')));
+    l_part_name_2nd := metric || '_' || substring(md5(dbname) from 1 for ideal_length);
+  ELSE
+    l_part_name_2nd := metric || '_' || dbname;
+  END IF;
 
   IF NOT EXISTS (SELECT 1
                    FROM pg_tables
