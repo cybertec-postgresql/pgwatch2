@@ -19,7 +19,7 @@ BEGIN
   THEN
     --RAISE NOTICE 'creating partition % ...', metric;
    
-    EXECUTE format($$CREATE TABLE public.%s (LIKE admin.metrics_template INCLUDING INDEXES)$$, quote_ident(metric));
+    EXECUTE format($$CREATE TABLE IF NOT EXISTS public.%s (LIKE admin.metrics_template INCLUDING INDEXES)$$, quote_ident(metric));
     EXECUTE format($$COMMENT ON TABLE public.%s IS 'pgwatch2-generated-metric-lvl'$$, quote_ident(metric));
   END IF;
 
