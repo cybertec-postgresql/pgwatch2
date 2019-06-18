@@ -1,10 +1,12 @@
 FROM ubuntu:16.04
 
 RUN apt-get -q update \
-    && apt-get -qy install wget apt-transport-https vim git supervisor postgresql postgresql-plpython-9.5 libfontconfig python3-pip libssl-dev libpq-dev \
-    && pip3 install -U pip \
+    && apt-get -qy install wget apt-transport-https vim git postgresql postgresql-plpython-9.5 libfontconfig python3-pip libssl-dev libpq-dev \
+    && pip3 install -U pip
+
+RUN pip3 install supervisor \
     && locale-gen "en_US.UTF-8" && apt autoremove -y \
-    && mkdir -p /var/log/supervisor /pgwatch2 \
+    && mkdir -p /var/log/supervisor /etc/supervisor /pgwatch2 \
     && rm -rf /var/lib/postgresql/9.5/main \
     && echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/9.5/main/postgresql.conf \
     && chgrp -R 0 /pgwatch2 /var/log/supervisor /etc/supervisor /var/run /var/lib/postgresql /var/log/postgresql /var/run/postgresql /etc/postgresql \
