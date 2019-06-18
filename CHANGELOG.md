@@ -37,7 +37,9 @@ or a specific version
 * Metrics - increase intervals for index/table stats
 * Metrics - add a sample bash script to push arbitrary metrics to the pgwatch2 metrics DB externally
 * Metrics - add "system identifier" to "wal" to enable auto-grouping of cluster members
-* Docker components update -  Grafana 6.2.1, Go 1.12.5, Influx 1.7.6
+* Metrics PG storage - support very long database names also in metric-dbname-time mode. Thanks @henriavelabarbe!
+* Config store - add a schema versioning table so that next version schema change diffs could be auto-applied 
+* Docker components update -  Grafana 6.2.3, Go 1.12.6, Influx 1.7.6
 
 NB! When migrating old "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
 applied first from the "pgwatch2/sql/config_store/migrations/" folder.
