@@ -75,7 +75,5 @@ touch /pgwatch2/persistent-config/db-bootstrap-done-marker
 
 fi
 
-/usr/lib/postgresql/9.5/bin/pg_ctl -D /var/lib/postgresql/9.5/main/ -o "-c config_file=/etc/postgresql/9.5/main/postgresql.conf" -w start
-
 
 exec /usr/bin/supervisord --configuration=/etc/supervisor/supervisord.conf --nodaemon
