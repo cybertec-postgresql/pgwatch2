@@ -25,11 +25,11 @@ GRAFANA_MAJOR_VER=$(grafana-server -v | egrep -o [0-9]{1} | head -1)
 
 psql -h /var/run/postgresql -f /pgwatch2/bootstrap/grafana_datasource.sql pgwatch2_grafana
 
-for slug in $(ls --hide='*.md' /pgwatch2/grafana_dashboards/v${GRAFANA_MAJOR_VER}) ; do
+for slug in $(ls --hide='*.md' /pgwatch2/grafana_dashboards/influxdb/v${GRAFANA_MAJOR_VER}) ; do
 
 echo "inserting dashboard: $slug"
-TITLE=$(cat /pgwatch2/grafana_dashboards/v${GRAFANA_MAJOR_VER}/${slug}/title.txt)
-JSON=$(cat /pgwatch2/grafana_dashboards/v${GRAFANA_MAJOR_VER}/${slug}/dashboard.json)
+TITLE=$(cat /pgwatch2/grafana_dashboards/influxdb/v${GRAFANA_MAJOR_VER}/${slug}/title.txt)
+JSON=$(cat /pgwatch2/grafana_dashboards/influxdb/v${GRAFANA_MAJOR_VER}/${slug}/dashboard.json)
 
 # in Grafana 5 "uid" column was introduced that is normally filled by the app
 if [ "$GRAFANA_MAJOR_VER" -gt 4 ] ; then
