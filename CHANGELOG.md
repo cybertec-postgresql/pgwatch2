@@ -39,6 +39,7 @@ or a specific version
 * Metrics - add "system identifier" to "wal" to enable auto-grouping of cluster members
 * Metrics PG storage - support very long database names also in metric-dbname-time mode. Thanks @henriavelabarbe!
 * Config store - add a schema versioning table so that next version schema change diffs could be auto-applied 
+* Web UI - external component update + according HTML / CSS changes: Bootstrap 3 -> 4, jQuery 3.1 -> 3.4
 * Docker components update -  Grafana 6.2.3, Go 1.12.6, Influx 1.7.6
 
 NB! When migrating old "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
