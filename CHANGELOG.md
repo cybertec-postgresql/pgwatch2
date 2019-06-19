@@ -11,7 +11,7 @@ or a specific version
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
 
-## v1.6.0 [DRAFT]
+## v1.6.0 [2019-06-19]
 
 * Gatherer feature - add support for Prometheus scraping
 * Gatherer feature - Patroni (etcd, Zookeeper, Consul) support (non-password access)
