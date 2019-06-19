@@ -41,7 +41,7 @@ echo "OK"
 
 
 echo "adding new DB 'smoke1' to monitoring via POST to Web UI /dbs page..."
-http -f POST :$WEBUIPORT/dbs md_unique_name=smoke1 md_dbtype=postgres md_hostname=/var/run/postgresql/ md_port=5432 md_dbname=pgwatch2 \
+http --verify=no -f POST :$WEBUIPORT/dbs md_unique_name=smoke1 md_dbtype=postgres md_hostname=/var/run/postgresql/ md_port=5432 md_dbname=pgwatch2 \
   md_user=pgwatch2 md_password=pgwatch2admin md_password_type=plain-text md_preset_config_name=basic md_is_enabled=true new=New >/dev/null
 echo "OK"
 
@@ -58,7 +58,7 @@ else
   --data-urlencode "q=SELECT count(xlog_location_b) FROM wal WHERE dbname='smoke1'" \
   | jq .results[0].series[0].values[0][1])
 fi
-if [ ! $ROWS -gt 0 ] ; then
+if [ -z $ROWS -o ! $ROWS -gt 0 ] ; then
   echo "could not get any db_stats rows for the inserted DB 'smoke1'"
   exit 1
 fi
