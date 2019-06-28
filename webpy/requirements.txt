@@ -1,6 +1,6 @@
 cherrypy
 jinja2
-psycopg2
+psycopg2-binary
 influxdb
 decorator
 cryptography
