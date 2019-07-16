@@ -424,6 +424,7 @@ def update_metric(params):
           m_id = %(m_id)s
     """
     cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper', 'm_master_only', 'm_standby_only'])
+    cherrypy_empty_text_to_nulls(params, ['m_column_attrs'])
     ret, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to update "metric": ' + err)
