@@ -7,4 +7,4 @@ select
 from
   get_table_bloat_approx()
 where
-  approx_free_space > 0
+  approx_free_space > 0;
