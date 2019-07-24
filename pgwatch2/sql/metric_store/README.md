@@ -17,6 +17,7 @@ A single "master" table for each distinct metric in the "public" schema + weekly
 ## metric-dbname-time
 
 A single "master" table for each distinct metric in the "public" schema + 2 level subpartitions ("dbname" + monthly time based) in the "subpartitions" schema. Works on PG 11+ versions. Suitable for 25+ monitored DBs.
+NB! Currently minimum effective retention period with this model is 30 days. This will be lifted once PG 12 comes out.
 
 ## custom
 
