@@ -51,7 +51,7 @@ create table pgwatch2.monitored_db (
     UNIQUE (md_unique_name),
     CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':'),
     CHECK (md_sslmode in ('disable', 'require', 'verify-ca', 'verify-full')),
-    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery', 'patroni')),
+    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery', 'patroni', 'patroni-continuous-discovery')),
     CHECK (md_group ~ E'\\w+'),
     CHECK (md_password_type in ('plain-text', 'aes-gcm-256'))
 );
@@ -83,13 +83,13 @@ create table metric (
 );
 
 
-/* this will allow auto-rollout of schema changes for future 1.6+ releases */
+/* this should allow auto-rollout of schema changes for future (1.6+) releases. currently only informative */
 create table schema_version (
     sv_tag text primary key,
     sv_created_on timestamptz not null default now()
 );
 
-insert into pgwatch2.schema_version (sv_tag) values ('1.6.0');
+insert into pgwatch2.schema_version (sv_tag) values ('1.6.1');
 
 
 insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
