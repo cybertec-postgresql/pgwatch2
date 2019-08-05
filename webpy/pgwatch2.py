@@ -225,6 +225,9 @@ def update_monitored_db(params, cmd_args=None):
         raise Exception('Failed to update "monitored_db": ' + err)
     ret.append('Updated!')
 
+    if params['md_dbtype'] in ['patroni', 'patroni-continuous-discovery']:
+        return ret  # check if DCS is accessible?
+
     # check connection if connect string changed or inactive host activated
     if data[0]['connection_data_changed'] or (old_row_data and (not old_row_data['md_is_enabled'] and params['md_is_enabled'])):  # show warning when changing connect data but cannot connect
         if params.get('md_password_type') == 'aes-gcm-256' and cmd_args.aes_gcm_keyphrase and data[0]['md_password'] and data[0]['md_password'].find('-') > 0:
@@ -344,6 +347,10 @@ def insert_monitored_db(params, cmd_args=None):
         if err:
             raise Exception('Failed to insert into "monitored_db": ' + err)
         ret.append('Host with ID {} added!'.format(data[0]['md_id']))
+
+        if params['md_dbtype'] in ['patroni', 'patroni-continuous-discovery']:
+            ret.append('Actual DB hosts will be discovered by the metrics daemon via DCS')  # check if DCS is accessible? would cause more deps...
+            return ret
 
         if params['md_dbtype'] == 'postgres-continuous-discovery':
             params['md_dbname'] = 'template1'
