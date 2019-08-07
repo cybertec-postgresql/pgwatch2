@@ -1,9 +1,8 @@
 /*
   NB! When possible the partitioned versions ("metric_store_part_time.sql"
-  or "metric_store_part_dbname_time.sql") (assuming PG10+) should be used
+  or "metric_store_part_dbname_time.sql") (assuming PG11+) should be used
   as much less IO would be then performed when removing old data.
-  Use the gatherer flag "--pg-schema-type=metric" when using this schema.
-  NB! A fresh DB, only for pgwatch2 metrics storage purposes, is assumed.
+  NB! A fresh separate DB, only for pgwatch2 metrics storage purposes, is assumed.
 */
 
 CREATE EXTENSION IF NOT EXISTS btree_gin;

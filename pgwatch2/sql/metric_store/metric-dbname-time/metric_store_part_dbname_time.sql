@@ -1,10 +1,7 @@
 /* NB! PG 11+ only, for lesser PG versions see "metric_store_simple.sql"
    This schema is recommended for 25+ monitored DBs or for short intervals /
    long retention periods i.e. gigs and gigs of data.
-   Also not to create too many sub-partitions which is detrimental to query
-   performance, data is split into *monthly* not weekly chunks!
-   Use the gatherer flag "--pg-schema-type=metric-dbname-time" when using this schema.
-   NB! A fresh DB, only for pgwatch2 metrics storage purposes, is assumed.
+   NB! A fresh separate DB, only for pgwatch2 metrics storage purposes, is assumed.
 */
 
 CREATE SCHEMA IF NOT EXISTS subpartitions AUTHORIZATION pgwatch2;
@@ -41,10 +38,10 @@ create table subpartitions."mymetric_mydbname"
   FOR VALUES IN ('my-dbname') PARTITION BY RANGE (time);
 COMMENT ON TABLE subpartitions."mymetric_mydbname" IS 'pgwatch2-generated-metric-dbname-lvl';
 
-create table subpartitions."mymetric_mydbname_y2019m01" -- month calculated dynamically of course
+create table subpartitions."mymetric_mydbname_y2019w01" -- month calculated dynamically of course
   PARTITION OF subpartitions."mymetric_mydbname"
-  FOR VALUES FROM ('2019-01-01') TO ('2019-02-01');
-COMMENT ON TABLE subpartitions."mymetric_mydbname_y2019m01" IS 'pgwatch2-generated-metric-dbname-time-lvl';
+  FOR VALUES FROM ('2019-01-01') TO ('2019-01-07');
+COMMENT ON TABLE subpartitions."mymetric_mydbname_y2019w01" IS 'pgwatch2-generated-metric-dbname-time-lvl';
 
 */
 

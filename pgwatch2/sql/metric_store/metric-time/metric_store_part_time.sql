@@ -1,8 +1,7 @@
 /* 
    NB! PG 11+ only (for lesser PG versions see "metric_store_simple.sql")
    This schema is recommended for <25 monitored DBs (see "metric_store_part_dbname_time.sql" for 25+).
-   Use the gatherer flag "--pg-schema-type=metric-time" when using this schema.
-   NB! A fresh DB, only for pgwatch2 metrics storage purposes, is assumed.
+   NB! A fresh separate DB, only for pgwatch2 metrics storage purposes, is assumed.
 */
 
 CREATE SCHEMA IF NOT EXISTS subpartitions AUTHORIZATION pgwatch2;

@@ -16,7 +16,7 @@ RETURNS record AS
 $SQL$
 DECLARE
   l_year int;
-  l_month int;
+  l_week int;
   l_part_name_2nd text;
   l_part_name_3rd text;
   l_part_start date;
@@ -40,11 +40,11 @@ BEGIN
   -- 2. level
 
   l_year := extract(isoyear from (metric_timestamp + '1month'::interval * 1));
-  l_month := extract(month from (metric_timestamp + '1month'::interval * 1));
+  l_week := extract(week from (metric_timestamp + '1week'::interval));
 -- raise notice '%_%_y%m%', metric, dbname, l_year, to_char(l_month, 'fm00');
-  IF char_length(format('%s_%s_y%sm%s', metric, dbname, l_year, to_char(l_month, 'fm00'))) > 63     -- use "dbname" hash instead of name for overly long ones
+  IF char_length(format('%s_%s_y%sw%s', metric, dbname, l_year, to_char(l_week, 'fm00'))) > 63     -- use "dbname" hash instead of name for overly long ones
   THEN
-    ideal_length = 63 - char_length(format('%s__y%sm%s', metric, l_year, to_char(l_month, 'fm00')));
+    ideal_length = 63 - char_length(format('%s__y%sm%s', metric, l_year, to_char(l_week, 'fm00')));
     l_part_name_2nd := metric || '_' || substring(md5(dbname) from 1 for ideal_length);
   ELSE
     l_part_name_2nd := metric || '_' || dbname;
@@ -65,18 +65,18 @@ BEGIN
   FOR i IN 0..partitions_to_precreate LOOP
 
   l_year := extract(isoyear from (metric_timestamp + '1month'::interval * i));
-  l_month := extract(month from (metric_timestamp + '1month'::interval * i));
+  l_week := extract(week from (metric_timestamp + '1week'::interval * i));
 
-  l_part_name_3rd := format('%s_y%sm%s', l_part_name_2nd, l_year, to_char(l_month, 'fm00'));
-  
+  l_part_name_3rd := format('%s_y%sw%s', metric, l_year, to_char(l_week, 'fm00' ));
+
   IF i = 0 THEN
-      l_part_start := to_date(l_year::text || l_month::text, 'YYYYMM');
-      l_part_end := l_part_start + '1month'::interval;
+      l_part_start := to_date(l_year::text || l_week::text, 'iyyyiw');
+      l_part_end := l_part_start + '1week'::interval;
       part_available_from := l_part_start;
       part_available_to := l_part_end;
   ELSE
-      l_part_start := l_part_start + '1month'::interval;
-      l_part_end := l_part_start + '1month'::interval;
+      l_part_start := l_part_start + '1week'::interval;
+      l_part_end := l_part_start + '1week'::interval;
       part_available_to := l_part_end;
   END IF;
 
