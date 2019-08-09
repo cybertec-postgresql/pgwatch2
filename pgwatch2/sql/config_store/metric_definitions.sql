@@ -1042,6 +1042,7 @@ true,
 $sql$
 /* NB! accessing pgstattuple_approx directly requires superuser or pg_stat_scan_tables/pg_monitor builtin roles */
 select
+  (extract(epoch from now()) * 1e9)::int8 AS epoch_ns,
   quote_ident(n.nspname)||'.'||quote_ident(c.relname) as tag_full_table_name,
   approx_free_percent,
   approx_free_space as approx_free_space_b,
