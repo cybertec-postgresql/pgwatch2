@@ -1,0 +1,10 @@
+\i cpu_load_plpythonu.sql
+\i psutil_cpu.sql
+\i psutil_disk_io_total.sql
+\i psutil_disk.sql
+\i psutil_mem.sql
+\i stat_activity_wrapper.sql
+\i stat_replication.sql
+\i stat_statements_wrapper.sql
+\i table_bloat_approx.sql
+\i wal_size.sql
