@@ -8,4 +8,4 @@ fi
 ./get_dependencies.sh
 
 echo "running 'go build pgwatch2.go' ..."
-go build git show -s --format="%H (%ci)" HEAD pgwatch2.go prom.go patroni.go
+go build -ldflags "-X 'main.GitVersionHash=`git show -s --format=\"%H (%ci)\" HEAD`'" pgwatch2.go prom.go patroni.go
