@@ -608,6 +608,8 @@ select
   n_tup_upd,
   n_tup_del,
   n_tup_hot_upd,
+  n_live_tup,
+  n_dead_tup,
   age(relfrozenxid) as tx_freeze_age
 from
   pg_stat_user_tables ut
@@ -618,7 +620,7 @@ where
   not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
   and c.relpersistence != 't'  order by toast_size_b desc nulls last; -- and temp tables
 $sql$,
-'{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze"]}'
+'{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}'
 );
 
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
@@ -645,6 +647,8 @@ select
   n_tup_upd,
   n_tup_del,
   n_tup_hot_upd,
+  n_live_tup,
+  n_dead_tup,
   vacuum_count,
   autovacuum_count,
   analyze_count,
@@ -659,7 +663,7 @@ where
   not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
   and c.relpersistence != 't'  order by toast_size_b desc nulls last; -- and temp tables
 $sql$,
-'{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze"]}'
+'{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}'
 );
 
 /* wal */

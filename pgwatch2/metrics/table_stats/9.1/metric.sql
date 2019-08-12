@@ -17,6 +17,7 @@ select
   n_tup_upd,
   n_tup_del,
   n_tup_hot_upd,
+  n_live_tup,
   n_dead_tup,
   vacuum_count,
   autovacuum_count,

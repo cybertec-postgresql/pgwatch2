@@ -17,6 +17,8 @@ select
   n_tup_upd,
   n_tup_del,
   n_tup_hot_upd,
+  n_live_tup,
+  n_dead_tup,
   age(relfrozenxid) as tx_freeze_age
 from
   pg_stat_user_tables ut
