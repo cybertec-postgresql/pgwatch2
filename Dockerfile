@@ -30,6 +30,12 @@ RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_6.2.5_amd6
 ADD pgwatch2 /pgwatch2
 ADD webpy /pgwatch2/webpy
 
+# For showing Git versions via :8080/versions or 'pgwatch2 --version'
+ARG GIT_HASH
+ARG GIT_TIME
+ENV GIT_HASH=${GIT_HASH}
+ENV GIT_TIME=${GIT_TIME}
+
 # Go installation [https://golang.org/dl/]
 # Grafana config customizations, Web UI requirements, compilation of the Go gatherer
 RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.12.7.linux-amd64.tar.gz \
@@ -38,6 +44,7 @@ RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.12.7.linux-amd64.tar.
     && cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
     && pip3 install -r /pgwatch2/webpy/requirements.txt \
     && pip2 install psutil \
+    && echo "$GIT_HASH" > /pgwatch2/build_git_version.txt \
     && cd /pgwatch2 && bash build_gatherer.sh \
     && rm /tmp/go.tar.gz \
     && rm -rf /usr/local/go /root/go \
