@@ -39,6 +39,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+var GitVersionHash = ""	// Will be set by "go build"!
+
 type MonitoredDatabase struct {
 	DBUniqueName         string `yaml:"unique_name"`
 	Group                string
@@ -3092,6 +3094,7 @@ type Options struct {
 	AddSystemIdentifier   string `long:"add-system-identifier" description:"Add system identifier to each captured metric" env:"PW2_ADD_SYSTEM_IDENTIFIER" default:"false"`
 	SystemIdentifierField string `long:"system-identifier-field" description:"Tag key for system identifier value if --add-system-identifier" env:"PW2_SYSTEM_IDENTIFIER_FIELD" default:"sys_id"`
 	ServersRefreshLoopSeconds int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERFVERS_REFRESH_LOOP_SECONDS" default:"120"`
+	Version               bool `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
 }
 
 var opts Options
@@ -3103,6 +3106,14 @@ func main() {
 		return
 	}
 
+	if opts.Version {
+		if GitVersionHash == "" {
+			fmt.Println("Git version not set! Use the 'build_gatherer.sh' script to build the binary or use 'go build  -ldflags \"-X 'main.GitVersionHash=`git show -s --format=\"%H (%ci)\" HEAD`\"' ...")
+			os.Exit(1)
+		}
+		fmt.Println(GitVersionHash)
+		os.Exit(0)
+	}
 	if len(opts.Verbose) >= 2 {
 		logging.SetLevel(logging.DEBUG, "main")
 	} else if len(opts.Verbose) == 1 {
