@@ -1760,7 +1760,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "decimals": null,
+      "decimals": 1,
       "description": "Based on get_stat_activity() helper",
       "fill": 1,
       "gridPos": {
