@@ -142,6 +142,7 @@ type DBVersionMapEntry struct {
 	LastCheckedOn    time.Time
 	IsInRecovery     bool
 	Version          decimal.Decimal
+	VersionStr       string
 	RealDbname       string
 	SystemIdentifier string
 }
@@ -1694,12 +1695,13 @@ func DBGetPGVersion(dbUnique string, noCache bool) (DBVersionMapEntry, error) {
 			}
 		}
 		ver.Version, _ = decimal.NewFromString(data[0]["ver"].(string))
+		ver.VersionStr = data[0]["ver"].(string)
 		ver.IsInRecovery = data[0]["pg_is_in_recovery"].(bool)
 		ver.LastCheckedOn = time.Now()
 		ver.RealDbname = data[0]["current_database"].(string)
 
 		if ver.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) {
-			log.Debugf("determining sytem identifier version for %s (ver: %v)", dbUnique, ver.Version)
+			log.Debugf("determining sytem identifier version for %s (ver: %v)", dbUnique, ver.VersionStr)
 			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_sysid)
 			if err == nil {
 				ver.SystemIdentifier = data[0]["system_identifier"].(string)
@@ -3507,7 +3509,7 @@ func main() {
 					failedInitialConnectHosts[db_unique] = true
 					continue
 				} else {
-					log.Infof("Connect OK. [%s] is on version %s (in recovery: %v)", db_unique, ver.Version, ver.IsInRecovery)
+					log.Infof("Connect OK. [%s] is on version %s (in recovery: %v)", db_unique, ver.VersionStr, ver.IsInRecovery)
 					if connectFailedSoFar {
 						delete(failedInitialConnectHosts, db_unique)
 					}
