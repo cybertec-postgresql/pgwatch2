@@ -442,10 +442,11 @@ def insert_metric(params):
         insert into
           pgwatch2.metric (m_name, m_pg_version_from, m_sql, m_comment, m_is_active, m_is_helper, m_master_only, m_standby_only, m_column_attrs)
         values
-          (%(m_name)s, %(m_pg_version_from)s, %(m_sql)s, %(m_comment)s, %(m_is_active)s, %(m_is_helper)s, %(m_master_only)s, %(m_standby_only)s, , %(m_column_attrs)s)
+          (%(m_name)s, %(m_pg_version_from)s, %(m_sql)s, %(m_comment)s, %(m_is_active)s, %(m_is_helper)s, %(m_master_only)s, %(m_standby_only)s, %(m_column_attrs)s)
         returning m_id
     """
     cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper', 'm_master_only', 'm_standby_only'])
+    cherrypy_empty_text_to_nulls(params, ['m_column_attrs'])
     ret, err = datadb.execute(sql, params)
     if err:
         raise Exception('Failed to insert into "metric": ' + err)
