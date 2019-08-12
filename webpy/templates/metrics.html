@@ -101,12 +101,12 @@
             {% endfor %}
             <tr>
                 <form action="/metrics" method="post">
-                    <td><input type="text" name="pc_name" value="" size="10"></td>
+                    <td><input type="text" id="pc_name" name="pc_name" value="" size="10"></td>
                     <td><input type="text" name="pc_description" value=""></td>
-                    <td><textarea name="pc_config" cols="50"></textarea></td>
+                    <td><textarea id="pc_config" name="pc_config" cols="50">{"metric": interval_seconds, ...}</textarea></td>
                     <td></td>
                     <td></td>
-                    <td><input type="submit" name="new" value="New"></td>
+                    <td><input type="submit" id="new" name="new" value="New"></td>
                     <td></td>
                 </form>
             </tr>
@@ -198,6 +198,19 @@
         $(".delete").click(function(e){
             var r = confirm("Delete?");
             if (r == false) {
+                e.preventDefault();
+            }
+        });
+        $("#new").click(function(e){
+            if ($('#pc_name').val() == '') {
+                alert('Preset config name is empty!');
+                e.preventDefault();
+            }
+            pc_config = $('#pc_config').val()
+            try {
+                JSON.parse(pc_config);
+            } catch (ex) {
+                alert('Preset config is not valid JSON!');
                 e.preventDefault();
             }
         });
