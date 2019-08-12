@@ -9,6 +9,12 @@ RUN apt-get -q update && apt-get -qy install wget git && apt autoremove -y
 ADD pgwatch2 /pgwatch2
 
 
+# For showing Git versions via :8080/versions or 'pgwatch2 --version'
+ARG GIT_HASH
+ARG GIT_TIME
+ENV GIT_HASH=${GIT_HASH}
+ENV GIT_TIME=${GIT_TIME}
+
 ###
 ### Install Go and compile the gatherer daemon
 ###
