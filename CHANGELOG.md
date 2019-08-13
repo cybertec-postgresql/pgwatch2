@@ -10,6 +10,23 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.6.1 [2019-08-13]
+
+* Config DB fix - allow 'patroni-continuous-discovery' DB type available in YAML mode
+* Web UI fix - adding/updating new metrics was broken
+* Gatherer fix - correct PG version display, v10.10 was displayed as 10.1
+* Gatherer improvement - add --version option to display build Git version
+* Metrics DB improvement - metric-dbname-time Postgres storage model using weekly partitions instead of monthly now
+* Metrics and metrics DB - add "psql" rollout scripts
+* Metrics - add n_live_tup, n_dead_tup to 'table_stats'
+* Web UI improvement - replace "psycopg2" dependency with "psycopg2-binary"
+* Web UI improvement - don't try to check connection for Patroni dbtype
+* Web UI improvement - some sanity checks on adding preset configs
+* Dashboards - add unused repl. slots to the Alert Template
+* Docker - Dockerfiles not directly dependant on Git now but --build-args + Bash build helper scripts
+* Docker component update: Influx 1.7.7, Grafana 6.2.5, Go 1.12.7
+
+
 
 ## v1.6.0 [2019-06-19]
 
