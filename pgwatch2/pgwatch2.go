@@ -899,6 +899,19 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		log.Error("Could not start Postgres metricsDB transaction:", err)
 		return err
 	}
+	defer func() {
+		if err == nil {
+			tx_err := txn.Commit()
+			if tx_err != nil {
+				log.Error("COPY Commit to Postgres failed:", tx_err)
+			}
+		} else {
+			tx_err := txn.Rollback()
+			if tx_err!= nil {
+				log.Error("COPY Rollback to Postgres failed:", tx_err)
+			}
+		}
+	}()
 
 	for metricName, metrics := range metricsToStorePerMetric {
 		var stmt *go_sql.Stmt
@@ -962,10 +975,6 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		if err != nil {
 			log.Error("stmt.Close() failed:", err)
 		}
-	}
-	err = txn.Commit()
-	if err != nil {
-		log.Error("COPY Commit to Postgres failed:", err)
 	}
 
 	t_diff := time.Now().Sub(t1)
