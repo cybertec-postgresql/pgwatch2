@@ -882,7 +882,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 	} else if PGSchemaType == "metric-time" {
 		err = EnsureMetricTime(pg_part_bounds)
 	} else if PGSchemaType == "metric-dbname-time" {
-		err = EnsureDbnameMetricTime(pg_part_bounds_dbname)
+		err = EnsureMetricDbnameTime(pg_part_bounds_dbname)
 	} else {
 		log.Fatal("should never happen...")
 	}
@@ -1307,7 +1307,7 @@ func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo) error {
 	return nil
 }
 
-func EnsureDbnameMetricTime(metric_dbname_part_bounds map[string]map[string]ExistingPartitionInfo) error {
+func EnsureMetricDbnameTime(metric_dbname_part_bounds map[string]map[string]ExistingPartitionInfo) error {
 	// TODO if less < 1d to part. end, precreate ?
 	sql_ensure := `
 	select * from admin.ensure_partition_metric_dbname_time($1, $2, $3)
