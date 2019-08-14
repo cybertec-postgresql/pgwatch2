@@ -42,12 +42,13 @@ BEGIN
   l_year := extract(isoyear from (metric_timestamp + '1month'::interval * 1));
   l_week := extract(week from (metric_timestamp + '1week'::interval));
 -- raise notice '%_%_y%m%', metric, dbname, l_year, to_char(l_month, 'fm00');
-  IF char_length(format('%s_%s_y%sw%s', metric, dbname, l_year, to_char(l_week, 'fm00'))) > 63     -- use "dbname" hash instead of name for overly long ones
+
+  l_part_name_2nd := metric || '_' || dbname;
+
+  IF char_length(l_part_name_2nd) > 63     -- use "dbname" hash instead of name for overly long ones
   THEN
-    ideal_length = 63 - char_length(format('%s__y%sm%s', metric, l_year, to_char(l_week, 'fm00')));
+    ideal_length = 63 - char_length(format('%s_', metric));
     l_part_name_2nd := metric || '_' || substring(md5(dbname) from 1 for ideal_length);
-  ELSE
-    l_part_name_2nd := metric || '_' || dbname;
   END IF;
 
   IF NOT EXISTS (SELECT 1
@@ -67,8 +68,6 @@ BEGIN
   l_year := extract(isoyear from (metric_timestamp + '1month'::interval * i));
   l_week := extract(week from (metric_timestamp + '1week'::interval * i));
 
-  l_part_name_3rd := format('%s_y%sw%s', metric, l_year, to_char(l_week, 'fm00' ));
-
   IF i = 0 THEN
       l_part_start := to_date(l_year::text || l_week::text, 'iyyyiw');
       l_part_end := l_part_start + '1week'::interval;
@@ -78,6 +77,14 @@ BEGIN
       l_part_start := l_part_start + '1week'::interval;
       l_part_end := l_part_start + '1week'::interval;
       part_available_to := l_part_end;
+  END IF;
+
+  l_part_name_3rd := format('%s_%s_y%sw%s', metric, dbname, l_year, to_char(l_week, 'fm00' ));
+
+  IF char_length(l_part_name_3rd) > 63     -- use "dbname" hash instead of name for overly long ones
+  THEN
+      ideal_length = 63 - char_length(format('%s__y%sw%s', metric, l_year, to_char(l_week, 'fm00')));
+      l_part_name_3rd := format('%s_%s_y%sw%s', metric, substring(md5(dbname) from 1 for ideal_length), l_year, to_char(l_week, 'fm00' ));
   END IF;
 
 
