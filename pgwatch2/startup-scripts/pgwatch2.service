@@ -5,6 +5,7 @@ Description=Pgwatch2 Gathering Daemon
 User=pgwatch2
 Type=notify
 ExecStart=/usr/local/bin/pgwatch2 -c /usr/local/etc/pgwatch2/instances.yaml -m /usr/local/share/pgwatch2/metrics/
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
