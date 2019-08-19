@@ -1406,7 +1406,7 @@
         "#299c46"
       ],
       "decimals": 1,
-      "description": "Queries per Second based on  \"pg_stat_statements\" extenion info. Last $online_interval avg. < 0.1 Error / < 1 Warning thresholds by default",
+      "description": "Queries per Second based on  \"pg_stat_statements\" extension info. Last $online_interval avg. < 0.1 Error / < 1 Warning thresholds by default",
       "format": "short",
       "gauge": {
         "maxValue": 100,
@@ -2813,7 +2813,7 @@
         "#d44a3a"
       ],
       "decimals": 0,
-      "description": "Invalid indexes should be dropped as they 're updated on DML operations but cannot be used for speeding up queries.",
+      "description": "Invalid indexes should be dropped as they're updated on DML operations but cannot be used for speeding up queries.",
       "format": "short",
       "gauge": {
         "maxValue": 100,
@@ -3351,7 +3351,7 @@
         "#d44a3a"
       ],
       "decimals": 1,
-      "description": "Transaction logs  generation velocity.",
+      "description": "Transaction logs generation velocity.",
       "format": "bytes",
       "gauge": {
         "maxValue": 100,
@@ -3785,7 +3785,7 @@
         "#d44a3a"
       ],
       "decimals": 1,
-      "description": "Frequent sequential scans on bigger tables should usuallybe avoided. Warn / Error thresholds: 10 / 100",
+      "description": "Frequent sequential scans on bigger tables should usually be avoided. Warn / Error thresholds: 10 / 100",
       "format": "short",
       "gauge": {
         "maxValue": 100,
@@ -4381,7 +4381,7 @@
         "#d44a3a"
       ],
       "decimals": 0,
-      "description": "Based on db_stats.backup_duration_s  / pg_backup_start_time() func. N/A if no backup in progress.",
+      "description": "Based on db_stats.backup_duration_s  / pg_backup_start_time() [9.3+] function. N/A if no backup in progress.",
       "format": "dtdurations",
       "gauge": {
         "maxValue": 100,
