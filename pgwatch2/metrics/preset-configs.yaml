@@ -30,6 +30,7 @@
     table_io_stats: 600
     table_stats: 300
     wal: 60
+    wal_size: 300
     wal_receiver: 120
 
 - name: minimal
