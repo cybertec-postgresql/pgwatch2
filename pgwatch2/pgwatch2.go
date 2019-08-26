@@ -169,7 +169,6 @@ const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
 const FILE_BASED_METRIC_HELPERS_DIR = "00_helpers"
 const PG_CONN_RECYCLE_SECONDS = 1800                // applies for monitored nodes
 const APPLICATION_NAME = "pgwatch2"                 // will be set on all opened PG connections for informative purposes
-const TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS = 1800 // special statement timeout override for pgstatuple_approx metrics as they can be slow (seq. scans)
 const MAX_PG_CONNECTIONS_PER_MONITORED_DB = 2       // for limiting max concurrent queries on a single DB, sql.DB maxPoolSize cannot be fully trusted
 const GATHERER_STATUS_START = "START"
 const GATHERER_STATUS_STOP = "STOP"
@@ -441,16 +440,6 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 		}
 		defer conn.Close()
 
-		if !adHocMode && md.DBType == DBTYPE_PG {
-			stmtTimeout := md.StmtTimeout
-			if (metricName == "table_bloat_approx_summary" || metricName == "table_bloat_approx_stattuple") && md.StmtTimeout < TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS {
-				stmtTimeout = TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS
-			}
-			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", stmtTimeout))
-			if err != nil {
-				return nil, err, duration
-			}
-		}
 	} else {
 		var dbStats go_sql.DBStats
 		monitored_db_conn_cache_lock.RLock()
@@ -471,13 +460,6 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 			if err != nil {
 				return nil, err, duration
 			}
-			if !adHocMode && md.DBType == DBTYPE_PG {
-				log.Debugf("Setting statement_timeout to %ds for the new PG connection to %s...", md.StmtTimeout, dbUnique)
-				_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
-				if err != nil {
-					return nil, err, duration
-				}
-			}
 
 			conn.SetMaxIdleConns(1)
 			conn.SetMaxOpenConns(MAX_PG_CONNECTIONS_PER_MONITORED_DB)
@@ -489,25 +471,23 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 			monitored_db_conn_cache_lock.Unlock()
 		}
 
-		// special override for possibly long running bloat queries
-		if md.DBType == DBTYPE_PG && (metricName == "table_bloat_approx_summary" || metricName == "table_bloat_approx_stattuple") && md.StmtTimeout < TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS {
-			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", TABLE_BLOAT_APPROX_TIMEOUT_MIN_SECONDS))
-			if err != nil {
-				return nil, err, duration
-			}
+	}
+
+	if !adHocMode && md.DBType == DBTYPE_PG {
+		stmtTimeout := md.StmtTimeout
+		if stmtTimeout == 0 {
+			_, err = DBExecRead(conn, dbUnique, "SET statement_timeout TO 0")
+		} else {
+			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", stmtTimeout))
+		}
+		if err != nil {
+			return nil, err, duration
 		}
 	}
+
 	t1 := time.Now()
 	data, err := DBExecRead(conn, dbUnique, sql, args...)
 	t2 := time.Now()
-
-	if err == nil && md.DBType == DBTYPE_PG && useCache && (metricName == "table_bloat_approx_summary" || metricName == "table_bloat_approx_stattuple") {
-		// restore general statement timeout
-		_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", md.StmtTimeout))
-		if err != nil {
-			return nil, err, t2.Sub(t1)
-		}
-	}
 
 	return data, err, t2.Sub(t1)
 }
