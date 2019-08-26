@@ -56,7 +56,7 @@ type MonitoredDatabase struct {
 	SslClientCertPath    string             `yaml:"sslcert"`
 	SslClientKeyPath     string             `yaml:"sslkey"`
 	Metrics              map[string]float64 `yaml:"custom_metrics"`
-	StmtTimeout          int64
+	StmtTimeout          int64			   `yaml:"stmt_timeout"`
 	DBType               string
 	DBNameIncludePattern string            `yaml:"dbname_include_pattern"`
 	DBNameExcludePattern string            `yaml:"dbname_exclude_pattern"`
