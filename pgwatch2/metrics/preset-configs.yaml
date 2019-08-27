@@ -26,7 +26,7 @@
     sproc_stats: 180
     stat_statements: 180
     stat_statements_calls: 60
-    table_bloat_approx_summary: 7200
+    table_bloat_approx_summary_sql: 7200
     table_io_stats: 600
     table_stats: 300
     wal: 60
@@ -74,7 +74,7 @@
     sproc_stats: 180
     stat_statements: 180
     stat_statements_calls: 60
-    table_bloat_approx_summary: 7200
+    table_bloat_approx_summary_sql: 7200
     table_io_stats: 600
     table_stats: 300
     wal: 60

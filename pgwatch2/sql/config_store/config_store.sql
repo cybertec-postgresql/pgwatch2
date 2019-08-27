@@ -141,7 +141,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "wal_size": 300,
     "wal_receiver": 120,
     "change_events": 300,
-    "table_bloat_approx_summary": 7200
+    "table_bloat_approx_summary_sql": 7200
     }'),
     ('full', 'almost all available metrics for a even deeper performance understanding',
     '{
@@ -165,7 +165,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "wal": 60,
     "wal_size": 120,
     "change_events": 300,
-    "table_bloat_approx_summary": 7200,
+    "table_bloat_approx_summary_sql": 7200,
     "kpi": 120,
     "stat_ssl": 120,
     "psutil_cpu": 120,

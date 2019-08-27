@@ -2,20 +2,20 @@
 -- NB! monitoring user needs SELECT grant on all tables or a SECURITY DEFINER wrapper around that SQL
 
 CREATE OR REPLACE FUNCTION get_table_bloat_approx_sql(
-      OUT full_table_name text,
-      OUT approx_bloat_percent double precision,
-      OUT approx_bloat_bytes double precision,
-      OUT fillfactor integer
-    ) RETURNS SETOF RECORD
-LANGUAGE sql
-SECURITY DEFINER
+    OUT full_table_name text,
+    OUT approx_bloat_percent double precision,
+    OUT approx_bloat_bytes double precision,
+    OUT fillfactor integer
+) RETURNS SETOF RECORD
+    LANGUAGE sql
+    SECURITY DEFINER
 AS $$
 
 SELECT
-  quote_ident(schemaname)||'.'||quote_ident(tblname) as full_table_name,
-  bloat_ratio,
-  bloat_size,
-  fillfactor
+            quote_ident(schemaname)||'.'||quote_ident(tblname) as full_table_name,
+            bloat_ratio,
+            bloat_size,
+            fillfactor
 FROM (
 
 /* WARNING: executed with a non-superuser role, the query inspect only tables you are granted to read.
@@ -121,7 +121,7 @@ FROM (
                        ) AS s2
               ) AS s3
          -- WHERE NOT is_na
- ) s4
+     ) s4
 $$;
 
 GRANT EXECUTE ON FUNCTION get_table_bloat_approx_sql() TO pgwatch2;
