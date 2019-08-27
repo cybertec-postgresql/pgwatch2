@@ -818,7 +818,7 @@
         "rgba(50, 172, 45, 0.97)"
       ],
       "decimals": 1,
-      "description": "Based on pgstattuple_approx, for tables >800KB",
+      "description": "Based on a pure SQL  based estimate for fast results. Re-check with \"pgstattuple\" if numbers look suspicious!",
       "editable": true,
       "error": false,
       "format": "bytes",
@@ -899,7 +899,7 @@
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "SELECT\n  date_trunc('hour', time) as time,\n  avg((data->'approx_free_space_b')::int8 + (data->'dead_tuple_len_b')::int8)\nFROM\n  table_bloat_approx_summary\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY\n  1\nORDER BY\n  1\n",
+          "rawSql": "SELECT\n  time,\n  avg((data->'approx_table_bloat_b')::int8)\nFROM\n  table_bloat_approx_summary_sql\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY\n  1\nORDER BY\n  1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [

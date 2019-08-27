@@ -547,7 +547,7 @@
         "rgba(50, 172, 45, 0.97)"
       ],
       "decimals": 1,
-      "description": "Sum of all DB changes over the whole selected period",
+      "description": "Sum of all DBs. Based on a SQL based approximate.",
       "editable": true,
       "error": false,
       "format": "bytes",
@@ -626,7 +626,7 @@
           "policy": "default",
           "query": "select sum(bloat) from (SELECT last(\"approx_free_space_b\") - first(\"approx_free_space_b\") as bloat FROM \"table_bloat_approx_summary\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY dbname, time(3650d) fill(none))",
           "rawQuery": true,
-          "rawSql": "select\n  time,\n  sum(last_bloat_size) as total_bloat_size\nfrom (\nselect\n  time,\n  dbname,\n  max(last_value) as last_bloat_size\nfrom (\n  select\n    date_trunc('hour', time) as time,\n    dbname,\n    last_value((data->'approx_free_space_b')::int8) over w\n  from\n    table_bloat_approx_summary\n  where \n    dbname in ($dbname)\n    and $__timeFilter(time)\n  window w as (\n     partition by dbname, date_trunc('hour', time) order by time rows BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING\n  )\n) x\ngroup by 1, 2\n) y\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__unixEpochFrom() as time,\n  sum(bloat) from\n(\n\n  select distinct on (dbname)\n    dbname,\n    time,\n    (data->'approx_table_bloat_b')::int8 as bloat\n  from\n    table_bloat_approx_summary_sql\n  where \n    dbname in ($dbname)\n    and $__timeFilter(time)\n  order by\n    dbname, time\n\n) a    \n\nunion all\n\nselect\n  $__unixEpochTo() as time,\n  sum(bloat)\nfrom (\n\n  select distinct on (dbname)\n    dbname,\n    time,\n    (data->'approx_table_bloat_b')::int8 as bloat\n  from\n    table_bloat_approx_summary_sql\n  where \n    dbname in ($dbname)\n    and $__timeFilter(time)\n  order by\n    dbname, time desc\n    \n) b",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [

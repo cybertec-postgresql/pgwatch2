@@ -734,7 +734,7 @@
         "rgba(50, 172, 45, 0.97)"
       ],
       "decimals": 1,
-      "description": "Based on pgstattuple_approx, for tables >800KB",
+      "description": "Based on a pure SQL  based estimate for fast results. Needs \"get_table_bloat_approx_sql\" helper. Re-check with \"pgstattuple\" if numbers look suspicious!",
       "editable": true,
       "error": false,
       "format": "bytes",
@@ -810,7 +810,7 @@
           "measurement": "table_bloat_approx_summary",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"approx_free_space_b\" ) + mean(\"dead_tuple_len_b\") FROM \"table_bloat_approx_summary\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(1h) fill(none)",
+          "query": "SELECT mean(\"approx_table_bloat_b\" ) FROM \"table_bloat_approx_summary_sql\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(1h) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -840,7 +840,7 @@
       "thresholds": "",
       "timeFrom": "6h",
       "timeShift": null,
-      "title": "Approx Bloat",
+      "title": "Approx Table Bloat",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
