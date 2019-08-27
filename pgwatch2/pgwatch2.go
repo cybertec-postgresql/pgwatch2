@@ -228,6 +228,7 @@ var promExporter *Exporter
 var promServer *http.Server
 var addRealDbname bool
 var addSystemIdentifier bool
+var forceRecreatePGMetricPartitions = false			// to signal override PG metrics storage cache
 
 func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
@@ -858,13 +859,16 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 	}
 
 	if PGSchemaType == "metric" {
-		err = EnsureMetric(pg_part_bounds)
+		err = EnsureMetric(pg_part_bounds, forceRecreatePGMetricPartitions)
 	} else if PGSchemaType == "metric-time" {
-		err = EnsureMetricTime(pg_part_bounds)
+		err = EnsureMetricTime(pg_part_bounds, forceRecreatePGMetricPartitions)
 	} else if PGSchemaType == "metric-dbname-time" {
-		err = EnsureMetricDbnameTime(pg_part_bounds_dbname)
+		err = EnsureMetricDbnameTime(pg_part_bounds_dbname, forceRecreatePGMetricPartitions)
 	} else {
 		log.Fatal("should never happen...")
+	}
+	if forceRecreatePGMetricPartitions {
+		forceRecreatePGMetricPartitions = false
 	}
 	if err != nil {
 		return err
@@ -883,12 +887,12 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		if err == nil {
 			tx_err := txn.Commit()
 			if tx_err != nil {
-				log.Error("COPY Commit to Postgres failed:", tx_err)
+				log.Debug("COPY Commit to Postgres failed:", tx_err)
 			}
 		} else {
 			tx_err := txn.Rollback()
 			if tx_err!= nil {
-				log.Error("COPY Rollback to Postgres failed:", tx_err)
+				log.Debug("COPY Rollback to Postgres failed:", tx_err)
 			}
 		}
 	}()
@@ -949,6 +953,10 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		_, err = stmt.Exec()
 		if err != nil {
 			log.Error("COPY to Postgres failed:", err)
+			if strings.Contains(err.Error(), "no partition") {
+				log.Warning("Some metric partitions might have been removed, halting all metric storage. Trying to re-create all needed partitions on next run")
+				forceRecreatePGMetricPartitions = true
+			}
 		}
 	stmt_close:
 		err = stmt.Close()
@@ -1228,7 +1236,7 @@ func EnsureMetricDummy(metric string) {
 	}
 }
 
-func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo) error {
+func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo, force bool) error {
 
 	sql_ensure := `
 	select * from admin.ensure_partition_metric($1)
@@ -1236,7 +1244,7 @@ func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo) error {
 	for metric, _ := range pg_part_bounds {
 
 		_, ok := partitionMapMetric[metric]
-		if !ok {
+		if !ok || force {
 			_, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric)
 			if err != nil {
 				log.Errorf("Failed to create partition on metric '%s': %v", metric, err)
@@ -1248,7 +1256,7 @@ func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo) error {
 	return nil
 }
 
-func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo) error {
+func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo, force bool) error {
 	// TODO if less < 1d to part. end, precreate ?
 	sql_ensure := `
 	select * from admin.ensure_partition_metric_time($1, $2)
@@ -1261,7 +1269,7 @@ func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo) error {
 		}
 
 		partInfo, ok := partitionMapMetric[metric]
-		if !ok || (ok && (pb.StartTime.Before(partInfo.StartTime))) {
+		if !ok || (ok && (pb.StartTime.Before(partInfo.StartTime))) || force {
 			ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric, pb.StartTime)
 			if err != nil {
 				log.Error("Failed to create partition on 'metrics':", err)
@@ -1274,7 +1282,7 @@ func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo) error {
 			partInfo.EndTime = ret[0]["part_available_to"].(time.Time)
 			partitionMapMetric[metric] = partInfo
 		}
-		if pb.EndTime.After(partInfo.EndTime) || pb.EndTime.Equal(partInfo.EndTime) {
+		if pb.EndTime.After(partInfo.EndTime) || pb.EndTime.Equal(partInfo.EndTime) || force {
 			ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric, pb.EndTime)
 			if err != nil {
 				log.Error("Failed to create partition on 'metrics':", err)
@@ -1287,7 +1295,7 @@ func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo) error {
 	return nil
 }
 
-func EnsureMetricDbnameTime(metric_dbname_part_bounds map[string]map[string]ExistingPartitionInfo) error {
+func EnsureMetricDbnameTime(metric_dbname_part_bounds map[string]map[string]ExistingPartitionInfo, force bool) error {
 	// TODO if less < 1d to part. end, precreate ?
 	sql_ensure := `
 	select * from admin.ensure_partition_metric_dbname_time($1, $2, $3)
@@ -1306,7 +1314,7 @@ func EnsureMetricDbnameTime(metric_dbname_part_bounds map[string]map[string]Exis
 			}
 
 			partInfo, ok := partitionMapMetricDbname[metric][dbname]
-			if !ok || (ok && (pb.StartTime.Before(partInfo.StartTime))) {
+			if !ok || (ok && (pb.StartTime.Before(partInfo.StartTime))) || force {
 				ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric, dbname, pb.StartTime)
 				if err != nil {
 					log.Errorf("Failed to create partition for [%s:%s]: %v", metric, dbname, err)
@@ -1319,7 +1327,7 @@ func EnsureMetricDbnameTime(metric_dbname_part_bounds map[string]map[string]Exis
 				partInfo.EndTime = ret[0]["part_available_to"].(time.Time)
 				partitionMapMetricDbname[metric][dbname] = partInfo
 			}
-			if pb.EndTime.After(partInfo.EndTime) || pb.EndTime.Equal(partInfo.EndTime) {
+			if pb.EndTime.After(partInfo.EndTime) || pb.EndTime.Equal(partInfo.EndTime) || force {
 				ret, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric, dbname, pb.EndTime)
 				if err != nil {
 					log.Errorf("Failed to create partition for [%s:%s]: %v", metric, dbname, err)
