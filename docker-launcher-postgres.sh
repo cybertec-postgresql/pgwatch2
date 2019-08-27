@@ -69,6 +69,7 @@ su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/cpu_load_plpyth
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/stat_statements_wrapper.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/stat_activity_wrapper.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/table_bloat_approx.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/table_bloat_approx_sql.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/wal_size.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/psutil_cpu.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/psutil_mem.sql" postgres
