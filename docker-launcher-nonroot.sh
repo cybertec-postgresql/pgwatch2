@@ -14,14 +14,8 @@ if [ ! -f /pgwatch2/persistent-config/self-signed-ssl.key -o ! -f /pgwatch2/pers
     chmod 0600 /pgwatch2/persistent-config/self-signed-ssl.*
 fi
 
-if [ -n "$PW2_GRAFANASSL" ] ; then
-    $(grep -q 'protocol = http$' /etc/grafana/grafana.ini)
-    if [ "$?" -eq 0 ] ; then
-        sed -i 's/protocol = http.*/protocol = https/' /etc/grafana/grafana.ini
-    fi
-fi
-
-if [ -n "$PW2_GRAFANASSL" ] ; then
+GRAFANASSL="${PW2_GRAFANASSL,,}"    # to lowercase
+if [ "$GRAFANASSL" == "1" ] || [ "${GRAFANASSL:0:1}" == "t" ]; then
     $(grep -q 'protocol = http$' /etc/grafana/grafana.ini)
     if [ "$?" -eq 0 ] ; then
         sed -i 's/protocol = http.*/protocol = https/' /etc/grafana/grafana.ini
