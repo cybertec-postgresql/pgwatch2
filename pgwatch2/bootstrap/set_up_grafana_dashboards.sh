@@ -55,4 +55,9 @@ echo "$SQL" | psql -h /var/run/postgresql pgwatch2_grafana
 
 done
 
+HEALTHCHECK_STAR="INSERT INTO star (user_id, dashboard_id) SELECT 1, id FROM dashboard WHERE slug = 'health-check'"
+psql -h /var/run/postgresql -c "$HEALTHCHECK_STAR" pgwatch2_grafana
+HOME_DASH="INSERT INTO preferences (org_id, user_id, version, home_dashboard_id, timezone, theme, created, updated, team_id) SELECT 1, 0, 0, id, '', '', now(), now(), 0 FROM dashboard WHERE slug = 'health-check'"
+psql -h /var/run/postgresql -c "$HOME_DASH" pgwatch2_grafana
+
 exit 0
