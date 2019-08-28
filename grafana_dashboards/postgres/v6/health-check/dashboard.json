@@ -3223,7 +3223,7 @@
         "#d44a3a"
       ],
       "decimals": 1,
-      "description": "Extra space that would disappear after \"compacting\". For tables and B-tree indexes. Not 100% exact",
+      "description": "Estimated extra space held by tables (excluding indexes) that would disappear after \"compacting\".",
       "format": "bytes",
       "gauge": {
         "maxValue": 100,
@@ -3299,7 +3299,7 @@
           "policy": "default",
           "query": "select sum(bloat) from (SELECT last(\"approx_free_space_b\") as bloat FROM \"table_bloat_approx_summary\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1d) fill(none))",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'approx_free_space_b')::int8\nFROM\n  table_bloat_approx_summary\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY 1 DESC\nLIMIT 1\n",
+          "rawSql": "SELECT\n  time,\n  (data->'approx_table_bloat_b')::int8\nFROM\n  table_bloat_approx_summary_sql\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY 1 DESC\nLIMIT 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [

@@ -2926,7 +2926,7 @@
         "#d44a3a"
       ],
       "decimals": 1,
-      "description": "Extra space that would disappear after \"compacting\". For tables and B-tree indexes. Not 100% exact",
+      "description": "Estimated extra space held by tables (excluding indexes) that would disappear after \"compacting\".",
       "format": "bytes",
       "gauge": {
         "maxValue": 100,
@@ -2997,7 +2997,7 @@
           "measurement": "table_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select sum(bloat) from (SELECT last(\"approx_free_space_b\") as bloat FROM \"table_bloat_approx_summary\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1d) fill(none))",
+          "query": "SELECT last(\"approx_table_bloat_b\") as bloat FROM \"table_bloat_approx_summary_sql\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1d) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -4097,7 +4097,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "decimals": null,
+      "decimals": 1,
       "description": "Max. table age since last FREEZE. Could hint at problems when going into 100s of millions",
       "format": "short",
       "gauge": {
