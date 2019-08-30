@@ -370,7 +370,8 @@ couple of basic concepts though:
 precision) column to record the metrics reading time. If the column is not there, things will still 
 work though as gathering server’s timestamp will be used, you’ll just lose some milliseconds 
 (assuming intra-datacenter monitoring) of precision.
-* Queries can only return text, integer, boolean or floating point (a.k.a. double precision) Postgres data types.
+* Queries can only return text, integer, boolean or floating point (a.k.a. double precision) Postgres data types. Note
+that columns with NULL values are not stored at all in the data layer as it's a bit bothersome to work with NULLs!
 * Columns can be optionally “tagged” by prefixing them with “tag_”. By doing this, the column data 
 will be indexed by the InfluxDB / Postgres giving following advantages:
   * Sophisticated auto-discovery support for indexed keys/values, when building charts with Grafana.
