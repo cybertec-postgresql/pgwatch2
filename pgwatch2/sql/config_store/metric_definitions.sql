@@ -22,7 +22,7 @@ select
   (select extract(epoch from (now() - xact_start))::int
    from get_stat_activity() where current_query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
-    from sa_snapshot where current_query = 'active') as longest_query_seconds;
+    from sa_snapshot where current_query != '<IDLE>') as longest_query_seconds;
 $sql$,
 '{"prometheus_all_gauge_columns": true}'
 );
@@ -102,7 +102,7 @@ select
   (select extract(epoch from (now() - xact_start))::int
     from sa_snapshot where xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
   (select extract(epoch from (now() - xact_start))::int
-   from get_stat_activity() where backend_type = 'autovacuum worker' order by xact_start limit 1) as longest_autovacuum_seconds,
+   from get_stat_activity() where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active') as longest_query_seconds,
   (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
@@ -120,7 +120,7 @@ with sa_snapshot as (
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  (select count(*) from sa_snapshot) as total,
+  (select count(*) from sa_snapshot where backend_type = 'client backend') as total,
   (select count(*) from sa_snapshot where backend_type = 'background worker') as background_workers,
   (select count(*) from sa_snapshot where state = 'active' and backend_type = 'client backend') as active,
   (select count(*) from sa_snapshot where state = 'idle' and backend_type = 'client backend') as idle,
@@ -358,7 +358,46 @@ q_stat_activity AS (
 )
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  (select pg_xlog_location_diff(pg_current_xlog_location(), '0/0'))::int8 AS wal_location_b,
+  numbackends - 1 as numbackends,
+  (select count(*) from q_stat_activity where not current_query in ('<IDLE>', '<IDLE> in transaction')) AS active_backends,
+  (select count(*) from q_stat_activity where waiting) AS blocked_backends,
+  (select round(extract(epoch from now()) - extract(epoch from (select xact_start from q_stat_activity
+    where datid = d.datid and not current_query like 'autovacuum:%' order by xact_start limit 1))))::int AS kpi_oldest_tx_s,
+  xact_commit + xact_rollback AS tps,
+  xact_commit,
+  xact_rollback,
+  blks_read,
+  blks_hit,
+  (select sum(seq_scan) from q_stat_tables)::int8 AS seq_scans_on_tbls_gt_10mb,
+  tup_inserted,
+  tup_updated,
+  tup_deleted,
+  (select sum(calls) from pg_stat_user_functions where not schemaname like any(array[E'pg\\_%', 'information_schema']))::int8 AS sproc_calls,
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s
+FROM
+  pg_stat_database d
+WHERE
+  datname = current_database();
+$sql$,
+'{"prometheus_gauge_columns": ["numbackends", "active_backends", "blocked_backends", "kpi_oldest_tx_s"]}'
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'kpi',
+9.2,
+$sql$
+WITH q_stat_tables AS (
+  SELECT * FROM pg_stat_user_tables t
+  JOIN pg_class c ON c.oid = t.relid
+  WHERE NOT schemaname LIKE E'pg\\_temp%'
+  AND c.relpages > (1e7 / 8)    -- >10MB
+),
+q_stat_activity AS (
+  SELECT * FROM get_stat_activity()
+)
+SELECT
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   numbackends - 1 as numbackends,
   (select count(1) from q_stat_activity where state = 'active') AS active_backends,
   (select count(1) from q_stat_activity where waiting) AS blocked_backends,
@@ -385,8 +424,6 @@ WHERE
 $sql$,
 '{"prometheus_gauge_columns": ["numbackends", "active_backends", "blocked_backends", "kpi_oldest_tx_s"]}'
 );
-
-/* kpi */
 
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (

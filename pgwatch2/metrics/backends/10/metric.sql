@@ -1,11 +1,10 @@
 with sa_snapshot as (
   select * from get_stat_activity()
   where pid != pg_backend_pid()
-  and datname = current_database()
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  (select count(*) from sa_snapshot) as total,
+  (select count(*) from sa_snapshot where backend_type = 'client backend') as total,
   (select count(*) from sa_snapshot where backend_type = 'background worker') as background_workers,
   (select count(*) from sa_snapshot where state = 'active' and backend_type = 'client backend') as active,
   (select count(*) from sa_snapshot where state = 'idle' and backend_type = 'client backend') as idle,
