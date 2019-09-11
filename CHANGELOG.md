@@ -25,7 +25,7 @@ or a specific version
 * Metrics - correct older (9.0/9.1) "backends" and "kpi" metrics
 * Docker - fix case where setting PW2_GRAFANASSL=0 still enabled SSL
 * Docker - make "Health-check" the default dashboard / splash screen
-* Docker component update: Influx 1.7.8, Grafana 6.2.5, Go 1.12.9
+* Docker component update: Influx 1.7.8, Grafana 6.3.5, Go 1.12.9
 
 
 ## v1.6.1 [2019-08-13]
