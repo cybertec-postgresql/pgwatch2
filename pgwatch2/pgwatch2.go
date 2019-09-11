@@ -2290,7 +2290,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 		t2 := time.Now()
 
 		if t2.Sub(t1) > (time.Second * time.Duration(interval)) {
-			log.Warningf("Total fetching time of %v bigger than %vs interval for [%s:%s]", t2.Sub(t1), interval, dbUniqueName, metricName)
+			log.Warningf("Total fetching time of %vs bigger than %vs interval for [%s:%s]", t2.Sub(t1).Truncate(time.Millisecond*100).Seconds(), interval, dbUniqueName, metricName)
 		}
 
 		if err != nil {
