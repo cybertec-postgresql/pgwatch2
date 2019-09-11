@@ -12,7 +12,7 @@ or a specific version
 
 
 ## v1.6.2 [draft]
-
+* Gatherer + metrics - make pgwatch2 "superuser" aware. Superusers don't need helpers any more for non-Python metrics
 * Gatherer fix - in YAML mode statement timeout config file sample didn't match the actual parsing key
 * Metrics store fix - correct "metric-dbname-time" model weekly partition creation
 * Metrics store improvement - gatherer would not always recover from PG storage failures and restart was needed
