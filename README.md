@@ -363,8 +363,11 @@ which are not meant to be used on their own.
 Metrics are named SQL queries that can return pretty much everything you find
 useful and which can have different query text versions for different target PostgreSQL versions. 
 Correct version of the metric definition will be chosen automatically by regularly connecting to the 
-target database and checking the version. For defining metrics definitions you should adhere to a 
-couple of basic concepts though:
+target database and checking the Postgres version and if the monitoring user is a superuser or not. For superusers some
+metrics are re-defined (v1.6.2) so that no "helpers" are needed for Postgres-native Stats Collector infos. Using superuser
+accounts for monitoring is of course not really recommended.
+
+For defining metrics definitions you should adhere to a couple of basic concepts though:
 
 * Every metric query should have an “epoch_ns” (nanoseconds since epoch, default InfluxDB timestamp 
 precision) column to record the metrics reading time. If the column is not there, things will still 

@@ -131,6 +131,7 @@
                 <td>Metric</td>
                 <td>PG version from</td>
                 <td title="NB! 'epoch_ns' column needs to be always present">SQL</td>
+                <td title="Will be used instead of normal SQL if monitoring user is a superuser (recommended only on localhost usage). Helps to avoid creating helper functions (aka altering the DB state in any way) for Postgres-native metrics">Superuser SQL</td>
                 <td>Comment</td>
                 <td>Is active?</td>
                 <td title="Code for metric fetching helpers. Not to be used for normal metrics gathering">Is helper?</td>
@@ -152,6 +153,7 @@
                     </td>
                     <td><input type="text" name="m_pg_version_from" value="{{row['m_pg_version_from']}}" title="Version from"></td>
                     <td><textarea name="m_sql" cols="50" title="SQL for metric">{{row['m_sql']}}</textarea></td>
+                    <td><textarea name="m_sql_su" cols="50" title="Superuser SQL for metric">{{row['m_sql_su']}}</textarea></td>
                     <td><input type="text" name="m_comment" value="{{row['m_comment']}}" title="Comment"></td>
                     <td><input type="checkbox" name="m_is_active" {% if row['m_is_active'] %}checked{% endif %} title="Is active?"></td>
                     <td><input type="checkbox" name="m_is_helper" {% if row['m_is_helper'] %}checked{% endif %} title="Is helper?"></td>
@@ -169,6 +171,7 @@
                     <td><input type="text" name="m_name" value="" title="Metric name. Lowercase alphanumerics and underscores allowed." pattern="[a-z0-9_]+"></td>
                     <td><input type="text" name="m_pg_version_from" value="9.0" title="Version from"></td>
                     <td><textarea name="m_sql" cols="50" title="SQL for metric">SELECT (extract(epoch from now()) * 1e9)::int8 as epoch_ns, ...</textarea></td>
+                    <td><textarea name="m_sql_su" cols="50" title="Superuser SQL for metric"></textarea></td>
                     <td><input type="text" name="m_comment" value=""  title="Comment"></td>
                     <td><input type="checkbox" name="m_is_active"  title="Is active?" checked></td>
                     <td><input type="checkbox" name="m_is_helper" title="Is helper?"></td>

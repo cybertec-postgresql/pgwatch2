@@ -5,7 +5,7 @@ if [ -z "$go_on_path" ] ; then
     export PATH=$PATH:/usr/local/go/bin
 fi
 
-./get_dependencies.sh
+#./get_dependencies.sh
 
 echo "running 'go build pgwatch2.go prom.go patroni.go' ..."
 

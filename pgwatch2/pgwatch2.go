@@ -97,6 +97,7 @@ type MetricColumnAttrs struct {
 
 type MetricVersionProperties struct {
 	Sql         string
+	SqlSU       string
 	MasterOnly  bool
 	StandbyOnly bool
 	ColumnAttrs MetricColumnAttrs // Prometheus Metric Type (Counter is default) and ignore list
@@ -147,6 +148,7 @@ type DBVersionMapEntry struct {
 	VersionStr       string
 	RealDbname       string
 	SystemIdentifier string
+	IsSuperuser      bool	// if true and no helpers are installed, use superuser SQL version of metric if available
 }
 
 type ExistingPartitionInfo struct {
@@ -1675,6 +1677,12 @@ func DBGetPGVersion(dbUnique string, noCache bool) (DBVersionMapEntry, error) {
 			)[1]::text as ver, pg_is_in_recovery(), current_database()::text;
 	`
 	sql_sysid := `select system_identifier::text from pg_control_system();`
+	sql_su := `select rolsuper or exists (
+				 select * from pg_catalog.pg_auth_members m
+				 join pg_catalog.pg_roles b on (m.roleid = b.oid)
+        		 where m.member = r.oid and b.rolname = 'rds_superuser') as rolsuper
+			   from pg_roles r where rolname = session_user;`
+
 	db_pg_version_map_lock.RLock()
 	ver, ok = db_pg_version_map[dbUnique]
 	db_pg_version_map_lock.RUnlock()
@@ -1700,12 +1708,19 @@ func DBGetPGVersion(dbUnique string, noCache bool) (DBVersionMapEntry, error) {
 		ver.RealDbname = data[0]["current_database"].(string)
 
 		if ver.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) {
-			log.Debugf("determining sytem identifier version for %s (ver: %v)", dbUnique, ver.VersionStr)
+			log.Debugf("determining system identifier version for %s (ver: %v)", dbUnique, ver.VersionStr)
 			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_sysid)
 			if err == nil {
 				ver.SystemIdentifier = data[0]["system_identifier"].(string)
 			}
 		}
+
+		log.Debugf("determining if monitoring user is a superuser for %s",  dbUnique)
+		data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_su)
+		if err == nil {
+			ver.IsSuperuser = data[0]["rolsuper"].(bool)
+		}
+		log.Debugf("superuser=%v", ver.IsSuperuser)
 
 		db_pg_version_map_lock.Lock()
 		db_pg_version_map[dbUnique] = ver
@@ -2133,6 +2148,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	var vme DBVersionMapEntry
 	var db_pg_version decimal.Decimal
 	var err error
+	var sql string
 
 	if msg.DBType == DBTYPE_PG {
 		vme, err = DBGetPGVersion(msg.DBUniqueName, false)
@@ -2155,7 +2171,12 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 			last_sql_fetch_error.Store(msg.MetricName+":"+db_pg_version.String(), time.Now().Unix())
 		}
 		return nil, err
-	} else if mvp.Sql == "" && msg.MetricName != "change_events" {
+	}
+	sql = mvp.Sql
+	if vme.IsSuperuser && mvp.SqlSU != ""  {
+		sql = mvp.SqlSU		// TODO only if no helper function?
+	}
+	if sql == "" && msg.MetricName != "change_events" {
 		// let's ignore dummy SQL-s
 		log.Debugf("Ignoring fetch message - got an empty/dummy SQL string for [%s:%s]", msg.DBUniqueName, msg.MetricName)
 		return nil, nil
@@ -2169,8 +2190,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	if msg.MetricName == "change_events" && context != CONTEXT_PROMETHEUS_SCRAPE { // special handling, multiple queries + stateful
 		CheckForPGObjectChangesAndStore(msg.DBUniqueName, db_pg_version, storage_ch, host_state) // TODO no host_state for Prometheus
 	} else {
-
-		data, err, duration := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, mvp.Sql)
+		data, err, duration := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
 
 		if err != nil {
 			// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
@@ -2380,7 +2400,7 @@ func UpdateMetricDefinitionMap(newMetrics map[string]map[decimal.Decimal]MetricV
 
 func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metric_def_map_new := make(map[string]map[decimal.Decimal]MetricVersionProperties)
-	sql := "select m_name, m_pg_version_from::text, m_sql, m_master_only, m_standby_only, coalesce(m_column_attrs::text, '') as m_column_attrs from pgwatch2.metric where m_is_active"
+	sql := "select m_name, m_pg_version_from::text, m_sql, m_master_only, m_standby_only, coalesce(m_column_attrs::text, '') as m_column_attrs, m_sql_su from pgwatch2.metric where m_is_active"
 
 	log.Info("updating metrics definitons from ConfigDB...")
 	data, err := DBExecRead(configDb, CONFIGDB_IDENT, sql)
@@ -2410,6 +2430,7 @@ func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decim
 		}
 		metric_def_map_new[row["m_name"].(string)][d] = MetricVersionProperties{
 			Sql:         row["m_sql"].(string),
+			SqlSU:       row["m_sql_su"].(string),
 			MasterOnly:  row["m_master_only"].(bool),
 			StandbyOnly: row["m_standby_only"].(bool),
 			ColumnAttrs: ca,
@@ -2726,21 +2747,29 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 							continue
 						}
 						validMetricDefs++
-						if validMetricDefs > 1 {
+						if validMetricDefs > 1 && !strings.Contains(md.Name(), "_su") {
 							log.Warningf("Multiple definitions found for metric [%s:%s], using the last one (%s)...", f.Name(), pgVer.Name(), md.Name())
 						}
-						mvp := MetricVersionProperties{Sql: string(metric_sql[:]), ColumnAttrs: metricColumnAttrs}
 
 						//log.Debugf("Metric definition for \"%s\" ver %s: %s", f.Name(), pgVer.Name(), metric_sql)
-						_, ok := metrics_map[f.Name()]
+						mvpVer, ok := metrics_map[f.Name()]
+						var mvp MetricVersionProperties
 						if !ok {
 							metrics_map[f.Name()] = make(map[decimal.Decimal]MetricVersionProperties)
 						}
-						if strings.Contains(md.Name(), "master") {
+						mvp, ok = mvpVer[d]
+						if !ok {
+							mvp = MetricVersionProperties{Sql: string(metric_sql[:]), ColumnAttrs: metricColumnAttrs}
+						}
+
+						if strings.Contains(md.Name(), "_master") {
 							mvp.MasterOnly = true
 						}
-						if strings.Contains(md.Name(), "standby") {
+						if strings.Contains(md.Name(), "_standby") {
 							mvp.StandbyOnly = true
+						}
+						if strings.Contains(md.Name(), "_su") {
+							mvp.SqlSU = string(metric_sql[:])
 						}
 						metrics_map[f.Name()][d] = mvp
 					}

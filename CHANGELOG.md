@@ -10,6 +10,24 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+
+## v1.6.2 [draft]
+
+* Gatherer fix - in YAML mode statement timeout config file sample didn't match the actual parsing key
+* Metrics store fix - correct "metric-dbname-time" model weekly partition creation
+* Metrics store improvement - gatherer would not always recover from PG storage failures and restart was needed
+* Gatherer improvement - make SystemD service template to re-start on failure
+* Gatherer improvement - remove built-in statement timeout override for bloat queries
+* Gatherer improvement - always set statement timeout explicitly before any metric queries to avoid a corner case
+* Dashboards - Health-check description updates and minor corrections
+* Metrics - add 'wal_size' (10+) to 'exhaustive' preset
+* Metrics - replace accurate "pgstattuple" based bloat info gathering with SQL based estimates in preset configs
+* Metrics - correct older (9.0/9.1) "backends" and "kpi" metrics
+* Docker - fix case where setting PW2_GRAFANASSL=0 still enabled SSL
+* Docker - make "Health-check" the default dashboard / splash screen
+* Docker component update: Influx 1.7.8, Grafana 6.2.5, Go 1.12.9
+
+
 ## v1.6.1 [2019-08-13]
 
 * Config DB fix - allow 'patroni-continuous-discovery' DB type available in YAML mode
