@@ -12,13 +12,16 @@ or a specific version
 
 
 ## v1.6.2 [draft]
-* Gatherer + metrics - make pgwatch2 "superuser" aware. Superusers don't need helpers any more for non-Python metrics
+
+* Gatherer improvement - support password/cert authentication for Patroni and etcd
+* Gatherer improvement - make pgwatch2 "superuser" aware. Superusers don't need helpers any more for non-Python metrics
 * Gatherer fix - in YAML mode statement timeout config file sample didn't match the actual parsing key
 * Metrics store fix - correct "metric-dbname-time" model weekly partition creation
 * Metrics store improvement - gatherer would not always recover from PG storage failures and restart was needed
 * Gatherer improvement - make SystemD service template to re-start on failure
 * Gatherer improvement - remove built-in statement timeout override for bloat queries
 * Gatherer improvement - always set statement timeout explicitly before any metric queries to avoid a corner case
+* Dashboards - new "Postgre Version Overview" dash for Influx and PG data sources
 * Dashboards - Health-check description updates and minor corrections
 * Metrics - add 'wal_size' (10+) to 'exhaustive' preset
 * Metrics - replace accurate "pgstattuple" based bloat info gathering with SQL based estimates in preset configs

@@ -74,6 +74,11 @@ type HostConfigAttrs struct {
 	DcsEndpoints       []string `yaml:"dcs_endpoints"`
 	Scope              string
 	Namespace          string
+	Username           string
+	Password           string
+	CAFile             string `yaml:"ca_file"`
+	CertFile           string `yaml:"cert_file"`
+	KeyFile            string `yaml:"key_file"`
 }
 
 type PatroniClusterMember struct {

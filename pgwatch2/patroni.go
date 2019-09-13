@@ -7,6 +7,7 @@ import (
 	consul_api "github.com/hashicorp/consul/api"
 	"github.com/samuel/go-zookeeper/zk"
 	"go.etcd.io/etcd/client"
+	"go.etcd.io/etcd/pkg/transport"
 	"path"
 	"regexp"
 	"time"
@@ -73,16 +74,38 @@ func ConsulGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember
 
 func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, error) {
 	var ret []PatroniClusterMember
+	var cfg client.Config
 
 	if len(database.HostConfig.DcsEndpoints) == 0 {
 		return ret, errors.New("Missing ETCD connect info, make sure host config has a 'dcs_endpoints' key")
 	}
 
-	cfg := client.Config{
-		Endpoints:               database.HostConfig.DcsEndpoints,
-		Transport:               client.DefaultTransport,
-		HeaderTimeoutPerRequest: time.Second,
+	if database.HostConfig.CAFile != "" || database.HostConfig.KeyFile != "" || database.HostConfig.CertFile != ""{
+		tls := transport.TLSInfo{
+			TrustedCAFile: database.HostConfig.CAFile,
+			CertFile:      database.HostConfig.CertFile,
+			KeyFile:       database.HostConfig.KeyFile,
+		}
+		//log.Debugf("Setting ETCD TLS config for %s: %+v", database.DBUniqueName, tls)
+		dialTimeout := 10 * time.Second
+		etcdTransport, _ := transport.NewTransport(tls, dialTimeout)
+		cfg = client.Config{
+			Endpoints:               database.HostConfig.DcsEndpoints,
+			Transport:               etcdTransport,
+			HeaderTimeoutPerRequest: time.Second,
+			Username:			     database.HostConfig.Username,
+			Password:			     database.HostConfig.Password,
+		}
+	} else {
+		cfg = client.Config{
+			Endpoints:               database.HostConfig.DcsEndpoints,
+			Transport:               client.DefaultTransport,
+			HeaderTimeoutPerRequest: time.Second,
+			Username:			     database.HostConfig.Username,
+			Password:			     database.HostConfig.Password,
+		}
 	}
+
 	c, err := client.New(cfg)
 	if err != nil {
 		log.Error("Could not connect to ETCD", err)
@@ -96,6 +119,7 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 		log.Error("Could not read Patroni members from ETCD:", err)
 		return ret, err
 	}
+	log.Debugf("ETCD response for %s: %+v", database.DBUniqueName, resp)
 
 	for _, node := range resp.Node.Nodes {
 		log.Debugf("Found a cluster member from etcd: %+v", node.Value)

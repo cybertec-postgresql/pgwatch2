@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Pgwatch2 :: DBs to monitor</title>
     <link rel="stylesheet" href="/static/bootstrap-4.3.1-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/custom.css">
 </head>
 <body>
 <div class="container-fluid">
@@ -373,7 +374,7 @@
                 alert('NB! "Host config" pre-filled with Etcd localhost values');
                 $("#md_port").val('');
                 $("#md_hostname").val('');
-                $("#md_host_config").val('{"dcs_type": "etcd", "dcs_endpoints": ["http://127.0.0.1:2379/"], "namespace": "/service/", "scope": "batman"}');
+                $("#md_host_config").val('{"dcs_type": "etcd", "dcs_endpoints": ["http://127.0.0.1:2379/"], "namespace": "/service/", "scope": "batman", "username": "", "password": "", "ca_file": "", "cert_file": "", "key_file": ""}');
             }
         });
     });

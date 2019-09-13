@@ -23,18 +23,23 @@
   sslkey: ''
 
 - unique_name: test2
-  dbtype: postgres
+  dbtype: patroni-continuous-discovery
   host: localhost
   port: 5432
   dbname: ''
-  user: krl
-  password: krl
+  user: postgres
+  password:
   sslmode: disable
   host_config:    # host_config used only for dbtype=patroni|patroni-continuous-discovery currently
     dcs_type: etcd
     dcs_endpoints: ["http://localhost:2379"]
     scope: batman
     namespace: /service/
+    username:
+    password:
+    ca_file:
+    cert_file:
+    cert_key:
   stmt_timeout: 5
   preset_metrics:
   custom_metrics:

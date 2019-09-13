@@ -342,6 +342,9 @@ one database is to be monitored) and instead "Host config" JSON field should be 
 }
 ```
 
+For etcd also username, password, ca_file, cert_file, key_file optional parameters can be defined - other DCS systems
+are currently supported only without authentication.
+
 Also if you don't use the replicas actively for queries then it might make sense to decrease the volume of gathered
 metrics and to disable the monitoring of standby-s with the "Master mode only?" checkbox.
 
