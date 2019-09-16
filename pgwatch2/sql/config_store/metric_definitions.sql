@@ -1885,7 +1885,7 @@ with table_bloat_approx as (
     where
         relkind in ('r', 'm')
         and c.relpages >= 128 -- tables >1mb
-        and not n.nspname like any (array[E'pg\\_%', 'information_schema'])
+        and not n.nspname != 'information_schema'
 )
 select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
