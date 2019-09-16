@@ -712,13 +712,6 @@ retry:
 				epoch_time = time.Unix(0, epoch_ns)
 			}
 
-			if addRealDbname && msg.RealDbname != "" {
-				tags[opts.RealDbnameField] = msg.RealDbname
-			}
-			if addSystemIdentifier && msg.SystemIdentifier != "" {
-				tags[opts.SystemIdentifierField] = msg.SystemIdentifier
-			}
-
 			pt, err := client.NewPoint(msg.MetricName, tags, fields, epoch_time)
 
 			if err != nil {
@@ -783,13 +776,6 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 				for k, v := range msg.CustomTags {
 					tags[k] = fmt.Sprintf("%v", v)
 				}
-			}
-
-			if addRealDbname && msg.RealDbname != "" {
-				tags[opts.RealDbnameField] = msg.RealDbname
-			}
-			if addSystemIdentifier && msg.SystemIdentifier != "" {
-				tags[opts.SystemIdentifierField] = msg.SystemIdentifier
 			}
 
 			for k, v := range dr {
@@ -1712,10 +1698,10 @@ func DBGetPGVersion(dbUnique string, noCache bool) (DBVersionMapEntry, error) {
 		ver.LastCheckedOn = time.Now()
 		ver.RealDbname = data[0]["current_database"].(string)
 
-		if ver.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) {
+		if ver.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) && addSystemIdentifier {
 			log.Debugf("determining system identifier version for %s (ver: %v)", dbUnique, ver.VersionStr)
 			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_sysid)
-			if err == nil {
+			if err == nil && len(data) > 0 {
 				ver.SystemIdentifier = data[0]["system_identifier"].(string)
 			}
 		}
@@ -2222,12 +2208,43 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 				data = FilterPgbouncerData(data, md.DBName)
 			}
 
+			if addRealDbname || addSystemIdentifier {
+				db_pg_version_map_lock.RLock()
+				ver, _ := db_pg_version_map[msg.DBUniqueName]
+				db_pg_version_map_lock.RUnlock()
+				data = AddDbnameSysinfoIfNotExistsToQueryResultData(msg, data, ver)
+			}
+
 			return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags,
 				MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
 		}
 	}
 	return nil, nil
 }
+
+
+func AddDbnameSysinfoIfNotExistsToQueryResultData(msg MetricFetchMessage, data []map[string]interface{}, ver DBVersionMapEntry) []map[string]interface{} {
+	enriched_data := make([]map[string]interface{}, 0)
+
+	log.Debugf("Enriching all rows of [%s:%s] with sysinfo (%s) / real dbname (%s) if set. ", msg.DBUniqueName, msg.MetricName, ver.SystemIdentifier, ver.RealDbname)
+	for _, dr := range data {
+		if addRealDbname && ver.RealDbname != "" {
+			old, ok := dr[opts.RealDbnameField]
+			if !ok || old == "" {
+				dr[opts.RealDbnameField] = ver.RealDbname
+			}
+		}
+		if addSystemIdentifier && ver.SystemIdentifier != "" {
+			old, ok := dr[opts.SystemIdentifierField]
+			if !ok || old == "" {
+				dr[opts.SystemIdentifierField] = ver.SystemIdentifier
+			}
+		}
+		enriched_data = append(enriched_data, dr)
+	}
+	return enriched_data
+}
+
 
 func StoreMetrics(metrics []MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) (int, error) {
 
