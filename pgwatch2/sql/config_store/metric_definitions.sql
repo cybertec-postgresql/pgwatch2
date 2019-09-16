@@ -1023,7 +1023,7 @@ select
     end as xlog_location_b,
   case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int,
   extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
-  system_identifier::text as sys_id
+  system_identifier::text as tag_sys_id
 from pg_control_system();
 $sql$,
 '{"prometheus_gauge_columns": ["in_recovery_int", "postmaster_uptime_s"]}'

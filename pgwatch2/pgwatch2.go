@@ -162,6 +162,7 @@ type ExistingPartitionInfo struct {
 }
 
 const EPOCH_COLUMN_NAME string = "epoch_ns"      // this column (epoch in nanoseconds) is expected in every metric query
+const TAG_PREFIX string = "tag_"
 const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
 const GRAPHITE_METRICS_PREFIX string = "pgwatch2"
 const PERSIST_QUEUE_MAX_SIZE = 10000 // storage queue max elements. when reaching the limit, older metrics will be dropped.
@@ -694,7 +695,7 @@ retry:
 				}
 				if k == EPOCH_COLUMN_NAME {
 					epoch_ns = v.(int64)
-				} else if strings.HasPrefix(k, "tag_") {
+				} else if strings.HasPrefix(k, TAG_PREFIX) {
 					tag := k[4:]
 					tags[tag] = fmt.Sprintf("%v", v)
 				} else {
@@ -784,7 +785,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 				}
 				if k == EPOCH_COLUMN_NAME {
 					epoch_ns = v.(int64)
-				} else if strings.HasPrefix(k, "tag_") {
+				} else if strings.HasPrefix(k, TAG_PREFIX) {
 					tag := k[4:]
 					tags[tag] = fmt.Sprintf("%v", v)
 				} else {
@@ -1381,7 +1382,7 @@ func SendToGraphite(dbname, measurement string, data [](map[string]interface{}))
 			} else {
 				var metric graphite.Metric
 
-				if strings.HasPrefix(k, "tag_") { // ignore tags for Graphite
+				if strings.HasPrefix(k, TAG_PREFIX) { // ignore tags for Graphite
 					metric.Name = metric_base_prefix + k[4:]
 				} else {
 					metric.Name = metric_base_prefix + k
@@ -2229,15 +2230,15 @@ func AddDbnameSysinfoIfNotExistsToQueryResultData(msg MetricFetchMessage, data [
 	log.Debugf("Enriching all rows of [%s:%s] with sysinfo (%s) / real dbname (%s) if set. ", msg.DBUniqueName, msg.MetricName, ver.SystemIdentifier, ver.RealDbname)
 	for _, dr := range data {
 		if addRealDbname && ver.RealDbname != "" {
-			old, ok := dr[opts.RealDbnameField]
+			old, ok := dr[TAG_PREFIX + opts.RealDbnameField]
 			if !ok || old == "" {
-				dr[opts.RealDbnameField] = ver.RealDbname
+				dr[TAG_PREFIX + opts.RealDbnameField] = ver.RealDbname
 			}
 		}
 		if addSystemIdentifier && ver.SystemIdentifier != "" {
-			old, ok := dr[opts.SystemIdentifierField]
+			old, ok := dr[TAG_PREFIX + opts.SystemIdentifierField]
 			if !ok || old == "" {
-				dr[opts.SystemIdentifierField] = ver.SystemIdentifier
+				dr[TAG_PREFIX + opts.SystemIdentifierField] = ver.SystemIdentifier
 			}
 		}
 		enriched_data = append(enriched_data, dr)
