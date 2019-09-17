@@ -9,6 +9,7 @@ select
   pg_total_relation_size(reltoastrelid) as toast_size_b,
   (extract(epoch from now() - greatest(last_vacuum, last_autovacuum)))::int8 as seconds_since_last_vacuum,
   (extract(epoch from now() - greatest(last_analyze, last_autoanalyze)))::int8 as seconds_since_last_analyze,
+  case when 'autovacuum_enabled=off' = ANY(c.reloptions) then 1 else 0 end as no_autovacuum,
   seq_scan,
   seq_tup_read,
   idx_scan,

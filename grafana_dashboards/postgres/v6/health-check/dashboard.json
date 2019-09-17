@@ -577,13 +577,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=11&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: backends' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=11&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -721,13 +717,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=11&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: backends' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=11&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -865,11 +857,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Lock details",
-          "includeVars": true,
           "targetBlank": true,
           "title": "'Lock details' dashboard",
-          "type": "dashboard"
+          "url": "/dashboard/db/lock-details?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -1007,12 +997,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
           "targetBlank": true,
           "title": "Open 'DB overview :: share'd buffers ' panel",
-          "type": "dashboard",
-          "url": "/d/2c8964a22/db-overview"
+          "url": "/d/2c8964a22/db-overview?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -1150,13 +1137,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=8&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: Rollback Ratio' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1288,13 +1271,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview Unprivileged / Developer",
-          "includeVars": true,
-          "params": "panelId=15&fullscreen",
           "targetBlank": true,
           "title": "'DB overview Unprivileged / Developer :: TPS' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview-developer"
+          "url": "/dashboard/db/db-overview-developer?$__all_variables&panelId=15&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1426,13 +1405,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview Unprivileged / Developer mode",
-          "includeVars": true,
-          "params": "panelId=15&fullscreen",
           "targetBlank": true,
           "title": "'DB overview Unprivileged / Developer :: QPS' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview-developer"
+          "url": "/dashboard/db/db-overview-developer?$__all_variables&panelId=15&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1564,13 +1539,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=11&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: Backends' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=11&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1708,13 +1679,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "DB overview :: DB size panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1846,13 +1813,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "DB overview :: DB size panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1984,12 +1947,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "System Stats",
-          "includeVars": true,
-          "params": "panelId=8&fullscreen",
           "targetBlank": true,
           "title": "Open 'System Stats :: Free disk ' panel",
-          "type": "dashboard"
+          "url": "/dashboard/db/system-stats?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -2127,13 +2087,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=12&fullscreen",
           "targetBlank": true,
           "title": "'DB overview:: Query runtime' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=12&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -2265,12 +2221,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DDL / Config change events",
-          "includeVars": true,
           "targetBlank": true,
           "title": "'DDL / Config change events' dash",
-          "type": "dashboard",
-          "url": "/dashboard/db/change-events"
+          "url": "/dashboard/db/change-events?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -2408,12 +2361,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DDL / Config change events",
-          "includeVars": true,
           "targetBlank": true,
           "title": "'DDL / Config change events' dash",
-          "type": "dashboard",
-          "url": "/dashboard/db/change-events"
+          "url": "/dashboard/db/change-events?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -2695,13 +2645,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "DB overview :: WAL panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -2813,7 +2759,7 @@
         "#d44a3a"
       ],
       "decimals": 0,
-      "description": "Invalid indexes should be dropped as they're updated on DML operations but cannot be used for speeding up queries.",
+      "description": "Invalid indexes should be dropped as they're updated on DML operations but cannot be used for speeding up queries. In case multiple indexes of same structure Postgres will use the smallest so the others can be dropped. 'N/A' displayed both when no duplicate indexes or no metrics data for index_stats.",
       "format": "short",
       "gauge": {
         "maxValue": 100,
@@ -2833,9 +2779,7 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Index overview",
           "title": "\"Index overview\" dashboard",
-          "type": "dashboard",
           "url": "/dashboard/db/index-overview"
         }
       ],
@@ -2896,7 +2840,7 @@
           "policy": "default",
           "query": "select sum(\"last\") from (select last(\"is_invalid_int\") from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter  group by \"index_full_name\")",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 as time,\n  sum((data->'is_invalid_int')::int)\nFROM\n  index_stats\nWHERE\n  time = (select max(time) from index_stats where $__timeFilter(time) AND dbname = '$dbname')\n  AND dbname = '$dbname'\nGROUP BY 1",
+          "rawSql": "WITH q_duplicates AS (\nSELECT\n  coalesce(sum(count-1), 0) as extra\nFROM (\nSELECT\n  tag_data->>'table_full_name' as table_full_name,\n  data->>'index_def' as index_def,\n  count(*)\nFROM\n  index_stats\nWHERE\n  time = (select max(time) from index_stats where $__timeFilter(time) AND dbname = '$dbname')\n  AND dbname = '$dbname'\nGROUP BY 1, 2\nHAVING count(*) > 1\n) x\n)\nSELECT\n  0 as time,\n  sum((data->'is_invalid_int')::int) + (select extra from q_duplicates)\nFROM\n  index_stats\nWHERE\n  time = (select max(time) from index_stats where $__timeFilter(time) AND dbname = '$dbname')\n  AND dbname = '$dbname'\nGROUP BY 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -2926,7 +2870,7 @@
       ],
       "thresholds": "1,2",
       "timeFrom": null,
-      "title": "Invalid indexes",
+      "title": "Invalid / duplicate indexes",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [],
@@ -2942,7 +2886,7 @@
         "#d44a3a"
       ],
       "decimals": 0,
-      "description": "Postgres will use the smallest index in case 2 or more exists, so the others can be dropped. 'N/A' displayed both when no duplicate indexes or no metrics data for index_stats",
+      "description": "i.e. AUTOVACUUM disabled globally or per table.",
       "format": "short",
       "gauge": {
         "maxValue": 100,
@@ -2960,16 +2904,7 @@
       "hideTimeOverride": true,
       "id": 30,
       "interval": null,
-      "links": [
-        {
-          "dashboard": "Index overview",
-          "includeVars": true,
-          "targetBlank": true,
-          "title": "'Index overview' dashboard",
-          "type": "dashboard",
-          "url": "/dashboard/db/index-overview"
-        }
-      ],
+      "links": [],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -3027,7 +2962,7 @@
           "policy": "default",
           "query": "select count(\"count\") from (select count(\"index_def\") from (select last(\"index_def\") as \"index_def\" from index_stats where \"dbname\" =~ /^$dbname$/  and $timeFilter  group by \"table_full_name\", \"index_full_name\", \"index_def_hash\") group by \"table_full_name\", \"index_def_hash\") where \"count\" > 1",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 as time,\n  coalesce(sum(count-1), 0)\nFROM (\nSELECT\n  tag_data->>'table_full_name' as table_full_name,\n  data->>'index_def' as index_def,\n  count(*)\nFROM\n  index_stats\nWHERE\n  time = (select max(time) from index_stats where $__timeFilter(time) AND dbname = '$dbname')\n  AND dbname = '$dbname'\nGROUP BY 1, 2\nHAVING count(*) > 1\n) x\n",
+          "rawSql": "SELECT\n  0 as time,\n  sum(count)\nFROM (\n\nSELECT * FROM (\n\nSELECT\n  case when data->>'autovacuum' = 'off' then 1 else 0 end as count\nFROM\n  settings\nWHERE\n  dbname = '$dbname'\n  AND time > now() - '1d'::interval\nORDER BY time DESC LIMIT 1\n\n) a\n\nUNION ALL\n\nSELECT * FROM (\n\nSELECT\n  count(*)\nFROM\n  table_stats\nWHERE\n  dbname = '$dbname'\n  AND time = (select max(time) from table_stats where dbname = '$dbname')\n  AND (data->'no_autovacuum')::int = 1\n\n) b\n\n) x;",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -3055,9 +2990,9 @@
           ]
         }
       ],
-      "thresholds": "1,5",
+      "thresholds": "1,10",
       "timeFrom": null,
-      "title": "Duplicate indexes",
+      "title": "Autovacuum issues",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -3099,13 +3034,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Checkpointer / Bgwriter / Block IO Stats",
-          "includeVars": true,
-          "params": "panelId=2&fullscreen",
           "targetBlank": true,
           "title": "Checkpointer / Bgwriter / Block IO Stats",
-          "type": "dashboard",
-          "url": "/d/db8d96d1e/checkpointer-bgwriter-stats"
+          "url": "/d/db8d96d1e/checkpointer-bgwriter-stats?$__all_variables&panelId=2&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3371,13 +3302,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "DB overview :: WAL panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3521,13 +3448,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=9&fullscreen",
           "targetBlank": true,
           "title": "DB overview",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=9&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3805,12 +3728,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Tables Top",
-          "includeVars": true,
-          "params": "panelId=4&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Most scans' panel",
-          "type": "dashboard"
+          "url": "/dashboard/db/tables-top?$__all_variables&panelId=4&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3954,12 +3874,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Tables Top",
-          "includeVars": true,
-          "params": "panelId=6&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Inserts' panel",
-          "type": "dashboard"
+          "url": "/dashboard/db/tables-top?$__all_variables&panelId=6&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -4103,12 +4020,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Tables Top",
-          "includeVars": true,
-          "params": "panelId=7&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Updates' panel",
-          "type": "dashboard"
+          "url": "/dashboard/db/tables-top?$__all_variables&panelId=7&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -4252,12 +4166,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Tables Top",
-          "includeVars": true,
-          "params": "panelId=8&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Deletes' panel",
-          "type": "dashboard"
+          "url": "/dashboard/db/tables-top?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -4669,13 +4580,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Replication lag",
-          "includeVars": true,
-          "params": "",
           "targetBlank": true,
           "title": "Replication lag panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/replication"
+          "url": "/dashboard/db/replication?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -4813,13 +4720,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Replication lag",
-          "includeVars": true,
-          "params": "",
           "targetBlank": true,
           "title": "'Replication lag' dashboard",
-          "type": "dashboard",
-          "url": "/dashboard/db/replication"
+          "url": "/dashboard/db/replication?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -4951,13 +4854,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Replication lag",
-          "includeVars": true,
-          "params": "",
           "targetBlank": true,
           "title": "'Replication lag' dashboard",
-          "type": "dashboard",
-          "url": "/dashboard/db/replication"
+          "url": "/dashboard/db/replication?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -5092,7 +4991,7 @@
       "type": "text"
     }
   ],
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [],
   "templating": {

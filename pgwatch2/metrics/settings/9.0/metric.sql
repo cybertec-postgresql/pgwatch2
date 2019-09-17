@@ -45,6 +45,7 @@ select
   (select setting from qs where name = 'shared_preload_libraries') as shared_preload_libraries,
   (select setting from qs where name = 'listen_addresses') as listen_addresses,
   (select setting from qs where name = 'ssl') as ssl,
+  (select setting from qs where name = 'autovacuum') as autovacuum,
   (select setting::int8 from qs where name = 'autovacuum_max_workers') as autovacuum_max_workers,
   (select setting::float8 from qs where name = 'autovacuum_vacuum_scale_factor') as autovacuum_vacuum_scale_factor,
   (select setting::float8 from qs where name = 'autovacuum_vacuum_threshold') as autovacuum_vacuum_threshold,
