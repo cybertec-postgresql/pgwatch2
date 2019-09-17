@@ -26,6 +26,7 @@ or a specific version
 * Metrics - add 'wal_size' (10+) to 'exhaustive' preset
 * Metrics - replace accurate "pgstattuple" based bloat info gathering with SQL based estimates in preset configs
 * Metrics - correct older (9.0/9.1) "backends" and "kpi" metrics
+* Metrics - add Autovacuum info to "settings" and "table_stats" + display on PG "health-check" dash
 * Docker - fix case where setting PW2_GRAFANASSL=0 still enabled SSL
 * Docker - make "Health-check" the default dashboard / splash screen
 * Docker component update: Influx 1.7.8, Grafana 6.3.5, Go 1.12.9
