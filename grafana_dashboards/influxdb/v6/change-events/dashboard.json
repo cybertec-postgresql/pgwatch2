@@ -218,7 +218,7 @@
       "filterNull": false,
       "fontSize": "100%",
       "gridPos": {
-        "h": 7,
+        "h": 5,
         "w": 12,
         "x": 0,
         "y": 7
@@ -302,7 +302,7 @@
       "filterNull": false,
       "fontSize": "100%",
       "gridPos": {
-        "h": 7,
+        "h": 5,
         "w": 12,
         "x": 12,
         "y": 7
@@ -386,10 +386,10 @@
       "filterNull": false,
       "fontSize": "100%",
       "gridPos": {
-        "h": 7,
+        "h": 5,
         "w": 12,
         "x": 0,
-        "y": 14
+        "y": 12
       },
       "id": 4,
       "links": [],
@@ -470,10 +470,10 @@
       "filterNull": false,
       "fontSize": "100%",
       "gridPos": {
-        "h": 7,
+        "h": 5,
         "w": 12,
         "x": 12,
-        "y": 14
+        "y": 12
       },
       "id": 5,
       "links": [],
@@ -554,7 +554,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 17
       },
       "id": 7,
       "links": [],
