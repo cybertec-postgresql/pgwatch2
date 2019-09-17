@@ -13,9 +13,8 @@ import (
 	"time"
 )
 
-var lastFoundClusterMembers = make(map[string][]PatroniClusterMember)	// needed for cases where DCS is temporarily down
-																		// don't want to immediately remove monitoring of DBs
-
+var lastFoundClusterMembers = make(map[string][]PatroniClusterMember) // needed for cases where DCS is temporarily down
+// don't want to immediately remove monitoring of DBs
 
 func ParseHostAndPortFromJdbcConnStr(connStr string) (string, string, error) {
 	r := regexp.MustCompile(`postgres://(.*)+:([0-9]+)/`)
@@ -36,8 +35,8 @@ func ConsulGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember
 
 	config := consul_api.Config{}
 	config.Address = database.HostConfig.DcsEndpoints[0]
-	if config.Address[0] == '/' {	// Consul doesn't have leading slashes
-		config.Address = config.Address[1:len(config.Address)-1]
+	if config.Address[0] == '/' { // Consul doesn't have leading slashes
+		config.Address = config.Address[1 : len(config.Address)-1]
 	}
 	client, err := consul_api.NewClient(&config)
 	if err != nil {
@@ -54,7 +53,7 @@ func ConsulGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember
 		return ret, err
 	}
 	if members != nil {
-		for _, member:= range members {
+		for _, member := range members {
 			name := path.Base(member.Key)
 			log.Debugf("Found a cluster member from Consul: %+v", name)
 			nodeData, err := jsonTextToStringMap(string(member.Value))
@@ -80,7 +79,7 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 		return ret, errors.New("Missing ETCD connect info, make sure host config has a 'dcs_endpoints' key")
 	}
 
-	if database.HostConfig.CAFile != "" || database.HostConfig.KeyFile != "" || database.HostConfig.CertFile != ""{
+	if database.HostConfig.CAFile != "" || database.HostConfig.KeyFile != "" || database.HostConfig.CertFile != "" {
 		tls := transport.TLSInfo{
 			TrustedCAFile: database.HostConfig.CAFile,
 			CertFile:      database.HostConfig.CertFile,
@@ -93,16 +92,16 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 			Endpoints:               database.HostConfig.DcsEndpoints,
 			Transport:               etcdTransport,
 			HeaderTimeoutPerRequest: time.Second,
-			Username:			     database.HostConfig.Username,
-			Password:			     database.HostConfig.Password,
+			Username:                database.HostConfig.Username,
+			Password:                database.HostConfig.Password,
 		}
 	} else {
 		cfg = client.Config{
 			Endpoints:               database.HostConfig.DcsEndpoints,
 			Transport:               client.DefaultTransport,
 			HeaderTimeoutPerRequest: time.Second,
-			Username:			     database.HostConfig.Username,
-			Password:			     database.HostConfig.Password,
+			Username:                database.HostConfig.Username,
+			Password:                database.HostConfig.Password,
 		}
 	}
 
@@ -114,7 +113,7 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 	kapi := client.NewKeysAPI(c)
 
 	membersPath := path.Join(database.HostConfig.Namespace, database.HostConfig.Scope, "members")
-	resp, err := kapi.Get(context.Background(), membersPath , &client.GetOptions{Recursive:true})
+	resp, err := kapi.Get(context.Background(), membersPath, &client.GetOptions{Recursive: true})
 	if err != nil {
 		log.Error("Could not read Patroni members from ETCD:", err)
 		return ret, err
@@ -190,9 +189,9 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 	log.Debugf("Resolving Patroni nodes for \"%s\" from HostConfig: %+v", ce.DBUniqueName, ce.HostConfig)
 	if ce.HostConfig.DcsType == DCS_TYPE_ETCD {
 		cm, err = EtcdGetClusterMembers(ce)
-	} else if ce.HostConfig.DcsType == DCS_TYPE_ZOOKEEPER{
+	} else if ce.HostConfig.DcsType == DCS_TYPE_ZOOKEEPER {
 		cm, err = ZookeeperGetClusterMembers(ce)
-	} else if ce.HostConfig.DcsType == DCS_TYPE_CONSUL{
+	} else if ce.HostConfig.DcsType == DCS_TYPE_CONSUL {
 		cm, err = ConsulGetClusterMembers(ce)
 	} else {
 		log.Error("unknown DCS", ce.HostConfig.DcsType)
@@ -201,7 +200,7 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 	if err != nil {
 		log.Warningf("Failed to get info from DCS for %s, using previous member info if any", ce.DBUniqueName)
 		cm, ok = lastFoundClusterMembers[ce.DBUniqueName]
-		if ok {	// mask error from main loop not to remove monitored DBs due to "jitter"
+		if ok { // mask error from main loop not to remove monitored DBs due to "jitter"
 			err = nil
 		}
 	} else {
@@ -246,7 +245,7 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 				PresetMetrics:     ce.PresetMetrics,
 				IsSuperuser:       ce.IsSuperuser,
 				CustomTags:        ce.CustomTags,
-				HostConfig:	       ce.HostConfig,
+				HostConfig:        ce.HostConfig,
 				DBType:            "postgres"})
 			continue
 		} else {
@@ -298,4 +297,3 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 
 	return md, err
 }
-

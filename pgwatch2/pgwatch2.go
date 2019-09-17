@@ -39,7 +39,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var GitVersionHash = ""	// Will be set by "go build"!
+var GitVersionHash = "" // Will be set by "go build"!
 
 type MonitoredDatabase struct {
 	DBUniqueName         string `yaml:"unique_name"`
@@ -56,7 +56,7 @@ type MonitoredDatabase struct {
 	SslClientCertPath    string             `yaml:"sslcert"`
 	SslClientKeyPath     string             `yaml:"sslkey"`
 	Metrics              map[string]float64 `yaml:"custom_metrics"`
-	StmtTimeout          int64			   `yaml:"stmt_timeout"`
+	StmtTimeout          int64              `yaml:"stmt_timeout"`
 	DBType               string
 	DBNameIncludePattern string            `yaml:"dbname_include_pattern"`
 	DBNameExcludePattern string            `yaml:"dbname_exclude_pattern"`
@@ -66,26 +66,26 @@ type MonitoredDatabase struct {
 	CustomTags           map[string]string `yaml:"custom_tags"` // ignored on graphite
 	HostConfig           HostConfigAttrs   `yaml:"host_config"`
 	//JdbcConnStr          string            `yaml: "jdbc_conn_str"`
-	OnlyIfMaster         bool `yaml:"only_if_master"`
+	OnlyIfMaster bool `yaml:"only_if_master"`
 }
 
 type HostConfigAttrs struct {
-	DcsType            string `yaml:"dcs_type"`
-	DcsEndpoints       []string `yaml:"dcs_endpoints"`
-	Scope              string
-	Namespace          string
-	Username           string
-	Password           string
-	CAFile             string `yaml:"ca_file"`
-	CertFile           string `yaml:"cert_file"`
-	KeyFile            string `yaml:"key_file"`
+	DcsType      string   `yaml:"dcs_type"`
+	DcsEndpoints []string `yaml:"dcs_endpoints"`
+	Scope        string
+	Namespace    string
+	Username     string
+	Password     string
+	CAFile       string `yaml:"ca_file"`
+	CertFile     string `yaml:"cert_file"`
+	KeyFile      string `yaml:"key_file"`
 }
 
 type PatroniClusterMember struct {
-	Scope              string
-	Name               string
-	ConnUrl            string `yaml:"conn_url"`
-	Role               string
+	Scope   string
+	Name    string
+	ConnUrl string `yaml:"conn_url"`
+	Role    string
 }
 
 type PresetConfig struct {
@@ -153,7 +153,7 @@ type DBVersionMapEntry struct {
 	VersionStr       string
 	RealDbname       string
 	SystemIdentifier string
-	IsSuperuser      bool	// if true and no helpers are installed, use superuser SQL version of metric if available
+	IsSuperuser      bool // if true and no helpers are installed, use superuser SQL version of metric if available
 }
 
 type ExistingPartitionInfo struct {
@@ -161,7 +161,7 @@ type ExistingPartitionInfo struct {
 	EndTime   time.Time
 }
 
-const EPOCH_COLUMN_NAME string = "epoch_ns"      // this column (epoch in nanoseconds) is expected in every metric query
+const EPOCH_COLUMN_NAME string = "epoch_ns" // this column (epoch in nanoseconds) is expected in every metric query
 const TAG_PREFIX string = "tag_"
 const METRIC_DEFINITION_REFRESH_TIME int64 = 120 // min time before checking for new/changed metric definitions
 const GRAPHITE_METRICS_PREFIX string = "pgwatch2"
@@ -175,9 +175,9 @@ const DATASTORE_POSTGRES = "postgres"
 const DATASTORE_PROMETHEUS = "prometheus"
 const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
 const FILE_BASED_METRIC_HELPERS_DIR = "00_helpers"
-const PG_CONN_RECYCLE_SECONDS = 1800                // applies for monitored nodes
-const APPLICATION_NAME = "pgwatch2"                 // will be set on all opened PG connections for informative purposes
-const MAX_PG_CONNECTIONS_PER_MONITORED_DB = 2       // for limiting max concurrent queries on a single DB, sql.DB maxPoolSize cannot be fully trusted
+const PG_CONN_RECYCLE_SECONDS = 1800          // applies for monitored nodes
+const APPLICATION_NAME = "pgwatch2"           // will be set on all opened PG connections for informative purposes
+const MAX_PG_CONNECTIONS_PER_MONITORED_DB = 2 // for limiting max concurrent queries on a single DB, sql.DB maxPoolSize cannot be fully trusted
 const GATHERER_STATUS_START = "START"
 const GATHERER_STATUS_STOP = "STOP"
 const METRICDB_IDENT = "metricDb"
@@ -193,7 +193,7 @@ const DBTYPE_PATRONI = "patroni"
 const DBTYPE_PATRONI_CONT = "patroni-continuous-discovery"
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true}
-var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT}	// used for informational purposes
+var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT} // used for informational purposes
 var configDb *sqlx.DB
 var metricDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
@@ -216,7 +216,7 @@ var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently sup
 // secondary Influx meant for HA or Grafana load balancing for 100+ instances with lots of alerts
 var fileBased = false
 var adHocMode = false
-var preset_metric_def_map map[string]map[string]float64          // read from metrics folder in "file mode"
+var preset_metric_def_map map[string]map[string]float64 // read from metrics folder in "file mode"
 /// internal statistics calculation
 var lastSuccessfulDatastoreWriteTime time.Time
 var totalMetricsFetchedCounter uint64
@@ -236,7 +236,7 @@ var promExporter *Exporter
 var promServer *http.Server
 var addRealDbname bool
 var addSystemIdentifier bool
-var forceRecreatePGMetricPartitions = false			// to signal override PG metrics storage cache
+var forceRecreatePGMetricPartitions = false // to signal override PG metrics storage cache
 
 func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
@@ -262,7 +262,7 @@ func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password
 	} else {
 		conn_str := fmt.Sprintf("host=%s port=%s dbname='%s' sslmode=%s user=%s application_name=%s sslrootcert='%s' sslcert='%s' sslkey='%s'",
 			host, port, dbname, sslmode, user, APPLICATION_NAME, sslrootcert, sslcert, sslkey)
-		if password != "" {	// having empty string as password effectively disables .pgpass so include only if password given
+		if password != "" { // having empty string as password effectively disables .pgpass so include only if password given
 			conn_str += "password=" + password
 		}
 		db, err = sqlx.Open("postgres", conn_str)
@@ -885,7 +885,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 			}
 		} else {
 			tx_err := txn.Rollback()
-			if tx_err!= nil {
+			if tx_err != nil {
 				log.Debug("COPY Rollback to Postgres failed:", tx_err)
 			}
 		}
@@ -1707,7 +1707,7 @@ func DBGetPGVersion(dbUnique string, noCache bool) (DBVersionMapEntry, error) {
 			}
 		}
 
-		log.Debugf("determining if monitoring user is a superuser for %s",  dbUnique)
+		log.Debugf("determining if monitoring user is a superuser for %s", dbUnique)
 		data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_su)
 		if err == nil {
 			ver.IsSuperuser = data[0]["rolsuper"].(bool)
@@ -1740,8 +1740,6 @@ func GetMetricVersionProperties(metric string, pgVer decimal.Decimal, metricDefM
 		mdm = metric_def_map // global cache
 		defer metric_def_map_lock.RUnlock()
 	}
-
-
 
 	_, ok := mdm[metric]
 	if !ok || len(mdm[metric]) == 0 {
@@ -2165,8 +2163,8 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 		return nil, err
 	}
 	sql = mvp.Sql
-	if vme.IsSuperuser && mvp.SqlSU != ""  {
-		sql = mvp.SqlSU		// TODO only if no helper function?
+	if vme.IsSuperuser && mvp.SqlSU != "" {
+		sql = mvp.SqlSU // TODO only if no helper function?
 	}
 	if sql == "" && msg.MetricName != "change_events" {
 		// let's ignore dummy SQL-s
@@ -2223,29 +2221,27 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	return nil, nil
 }
 
-
 func AddDbnameSysinfoIfNotExistsToQueryResultData(msg MetricFetchMessage, data []map[string]interface{}, ver DBVersionMapEntry) []map[string]interface{} {
 	enriched_data := make([]map[string]interface{}, 0)
 
 	log.Debugf("Enriching all rows of [%s:%s] with sysinfo (%s) / real dbname (%s) if set. ", msg.DBUniqueName, msg.MetricName, ver.SystemIdentifier, ver.RealDbname)
 	for _, dr := range data {
 		if addRealDbname && ver.RealDbname != "" {
-			old, ok := dr[TAG_PREFIX + opts.RealDbnameField]
+			old, ok := dr[TAG_PREFIX+opts.RealDbnameField]
 			if !ok || old == "" {
-				dr[TAG_PREFIX + opts.RealDbnameField] = ver.RealDbname
+				dr[TAG_PREFIX+opts.RealDbnameField] = ver.RealDbname
 			}
 		}
 		if addSystemIdentifier && ver.SystemIdentifier != "" {
-			old, ok := dr[TAG_PREFIX + opts.SystemIdentifierField]
+			old, ok := dr[TAG_PREFIX+opts.SystemIdentifierField]
 			if !ok || old == "" {
-				dr[TAG_PREFIX + opts.SystemIdentifierField] = ver.SystemIdentifier
+				dr[TAG_PREFIX+opts.SystemIdentifierField] = ver.SystemIdentifier
 			}
 		}
 		enriched_data = append(enriched_data, dr)
 	}
 	return enriched_data
 }
-
 
 func StoreMetrics(metrics []MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) (int, error) {
 
@@ -2288,7 +2284,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 	interval := config[metricName]
 	ticker := time.NewTicker(time.Millisecond * time.Duration(interval*1000))
 	host_state := make(map[string]map[string]string)
-	var last_uptime_s int64 = -1		// used for "server restarted" event detection
+	var last_uptime_s int64 = -1 // used for "server restarted" event detection
 	var last_error_notification_time time.Time
 	failed_fetches := 0
 
@@ -2333,7 +2329,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 				postmaster_uptime_s, ok := (metricStoreMessages[0].Data)[0]["postmaster_uptime_s"]
 				if ok {
 					if last_uptime_s != -1 {
-						if postmaster_uptime_s.(int64) < last_uptime_s {	// restart (or possibly also failover when host is routed) happened
+						if postmaster_uptime_s.(int64) < last_uptime_s { // restart (or possibly also failover when host is routed) happened
 							message := "Server restart (or failover) of \"" + dbUniqueName + "\""
 							log.Warning(message)
 							detected_changes_summary := make([](map[string]interface{}), 0)
@@ -2947,11 +2943,11 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 		if e.IsEnabled && e.PasswordType == "aes-gcm-256" && opts.AesGcmKeyphrase != "" {
 			e.Password = decrypt(e.DBUniqueName, opts.AesGcmKeyphrase, e.Password)
 		}
-		if e.DBType == DBTYPE_PATRONI && e.DBName == ""{
+		if e.DBType == DBTYPE_PATRONI && e.DBName == "" {
 			log.Warningf("Ignoring host \"%s\" as \"dbname\" attribute not specified but required by dbtype=patroni", e.DBUniqueName)
 			continue
 		}
-		if e.DBType == DBTYPE_PG && e.DBName == ""{
+		if e.DBType == DBTYPE_PG && e.DBName == "" {
 			log.Warningf("Ignoring host \"%s\" as \"dbname\" attribute not specified but required by dbtype=postgres", e.DBUniqueName)
 			continue
 		}
@@ -3136,14 +3132,14 @@ type Options struct {
 	AesGcmKeyphraseFile     string `long:"aes-gcm-keyphrase-file" description:"File with decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE_FILE"`
 	AesGcmPasswordToEncrypt string `long:"aes-gcm-password-to-encrypt" description:"A special mode, returns the encrypted plain-text string and quits. Keyphrase(file) must be set. Useful for YAML mode" env:"PW2_AES_GCM_PASSWORD_TO_ENCRYPT"`
 	// NB! "Test data" mode needs to be combined with "ad-hoc" mode to get an initial set of metrics from a real source
-	TestdataMultiplier    int    `long:"testdata-multiplier" description:"For how many hosts to generate data" env:"PW2_TESTDATA_MULTIPLIER"`
-	TestdataDays          int    `long:"testdata-days" description:"For how many days to generate data" env:"PW2_TESTDATA_DAYS"`
-	AddRealDbname         string `long:"add-real-dbname" description:"Add real DB name to each captured metric" env:"PW2_ADD_REAL_DBNAME" default:"false"`
-	RealDbnameField       string `long:"real-dbname-field" description:"Tag key for real DB name if --add-real-dbname enabled" env:"PW2_REAL_DBNAME_FIELD" default:"real_dbname"`
-	AddSystemIdentifier   string `long:"add-system-identifier" description:"Add system identifier to each captured metric" env:"PW2_ADD_SYSTEM_IDENTIFIER" default:"false"`
-	SystemIdentifierField string `long:"system-identifier-field" description:"Tag key for system identifier value if --add-system-identifier" env:"PW2_SYSTEM_IDENTIFIER_FIELD" default:"sys_id"`
+	TestdataMultiplier        int    `long:"testdata-multiplier" description:"For how many hosts to generate data" env:"PW2_TESTDATA_MULTIPLIER"`
+	TestdataDays              int    `long:"testdata-days" description:"For how many days to generate data" env:"PW2_TESTDATA_DAYS"`
+	AddRealDbname             string `long:"add-real-dbname" description:"Add real DB name to each captured metric" env:"PW2_ADD_REAL_DBNAME" default:"false"`
+	RealDbnameField           string `long:"real-dbname-field" description:"Tag key for real DB name if --add-real-dbname enabled" env:"PW2_REAL_DBNAME_FIELD" default:"real_dbname"`
+	AddSystemIdentifier       string `long:"add-system-identifier" description:"Add system identifier to each captured metric" env:"PW2_ADD_SYSTEM_IDENTIFIER" default:"false"`
+	SystemIdentifierField     string `long:"system-identifier-field" description:"Tag key for system identifier value if --add-system-identifier" env:"PW2_SYSTEM_IDENTIFIER_FIELD" default:"sys_id"`
 	ServersRefreshLoopSeconds int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERVERS_REFRESH_LOOP_SECONDS" default:"120"`
-	Version               bool `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
+	Version                   bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
 }
 
 var opts Options
@@ -3432,7 +3428,7 @@ func main() {
 	var metrics map[string]map[decimal.Decimal]MetricVersionProperties
 
 	for { //main loop
-		hostsToShutDownDueToRoleChange := make(map[string]bool)		// hosts went from master to standby and have "only if master" set
+		hostsToShutDownDueToRoleChange := make(map[string]bool) // hosts went from master to standby and have "only if master" set
 
 		if time.Now().Unix()-last_metrics_refresh_time > METRIC_DEFINITION_REFRESH_TIME {
 			//metrics
@@ -3595,7 +3591,7 @@ func main() {
 
 			if host.DBType == DBTYPE_PG {
 				ver, err := DBGetPGVersion(db_unique, false)
-				if err == nil {	// ok to ignore error, re-tried on next loop
+				if err == nil { // ok to ignore error, re-tried on next loop
 					if ver.IsInRecovery && host.OnlyIfMaster {
 						log.Infof("[%s] to be removed from monitoring due to 'master only' property and status change", db_unique)
 						hostsToShutDownDueToRoleChange[db_unique] = true
@@ -3688,7 +3684,7 @@ func main() {
 
 			_, ok := hostsToShutDownDueToRoleChange[db]
 
-			if !ok {	// maybe some single metric was disabled
+			if !ok { // maybe some single metric was disabled
 				for _, host := range monitored_dbs {
 					if host.DBUniqueName == db {
 						metricConfig := host.Metrics
