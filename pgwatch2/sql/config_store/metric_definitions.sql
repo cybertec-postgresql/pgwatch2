@@ -1900,7 +1900,9 @@ from
 where
      approx_free_space > 0;
 
-$sql$);
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
+);
 
 /* approx. bloat summary pure SQL estimate */
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql, m_column_attrs, m_sql_su)
