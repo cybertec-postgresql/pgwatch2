@@ -3506,10 +3506,14 @@ func main() {
 		UpdateMonitoredDBCache(monitored_dbs)
 
 		if first_loop {
-			first_loop = false // only used for failing when 1st config reading fails
+			log.Warning("host info refreshed, nr. of enabled hosts in configuration:", len(monitored_dbs))
+		} else {
+			log.Info("host info refreshed, nr. of enabled hosts in configuration:", len(monitored_dbs))
 		}
 
-		log.Info("host info refreshed, nr. of enabled hosts in configuration:", len(monitored_dbs))
+		if first_loop {
+			first_loop = false // only used for failing when 1st config reading fails
+		}
 
 		for _, host := range monitored_dbs {
 			log.Debugf("processing database: %s, metric config: %v, custom tags: %v, host config: %#v", host.DBUniqueName, host.Metrics, host.CustomTags, host.HostConfig)
