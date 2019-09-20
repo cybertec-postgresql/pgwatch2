@@ -10,8 +10,10 @@ Note: has a self-signed certificate as configured out the box in Docker, so you 
 
 # Installing
 
-Software is packaged as Docker (for custom setup see the last paragraph below, for a Docker quickstart see
-[here](https://docs.docker.com/get-started/)) for getting started quickly.
+For the fastest installation / setup experience Docker images are provided via Docker Hub (for a Docker quickstart see
+[here](https://docs.docker.com/get-started/)). For doing a custom setup see the "Installing without Docker" paragraph
+below or turn to the "releases" tab for DEB / RPM / Tar packages.
+
 ```
 # fetch and run the latest Docker image, exposing Grafana on port 3000 and administrative web UI on 8080
 docker run -d -p 3000:3000 -p 8080:8080 -e PW2_TESTDB=true --name pw2 cybertec/pgwatch2
@@ -458,7 +460,9 @@ outside of Docker.
 
 # Installing without Docker
 
-All examples assuming Ubuntu.
+Below are sample steps to do a custom install from scratch using a Postgres configuration DB for both pgwatch2 config and
+Grafana config. NB! pgwatch2 config can also be stored YAML and Grafana can use embedded Sqlite DB so technically only
+DB that is absolutely needed is the metrics storage DB, here Influx. All examples assuming Ubuntu.
 
 1. Install Postgres and create DB-s/roles for pgwatch2/Grafana
     
@@ -566,6 +570,9 @@ All examples assuming Ubuntu.
     
 5. Install Go and compile the gatherer
     
+    NB! There are pre-built binaries DEB / RPM / Tar packages also avaialble on the "releases" tab so this step is not
+    really mandatory if maximum control or code changes are not required.
+
     Check for the latest Go version from https://golang.org/dl/
     
     ```
