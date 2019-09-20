@@ -499,7 +499,7 @@ DB that is absolutely needed is the metrics storage DB, here Influx. All example
     ```
     Take a look/edit the Influx config at /etc/influxdb/influxdb.conf and it's recommend to create also a separate limited
     login user e.g. "pgwatch2" to be used by the metrics gathering daemon to store metrics. See [here](https://docs.influxdata.com/influxdb/latest/administration/config/)
-    on configuring InfluxDB and [here](https://docs.influxdata.com/influxdb/latest/query_language/authentication_and_authorization/#user-types-and-privileges)
+    on configuring InfluxDB and [here](https://docs.influxdata.com/influxdb/latest/administration/authentication_and_authorization/)
     for creating new users.
     
     Default port for the API: 8086
