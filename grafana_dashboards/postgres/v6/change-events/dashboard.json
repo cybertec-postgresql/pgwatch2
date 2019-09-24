@@ -81,7 +81,7 @@
       "targets": [
         {
           "alias": "CPU load",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -130,7 +130,7 @@
         },
         {
           "alias": "Rollback ratio",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -152,7 +152,6 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT (non_negative_derivative(mean(\"xact_rollback\")) / (non_negative_derivative(mean(\"xact_commit\")) + non_negative_derivative(mean(\"xact_rollback\"))) * 100) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg( case when (xc = xc_lag and xr = xr_lag) then null else ( ((xr - xr_lag)::numeric*100) / ((xc - xc_lag) + (xr - xr_lag)) ) end ) as \"Rollback ratio\"\nfrom (\n  select\n    (data->'xact_rollback')::float8 as xr, lag((data->'xact_rollback')::float8) over w as xr_lag,\n    (data->'xact_commit')::float8 as xc, lag((data->'xact_rollback')::float8) over w as xc_lag,\n    time\n  from db_stats\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n  window w as (order by time)\n) x\nwhere xc >= xc_lag\ngroup by 1\norder by 1\n\n\n\n\n\n",
           "refId": "B",
@@ -272,7 +271,7 @@
       ],
       "targets": [
         {
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "table",
           "group": [],
           "groupBy": [
@@ -292,7 +291,6 @@
           "measurement": "object_changes",
           "metricColumn": "none",
           "policy": "default",
-          "query": "SELECT event, table FROM \"table_changes\" WHERE $timeFilter AND dbname =~ /^$dbname$/",
           "rawQuery": true,
           "rawSql": "SELECT\n  time::text,\n  data->>'event' as event,\n  tag_data->>'table' as table\nFROM\n  table_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY\n  time",
           "refId": "A",
@@ -367,7 +365,7 @@
       ],
       "targets": [
         {
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "table",
           "group": [],
           "groupBy": [
@@ -387,7 +385,6 @@
           "measurement": "object_changes",
           "metricColumn": "none",
           "policy": "default",
-          "query": "SELECT event, index FROM \"index_changes\" WHERE $timeFilter AND dbname =~ /^$dbname$/",
           "rawQuery": true,
           "rawSql": "SELECT\n  time::text,\n  data->>'event' as event,\n  tag_data->>'index' as index,\n  data->>'table' as table\nFROM\n  index_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY\n  time",
           "refId": "A",
@@ -462,7 +459,7 @@
       ],
       "targets": [
         {
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "table",
           "group": [],
           "groupBy": [
@@ -481,7 +478,6 @@
           ],
           "metricColumn": "none",
           "policy": "default",
-          "query": "SELECT event, sproc FROM \"sproc_changes\" WHERE $timeFilter AND dbname =~ /^$dbname$/",
           "rawQuery": true,
           "rawSql": "SELECT\n  time::text,\n  data->>'event' as event,\n  tag_data->>'sproc' as sproc\nFROM\n  sproc_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY\n  time",
           "refId": "A",
@@ -557,7 +553,7 @@
       ],
       "targets": [
         {
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "table",
           "group": [],
           "groupBy": [
@@ -576,7 +572,6 @@
           ],
           "metricColumn": "none",
           "policy": "default",
-          "query": "SELECT event, setting, value FROM \"configuration_changes\" WHERE $timeFilter AND dbname =~ /^$dbname$/",
           "rawQuery": true,
           "rawSql": "SELECT\n  time::text,\n  tag_data->>'setting' as event,\n  data->>'value' as value\nFROM\n  configuration_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY\n  time",
           "refId": "A",

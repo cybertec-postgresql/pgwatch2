@@ -23,6 +23,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Based on pg_locks",
       "fill": 1,
       "gridPos": {
@@ -57,7 +58,7 @@
       "targets": [
         {
           "alias": "$tag_lockmode",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [

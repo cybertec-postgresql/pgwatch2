@@ -23,6 +23,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -56,7 +57,7 @@
       "targets": [
         {
           "alias": "calls",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -170,6 +171,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "fill": 1,
       "gridPos": {
@@ -204,7 +206,7 @@
       "targets": [
         {
           "alias": "total_time",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [

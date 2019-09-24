@@ -21,6 +21,7 @@
   "panels": [
     {
       "columns": [],
+      "datasource": null,
       "description": "As per  \"settings\" metric.",
       "fontSize": "100%",
       "gridPos": {

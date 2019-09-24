@@ -12,6 +12,7 @@
       }
     ]
   },
+  "datasource": null,
   "description": "For one query",
   "editable": true,
   "gnetId": null,
@@ -24,6 +25,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 1,
       "gridPos": {
         "h": 5,
@@ -57,7 +59,7 @@
       "targets": [
         {
           "alias": "avg_runtime",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -166,6 +168,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 1,
       "gridPos": {
         "h": 5,
@@ -199,7 +202,7 @@
       "targets": [
         {
           "alias": "calls",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -313,6 +316,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 1,
       "gridPos": {
         "h": 5,
@@ -346,7 +350,7 @@
       "targets": [
         {
           "alias": "total_runtime",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -460,6 +464,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 1,
       "gridPos": {
         "h": 5,
@@ -493,7 +498,7 @@
       "targets": [
         {
           "alias": "sb_hit_ratio",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -602,6 +607,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 1,
       "gridPos": {
         "h": 5,
@@ -635,7 +641,7 @@
       "targets": [
         {
           "alias": "temp_blks_written",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -749,6 +755,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "FYI - blk_write_time can easily be 0 as normally changes happen only in the shared buffers and are written out by the checkpointer / background writer.",
       "fill": 1,
       "gridPos": {
@@ -783,7 +790,7 @@
       "targets": [
         {
           "alias": "blk_read_time",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -897,6 +904,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 1,
       "gridPos": {
         "h": 5,
@@ -930,7 +938,7 @@
       "targets": [
         {
           "alias": "io_time_pct",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1023,6 +1031,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "fontSize": "100%",
       "gridPos": {
         "h": 5,
@@ -1079,7 +1088,7 @@
       ],
       "targets": [
         {
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "table",
           "group": [],
           "groupBy": [
@@ -1099,7 +1108,6 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "show tag values FROM \"stat_statements\" WITH key = \"query\" WHERE \"queryid\" = '$queryid'",
           "rawQuery": true,
           "rawSql": "select\n  tag_data->>'query' as \"Value\"\nfrom stat_statements\nwhere dbname = '$dbname' and tag_data @> '{\"queryid\": \"$queryid\"}'\norder by time desc\nlimit 1",
           "refId": "A",

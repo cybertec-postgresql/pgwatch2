@@ -20,6 +20,7 @@
   "panels": [
     {
       "columns": [],
+      "datasource": null,
       "description": "",
       "fontSize": "90%",
       "gridPos": {
@@ -164,6 +165,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "",
       "fontSize": "90%",
       "gridPos": {
@@ -308,6 +310,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "",
       "fontSize": "90%",
       "gridPos": {
@@ -452,6 +455,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "total_time - blk_read_time -blk_write_time. Requires track_io_timing=on",
       "fontSize": "100%",
       "gridPos": {
@@ -588,6 +592,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "Does not include Shared Buffer activities. Same as 'By total runtime' if no direct IO was performed. Requires track_io_timing=on",
       "fontSize": "100%",
       "gridPos": {

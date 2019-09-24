@@ -28,6 +28,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Last 5m data",
       "editable": true,
       "error": false,
@@ -161,6 +162,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Last 5min data",
       "editable": true,
       "error": false,
@@ -289,6 +291,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Current Transaction Per Second (10m avg) + last 6h history",
       "editable": true,
       "error": false,
@@ -417,6 +420,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Queries Per Second based on pg_stat_statements.calls. Last 10m avg. + last 6h history",
       "editable": true,
       "error": false,
@@ -475,7 +479,7 @@
       "targets": [
         {
           "alias": "QPS",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -548,6 +552,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Approximate value based on pg_stat_statements total_time / calls. Last 10min avg. + last 6h history",
       "editable": true,
       "error": false,
@@ -606,7 +611,7 @@
       "targets": [
         {
           "alias": "avg_query_runtime_per_db",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -680,6 +685,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "decimals": 1,
       "description": "Based on pg_stat_database.numbackends. Last 10m avg + 6h history",
       "editable": true,
@@ -739,7 +745,7 @@
       "targets": [
         {
           "alias": "",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -820,6 +826,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "decimals": null,
       "description": "",
       "editable": true,
@@ -879,7 +886,7 @@
       "targets": [
         {
           "alias": "",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -966,6 +973,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -1024,7 +1032,7 @@
       "targets": [
         {
           "alias": "db_size_change_last_hour",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1094,6 +1102,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "description": "",
       "editable": true,
@@ -1151,7 +1160,7 @@
       "targets": [
         {
           "alias": "INSERT",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1251,6 +1260,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -1290,7 +1300,7 @@
       "targets": [
         {
           "alias": "Shared buffers hit ratio",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1392,6 +1402,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "description": "Approximate value based on pg_stat_statements total_time / calls",
       "fill": 1,
@@ -1428,7 +1439,7 @@
       "targets": [
         {
           "alias": "avg_query_runtime",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1529,6 +1540,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -1578,7 +1590,7 @@
       "targets": [
         {
           "alias": "WAL rate",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1642,7 +1654,7 @@
         },
         {
           "alias": "DB Size",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1792,7 +1804,7 @@
       "targets": [
         {
           "alias": "# Sessions",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1844,7 +1856,7 @@
         },
         {
           "alias": "Deadlocks (1h rate)",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1941,6 +1953,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "description": "Transactions per Second / Queries per Second",
       "fill": 1,
@@ -2123,6 +2136,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "description": "",
       "fill": 1,
@@ -2268,6 +2282,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "description": "",
       "fill": 1,

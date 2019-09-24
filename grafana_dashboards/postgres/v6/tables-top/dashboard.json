@@ -20,6 +20,7 @@
   "panels": [
     {
       "columns": [],
+      "datasource": null,
       "fontSize": "100%",
       "gridPos": {
         "h": 6,
@@ -168,6 +169,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "fontSize": "100%",
       "gridPos": {
         "h": 6,
@@ -316,6 +318,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "fontSize": "100%",
       "gridPos": {
         "h": 6,
@@ -464,6 +467,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "",
       "fontSize": "100%",
       "gridPos": {
@@ -613,6 +617,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "",
       "fontSize": "100%",
       "gridPos": {
@@ -762,6 +767,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "",
       "fontSize": "100%",
       "gridPos": {
@@ -911,6 +917,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "",
       "fontSize": "100%",
       "gridPos": {

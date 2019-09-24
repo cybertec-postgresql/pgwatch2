@@ -21,6 +21,7 @@
   "panels": [
     {
       "columns": [],
+      "datasource": null,
       "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
       "fontSize": "100%",
       "gridPos": {
@@ -175,6 +176,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
       "fontSize": "100%",
       "gridPos": {
@@ -329,6 +331,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
       "fontSize": "100%",
       "gridPos": {
@@ -483,6 +486,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
       "fontSize": "100%",
       "gridPos": {
@@ -637,6 +641,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
       "fontSize": "100%",
       "gridPos": {

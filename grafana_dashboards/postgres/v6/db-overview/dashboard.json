@@ -27,6 +27,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Last 5min data",
       "editable": true,
       "error": false,
@@ -84,7 +85,7 @@
       "targets": [
         {
           "alias": "TPS",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -162,6 +163,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Last 5min data",
       "editable": true,
       "error": false,
@@ -219,7 +221,7 @@
       "targets": [
         {
           "alias": "TPS",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -292,6 +294,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Current Transaction Per Second (10min avg.) + 6h history",
       "editable": true,
       "error": false,
@@ -349,7 +352,7 @@
       "targets": [
         {
           "alias": "TPS",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -422,6 +425,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Queries Per Second based on pg_stat_statements.calls. 10min avg. + 6h history",
       "editable": true,
       "error": false,
@@ -480,7 +484,7 @@
       "targets": [
         {
           "alias": "QPS",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -553,6 +557,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "10min avg. + 6h history. Requires pg_stat_statements extension and the \"get_stat_statements\" helper function  from  the \"sql/metric_fetching_helpers\" folder on the monitored DB. Not including pgwatch2 generated metrics fetching queries.",
       "editable": true,
       "error": false,
@@ -611,7 +616,7 @@
       "targets": [
         {
           "alias": "avg_query_runtime_per_db",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -685,6 +690,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -743,7 +749,7 @@
       "targets": [
         {
           "alias": "db_size_change_last_hour",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -817,6 +823,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "decimals": 1,
       "description": "Based on a pure SQL  based estimate for fast results. Re-check with \"pgstattuple\" if numbers look suspicious!",
       "editable": true,
@@ -876,7 +883,7 @@
       "targets": [
         {
           "alias": "Bloat size",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -957,6 +964,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "decimals": 1,
       "description": "Last CPU load_5 value + 6h history. NB! Requires get_load_average() function making use of PL/Pythonu",
       "editable": true,
@@ -1016,7 +1024,7 @@
       "targets": [
         {
           "alias": "load_5",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1093,6 +1101,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "description": "",
       "editable": true,
@@ -1150,7 +1159,7 @@
       "targets": [
         {
           "alias": "DELETE",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1296,7 +1305,7 @@
       "targets": [
         {
           "alias": "Shared buffers hit ratio",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1400,6 +1409,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -1443,7 +1453,7 @@
       "targets": [
         {
           "alias": "# Sessions",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1571,6 +1581,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -1620,7 +1631,7 @@
       "targets": [
         {
           "alias": "WAL rate",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1760,6 +1771,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "description": "Based on get_stat_activity() helper",
       "fill": 1,
@@ -1796,7 +1808,7 @@
       "targets": [
         {
           "alias": "idle",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1901,6 +1913,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "description": "Requires according \"metric fetching helpers\" on the monitored server. Not including pgwatch2 generated metrics fetching queries.",
       "fill": 1,
@@ -1946,7 +1959,7 @@
       "targets": [
         {
           "alias": "load_5",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1999,7 +2012,7 @@
         },
         {
           "alias": "avg_query_runtime",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [

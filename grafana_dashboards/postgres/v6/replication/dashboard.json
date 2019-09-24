@@ -27,6 +27,7 @@
         "#bf1b00",
         "#d44a3a"
       ],
+      "datasource": null,
       "decimals": 0,
       "description": "Based on last 5m data.  > 1 ~ Error. Causes WAL accumulation on the master and possibly autovacuum inefficiencies",
       "format": "none",
@@ -154,6 +155,7 @@
         "#bf1b00",
         "#d44a3a"
       ],
+      "datasource": null,
       "decimals": 0,
       "description": "Based on last 5m data. FYI - no thresholds defined",
       "format": "none",
@@ -281,6 +283,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "decimals": 0,
       "description": "NB! Data is available  only on connected replicas. No thresholds by default",
       "format": "short",
@@ -414,6 +417,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "decimals": 0,
       "description": "NB! Data is available  only on connected replicas. No thresholds by default",
       "format": "short",
@@ -547,6 +551,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "decimals": 1,
       "description": "Based on last 5m of \"pg_replication_slots.restart_lsn\" and translates to \"overhead\" WAL folder size",
       "format": "bytes",
@@ -674,6 +679,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "decimals": 1,
       "description": "NB! Data is available  only on connected replicas! Based on last 5m data.",
       "format": "bytes",
@@ -807,6 +813,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "decimals": 1,
       "description": "NB! Data is available  only on connected replicas! Based on last 5m data.",
       "format": "bytes",
@@ -940,6 +947,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "decimals": 1,
       "description": "NB! Data is available  only on connected replicas! Based on last 5m data.",
       "format": "bytes",
@@ -1069,6 +1077,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Based on pg_replication_slots.  Primary only",
       "fill": 1,
       "gridPos": {
@@ -1103,7 +1112,7 @@
       "targets": [
         {
           "alias": "[[tag_dbname]] slot=[[tag_slot_name]]",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1218,6 +1227,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Based on pg_stat_replication on primaries. NB! Data is available  only on connected replicas!",
       "fill": 1,
       "gridPos": {
@@ -1252,7 +1262,7 @@
       "targets": [
         {
           "alias": "[[tag_dbname]] [[tag_application_name]] [[tag_client_info]]",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1373,6 +1383,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Based on pg_stat_replication on primaries. NB! Data is available  only on connected replicas!",
       "fill": 1,
       "gridPos": {
@@ -1408,7 +1419,7 @@
       "targets": [
         {
           "alias": "[[tag_dbname]] [[tag_application_name]] [[tag_client_info]]",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
@@ -1529,6 +1540,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Based on \"pg_replication_slots.xmin\". The oldest transaction that this slot needs the database to retain. VACUUM cannot remove tuples deleted by any later transaction.",
       "fill": 1,
       "gridPos": {
@@ -1564,7 +1576,7 @@
       "targets": [
         {
           "alias": "[[tag_dbname]] [[tag_slot_name]]",
-          "dsType": "influxdb",
+          "dsType": null,
           "format": "time_series",
           "group": [],
           "groupBy": [
