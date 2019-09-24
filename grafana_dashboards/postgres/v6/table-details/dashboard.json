@@ -83,7 +83,7 @@
           "policy": "default",
           "query": "SELECT mean(\"total_relation_size_b\") FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  avg((data->'table_size_b')::int8) as table_size,\n  avg((data->'total_relation_size_b')::int8) as total_relation_size,\n  avg((data->'toast_size_b')::int8) as toast_size\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time) AND dbname = '$dbname'\n  AND tag_data @> '{\"table_full_name\": \"$table_full_name\"}'\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  avg((data->'table_size_b')::int8) as table_size,\n  avg((data->'total_relation_size_b')::int8) as total_relation_size,\n  avg((data->'toast_size_b')::int8) as toast_size\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time) AND dbname = '$dbname'\n  AND tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\nGROUP BY 1\nORDER BY 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -233,7 +233,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  avg( ((seq_scan-seq_scan_lag)::numeric*3600) / extract(epoch from time - time_lag) ) as seq_scan,\n  avg( ((idx_scan-idx_scan_lag)::numeric*3600) / extract(epoch from time - time_lag) ) as idx_scan\nFROM (  \n  SELECT\n    (data->'seq_scan')::int8 as seq_scan, lag((data->'seq_scan')::int8) over w as seq_scan_lag,\n    (data->'idx_scan')::int8 as idx_scan, lag((data->'idx_scan')::int8) over w as idx_scan_lag,\n    time, lag(time) over w as time_lag  \n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time) AND dbname = '$dbname'\n    AND tag_data @> '{\"table_full_name\": \"$table_full_name\"}'\n  WINDOW w as (order by time)\n) x\nWHERE seq_scan >= seq_scan_lag and time > time_lag\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  avg( ((seq_scan-seq_scan_lag)::numeric*3600) / extract(epoch from time - time_lag) ) as seq_scan,\n  avg( ((idx_scan-idx_scan_lag)::numeric*3600) / extract(epoch from time - time_lag) ) as idx_scan\nFROM (  \n  SELECT\n    (data->'seq_scan')::int8 as seq_scan, lag((data->'seq_scan')::int8) over w as seq_scan_lag,\n    (data->'idx_scan')::int8 as idx_scan, lag((data->'idx_scan')::int8) over w as idx_scan_lag,\n    time, lag(time) over w as time_lag  \n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time) AND dbname = '$dbname'\n    AND tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n  WINDOW w as (order by time)\n) x\nWHERE seq_scan >= seq_scan_lag and time > time_lag\nGROUP BY 1\nORDER BY 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -386,7 +386,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg((ins-ins_lag) * 3600 / extract(epoch from time - time_lag)) as \"INSERT\",\n  avg((upd-upd_lag) * 3600 / extract(epoch from time - time_lag)) as \"UPDATE\",\n  avg((del-del_lag) * 3600 / extract(epoch from time - time_lag)) as \"DELETE\"\nfrom (\n        select \n          (data->'n_tup_ins')::int8 as ins, lag((data->'n_tup_ins')::int8) over w as ins_lag,\n          (data->'n_tup_upd')::int8 as upd, lag((data->'n_tup_upd')::int8) over w as upd_lag,\n          (data->'n_tup_del')::int8 as del, lag((data->'n_tup_del')::int8) over w as del_lag,\n          time, lag(time) over w as time_lag\n        from table_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        and tag_data @> '{\"table_full_name\": \"$table_full_name\"}'\n        window w as (order by time)\n\n) x\nwhere ins >= ins_lag and time > time_lag\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg((ins-ins_lag) * 3600 / extract(epoch from time - time_lag)) as \"INSERT\",\n  avg((upd-upd_lag) * 3600 / extract(epoch from time - time_lag)) as \"UPDATE\",\n  avg((del-del_lag) * 3600 / extract(epoch from time - time_lag)) as \"DELETE\"\nfrom (\n        select \n          (data->'n_tup_ins')::int8 as ins, lag((data->'n_tup_ins')::int8) over w as ins_lag,\n          (data->'n_tup_upd')::int8 as upd, lag((data->'n_tup_upd')::int8) over w as upd_lag,\n          (data->'n_tup_del')::int8 as del, lag((data->'n_tup_del')::int8) over w as del_lag,\n          time, lag(time) over w as time_lag\n        from table_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n\n) x\nwhere ins >= ins_lag and time > time_lag\ngroup by 1\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -543,7 +543,7 @@
           "policy": "default",
           "query": "SELECT non_negative_derivative(mean(\"heap_blks_hit\"), 10s) /  (non_negative_derivative(mean(\"heap_blks_hit\"), 10s) + non_negative_derivative(mean(\"heap_blks_read\"), 10s)) * 100 FROM \"table_io_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND \"table_full_name\" =~ /^$table_full_name$/ AND $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg( case when hh = hh_lag and hr = hr_lag then null else (hh-hh_lag)::numeric * 100 / (hh-hh_lag+hr-hr_lag) end ) as \"Heap\",\n  avg( case when ih = ih_lag and ir = ir_lag then null else (ih-ih_lag)::numeric * 100 / (ih-ih_lag+ir-ir_lag) end ) as \"Indexes\"  \nfrom (\n        select \n          (data->'heap_blks_hit')::int8 as hh, lag((data->'heap_blks_hit')::int8) over w as hh_lag,\n          (data->'heap_blks_read')::int8 as hr, lag((data->'heap_blks_read')::int8) over w as hr_lag,\n          (data->'idx_blks_hit')::int8 as ih, lag((data->'idx_blks_hit')::int8) over w as ih_lag,\n          (data->'idx_blks_read')::int8 as ir, lag((data->'idx_blks_read')::int8) over w as ir_lag,\n          time\n        from table_io_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        and tag_data @> '{\"table_full_name\": \"$table_full_name\"}'\n        window w as (order by time)\n) x\nwhere hh >= hh_lag\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg( case when hh = hh_lag and hr = hr_lag then null else (hh-hh_lag)::numeric * 100 / (hh-hh_lag+hr-hr_lag) end ) as \"Heap\",\n  avg( case when ih = ih_lag and ir = ir_lag then null else (ih-ih_lag)::numeric * 100 / (ih-ih_lag+ir-ir_lag) end ) as \"Indexes\"  \nfrom (\n        select \n          (data->'heap_blks_hit')::int8 as hh, lag((data->'heap_blks_hit')::int8) over w as hh_lag,\n          (data->'heap_blks_read')::int8 as hr, lag((data->'heap_blks_read')::int8) over w as hr_lag,\n          (data->'idx_blks_hit')::int8 as ih, lag((data->'idx_blks_hit')::int8) over w as ih_lag,\n          (data->'idx_blks_read')::int8 as ir, lag((data->'idx_blks_read')::int8) over w as ir_lag,\n          time\n        from table_io_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere hh >= hh_lag\ngroup by 1\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -706,7 +706,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  index_name,\n  avg( ((idx_scan - idx_scan_lag)::numeric * 3600) / extract(epoch from time - time_lag) )\nfrom (\n        select \n          (data->'idx_scan')::int8 as idx_scan, lag((data->'idx_scan')::int8) over w as idx_scan_lag,\n          tag_data->>'index_name' as index_name,\n          time, lag(time) over w as time_lag\n        from index_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        and tag_data @> '{\"table_full_name\": \"$table_full_name\"}'\n        window w as (order by time)\n) x\nwhere idx_scan >= idx_scan_lag and time > time_lag\ngroup by 1, 2\norder by 1, 2",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  index_name,\n  avg( ((idx_scan - idx_scan_lag)::numeric * 3600) / extract(epoch from time - time_lag) )\nfrom (\n        select \n          (data->'idx_scan')::int8 as idx_scan, lag((data->'idx_scan')::int8) over w as idx_scan_lag,\n          tag_data->>'index_name' as index_name,\n          time, lag(time) over w as time_lag\n        from index_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere idx_scan >= idx_scan_lag and time > time_lag\ngroup by 1, 2\norder by 1, 2",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -855,7 +855,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 as time,\n  (data->'seconds_since_last_vacuum')::int8\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\n  AND tag_data @> '{\"table_full_name\": \"$table_full_name\"}'\nORDER BY time DESC\nLIMIT 1\n",
+          "rawSql": "SELECT\n  0 as time,\n  (data->'seconds_since_last_vacuum')::int8\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\n  AND tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
           "select": [
             [
@@ -957,7 +957,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 as time,\n  (data->'seconds_since_last_analyze')::int8\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\n  AND tag_data @> '{\"table_full_name\": \"$table_full_name\"}'\nORDER BY time DESC\nLIMIT 1\n",
+          "rawSql": "SELECT\n  0 as time,\n  (data->'seconds_since_last_analyze')::int8\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\n  AND tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
           "select": [
             [
