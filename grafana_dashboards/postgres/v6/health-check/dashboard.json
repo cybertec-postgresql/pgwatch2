@@ -3038,7 +3038,7 @@
         {
           "targetBlank": true,
           "title": "Checkpointer / Bgwriter / Block IO Stats",
-          "url": "/d/db8d96d1e/checkpointer-bgwriter-stats?$__all_variables&panelId=2&fullscreen"
+          "url": "/dashboard/db/checkpointer-bgwriter-stats?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -4583,7 +4583,7 @@
       "links": [
         {
           "targetBlank": true,
-          "title": "Replication lag panel",
+          "title": "'Replication lag' dashboard",
           "url": "/dashboard/db/replication?$__all_variables"
         }
       ],
