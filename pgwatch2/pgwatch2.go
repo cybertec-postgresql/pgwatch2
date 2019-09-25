@@ -503,7 +503,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 
 func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 	sql := `
-		select
+		select /* pgwatch2_generated */
 		  md_unique_name, md_group, md_dbtype, md_hostname, md_port, md_dbname, md_user, coalesce(md_password, '') as md_password,
 		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode, md_is_superuser,
 		  coalesce(md_include_pattern, '') as md_include_pattern, coalesce(md_exclude_pattern, '') as md_exclude_pattern,
@@ -1663,13 +1663,13 @@ func DBGetPGVersion(dbUnique string, noCache bool) (DBVersionMapEntry, error) {
 	var ver DBVersionMapEntry
 	var ok bool
 	sql := `
-		select (regexp_matches(
+		select /* pgwatch2_generated */ (regexp_matches(
 			regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'),
 			E'\\d+\\.?\\d+?')
 			)[1]::text as ver, pg_is_in_recovery(), current_database()::text;
 	`
-	sql_sysid := `select system_identifier::text from pg_control_system();`
-	sql_su := `select rolsuper or exists (
+	sql_sysid := `select /* pgwatch2_generated */ system_identifier::text from pg_control_system();`
+	sql_su := `select /* pgwatch2_generated */ rolsuper or exists (
 				 select * from pg_catalog.pg_auth_members m
 				 join pg_catalog.pg_roles b on (m.roleid = b.oid)
         		 where m.member = r.oid and b.rolname = 'rds_superuser') as rolsuper
@@ -2419,7 +2419,7 @@ func UpdateMetricDefinitionMap(newMetrics map[string]map[decimal.Decimal]MetricV
 
 func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metric_def_map_new := make(map[string]map[decimal.Decimal]MetricVersionProperties)
-	sql := "select m_name, m_pg_version_from::text, m_sql, m_master_only, m_standby_only, coalesce(m_column_attrs::text, '') as m_column_attrs, m_sql_su from pgwatch2.metric where m_is_active"
+	sql := "select /* pgwatch2_generated */ m_name, m_pg_version_from::text, m_sql, m_master_only, m_standby_only, coalesce(m_column_attrs::text, '') as m_column_attrs, m_sql_su from pgwatch2.metric where m_is_active"
 
 	log.Info("updating metrics definitons from ConfigDB...")
 	data, err := DBExecRead(configDb, CONFIGDB_IDENT, sql)
@@ -2568,7 +2568,7 @@ retry:
 
 func DoesFunctionExists(dbUnique, functionName string) bool {
 	log.Debug("Checking for function existance", dbUnique, functionName)
-	sql := fmt.Sprintf("select 1 from pg_proc join pg_namespace n on pronamespace = n.oid where proname = '%s' and n.nspname = 'public'", functionName)
+	sql := fmt.Sprintf("select /* pgwatch2_generated */ 1 from pg_proc join pg_namespace n on pronamespace = n.oid where proname = '%s' and n.nspname = 'public'", functionName)
 	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
 	if err != nil {
 		log.Error("Failed to check for function existance", dbUnique, functionName, err)
@@ -2617,7 +2617,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 		}
 
 	} else {
-		sql_helpers := "select distinct m_name from pgwatch2.metric where m_is_active and m_is_helper" // m_name is a helper function name
+		sql_helpers := "select /* pgwatch2_generated */ distinct m_name from pgwatch2.metric where m_is_active and m_is_helper" // m_name is a helper function name
 		data, err := DBExecRead(configDb, CONFIGDB_IDENT, sql_helpers)
 		if err != nil {
 			log.Error(err)
@@ -2881,7 +2881,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 	}
 	defer c.Close()
 
-	sql := `select datname::text as datname,
+	sql := `select /* pgwatch2_generated */ datname::text as datname,
 		quote_ident(datname)::text as datname_escaped
 		from pg_database
 		where not datistemplate
