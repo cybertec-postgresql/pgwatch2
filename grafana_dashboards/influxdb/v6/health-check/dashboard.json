@@ -290,7 +290,13 @@
       "hideTimeOverride": true,
       "id": 46,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "'Postgres Version Overview' dashboard",
+          "url": "/dashboard/db/postgres-version-overview?orgId=1"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -408,12 +414,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
           "targetBlank": true,
-          "title": "Open 'DB overview :: share'd buffers ' panel",
-          "type": "dashboard",
-          "url": "/d/2c8964a22/db-overview"
+          "title": "Open 'DB overview :: shared buffers' panel",
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -539,13 +542,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=11&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: backends' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=11&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -668,7 +667,13 @@
       "hideTimeOverride": true,
       "id": 45,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "'DB overview :: backends' panel",
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=11&fullscreen"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -772,11 +777,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Lock details",
-          "includeVars": true,
           "targetBlank": true,
           "title": "'Lock details' dashboard",
-          "type": "dashboard"
+          "url": "/dashboard/db/lock-details?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -902,13 +905,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=11&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: Backends' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=11&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1034,13 +1033,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=8&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: Rollback Ratio' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1160,13 +1155,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview Unprivileged / Developer",
-          "includeVars": true,
-          "params": "panelId=15&fullscreen",
           "targetBlank": true,
           "title": "'DB overview Unprivileged / Developer :: TPS' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview-developer"
+          "url": "/dashboard/db/db-overview-developer?$__all_variables&panelId=15&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1286,13 +1277,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview Unprivileged / Developer mode",
-          "includeVars": true,
-          "params": "panelId=15&fullscreen",
           "targetBlank": true,
           "title": "'DB overview Unprivileged / Developer :: QPS' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview-developer"
+          "url": "/dashboard/db/db-overview-developer?$__all_variables&panelId=15&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1412,13 +1399,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=12&fullscreen",
           "targetBlank": true,
           "title": "'DB overview:: Query runtime' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=12&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1538,13 +1521,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: DB size' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1664,13 +1643,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: DB size' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1790,12 +1765,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "System Stats",
-          "includeVars": true,
-          "params": "panelId=8&fullscreen",
           "targetBlank": true,
           "title": "Open 'System Stats :: Free disk ' panel",
-          "type": "dashboard"
+          "url": "/dashboard/db/system-stats?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -2041,12 +2013,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DDL / Config change events",
-          "includeVars": true,
           "targetBlank": true,
           "title": "'DDL / Config change events' dash",
-          "type": "dashboard",
-          "url": "/dashboard/db/change-events"
+          "url": "/dashboard/db/change-events?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -2172,12 +2141,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DDL / Config change events",
-          "includeVars": true,
           "targetBlank": true,
           "title": "'DDL / Config change events' dash",
-          "type": "dashboard",
-          "url": "/dashboard/db/change-events"
+          "url": "/dashboard/db/change-events?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -2435,13 +2401,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: WAL' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -2573,9 +2535,8 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Index overview",
+          "targetBlank": true,
           "title": "\"Index overview\" dashboard",
-          "type": "dashboard",
           "url": "/dashboard/db/index-overview"
         }
       ],
@@ -2690,12 +2651,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Index overview",
-          "includeVars": true,
           "targetBlank": true,
           "title": "'Index overview' dashboard",
-          "type": "dashboard",
-          "url": "/dashboard/db/index-overview"
+          "url": "/dashboard/db/index-overview?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -2815,12 +2773,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Checkpointer / Bgwriter / Block IO Stats",
-          "includeVars": true,
-          "params": "panelId=2&fullscreen",
           "targetBlank": true,
-          "title": "Opens \"Checkpointer / Bgwriter / Block IO Stats :: Checkpoints\" panel",
-          "type": "dashboard"
+          "title": "Opens \"Checkpointer / Bgwriter / Block IO Stats :: Checkpoints\" dashboard",
+          "url": "/dashboard/db/checkpointer-bgwriter-stats?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -3062,12 +3017,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Tables Top",
-          "includeVars": true,
-          "params": "panelId=6&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Inserts' panel",
-          "type": "dashboard"
+          "url": "/dashboard/db/tables-top?$__all_variables&panelId=6&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3199,12 +3151,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Tables Top",
-          "includeVars": true,
-          "params": "panelId=7&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Updates' panel",
-          "type": "dashboard"
+          "url": "/dashboard/db/tables-top?$__all_variables&panelId=7&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3336,12 +3285,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Tables Top",
-          "includeVars": true,
-          "params": "panelId=8&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Deletes' panel",
-          "type": "dashboard"
+          "url": "/dashboard/db/tables-top?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3473,12 +3419,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Tables Top",
-          "includeVars": true,
-          "params": "panelId=4&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Most scans' panel",
-          "type": "dashboard"
+          "url": "/dashboard/db/tables-top?$__all_variables&panelId=4&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3610,13 +3553,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=12&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: CPU load' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=12&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3736,13 +3675,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "DB overview",
-          "includeVars": true,
-          "params": "panelId=9&fullscreen",
           "targetBlank": true,
           "title": "DB overview",
-          "type": "dashboard",
-          "url": "/dashboard/db/db-overview"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=9&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -4240,13 +4175,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Replication",
-          "includeVars": true,
-          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "'Replication :: XMIN age' panel",
-          "type": "dashboard",
-          "url": "/dashboard/db/replication"
+          "url": "/dashboard/db/replication?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -4409,13 +4340,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Replication lag",
-          "includeVars": true,
-          "params": "",
           "targetBlank": true,
           "title": "'Replication lag' dashboard",
-          "type": "dashboard",
-          "url": "/dashboard/db/replication"
+          "url": "/dashboard/db/replication?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -4535,13 +4462,9 @@
       "interval": null,
       "links": [
         {
-          "dashboard": "Replication lag",
-          "includeVars": true,
-          "params": "",
           "targetBlank": true,
           "title": "'Replication lag' dashboard",
-          "type": "dashboard",
-          "url": "/dashboard/db/replication"
+          "url": "/dashboard/db/replication?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -4648,7 +4571,7 @@
       "type": "text"
     }
   ],
-  "schemaVersion": 18,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [],
   "templating": {
