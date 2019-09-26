@@ -8,6 +8,7 @@ import (
 	"github.com/samuel/go-zookeeper/zk"
 	"go.etcd.io/etcd/client"
 	"go.etcd.io/etcd/pkg/transport"
+	"os"
 	"path"
 	"regexp"
 	"time"
@@ -74,16 +75,37 @@ func ConsulGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember
 func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, error) {
 	var ret []PatroniClusterMember
 	var cfg client.Config
+	var CAFile = database.HostConfig.CAFile
+	var CertFile = database.HostConfig.CertFile
+	var KeyFile = database.HostConfig.KeyFile
 
 	if len(database.HostConfig.DcsEndpoints) == 0 {
 		return ret, errors.New("Missing ETCD connect info, make sure host config has a 'dcs_endpoints' key")
 	}
 
 	if database.HostConfig.CAFile != "" || database.HostConfig.KeyFile != "" || database.HostConfig.CertFile != "" {
+		if database.HostConfig.CAFile != "" {
+			if _, err := os.Stat(database.HostConfig.CAFile); os.IsNotExist(err) {
+				log.Warningf("Configured CAFile for Patroni cluster '%s' not found, ignoring the file: %s", database.DBUniqueName, database.HostConfig.CAFile)
+				CAFile = ""
+			}
+		}
+		if database.HostConfig.CertFile != "" {
+			if _, err := os.Stat(database.HostConfig.CertFile); os.IsNotExist(err) {
+				log.Warningf("Configured CertFile for Patroni cluster '%s' not found, ignoring the file: %s", database.DBUniqueName, database.HostConfig.CertFile)
+				CertFile = ""
+			}
+		}
+		if database.HostConfig.KeyFile != "" {
+			if _, err := os.Stat(database.HostConfig.KeyFile); os.IsNotExist(err) {
+				log.Warningf("Configured KeyFile for Patroni cluster '%s' not found, ignoring the file: %s", database.DBUniqueName, database.HostConfig.KeyFile)
+				KeyFile = ""
+			}
+		}
 		tls := transport.TLSInfo{
-			TrustedCAFile: database.HostConfig.CAFile,
-			CertFile:      database.HostConfig.CertFile,
-			KeyFile:       database.HostConfig.KeyFile,
+			TrustedCAFile: CAFile,
+			CertFile:      CertFile,
+			KeyFile:       KeyFile,
 		}
 		//log.Debugf("Setting ETCD TLS config for %s: %+v", database.DBUniqueName, tls)
 		dialTimeout := 10 * time.Second
