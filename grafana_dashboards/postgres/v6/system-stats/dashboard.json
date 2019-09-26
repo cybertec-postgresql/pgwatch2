@@ -1218,7 +1218,7 @@
         "allValue": null,
         "current": {
           "text": null,
-          "value": "test"
+          "text": null
         },
         "datasource": null,
         "definition": "",
