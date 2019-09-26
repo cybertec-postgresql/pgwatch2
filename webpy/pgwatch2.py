@@ -341,7 +341,7 @@ def insert_monitored_db(params, cmd_args=None):
             else:
                 ret.append('{} DBs added: {}'.format(len(dbs_to_add), ', '.join(dbs_to_add)))
     else:   # only 1 DB
-        if params['md_dbtype'] in ['postgres-continuous-discovery', 'patroni', 'patroni-continuous-discovery']:
+        if params['md_dbtype'] in ['postgres-continuous-discovery', 'patroni-continuous-discovery']:
             params['md_dbname'] = ''
         data, err = datadb.execute(sql_insert_new_db, params)
         if err:
