@@ -21,7 +21,9 @@ or a specific version
 * Gatherer improvement - make SystemD service template to re-start on failure
 * Gatherer improvement - remove built-in statement timeout override for bloat queries
 * Gatherer improvement - always set statement timeout explicitly before any metric queries to avoid a corner case
-* Dashboards - new "Postgre Version Overview" dash for Influx and PG data sources
+* Dashboards - new "Postgres Version Overview" dash
+* Dashboards - new "Stat Statements SQL Search" dash for finding execution stats for matching SQL texts
+* Dashboards - by default filter out pgwatch2 generated metric fetching queries in Stat Statements Top 
 * Dashboards - Health-check description updates and minor corrections
 * Metrics - add 'wal_size' (10+) to 'exhaustive' preset
 * Metrics - replace accurate "pgstattuple" based bloat info gathering with SQL based estimates in preset configs
@@ -29,7 +31,7 @@ or a specific version
 * Metrics - add Autovacuum info to "settings" and "table_stats" + display on PG "health-check" dash
 * Docker - fix case where setting PW2_GRAFANASSL=0 still enabled SSL
 * Docker - make "Health-check" the default dashboard / splash screen
-* Docker component update: Influx 1.7.8, Grafana 6.3.5, Go 1.12.9
+* Docker component update: Influx 1.7.8, Grafana 6.3.6, Go 1.12.10
 
 
 ## v1.6.1 [2019-08-13]
