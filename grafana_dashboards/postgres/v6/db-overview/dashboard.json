@@ -105,7 +105,6 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select\n  time,\n  ((c - c_lag) + (r - r_lag)) / extract(epoch from time - time_lag) as tps\nfrom (\n        select \n          (data->>'xact_commit')::int8 as c, lag((data->>'xact_commit')::int8) over w as c_lag,\n          (data->>'xact_rollback')::int8 as r, lag((data->>'xact_rollback')::int8) over w as r_lag,\n          time, lag(time) over w as time_lag\n        from db_stats \n        where dbname = '$dbname' and time > now() - '30m'::interval\n        window w as (order by time)        \n) x \nwhere c >= c_lag and r >= r_lag\norder by time\n;",
           "rawQuery": true,
           "rawSql": "SELECT\n  time,\n  (data->'in_recovery_int')::int\nFROM\n  wal\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
@@ -241,7 +240,6 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select\n  time,\n  ((c - c_lag) + (r - r_lag)) / extract(epoch from time - time_lag) as tps\nfrom (\n        select \n          (data->>'xact_commit')::int8 as c, lag((data->>'xact_commit')::int8) over w as c_lag,\n          (data->>'xact_rollback')::int8 as r, lag((data->>'xact_rollback')::int8) over w as r_lag,\n          time, lag(time) over w as time_lag\n        from db_stats \n        where dbname = '$dbname' and time > now() - '30m'::interval\n        window w as (order by time)        \n) x \nwhere c >= c_lag and r >= r_lag\norder by time\n;",
           "rawQuery": true,
           "rawSql": "SELECT\n  time,\n  (data->'postmaster_uptime_s')::int\nFROM\n  wal\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time DESC\nLIMIT 1\n",
           "refId": "A",
@@ -372,7 +370,6 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select\n  time,\n  ((c - c_lag) + (r - r_lag)) / extract(epoch from time - time_lag) as tps\nfrom (\n        select \n          (data->>'xact_commit')::int8 as c, lag((data->>'xact_commit')::int8) over w as c_lag,\n          (data->>'xact_rollback')::int8 as r, lag((data->>'xact_rollback')::int8) over w as r_lag,\n          time, lag(time) over w as time_lag\n        from db_stats \n        where dbname = '$dbname' and time > now() - '30m'::interval\n        window w as (order by time)        \n) x \nwhere c >= c_lag and r >= r_lag\norder by time\n;",
           "rawQuery": true,
           "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg(((c - c_lag) + (r - r_lag)) / extract(epoch from time - time_lag)) as tps\nfrom (\n        select \n          (data->>'xact_commit')::int8 as c, lag((data->>'xact_commit')::int8) over w as c_lag,\n          (data->>'xact_rollback')::int8 as r, lag((data->>'xact_rollback')::int8) over w as r_lag,\n          time, lag(time) over w as time_lag\n        from db_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere c >= c_lag and r >= r_lag and time > time_lag\ngroup by 1\norder by 1",
           "refId": "A",
@@ -504,7 +501,6 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(last(\"calls\"), 1s) FROM \"stat_statements_calls\" WHERE $timeFilter AND \"dbname\" =~ /^$dbname$/ GROUP BY time(5m) fill(none)",
           "rawQuery": true,
           "rawSql": "select\n  $__timeGroup(time, $__interval),\n  avg((c - c_lag) / extract(epoch from time - time_lag)) as qps\nfrom (\n        select \n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          time, lag(time) over w as time_lag\n        from stat_statements_calls\n        where dbname = '$dbname' and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere c >= c_lag\ngroup by 1\norder by 1\n",
           "refId": "A",
@@ -636,7 +632,6 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "--select mean(q) from (SELECT non_negative_derivative(mean(\"total_time\")) / non_negative_derivative(mean(\"calls\")) as q FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND \"query\" !~ /(?i)::int8[\\s+]as[\\s]+epoch_ns/ AND $timeFilter GROUP BY queryid, time(5m) fill(none)) group by time(5m) fill(none)\n",
           "rawQuery": true,
           "rawSql": "select\n  time,\n  avg(avg) as \"avg_query_runtime\"\nfrom (\n\nselect\n$__timeGroup(time, $__interval),\nqueryid,\navg((tt-tt_lag)::numeric / (c-c_lag))\n\nfrom (\n\n        select \n          (data->>'total_time')::float8 as tt, lag((data->>'total_time')::float8) over w as tt_lag,\n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          tag_data->>'queryid' as queryid,\n          time\n        from stat_statements\n        where dbname = '$dbname' and $__timeFilter(time)\n        and not tag_data->>'query' like '%$2)::int8 as epoch_ns,%' /*trying to not include queries by pgwatch itself*/\n        window w as (partition by tag_data->>'queryid' order by time)\n) x\nwhere c > c_lag and tt >= tt_lag\ngroup by 1, 2\norder by 1, 2\n) y\ngroup by 1\norder by 1",
           "refId": "A",
@@ -1327,7 +1322,6 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT ( non_negative_derivative(mean(\"blks_hit\")) / (non_negative_derivative(mean(\"blks_hit\")) + non_negative_derivative(mean(\"blks_read\")))) * 100 FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($__interval) fill(none)",
           "rawQuery": true,
           "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg((hit-hit_lag)::numeric / ((hit-hit_lag) + (read-read_lag)))*100 as \"Shared buffers hit ratio\",\n  avg((roll-roll_lag)::numeric / ((roll-roll_lag) + (comm-comm_lag)))*100 as \"TX rollback ratio\"\nfrom (\n        select \n          (data->>'blks_hit')::int8 as hit, lag((data->>'blks_hit')::int8) over w as hit_lag,\n          (data->>'blks_read')::int8 as read, lag((data->>'blks_read')::int8) over w as read_lag,\n          (data->>'xact_rollback')::int8 as roll, lag((data->>'xact_rollback')::int8) over w as roll_lag,\n          (data->>'xact_commit')::int8 as comm, lag((data->>'xact_commit')::int8) over w as comm_lag,\n          time\n        from db_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        window w as (order by time)\n) x\nwhere (hit > hit_lag or read > read_lag) and (roll > roll_lag or comm > comm_lag)\ngroup by 1\norder by 1",
           "refId": "A",
@@ -1443,7 +1437,7 @@
       "renderer": "flot",
       "seriesOverrides": [
         {
-          "alias": "Temp bytes (1h rate)",
+          "alias": "/Temp bytes/",
           "yaxis": 2
         }
       ],
@@ -1616,10 +1610,6 @@
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [
-        {
-          "alias": "WAL rate (bytes/h)",
-          "yaxis": 2
-        },
         {
           "alias": "DB Size",
           "yaxis": 2
@@ -1947,10 +1937,6 @@
         {
           "alias": "avg_query_runtime",
           "yaxis": 2
-        },
-        {
-          "alias": "avg_query_runtime_approx",
-          "yaxis": 2
         }
       ],
       "spaceLength": 10,
@@ -2034,7 +2020,6 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select mean(runtime) from (SELECT non_negative_derivative(last(\"total_time\"), 1h) / non_negative_derivative(last(\"calls\"), 1h) as runtime FROM \"stat_statements\" WHERE \"dbname\" =~ /^$dbname$/ AND \"query\" !~ /(?i)::int8[\\s]+as[\\s]+epoch_ns/ AND $timeFilter GROUP BY queryid, time($__interval) fill(none)) group by time($__interval) fill(none)",
           "rawQuery": true,
           "rawSql": "select\n  time,\n  avg(avg) as \"avg_query_runtime\"\nfrom (\n\nselect\n$__timeGroup(time, $agg_interval),\nqueryid,\navg((tt-tt_lag)::numeric / (c-c_lag))\n\nfrom (\n\n        select \n          (data->>'total_time')::float8 as tt, lag((data->>'total_time')::float8) over w as tt_lag,\n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          tag_data->>'queryid' as queryid,\n          time\n        from stat_statements\n        where dbname = '$dbname' and $__timeFilter(time)\n        and not tag_data->>'query' like '%$2)::int8 as epoch_ns,%' /*trying to not include queries by pgwatch itself*/\n        window w as (partition by tag_data->>'queryid' order by time)\n) x\nwhere c > c_lag and tt >= tt_lag\ngroup by 1, 2\norder by 1, 2\n) y\ngroup by 1\norder by 1",
           "refId": "B",
