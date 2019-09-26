@@ -848,7 +848,7 @@
       {
         "allValue": null,
         "current": {
-          "text": "test",
+          "text": null,
           "value": "test"
         },
         "datasource": null,
