@@ -11,7 +11,7 @@ or a specific version
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
 
-## v1.6.2 [draft]
+## v1.6.2 [2019-09-27]
 
 * Gatherer improvement - support password/cert authentication for Patroni and etcd
 * Gatherer improvement - make pgwatch2 "superuser" aware. Superusers don't need helpers any more for non-Python metrics
@@ -29,6 +29,7 @@ or a specific version
 * Metrics - replace accurate "pgstattuple" based bloat info gathering with SQL based estimates in preset configs
 * Metrics - correct older (9.0/9.1) "backends" and "kpi" metrics
 * Metrics - add Autovacuum info to "settings" and "table_stats" + display on PG "health-check" dash
+* Metrics - "kpi" was failing on replicas for some PG versions
 * Docker - fix case where setting PW2_GRAFANASSL=0 still enabled SSL
 * Docker - make "Health-check" the default dashboard / splash screen
 * Docker component update: Influx 1.7.8, Grafana 6.3.6, Go 1.12.10
