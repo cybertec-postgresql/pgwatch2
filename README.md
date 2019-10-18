@@ -24,10 +24,10 @@ NB! If you don't want to add the "test" database (the pgwatch2 configuration db)
 parameter when launching the image.
 
 For production setups without a container management framework also "--restart unless-stopped"
-(or custom startup scripts) is highly recommended. Also usage of volumes is then recommended to enable
-easier updating to newer pgwatch2 Docker images without going through the backup/restore procedure described towards the
-end of README. For maximum flexibility, security and update simplicity though, best would to do a custom setup - see
-paragraph "Installing without Docker" towards the end of README for that.
+(or custom startup scripts) is highly recommended. Also exposing the config/metrics database ports for backups and usage
+of volumes is then recommended to enable easier updating to newer pgwatch2 Docker images without going through the
+backup/restore procedure described towards the end of README. For maximum flexibility, security and update simplicity
+though, best would to do a custom setup - see paragraph "Installing without Docker" towards the end of README for that.
 
 ```
 for v in pg influx grafana pw2 ; do docker volume create $v ; done
@@ -37,10 +37,10 @@ docker run -d --name pw2 -v pg:/var/lib/postgresql -v influx:/var/lib/influxdb -
 docker run -d --name pw2 -v pg:/var/lib/postgresql -v grafana:/var/lib/grafana -v pw2:/pgwatch2/persistent-config -p 8080:8080 -p 3000:3000 -e PW2_TESTDB=true cybertec/pgwatch2-postgres
 ```
 
-For more advanced usecases (production setup backups) or for easier problemsolving you can decide to expose all services
+For more advanced usecases (production setup with backups) or for easier problemsolving you can decide to expose all services
 ```
 # run with all ports exposed
-docker run -d --restart unless-stopped -p 3000:3000 -p 5432:5432 -p 8086:8086 -p 8080:8080 -p 8081:8081 -p 8088:8088 --name pw2 cybertec/pgwatch2
+docker run -d --restart unless-stopped -p 3000:3000 -p 5432:5432 -p 8086:8086 -p 8080:8080 -p 8081:8081 -p 8088:8088 -v ... --name pw2 cybertec/pgwatch2
 ```
 NB! For production usage make sure you also specify listening IPs explicitly (-p IP:host_port:container_port), by default Docker uses 0.0.0.0 (all network devices).
 
