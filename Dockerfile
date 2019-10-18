@@ -23,6 +23,7 @@ RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_6.3.6_amd6
     && sed -i 's/\# \[http\]/\[http\]/' /etc/influxdb/influxdb.conf \
     && sed -i '0,/\# log-enabled = true/{s/\# log-enabled = true/log-enabled = false/}' /etc/influxdb/influxdb.conf \
     && sed -i 's/\# index-version = \"inmem\"/index-version = \"tsi1\"/' /etc/influxdb/influxdb.conf \
+    && sed -i 's/\# bind-address = \"127.0.0.1:8088\"/bind-address = \":8088\"/' /etc/influxdb/influxdb.conf \
     && pip3 install supervisor && mkdir /var/log/supervisor
 
 
