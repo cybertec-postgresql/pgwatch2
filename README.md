@@ -599,3 +599,99 @@ DB that is absolutely needed is the metrics storage DB, here Influx. All example
     Congrats! Now the metrics should start flowing in and after some minutes one should already see some graphs in Grafana.
 
 6. Install and configure SystemD init scripts for the Gatherer and the Web UI [here](https://github.com/cybertec-postgresql/pgwatch2/tree/master/pgwatch2/startup-scripts) and [here](https://github.com/cybertec-postgresql/pgwatch2/tree/master/webpy/startup-scripts) or make sure to hatch up some "init scripts" so that the pgwatch2 daemon and the Web UI would be started automatically when the system reboots. For externally packaged components (Grafana, Influx, Postgres) it should be the case already.
+
+
+# Updating without Docker
+
+For a custom installation there's quite some freedom in doing updates - fully independent components (Grafana, InfluxDB, PostgreSQL)
+can be updated any time without worrying too much about the other components. Only "tightly coupled" components are the
+pgwatch2 metrics collector, config DB and the optional Web UI - if the pgwatch2 config is kept in the database. If YAML
+approach (see the "File based operation" paragraph above) is used then things are more simple - the collector can be updated
+any time as YAML schema has default values for everything and also there's no Web UI (and Config DB = YAML files) and
+there order of component updates doesn't matter.
+
+## Updating Grafana
+
+Check / download the latest version from the official [website](https://grafana.com/grafana/download) or use the Github API:
+```
+VER=$(curl -so- https://api.github.com/repos/grafana/grafana/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1)
+wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_${VER}_amd64.deb
+dpkg -i grafana.deb
+```
+
+NB! There are no update scripts for the "preset" Grafana dashboards as it would break possible user applied changes. If
+you know that there are no user changes then one can just delete or rename the existing ones and import the latest JSON
+definitions from [here](https://github.com/cybertec-postgresql/pgwatch2/tree/master/grafana_dashboards). Also note that
+the dashboards don't change too frequently so it only makes sense to update if you haven't updated them for half a year
+or more, or if you pick up see some change decriptions from the [CHANGELOG](https://github.com/cybertec-postgresql/pgwatch2/blob/master/CHANGELOG.md).
+
+## Updating the config / metrics DB version
+
+Database updates can be quite complex, with many steps, so it makes sense to follow the manufacturer's instructions here.
+
+For InfluxDB typically something like that is enough though (assuming Debian based distros):
+
+```
+influx -version # check current version
+VER=$(curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1)
+wget -q -O influxdb.deb https://dl.influxdata.com/influxdb/releases/influxdb_${VER}_amd64.deb
+dpkg -i influxdb.deb
+```
+
+For PostgreSQL one should distinguish between minor version updates and major version upgrades. Minor updates are quite
+straightforward and problem-free, consisting of running something like (assuming Debian based distros):
+
+```
+apt update && apt install postgresql
+sudo systemctl restart postgresql
+```
+
+For PostgreSQL major version upgrades one should read the according relase notes (e.g. [here](https://www.postgresql.org/docs/12/release-12.html#id-1.11.6.5.4))
+and be prepared for the unavoidable downtime.
+
+
+## Updating the pgwatch2 schema, metrics collector, metrics, and the optional Web UI
+
+This is the pgwatch2 specific part, with some coupling between the following components - SQL schema, metrics collector,
+and the optional Web UI.
+
+Here one should check from the [CHANGELOG](https://github.com/cybertec-postgresql/pgwatch2/blob/master/CHANGELOG.md) if
+pgwatch2 schema needs updating. If yes, then manual applying of schema diffs is required before running the new gatherer
+or Web UI. If no, i.e. no schema changes, all components can be updated independently in random order.
+
+1. Given that we initially installed pgwatch v1.6.0, and now the latest version is 1.6.2, based on the release notes and
+[SQL diffs](https://github.com/cybertec-postgresql/pgwatch2/tree/master/pgwatch2/sql/config_store/migrations) we need to
+apply the following files:
+
+   ```
+   psql -U pgwatch2 -f pgwatch2/sql/config_store/migrations/v1.6.1-1_patroni_cont_discovery.sql pgwatch2
+   psql -U pgwatch2 -f v1.6.2_superuser_metrics.sql pgwatch2
+   ```
+   NB! When installing from packages the "diffs" are at: /etc/pgwatch2/sql/config_store/migrations/
+
+2. Compile or install the gatherer from RPM / DEB / tarball packages. See the above "Installing without Docker" paragraph
+for building details.
+
+3. Update the optional Python Web UI if using it to administer monitored DB-s and metric configs. The Web UI is not in the
+pre-built packages as deploying self-contained Python that runs on all platforms is not overly easy. If Web UI is started
+directly on the Github sources (`git clone && cd webpy && ./web.py`) then it is actually updated automatically as CherryPy
+web server monitors the file changes. If there were some breaking schema changes though, it might stop working and needs
+a restart after applying schema "diffs".
+
+4. If using SystemD service files to auto-start the collector or the Web UI, you might want to also check for possible
+updates there - "webpy/startup-scripts/pgwatch2-webui.service" for the Web UI or "pgwatch2/startup-scripts/pgwatch2.service" (/etc/pgwatch2/startup-scripts/pgwatch2.service
+for pre-built packages).
+
+5. Checking / updating metric definitions.
+
+   In the YAML mode you always get it automatically when refreshing the sources via Github or pre-built packages, but with
+   Config DB approach one needs to do it manually. Given that there are no user added metrics, is simple enough though - just delete
+   all old ones and re-insert everything from the latest metric definition SQL file.
+
+   ```
+   pg_dump -t pgwatch2.metrics pgwatch2 > old_metrics.sql  # a just-in-case backup
+   psql -U pgwatch2 -c "truncate pgwatch2.metrics" pgwatch2
+   psql -U pgwatch2 -f pgwatch2/sql/config_store/metric_definitions.sql pgwatch2
+   # or when using pre-built packages
+   # psql -U pgwatch2 -f /etc/pgwatch2/sql/config_store/metric_definitions.sql pgwatch2
+   ```

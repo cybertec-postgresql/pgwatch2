@@ -34,6 +34,10 @@ or a specific version
 * Docker - make "Health-check" the default dashboard / splash screen
 * Docker component update: Influx 1.7.8, Grafana 6.3.6, Go 1.12.10
 
+NB! When migrating old "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
+applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2/sql/config_store/migrations/ if using
+ther pre-built packages) folder.
+
 
 ## v1.6.1 [2019-08-13]
 
