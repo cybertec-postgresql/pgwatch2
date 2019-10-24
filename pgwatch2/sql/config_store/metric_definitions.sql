@@ -2554,7 +2554,7 @@ $sql$,
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'psutil_cpu',
-9.0,
+9.1,
 $sql$
 
 SELECT
@@ -2570,7 +2570,7 @@ $sql$,
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'psutil_mem',
-9.0,
+9.1,
 $sql$
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -2585,7 +2585,7 @@ $sql$,
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'psutil_disk',
-9.0,
+9.1,
 $sql$
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -2601,7 +2601,7 @@ $sql$,
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'psutil_disk_io_total',
-9.0,
+9.1,
 $sql$
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
