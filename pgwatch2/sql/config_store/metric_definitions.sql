@@ -320,6 +320,59 @@ select
   tup_inserted,
   tup_updated,
   tup_deleted,
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s
+from
+  pg_stat_database
+where
+  datname = current_database();
+$sql$,
+'{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s"]}'
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'db_stats',
+9.1,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  numbackends,
+  xact_commit,
+  xact_rollback,
+  blks_read,
+  blks_hit,
+  tup_returned,
+  tup_fetched,
+  tup_inserted,
+  tup_updated,
+  tup_deleted,
+  conflicts,
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s
+from
+  pg_stat_database
+where
+  datname = current_database();
+$sql$,
+'{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s"]}'
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'db_stats',
+9.2,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  numbackends,
+  xact_commit,
+  xact_rollback,
+  blks_read,
+  blks_hit,
+  tup_returned,
+  tup_fetched,
+  tup_inserted,
+  tup_updated,
+  tup_deleted,
   conflicts,
   temp_files,
   temp_bytes,
@@ -332,7 +385,7 @@ from
 where
   datname = current_database();
 $sql$,
-'{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s", "backup_duration_s"]}'
+'{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s"]}'
 );
 
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)

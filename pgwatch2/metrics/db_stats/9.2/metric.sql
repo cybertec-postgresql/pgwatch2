@@ -10,6 +10,12 @@ select
   tup_inserted,
   tup_updated,
   tup_deleted,
+  conflicts,
+  temp_files,
+  temp_bytes,
+  deadlocks,
+  blk_read_time,
+  blk_write_time,
   extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s
 from
   pg_stat_database

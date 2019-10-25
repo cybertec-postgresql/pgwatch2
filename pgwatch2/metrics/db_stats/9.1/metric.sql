@@ -10,6 +10,7 @@ select
   tup_inserted,
   tup_updated,
   tup_deleted,
+  conflicts,
   extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s
 from
   pg_stat_database
