@@ -7,4 +7,5 @@
 \i stat_replication.sql
 \i stat_statements_wrapper.sql
 \i table_bloat_approx.sql
+\i table_bloat_approx_sql.sql
 \i wal_size.sql
