@@ -1743,7 +1743,7 @@ func GetMetricVersionProperties(metric string, vme DBVersionMapEntry, metricDefM
 
 	_, ok := mdm[metric]
 	if !ok || len(mdm[metric]) == 0 {
-		log.Error("metric", metric, "not found")
+		log.Warning("metric", metric, "not found")
 		return MetricVersionProperties{}, errors.New("metric SQL not found")
 	}
 
@@ -1754,15 +1754,22 @@ func GetMetricVersionProperties(metric string, vme DBVersionMapEntry, metricDefM
 	sort.Sort(Decimal(keys))
 
 	var best_ver decimal.Decimal
+	var min_ver decimal.Decimal
 	var found bool
 	for _, ver := range keys {
 		if vme.Version.GreaterThanOrEqual(ver) {
 			best_ver = ver
 			found = true
 		}
+		if min_ver.IsZero() || ver.LessThan(min_ver) {
+			min_ver = ver
+		}
 	}
 
 	if !found {
+		if vme.Version.LessThan(min_ver) {	// metric not yet available for given PG ver
+			return MetricVersionProperties{}, errors.New(fmt.Sprintf("no suitable SQL found for metric \"%s\", server version \"%s\" too old. min defined SQL ver: %s", metric, vme.VersionStr, min_ver.String()))
+		}
 		return MetricVersionProperties{}, errors.New(fmt.Sprintf("no suitable SQL found for metric \"%s\", version \"%s\"", metric, vme.VersionStr))
 	}
 
@@ -2157,8 +2164,11 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	if err != nil {
 		epoch, ok := last_sql_fetch_error.Load(msg.MetricName + ":" + db_pg_version.String())
 		if !ok || ((time.Now().Unix() - epoch.(int64)) > 3600) { // complain only 1x per hour
-			log.Warningf("Failed to get SQL for metric '%s', version '%s'", msg.MetricName, vme.VersionStr)
+			log.Warningf("Failed to get SQL for metric '%s', version '%s': %v", msg.MetricName, vme.VersionStr, err)
 			last_sql_fetch_error.Store(msg.MetricName+":"+db_pg_version.String(), time.Now().Unix())
+		}
+		if strings.Contains(err.Error(), "too old") {
+			return nil, nil
 		}
 		return nil, err
 	}
