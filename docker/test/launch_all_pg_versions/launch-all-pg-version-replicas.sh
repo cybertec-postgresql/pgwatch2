@@ -129,6 +129,7 @@ function launch_replica_image {
  		exit 1
  	fi
 
+  echo "shared_preload_libraries='pg_stat_statements'" | sudo tee -a $REPLICA_VOL_PATH/postgresql.conf
  	if (( $(echo "$ver < 12" |bc -l) )); then
  		# create recovery.conf
  		echo "standby_mode='on'" | sudo tee $REPLICA_VOL_PATH/recovery.conf

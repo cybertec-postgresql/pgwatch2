@@ -33,6 +33,13 @@ function start_pg {
   fi
   sleep 5
 
+  MASTER_VOL_PATH=$(docker volume inspect --format '{{ .Mountpoint }}' pg$ver)
+  if [ $? -ne 0 ] ; then
+    echo "could not get master volume info for container pg$ver"
+    exit 1
+  fi
+  echo "shared_preload_libraries='pg_stat_statements'" | sudo tee -a $MASTER_VOL_PATH/postgresql.conf
+
   PW2_USER=$(psql -U postgres -h localhost -p $port -XAtc "select count(*) from pg_roles where rolname = 'pgwatch2'")
   if [ $PW2_USER -ne 1 ]; then
     for j in {1..5} ; do # try a few times when starting docker is slow
@@ -60,6 +67,12 @@ function start_pg {
   fi
   if [ $? -ne 0 ]; then
       echo "could not install plpython and psutil"
+      exit 1
+  fi
+
+  docker restart "pg${ver}"   # to activate pg_stat_statements
+  if [ $? -ne 0 ]; then
+      echo "could not restart pg${ver}"
       exit 1
   fi
 }
