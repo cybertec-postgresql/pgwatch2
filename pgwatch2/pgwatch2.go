@@ -1729,7 +1729,7 @@ func (a Decimal) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Decimal) Less(i, j int) bool { return a[i].LessThan(a[j]) }
 
 // assumes upwards compatibility for versions
-func GetMetricVersionProperties(metric string, pgVer decimal.Decimal, metricDefMap map[string]map[decimal.Decimal]MetricVersionProperties) (MetricVersionProperties, error) {
+func GetMetricVersionProperties(metric string, vme DBVersionMapEntry, metricDefMap map[string]map[decimal.Decimal]MetricVersionProperties) (MetricVersionProperties, error) {
 	var keys []decimal.Decimal
 	var mdm map[string]map[decimal.Decimal]MetricVersionProperties
 
@@ -1756,20 +1756,20 @@ func GetMetricVersionProperties(metric string, pgVer decimal.Decimal, metricDefM
 	var best_ver decimal.Decimal
 	var found bool
 	for _, ver := range keys {
-		if pgVer.GreaterThanOrEqual(ver) {
+		if vme.Version.GreaterThanOrEqual(ver) {
 			best_ver = ver
 			found = true
 		}
 	}
 
 	if !found {
-		return MetricVersionProperties{}, errors.New(fmt.Sprintf("suitable SQL not found for metric \"%s\", version \"%s\"", metric, pgVer))
+		return MetricVersionProperties{}, errors.New(fmt.Sprintf("no suitable SQL found for metric \"%s\", version \"%s\"", metric, vme.VersionStr))
 	}
 
 	return mdm[metric][best_ver], nil
 }
 
-func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -1780,7 +1780,7 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		host_state["sproc_hashes"] = make(map[string]string)
 	}
 
-	mvp, err := GetMetricVersionProperties("sproc_hashes", db_pg_version, nil)
+	mvp, err := GetMetricVersionProperties("sproc_hashes", vme, nil)
 	if err != nil {
 		log.Error("could not get sproc_hashes sql:", err)
 		return change_counts
@@ -1854,7 +1854,7 @@ func DetectSprocChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	return change_counts
 }
 
-func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectTableChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -1865,7 +1865,7 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		host_state["table_hashes"] = make(map[string]string)
 	}
 
-	mvp, err := GetMetricVersionProperties("table_hashes", db_pg_version, nil)
+	mvp, err := GetMetricVersionProperties("table_hashes", vme, nil)
 	if err != nil {
 		log.Error("could not get table_hashes sql:", err)
 		return change_counts
@@ -1939,7 +1939,7 @@ func DetectTableChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	return change_counts
 }
 
-func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectIndexChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -1950,7 +1950,7 @@ func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 		host_state["index_hashes"] = make(map[string]string)
 	}
 
-	mvp, err := GetMetricVersionProperties("index_hashes", db_pg_version, nil)
+	mvp, err := GetMetricVersionProperties("index_hashes", vme, nil)
 	if err != nil {
 		log.Error("could not get index_hashes sql:", err)
 		return change_counts
@@ -2022,7 +2022,7 @@ func DetectIndexChanges(dbUnique string, db_pg_version decimal.Decimal, storage_
 	return change_counts
 }
 
-func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+func DetectConfigurationChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
@@ -2033,7 +2033,7 @@ func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, 
 		host_state["configuration_hashes"] = make(map[string]string)
 	}
 
-	mvp, err := GetMetricVersionProperties("configuration_hashes", db_pg_version, nil)
+	mvp, err := GetMetricVersionProperties("configuration_hashes", vme, nil)
 	if err != nil {
 		log.Error("could not get index_hashes sql:", err)
 		return change_counts
@@ -2078,11 +2078,11 @@ func DetectConfigurationChanges(dbUnique string, db_pg_version decimal.Decimal, 
 	return change_counts
 }
 
-func CheckForPGObjectChangesAndStore(dbUnique string, db_pg_version decimal.Decimal, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) {
-	sproc_counts := DetectSprocChanges(dbUnique, db_pg_version, storage_ch, host_state) // TODO some of Detect*() code could be unified...
-	table_counts := DetectTableChanges(dbUnique, db_pg_version, storage_ch, host_state)
-	index_counts := DetectIndexChanges(dbUnique, db_pg_version, storage_ch, host_state)
-	conf_counts := DetectConfigurationChanges(dbUnique, db_pg_version, storage_ch, host_state)
+func CheckForPGObjectChangesAndStore(dbUnique string, vme DBVersionMapEntry, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) {
+	sproc_counts := DetectSprocChanges(dbUnique, vme, storage_ch, host_state) // TODO some of Detect*() code could be unified...
+	table_counts := DetectTableChanges(dbUnique, vme, storage_ch, host_state)
+	index_counts := DetectIndexChanges(dbUnique, vme, storage_ch, host_state)
+	conf_counts := DetectConfigurationChanges(dbUnique, vme, storage_ch, host_state)
 
 	// need to send info on all object changes as one message as Grafana applies "last wins" for annotations with similar timestamp
 	message := ""
@@ -2153,11 +2153,11 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 		// which cannot be accessed from Go lib/pg
 	}
 
-	mvp, err := GetMetricVersionProperties(msg.MetricName, vme.Version, nil)
+	mvp, err := GetMetricVersionProperties(msg.MetricName, vme, nil)
 	if err != nil {
 		epoch, ok := last_sql_fetch_error.Load(msg.MetricName + ":" + db_pg_version.String())
 		if !ok || ((time.Now().Unix() - epoch.(int64)) > 3600) { // complain only 1x per hour
-			log.Warningf("Failed to get SQL for metric '%s', version '%s'", msg.MetricName, db_pg_version)
+			log.Warningf("Failed to get SQL for metric '%s', version '%s'", msg.MetricName, vme.VersionStr)
 			last_sql_fetch_error.Store(msg.MetricName+":"+db_pg_version.String(), time.Now().Unix())
 		}
 		return nil, err
@@ -2178,7 +2178,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	}
 
 	if msg.MetricName == "change_events" && context != CONTEXT_PROMETHEUS_SCRAPE { // special handling, multiple queries + stateful
-		CheckForPGObjectChangesAndStore(msg.DBUniqueName, db_pg_version, storage_ch, host_state) // TODO no host_state for Prometheus
+		CheckForPGObjectChangesAndStore(msg.DBUniqueName, vme, storage_ch, host_state) // TODO no host_state for Prometheus
 	} else {
 		data, err, duration := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
 
@@ -2601,7 +2601,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 			if !DoesFunctionExists(dbUnique, helperName) {
 
 				log.Debug("Trying to create metric fetching helpers for", dbUnique, helperName)
-				mvp, err := GetMetricVersionProperties(helperName, db_pg_version.Version, helpers)
+				mvp, err := GetMetricVersionProperties(helperName, db_pg_version, helpers)
 				if err != nil {
 					log.Warning("Could not find query text for", dbUnique, helperName)
 					continue
@@ -2629,7 +2629,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 			if !DoesFunctionExists(dbUnique, metric) {
 
 				log.Debug("Trying to create metric fetching helpers for", dbUnique, metric)
-				mvp, err := GetMetricVersionProperties(metric, db_pg_version.Version, nil)
+				mvp, err := GetMetricVersionProperties(metric, db_pg_version, nil)
 				if err != nil {
 					log.Warning("Could not find query text for", dbUnique, metric)
 					continue
