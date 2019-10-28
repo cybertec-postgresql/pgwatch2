@@ -1,33 +1,36 @@
 #!/bin/bash
 
+POSTGRES_IMAGE_BASE=postgres # use official Docker images based on Debian
+
 function start_pg {
-  if [ -z $1 ] || [ -z $2 ]; then
-    echo "version and port required. exit"
+  if [ -z $1 ] || [ -z $2 ] || [ -z $3 ]; then
+    echo "full version, short version and port required. exit"
     exit 1
   fi
-  ver=$1
-  port=$2
+  full_ver=$1
+  ver=$2
+  port=$3
 
   volume="pg${ver}"
-  echo "checking if volume $volume exists for PG ver $ver..."
+  echo "checking if volume $volume exists for PG ver $full_ver..."
   vol_info=$(docker volume inspect $volume &>/dev/null)
   if [ $? -ne 0 ]; then
-    echo "creating volume $volume for PG ver $ver..."
+    echo "creating volume $volume for PG ver $full_ver..."
     create_vol=$(docker volume create $volume &>/dev/null)
     if [ $? -ne 0 ]; then
-      echo "could not create volume for $ver:"
+      echo "could not create volume for $full_ver:"
       echo "$create_vol"
     fi
   fi
 
-  echo "starting PG $ver on port $port ..."
-  docker run --rm -d --name "pg${ver}" -v $volume:/var/lib/postgresql/data -p $port:5432 postgres:$ver &>/tmp/pg-docker-run-all.out
+  echo "starting PG $full_ver on port $port ..."
+  docker run --rm -d --name "pg${ver}" -v $volume:/var/lib/postgresql/data -p $port:5432 $POSTGRES_IMAGE_BASE:$full_ver &>/tmp/pg-docker-run-all.out
   if [ $? -ne 0 ]; then
     $(grep "is already in use" /tmp/pg-docker-run-all.out &>/dev/null)
     if [[ $? -eq 0 ]] ; then
-      echo "$ver already running..."
+      echo "$full_ver already running..."
     else
-      echo "could not start docker PG $ver on port $port"
+      echo "could not start docker PG $full_ver on port $port"
       exit 1
     fi
   fi
@@ -38,81 +41,77 @@ function start_pg {
     echo "could not get master volume info for container pg$ver"
     exit 1
   fi
+
+  # postgresql.conf changes
   echo "shared_preload_libraries='pg_stat_statements'" | sudo tee -a $MASTER_VOL_PATH/postgresql.conf
+  echo "track_functions='pl'" | sudo tee -a $MASTER_VOL_PATH/postgresql.conf
+  if (( $(echo "$full_ver > 9.1" |bc -l) )); then
+    echo "track_io_timing='on'" | sudo tee -a $MASTER_VOL_PATH/postgresql.conf
+  fi
 
   PW2_USER=$(psql -U postgres -h localhost -p $port -XAtc "select count(*) from pg_roles where rolname = 'pgwatch2'")
-  if [ $PW2_USER -ne 1 ]; then
+  if [ $? -ne 0 ] || [ "$PW2_USER" -ne 1 ]; then
     for j in {1..5} ; do # try a few times when starting docker is slow
       psql -U postgres -h localhost -p $port -Xc "create user pgwatch2" &>/dev/null
       if [ $? -eq 0 ]; then
         break
       fi
-      sleep 1
+      sleep 2
     done
     if [ $? -ne 0 ]; then
-      echo "could not create pgwatch2 user on docker PG $ver on port $port"
+      echo "could not create pgwatch2 user on docker PG $full_ver on port $port"
       exit 1
     fi
   fi
 
-  echo "apt update"
-  docker exec -it pg${ver} apt update &>/dev/null
 
-  if (( $(echo "$ver < 12" |bc -l) )); then
-    echo "apt install -y --force-yes postgresql-plpython-${ver} python-psutil"
-    docker exec -it pg${ver} apt install -y --force-yes postgresql-plpython-${ver} python-psutil &>/dev/null
+  if [ "$POSTGRES_IMAGE_BASE" == "postgres" ]; then
+
+    echo "apt update"
+    docker exec -it pg${ver} apt update &>/dev/null
+
+    if (( $(echo "$full_ver < 12" |bc -l) )); then
+      echo "apt install -y --force-yes postgresql-plpython-${full_ver} python-psutil"
+      docker exec -it pg${ver} apt install -y --force-yes postgresql-plpython-${full_ver} python-psutil &>/dev/null
+    else
+      echo "apt install -y --allow-unauthenticated postgresql-plpython3-${full_ver} python3-psutil"
+      docker exec -it pg${ver} apt install -y --allow-unauthenticated postgresql-plpython3-${full_ver} python3-psutil &>/dev/null
+    fi
+    if [ $? -ne 0 ]; then
+        echo "could not install plpython and psutil"
+        exit 1
+    fi
   else
-    echo "apt install -y --allow-unauthenticated postgresql-plpython3-${ver} python3-psutil"
-    docker exec -it pg${ver} apt install -y --allow-unauthenticated postgresql-plpython3-${ver} python3-psutil &>/dev/null
-  fi
-  if [ $? -ne 0 ]; then
-      echo "could not install plpython and psutil"
-      exit 1
-  fi
+    echo "skipping install of extra packages as assumed installed on ${POSTGRES_IMAGE_BASE}:${full_ver}..."
+  fi  # extra packages
 
   docker restart "pg${ver}"   # to activate pg_stat_statements
   if [ $? -ne 0 ]; then
-      echo "could not restart pg${ver}"
+      echo "could not restart container pg${ver}"
       exit 1
   fi
 }
 
-i=0
-STARTING_PORT=54390
-LOW_VERSIONS="9.0 9.1 9.2 9.3 9.4 9.5 9.6"
-#LOW_VERSIONS=""
 
-for ver in $LOW_VERSIONS ; do
+for x in {0..6} {10..12} ; do
+
+  if [ ${x} -lt 10 ]; then
+    ver="9${x}"
+    full_ver="9.${x}"
+  else
+    ver=${x}
+    full_ver=${x}
+  fi
+  port="543${ver}"
 
   repl_image_running=$(docker ps -q --filter "name=pg${ver}")
   if [ -n "$repl_image_running" ]; then
-    echo "PG $ver already running"
-    i=$((i+1))
+    echo "PG $full_ver already running"
     continue
   fi
 
-  start_pg $ver $((STARTING_PORT+i))
-  i=$((i+1))
-
-done
-
-
-i=0
-STARTING_PORT=54310
-HIGH_VERSIONS="10 11 12"
-#HIGH_VERSIONS=
-
-for ver in $HIGH_VERSIONS ; do
-
-  repl_image_running=$(docker ps -q --filter "name=^pg${ver}\$")
-  if [ -n "$repl_image_running" ]; then
-    echo "PG $ver already running"
-    i=$((i+1))
-    continue
-  fi
-
-  start_pg $ver $((STARTING_PORT+i))
-  i=$((i+1))
+  echo "start_pg $full_ver $ver $port"
+  start_pg $full_ver $ver $port
 
 done
 

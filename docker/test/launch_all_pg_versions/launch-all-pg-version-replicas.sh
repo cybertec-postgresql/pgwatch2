@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#set -e
+POSTGRES_IMAGE_BASE=postgres # use official Docker images based on Debian
 
 MASTER_CONF=$(cat <<-EOF
 wal_level=hot_standby
@@ -17,23 +17,24 @@ EOF
 
 
 function enable_primary_replication {
-  if [ -z $1 ] || [ -z $2 ] ; then
-    echo "version and master port required. exit"
+  if [ -z $1 ] || [ -z $2 ] || [ -z $3 ]; then
+    echo "full version, short version and master port required. exit"
     exit 1
   fi
-  ver=$1
-  master_port=$2
+  full_ver=$1
+  ver=$2
+  master_port=$3
 
   needs_restart=0
   volume_name="pg$ver"
-  echo "getting volume $volume_name for PG ver $ver..."
+  echo "getting master volume $volume_name for PG ver $full_ver..."
   vol_path=$(docker volume inspect --format '{{ .Mountpoint }}' $volume_name)
 
   if [ $? -ne 0 ]; then
-    echo "could not inspect volume for $ver:"
-    echo "$vol_path"
+    echo "could not inspect master volume pg$ver for $full_ver:"
     exit 1
   fi
+  echo "vol_path: $vol_path"
 
   HBA_OK=$(sudo grep -q 'host replication all 0.0.0.0/0 trust' $vol_path/pg_hba.conf)
   if [ $? -ne 0 ]; then
@@ -42,10 +43,10 @@ function enable_primary_replication {
 	  needs_restart=1
   fi
 
-  if (( $(echo "$ver < 10" |bc -l) )); then
+  if (( $(echo "$full_ver < 10" |bc -l) )); then
 	WAL_LEVEL=$(psql -U postgres -h localhost -p $master_port -XAtc "show wal_level")
 	if [[ "$WAL_LEVEL" =~ "hot_standby" ]] || [[ "$WAL_LEVEL" =~ "replica" ]] ; then
-	  echo "$ver master already has replication enabled"
+	  echo "$full_ver master already has replication enabled"
 	else
 	  echo "enabling replication in $vol_path/postgresql.conf..."
 	  echo "$MASTER_CONF" | sudo tee -a $vol_path/postgresql.conf
@@ -54,10 +55,10 @@ function enable_primary_replication {
   fi
 
   if [ "$needs_restart" -gt 0 ]; then
-	  echo "restarting pg$ver master image to apply config changes..."
+	  echo "restarting pg$ver master container to apply config changes..."
 	  docker restart pg$ver
 	  if [ $? -ne 0 ]; then
-	    echo "could not restart pg$ver master image..."
+	    echo "could not restart pg$ver master container..."
 	    exit 1
 	  fi
 fi
@@ -66,13 +67,14 @@ fi
 
 function launch_replica_image {
 
-	if [ -z $1 ] || [ -z $2 ] ; then
-	  echo "ver and port needed"
+	if [ -z $1 ] || [ -z $2 ] || [ -z $2 ] ; then
+	  echo "full version, short version and master port required. exit"
 	  exit 1
 	fi
 
-	ver=$1
-    repl_port=$2
+	full_ver=$1
+	ver=$2
+  repl_port=$3
 
 	# create empty replica volume
 	volume_name="pg${ver}-repl"
@@ -89,10 +91,10 @@ function launch_replica_image {
 		fi
 	fi
 
-	echo "creating volume $volume_name for PG replica ver $ver..."
+	echo "creating volume $volume_name for PG replica ver $full_ver..."
 	create_vol=$(docker volume create $volume_name &>/dev/null)
 	if [ $? -ne 0 ]; then
-	  echo "could not create volume for replica $ver:"
+	  echo "could not create volume for replica $full_ver:"
 	  exit 1
 	fi
 
@@ -129,8 +131,8 @@ function launch_replica_image {
  		exit 1
  	fi
 
-  echo "shared_preload_libraries='pg_stat_statements'" | sudo tee -a $REPLICA_VOL_PATH/postgresql.conf
- 	if (( $(echo "$ver < 12" |bc -l) )); then
+  # recovery.conf
+ 	if (( $(echo "$full_ver < 12" |bc -l) )); then
  		# create recovery.conf
  		echo "standby_mode='on'" | sudo tee $REPLICA_VOL_PATH/recovery.conf
  		echo "primary_conninfo='host=${MASTER_IP}'" | sudo tee -a $REPLICA_VOL_PATH/recovery.conf
@@ -142,14 +144,15 @@ function launch_replica_image {
 
 	# start replica with port+1000
 	echo "starting image pg${ver}-repl on port $repl_port ..."
-	docker run --rm -d --name "pg${ver}-repl" -v $volume_name:/var/lib/postgresql/data -p $repl_port:5432 postgres:$ver &>/tmp/pg-docker-run-all.out
-	#docker run --rm --name "pg${ver}-repl" -v $volume_name:/var/lib/postgresql/data -p $repl_port:5432 postgres:$ver
+	echo "docker run --rm -d --name pg${ver}-repl -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 $POSTGRES_IMAGE_BASE:$full_ver"
+	docker run -d --name "pg${ver}-repl" -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 ${POSTGRES_IMAGE_BASE}:${full_ver} &>/tmp/pg-docker-run-all.out
 	if [ $? -ne 0 ]; then
 		$(grep "is already in use" /tmp/pg-docker-run-all.out &>/dev/null)
 		if [[ $? -eq 0 ]] ; then
-		  echo "$ver replica already running on port $repl_port..."
+		  echo "$full_ver replica already running on port $repl_port..."
+		  continue
 		else
-		  echo "could not start docker PG replica $ver on port $repl_port"
+		  echo "could not start docker PG replica $full_ver on port $repl_port"
 		  docker unpause pg$ver
 		  exit 1
 		fi
@@ -163,39 +166,53 @@ function launch_replica_image {
 		exit 1
 	fi
 
-	# plpython
-	echo "apt update"
-	docker exec -it pg${ver}-repl apt update &>/dev/null
+  if [ "$POSTGRES_IMAGE_BASE" == "postgres" ]; then
 
-	if (( $(echo "$ver < 12" |bc -l) )); then
-		echo "apt install -y --force-yes postgresql-plpython-${ver} python-psutil"
-		docker exec -it pg${ver}-repl apt install -y --force-yes postgresql-plpython-${ver} python-psutil &>/dev/null
-	else
-		echo "apt install -y --allow-unauthenticated postgresql-plpython3-${ver} python3-psutil"
-		docker exec -it pg${ver}-repl apt install -y --allow-unauthenticated postgresql-plpython3-${ver} python3-psutil &>/dev/null
-	fi
-	if [ $? -ne 0 ]; then
-	  echo "could not install postgresql-plpython-${ver}"
-	  exit 1
-	fi
+    echo "apt update"
+    docker exec -it pg${ver}-repl apt update #&>/dev/null
+
+    if (( $(echo "$full_ver < 12" |bc -l) )); then
+      echo "apt install -y --force-yes postgresql-plpython-${full_ver} python-psutil"
+      docker exec -it pg${ver}-repl apt install -y --force-yes postgresql-plpython-${full_ver} python-psutil # &>/dev/null
+    else
+      echo "apt install -y --allow-unauthenticated postgresql-plpython3-${full_ver} python3-psutil"
+      docker exec -it pg${ver}-repl apt install -y --allow-unauthenticated postgresql-plpython3-${full_ver} python3-psutil # &>/dev/null
+    fi
+    if [ $? -ne 0 ]; then
+      echo "could not install postgresql-plpython-${full_ver}"
+      exit 1
+    fi
+
+  else
+    echo "skipping install of extra packages as assumed installed on ${POSTGRES_IMAGE_BASE}:${full_ver}..."
+  fi  # extra packages
+
 }
 
 
-PG_VERSIONS="9.0 9.1 9.2 9.3 9.4 9.5 9.6 10 11 12"
-#PG_VERSIONS="12"
-for ver in $PG_VERSIONS ; do
+for x in {0..6} {10..12} ; do
+
+  if [ ${x} -lt 10 ]; then
+    ver="9${x}"
+    full_ver="9.${x}"
+  else
+    ver=${x}
+    full_ver=${x}
+  fi
+  master_port="543${ver}"
+  repl_port=$((master_port+1000))
 
   master_port=$(docker inspect --format='{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}' pg$ver)
-  echo "enabling replication settings for $ver master container ..."
-  enable_primary_replication $ver $master_port
+  echo "enabling replication settings for $full_ver master container ..."
+  enable_primary_replication $full_ver $ver $master_port
 
   repl_image_running=$(docker ps -q --filter "name=pg${ver}-repl")
   if [ -z "$repl_image_running" ]; then
-	  repl_port=$((master_port+1000))
-	  echo "creating replica for $ver on port $repl_port ..."
-	  launch_replica_image $ver $repl_port
+
+	  echo "creating replica for $full_ver on port $repl_port ..."
+	  launch_replica_image $full_ver $ver $repl_port
   else
-  	  echo "replica for $ver already running"
+  	  echo "replica for $full_ver already running"
   fi
 
 done
