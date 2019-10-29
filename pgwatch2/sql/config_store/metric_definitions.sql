@@ -259,10 +259,31 @@ $sql$
 
 /* bgwriter */
 
+
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
 values (
 'bgwriter',
 9.0,
+true,
+$sql$
+select
+   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+   checkpoints_timed,
+   checkpoints_req,
+   buffers_checkpoint,
+   buffers_clean,
+   maxwritten_clean,
+   buffers_backend,
+   buffers_alloc
+ from
+   pg_stat_bgwriter;
+$sql$
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_master_only, m_sql)
+values (
+'bgwriter',
+9.2,
 true,
 $sql$
 select
