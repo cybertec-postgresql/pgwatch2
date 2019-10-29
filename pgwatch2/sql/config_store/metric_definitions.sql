@@ -3132,7 +3132,7 @@ $sql$,
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_standby_only, m_sql, m_column_attrs)
 values (
 'wal_receiver',
-9.6,
+10,
 true,
 $sql$
 select
