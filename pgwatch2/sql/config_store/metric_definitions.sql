@@ -2629,6 +2629,7 @@ $sql$
     NB! "psutil" is known to behave differently depending on the used version and operating system, so if getting
     errors please adjust to your needs. "psutil" documentation here: https://psutil.readthedocs.io/en/latest/
 */
+CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
 
 CREATE OR REPLACE FUNCTION get_psutil_cpu(
 	OUT cpu_utilization float8, OUT load_1m_norm float8, OUT load_1m float8, OUT load_5m_norm float8, OUT load_5m float8,
@@ -2693,6 +2694,7 @@ values (
 9.1,
 $sql$
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
+CREATE EXTENSION IF NOT EXISTS plpythonu; -- NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es
 
 CREATE OR REPLACE FUNCTION get_psutil_mem(
 	OUT total float8, OUT used float8, OUT free float8, OUT buff_cache float8, OUT available float8, OUT percent float8,
@@ -2737,6 +2739,7 @@ values (
 9.1,
 $sql$
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
+CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
 
 CREATE OR REPLACE FUNCTION get_psutil_disk(
 	OUT dir_or_tablespace text, OUT path text, OUT total float8, OUT used float8, OUT free float8, OUT percent float8
@@ -2826,6 +2829,7 @@ values (
 $sql$
 
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
+CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
 
 CREATE OR REPLACE FUNCTION get_psutil_disk_io_total(
 	OUT read_count float8, OUT write_count float8, OUT read_bytes float8, OUT write_bytes float8
