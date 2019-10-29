@@ -1330,7 +1330,7 @@ $sql$
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_sql_su)
 values (
 'stat_statements',
-9.3,
+9.4,
 $sql$
 with q_data as (
   select
