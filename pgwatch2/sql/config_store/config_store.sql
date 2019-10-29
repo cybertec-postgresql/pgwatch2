@@ -73,12 +73,12 @@ create table metric (
     m_is_active         boolean not null default 't',
     m_is_helper         boolean not null default 'f',
     m_last_modified_on  timestamptz not null default now(),
-    m_master_only bool default false,
-    m_standby_only bool default false,
+    m_master_only       bool not null default false,
+    m_standby_only      bool not null default false,
     m_column_attrs      jsonb,  -- currently only useful for Prometheus
     m_sql_su            text default '',
 
-    unique (m_name, m_pg_version_from),
+    unique (m_name, m_pg_version_from, m_standby_only),
     check (not (m_master_only and m_standby_only)),
     check (m_name ~ '^[a-z0-9_]+$')
 );

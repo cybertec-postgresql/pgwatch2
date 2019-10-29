@@ -19,12 +19,7 @@ select
   n_tup_del,
   n_tup_hot_upd,
   n_live_tup,
-  n_dead_tup,
-  vacuum_count,
-  autovacuum_count,
-  analyze_count,
-  autoanalyze_count,
-  age(relfrozenxid) as tx_freeze_age
+  n_dead_tup
 from
   pg_stat_user_tables ut
   join
@@ -32,4 +27,4 @@ from
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
   not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
-  and c.relpersistence != 't'; -- and temp tables
+  and not relistemp; -- and temp tables
