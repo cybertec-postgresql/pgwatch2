@@ -2144,8 +2144,9 @@ func FilterPgbouncerData(data []map[string]interface{}, database_to_keep string)
 func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]string, storage_ch chan<- []MetricStoreMessage, context string) ([]MetricStoreMessage, error) {
 	var vme DBVersionMapEntry
 	var db_pg_version decimal.Decimal
-	var err error
+	var err, firstErr error
 	var sql string
+	var retryWithSuperuserSQL = true
 
 	if msg.DBType == DBTYPE_PG {
 		vme, err = DBGetPGVersion(msg.DBUniqueName, false)
@@ -2172,23 +2173,27 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 		}
 		return nil, err
 	}
+
+retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL if it's defined
+
 	sql = mvp.Sql
-	if vme.IsSuperuser && mvp.SqlSU != "" {
-		sql = mvp.SqlSU // TODO only if no helper function?
+	if (vme.IsSuperuser || (retryWithSuperuserSQL && firstErr != nil)) && mvp.SqlSU != "" {
+		sql = mvp.SqlSU
+		retryWithSuperuserSQL = false
 	}
 	if sql == "" && msg.MetricName != "change_events" {
 		// let's ignore dummy SQL-s
-		log.Debugf("Ignoring fetch message - got an empty/dummy SQL string for [%s:%s]", msg.DBUniqueName, msg.MetricName)
+		log.Debugf("[%s:%s] Ignoring fetch message - got an empty/dummy SQL string", msg.DBUniqueName, msg.MetricName)
 		return nil, nil
 	}
 
 	if (mvp.MasterOnly && vme.IsInRecovery) || (mvp.StandbyOnly && !vme.IsInRecovery) {
-		log.Debugf("Skipping fetching of [%s:%s] as server not in wanted state (IsInRecovery=%v)", msg.DBUniqueName, msg.MetricName, vme.IsInRecovery)
+		log.Debugf("[%s:%s] Skipping fetching of  as server not in wanted state (IsInRecovery=%v)", msg.DBUniqueName, msg.MetricName, vme.IsInRecovery)
 		return nil, nil
 	}
 
 	if msg.MetricName == "change_events" && context != CONTEXT_PROMETHEUS_SCRAPE { // special handling, multiple queries + stateful
-		CheckForPGObjectChangesAndStore(msg.DBUniqueName, vme, storage_ch, host_state) // TODO no host_state for Prometheus
+		CheckForPGObjectChangesAndStore(msg.DBUniqueName, vme, storage_ch, host_state) // TODO no host_state for Prometheus currently
 	} else {
 		data, err, duration := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
 
@@ -2199,20 +2204,32 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 				ver, _ := db_pg_version_map[msg.DBUniqueName]
 				db_pg_version_map_lock.RUnlock()
 				if ver.IsInRecovery {
-					log.Debugf("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err)
+					log.Debugf("[%s:%s] failed to fetch metrics: %s", msg.DBUniqueName, msg.MetricName, err)
 					return nil, err
 				}
 			}
-			log.Infof("failed to fetch metrics for '%s', metric '%s': %s", msg.DBUniqueName, msg.MetricName, err)
+
+			if retryWithSuperuserSQL && mvp.SqlSU != "" {
+				firstErr = err
+				log.Infof("[%s:%s] Normal fetch failed, re-trying to fetch with SU SQL", msg.DBUniqueName, msg.MetricName)
+				goto retry_with_superuser_sql
+			} else {
+				if firstErr != nil {
+					log.Infof("[%s:%s] failed to fetch metrics also with SU SQL so initial error will be returned. Current err: %s", msg.DBUniqueName, msg.MetricName, err)
+					return nil, firstErr	// returning the initial error
+				} else {
+					log.Infof("[%s:%s] failed to fetch metrics: %s", msg.DBUniqueName, msg.MetricName, err)
+				}
+			}
 			return nil, err
 		} else {
 			md, err := GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
 			if err != nil {
-				log.Errorf("could not get monitored DB details for %s: %s", msg.DBUniqueName, err)
+				log.Errorf("[%s:%s] could not get monitored DB details", msg.DBUniqueName, err)
 				return nil, err
 			}
 
-			log.Infof("fetched %d rows for [%s:%s] in %.1f ms", len(data), msg.DBUniqueName, msg.MetricName, float64(duration.Nanoseconds())/1000000)
+			log.Infof("[%s:%s] fetched %d rows in %.1f ms", msg.DBUniqueName, msg.MetricName, len(data), float64(duration.Nanoseconds())/1000000)
 			if msg.MetricName == "pgbouncer_stats" { // clean unwanted pgbouncer pool stats here as not possible in SQL
 				data = FilterPgbouncerData(data, md.DBName)
 			}
