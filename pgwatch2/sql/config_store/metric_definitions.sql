@@ -1232,7 +1232,7 @@ $sql$
 with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-    queryid::text as tag_queryid,
+    (regexp_replace(md5(query), E'\\D', '', 'g'))::varchar(10)::int8 as tag_queryid,
     max(ltrim(regexp_replace(query, E'[ \\t\\n\\r]+' , ' ', 'g')))::varchar(16000) as tag_query,
     sum(s.calls)::int8 as calls,
     sum(s.total_time)::double precision as total_time,
@@ -1253,7 +1253,7 @@ with q_data as (
     and not upper(s.query) like any (array['DEALLOCATE%', 'SET %', 'RESET %', 'BEGIN%', 'BEGIN;',
       'COMMIT%', 'END%', 'ROLLBACK%', 'SHOW%'])
   group by
-    queryid
+    tag_queryid
 )
 select * from (
   select
