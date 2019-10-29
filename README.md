@@ -217,10 +217,12 @@ CREATE ROLE pgwatch2 WITH LOGIN PASSWORD 'secret';
 -- NB! For very important databases it might make sense to ensure that the user
 -- account used for monitoring can only open a limited number of connections (there are according checks in code also though)
 ALTER ROLE pgwatch2 CONNECTION LIMIT 3;
+GRANT pg_monitor TO pgwatch2;   // v10+
 ```
-* Define the helper function to enable the monitoring of sessions counts, types and durations by the `pgwatch2` login defined above.
-If using a superuser login (not recommended) you can skip this step, just ensure that you check the `Is superuser?` checkbox
-(or "is_superuser: true" in YAML mode) when configuring databases.
+* If monitoring below v10 servers and not using superuser and don't also want to grant "pg_monitor" to the monitoring user,
+define the helper function to enable monitoring of some "protected" internal information, like active sessions info. If
+using a superuser login (not recommended for remote "pulling", but only "pushing") you can skip this step.
+
 ```
 psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/stat_activity_wrapper.sql mydb
 ```
@@ -248,6 +250,10 @@ psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/cpu_load_p
 
 For more detailed statistics (OS monitoring, table bloat, WAL size, etc) it is recommended to install also all other helpers
 found from the `pgwatch2/sql/metric_fetching_helpers` folder (or `pgwatch2/metrics/00_helpers` for YAML based setup).
+As of v1.6.0 though helpers are not needed for Postgres-native metrics (e.g. WAL size) if a privileged user (superuser or has pg_monitor GRANT)
+is used as all Postres-protected metrics have also "privileged" SQL-s defined for direct access. Another good way to take
+ensure that helpers get installed is to 1st run as superuser, by checking the `Auto-create helpers?` checkbox
+(or "is_superuser: true" in YAML mode) when configuring databases and then switch to the normal unprivileged "pgwatch2" user.
 
 NB! When rolling out helpers make sure the `search_path` is set correctly (same as monitoring role's) as metrics using the
 helpers, assume that monitoring role's `search_path` includes everything needed i.e. they don't qualify any schemas.
@@ -255,9 +261,14 @@ helpers, assume that monitoring role's `search_path` includes everything needed 
 
 ## Warning / notice on using metric fetching helpers
 
-* When installing some "helpers" and laters doing a binary PostgreSQL upgrade via `pg_upgrade`, this could result in some error messages thrown. Then just drop those failing helpers on the "to be upgraded" cluster and re-create them after the upgrade process.
+* When installing some "helpers" and laters doing a binary PostgreSQL upgrade via `pg_upgrade`, this could result in some
+error messages thrown. Then just drop those failing helpers on the "to be upgraded" cluster and re-create them after the upgrade process.
 
-* Starting from Postgres v10 helpers are mostly not needed (only for PL/Python ones getting OS statistics) - there are available some special monitoring roles like "pg_monitor", that are exactly meant to be used for such cases where we want to give access to all Statistics Collector views without any other "superuser behaviour". See [here](https://www.postgresql.org/docs/current/default-roles.html) for documentation on such special system roles.
+* Starting from Postgres v10 helpers are mostly not needed (only for PL/Python ones getting OS statistics) - there are available
+some special monitoring roles like "pg_monitor", that are exactly meant to be used for such cases where we want to give access
+to all Statistics Collector views without any other "superuser behaviour". See [here](https://www.postgresql.org/docs/current/default-roles.html)
+for documentation on such special system roles. Note that currently most out-of-the-box metrics first rely on the helpers
+as v10 is relatively new still, and only when fetching fails, direct access with the "Privileged SQL" is tried.
 
 * For gathering OS statistics (CPU, IO, disk) there are helpers and metrics provided, based on the "psutil" Python package...but from user reports seems the package behaviour differentiates slightly based on the Linux distro / Kernel version used, so small adjustments might be needed there (e.g. remove a non-existen column). Minimum usable Kernel version required is 3.3. Also note that SQL helpers functions are currently defined for Python 2, so for Python 3 you need to change the `LANGUAGE plpythonu` part.
 
