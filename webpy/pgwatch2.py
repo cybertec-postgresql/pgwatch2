@@ -91,7 +91,7 @@ def get_preset_configs():
     sql = """
         select
           pc_name, pc_description, pc_config::text, date_trunc('second', pc_last_modified_on)::text as pc_last_modified_on,
-          coalesce((select array_to_string(array_agg(md_unique_name order by md_unique_name), ',')
+          coalesce((select array_to_string(array_agg(md_unique_name order by md_unique_name), ', ')
             from pgwatch2.monitored_db where md_preset_config_name = pc_name and md_is_enabled
             group by md_preset_config_name), '') as active_dbs
         from
