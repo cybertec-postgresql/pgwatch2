@@ -190,7 +190,7 @@ function launch_replica_image {
 }
 
 PGVERS="0 1 2 3 4 5 6 10 11 12"
-if [ -n $1 ]; then
+if [ -n "$1" ]; then
   PGVERS="$1"
 fi
 
