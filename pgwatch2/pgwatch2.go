@@ -3532,10 +3532,10 @@ func main() {
 
 		UpdateMonitoredDBCache(monitored_dbs)
 
-		if first_loop {
-			log.Warning("host info refreshed, nr. of enabled hosts in configuration:", len(monitored_dbs))
+		if first_loop && (len(monitored_dbs) == 0 || len(metric_def_map) == 0) {
+			log.Warningf("host info refreshed, nr. of enabled hosts in configuration: %d, nr. of distinct metrics: %d", len(monitored_dbs), len(metric_def_map))
 		} else {
-			log.Info("host info refreshed, nr. of enabled hosts in configuration:", len(monitored_dbs))
+			log.Infof("host info refreshed, nr. of enabled hosts in configuration: %d, nr. of distinct metrics: %d", len(monitored_dbs), len(metric_def_map))
 		}
 
 		if first_loop {
