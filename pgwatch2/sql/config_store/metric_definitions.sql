@@ -341,7 +341,8 @@ select
   tup_inserted,
   tup_updated,
   tup_deleted,
-  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
+  case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int
 from
   pg_stat_database
 where
@@ -368,7 +369,8 @@ select
   tup_updated,
   tup_deleted,
   conflicts,
-  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
+  case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int
 from
   pg_stat_database
 where
@@ -400,7 +402,8 @@ select
   deadlocks,
   blk_read_time,
   blk_write_time,
-  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
+  case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int
 from
   pg_stat_database
 where
@@ -433,7 +436,8 @@ select
   blk_read_time,
   blk_write_time,
   extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
-  extract(epoch from (now() - pg_backup_start_time()))::int8 as backup_duration_s
+  extract(epoch from (now() - pg_backup_start_time()))::int8 as backup_duration_s,
+  case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int
 from
   pg_stat_database
 where
@@ -468,7 +472,8 @@ select
   extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
   extract(epoch from (now() - pg_backup_start_time()))::int8 as backup_duration_s,
   checksum_failures,
-  extract(epoch from (now() - checksum_last_failure))::int8 as checksum_last_failure_s
+  extract(epoch from (now() - checksum_last_failure))::int8 as checksum_last_failure_s,
+  case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int
 from
   pg_stat_database
 where

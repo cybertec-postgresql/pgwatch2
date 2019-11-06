@@ -17,7 +17,8 @@ select
   blk_read_time,
   blk_write_time,
   extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
-  extract(epoch from (now() - pg_backup_start_time()))::int8 as backup_duration_s
+  extract(epoch from (now() - pg_backup_start_time()))::int8 as backup_duration_s,
+  case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int
 from
   pg_stat_database
 where
