@@ -191,6 +191,8 @@ const DBTYPE_PG_CONT = "postgres-continuous-discovery"
 const DBTYPE_BOUNCER = "pgbouncer"
 const DBTYPE_PATRONI = "patroni"
 const DBTYPE_PATRONI_CONT = "patroni-continuous-discovery"
+const MONITORED_DBS_DATASTORE_SYNC_INTERVAL_SECONDS = 600			// write actively monitored DBs listing to metrics store after so many seconds
+const MONITORED_DBS_DATASTORE_SYNC_METRIC_NAME = "configured_dbs"	// FYI - for Postgres datastore there's also the admin.all_unique_dbnames table with all recent DB unique names with some metric data
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT} // used for informational purposes
@@ -237,6 +239,7 @@ var promServer *http.Server
 var addRealDbname bool
 var addSystemIdentifier bool
 var forceRecreatePGMetricPartitions = false // to signal override PG metrics storage cache
+var lastMonitoredDBsUpdate time.Time
 
 func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
@@ -3109,6 +3112,24 @@ func decrypt(dbUnique, passphrase, ciphertext string) string {
 	return string(data)
 }
 
+func SyncMonitoredDBsToDatastore(monitored_dbs []MonitoredDatabase, persistance_channel chan []MetricStoreMessage) {
+	if len(monitored_dbs) > 0 {
+		msms := make([]MetricStoreMessage, len(monitored_dbs))
+		now := time.Now()
+
+		for _, mdb := range monitored_dbs {
+			var db = make(map[string]interface{})
+			db["tag_group"] = mdb.Group
+			db["master_only"] = mdb.OnlyIfMaster
+			db["epoch_ns"] = now.UnixNano()
+			var data = [](map[string]interface{}){db}
+			msms = append(msms, MetricStoreMessage{DBUniqueName: mdb.DBUniqueName, MetricName: MONITORED_DBS_DATASTORE_SYNC_METRIC_NAME,
+				Data: data})
+		}
+		persistance_channel <- msms
+	}
+}
+
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
@@ -3531,6 +3552,17 @@ func main() {
 		}
 
 		UpdateMonitoredDBCache(monitored_dbs)
+
+		if lastMonitoredDBsUpdate.IsZero() || lastMonitoredDBsUpdate.Before(time.Now().Add(-1 * time.Second * MONITORED_DBS_DATASTORE_SYNC_INTERVAL_SECONDS)) {
+			monitored_dbs_copy := make([]MonitoredDatabase, len(monitored_dbs))
+			copy(monitored_dbs_copy, monitored_dbs)
+			if opts.BatchingDelayMs > 0 {
+				go SyncMonitoredDBsToDatastore(monitored_dbs_copy, buffered_persist_ch)
+			} else {
+				go SyncMonitoredDBsToDatastore(monitored_dbs_copy, persist_ch)
+			}
+			lastMonitoredDBsUpdate = time.Now()
+		}
 
 		if first_loop && (len(monitored_dbs) == 0 || len(metric_def_map) == 0) {
 			log.Warningf("host info refreshed, nr. of enabled hosts in configuration: %d, nr. of distinct metrics: %d", len(monitored_dbs), len(metric_def_map))
