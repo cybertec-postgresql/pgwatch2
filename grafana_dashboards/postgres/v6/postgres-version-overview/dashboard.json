@@ -23,7 +23,7 @@
       "columns": [],
       "datasource": null,
       "description": "As per  \"settings\" metric.",
-      "fontSize": "100%",
+      "fontSize": "130%",
       "gridPos": {
         "h": 14,
         "w": 24,
@@ -37,8 +37,8 @@
       "scroll": true,
       "showHeader": true,
       "sort": {
-        "col": 0,
-        "desc": true
+        "col": 1,
+        "desc": false
       },
       "styles": [
         {
@@ -50,7 +50,7 @@
             "rgba(50, 172, 45, 0.97)"
           ],
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": null,
+          "decimals": 0,
           "mappingType": 1,
           "pattern": "server_version_num",
           "thresholds": [
@@ -86,7 +86,7 @@
           "policy": "default",
           "query": "SELECT top(\"spread\", \"function_full_name\", \"oid\", $top) FROM (SELECT spread(\"total_time\") FROM \"sproc_stats\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"function_full_name\", \"oid\" fill(none) ) WHERE spread > 0",
           "rawQuery": true,
-          "rawSql": "SELECT\n  split_part(data->>'server_version'::text, ' ',  1) as server_version,\n  data->>'server_version_num' as server_version_num,\n  string_agg(DISTINCT dbname, ', ') as dbname  \nFROM\n  settings\nWHERE\n  $__timeFilter(time)\n  AND dbname IN ($dbname)\n  AND (data->>'server_version_num')::int8 <= $lower_than_server_version_num\nGROUP BY 1, 2\nORDER BY 1",
+          "rawSql": "SELECT\n  split_part(data->>'server_version'::text, ' ',  1) as server_version,\n  (data->'server_version_num')::int8 as server_version_num,\n  string_agg(DISTINCT dbname, ', ') as dbname  \nFROM\n  settings\nWHERE\n  $__timeFilter(time)\n  AND dbname IN ($dbname)\n  AND (data->>'server_version_num')::int8 <= $lower_than_server_version_num\nGROUP BY 1, 2\nORDER BY 1",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -120,6 +120,7 @@
     },
     {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2019/05/Cybertec_Logo_wei%C3%9F-transparent_300x80px-01.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "datasource": null,
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -164,7 +165,7 @@
       "type": "text"
     }
   ],
-  "schemaVersion": 19,
+  "schemaVersion": 20,
   "style": "dark",
   "tags": [],
   "templating": {
