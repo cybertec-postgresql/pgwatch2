@@ -3097,7 +3097,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'checkpoints_req')::int\nFROM\n  bgwriter\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY time\n",
+          "rawSql": "SELECT\n  0 as time,\n  sum(req - req_lag)\nFROM (\nSELECT\n  (data->'checkpoints_req')::int as req,\n  lag((data->'checkpoints_req')::int) over(order by time) as req_lag\nFROM\n  bgwriter\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\n) x\nWHERE req > req_lag\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
