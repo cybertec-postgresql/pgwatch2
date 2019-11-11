@@ -144,19 +144,25 @@ function launch_replica_image {
 
 	# start replica with port+1000
 	echo "starting image pg${ver}-repl on port $repl_port ..."
-	echo "docker run --rm -d --name pg${ver}-repl -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 $POSTGRES_IMAGE_BASE:$full_ver"
-	docker run -d --name "pg${ver}-repl" -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 ${POSTGRES_IMAGE_BASE}:${full_ver} &>/tmp/pg-docker-run-all.out
-	if [ $? -ne 0 ]; then
-		$(grep "is already in use" /tmp/pg-docker-run-all.out &>/dev/null)
-		if [[ $? -eq 0 ]] ; then
-		  echo "$full_ver replica already running on port $repl_port..."
-		  continue
-		else
-		  echo "could not start docker PG replica $full_ver on port $repl_port"
-		  docker unpause pg$ver
-		  exit 1
-		fi
+  container_info=$(docker inspect "pg${ver}-repl" &>/dev/null)
+  if [ $? -ne 0 ]; then
+    echo "docker run -d --name pg${ver}-repl -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 $POSTGRES_IMAGE_BASE:$full_ver"
+    docker run -d --name "pg${ver}-repl" -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 ${POSTGRES_IMAGE_BASE}:${full_ver} &>/tmp/pg-docker-run-all.out
+    if [ $? -ne 0 ]; then
+      $(grep "is already in use" /tmp/pg-docker-run-all.out &>/dev/null)
+      if [[ $? -eq 0 ]] ; then
+        echo "$full_ver replica already running on port $repl_port..."
+        continue
+      else
+        echo "could not start docker PG replica $full_ver on port $repl_port"
+        docker unpause pg$ver
+        exit 1
+      fi
+    fi
+	else
+	  docker start "pg${ver}-repl"
 	fi
+
 	sleep 5
 
     # unpause master

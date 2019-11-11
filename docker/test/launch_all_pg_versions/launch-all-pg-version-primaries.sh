@@ -23,17 +23,24 @@ function start_pg {
     fi
   fi
 
-  echo "starting PG $full_ver on port $port ..."
-  docker run --rm -d --name "pg${ver}" -v $volume:/var/lib/postgresql/data -p $port:5432 $POSTGRES_IMAGE_BASE:$full_ver &>/tmp/pg-docker-run-all.out
+  container_info=$(docker inspect "pg${ver}" &>/dev/null)
   if [ $? -ne 0 ]; then
-    $(grep "is already in use" /tmp/pg-docker-run-all.out &>/dev/null)
-    if [[ $? -eq 0 ]] ; then
-      echo "$full_ver already running..."
-    else
-      echo "could not start docker PG $full_ver on port $port"
-      exit 1
+    echo "starting PG $full_ver on port $port ..."
+    echo "docker run -d --name pg${ver} -v $volume:/var/lib/postgresql/data -p $port:5432 $POSTGRES_IMAGE_BASE:$full_ver"
+    docker run -d --name "pg${ver}" -v $volume:/var/lib/postgresql/data -p $port:5432 $POSTGRES_IMAGE_BASE:$full_ver &>/tmp/pg-docker-run-all.out
+    if [ $? -ne 0 ]; then
+      $(grep "is already in use" /tmp/pg-docker-run-all.out &>/dev/null)
+      if [[ $? -eq 0 ]] ; then
+        echo "$full_ver already running..."
+      else
+        echo "could not start docker PG $full_ver on port $port"
+        exit 1
+      fi
     fi
+  else
+    docker start "pg${ver}"
   fi
+
   sleep 5
 
   MASTER_VOL_PATH=$(docker volume inspect --format '{{ .Mountpoint }}' pg$ver)
@@ -109,8 +116,8 @@ for x in $PGVERS ; do
   fi
   port="543${ver}"
 
-  repl_image_running=$(docker ps -q --filter "name=pg${ver}")
-  if [ -n "$repl_image_running" ]; then
+  master_running=$(docker ps -q --filter "name=pg${ver}")
+  if [ -n "$master_running" ]; then
     echo "PG $full_ver already running"
     continue
   fi
