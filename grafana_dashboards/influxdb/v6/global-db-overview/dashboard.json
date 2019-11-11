@@ -2011,7 +2011,7 @@
       "title": "Shared buffer hit ratio",
       "tooltip": {
         "shared": true,
-        "sort": 2,
+        "sort": 1,
         "value_type": "individual"
       },
       "type": "graph",
