@@ -3133,7 +3133,7 @@ func SyncMonitoredDBsToDatastore(monitored_dbs []MonitoredDatabase, persistance_
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
-	Verbose              []bool `short:"v" long:"verbose" description:"Show verbose debug information" env:"PW2_VERBOSE"`
+	Verbose              string `short:"v" long:"verbose" description:"Chat level [DEBUG|INFO|WARN]. Default: WARN" env:"PW2_VERBOSE"`
 	Host                 string `long:"host" description:"PG config DB host" default:"localhost" env:"PW2_PGHOST"`
 	Port                 string `short:"p" long:"port" description:"PG config DB port" default:"5432" env:"PW2_PGPORT"`
 	Dbname               string `short:"d" long:"dbname" description:"PG config DB dbname" default:"pgwatch2" env:"PW2_PGDATABASE"`
@@ -3207,16 +3207,25 @@ func main() {
 		fmt.Println(GitVersionHash)
 		os.Exit(0)
 	}
-	if len(opts.Verbose) >= 2 {
+
+	if strings.ToUpper(opts.Verbose) == "DEBUG" {
 		logging.SetLevel(logging.DEBUG, "main")
-	} else if len(opts.Verbose) == 1 {
+	} else if strings.ToUpper(opts.Verbose) == "INFO" {
 		logging.SetLevel(logging.INFO, "main")
-	} else {
+	} else if strings.HasPrefix(strings.ToUpper(opts.Verbose), "WARN") {
 		logging.SetLevel(logging.WARNING, "main")
+	} else {
+		if len(opts.Verbose) >= 2 {
+			logging.SetLevel(logging.DEBUG, "main")
+		} else if len(opts.Verbose) == 1 {
+			logging.SetLevel(logging.INFO, "main")
+		} else {
+			logging.SetLevel(logging.WARNING, "main")
+		}
 	}
 	logging.SetFormatter(logging.MustStringFormatter(`%{level:.4s} %{shortfunc}: %{message}`))
 
-	log.Debug("opts", opts)
+	log.Debugf("opts: %+v", opts)
 
 	if opts.ServersRefreshLoopSeconds <= 1 {
 		log.Fatal("--servers-refresh-loop-seconds must be greater than 1")
