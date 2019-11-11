@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 
 # To import all dashboards using default datasource
 
@@ -10,7 +10,8 @@ export PGDATABASE=pgwatch2_grafana
 GRAFANA_DB_TYPE=postgres
 GRAFANA_MAJOR_VER=6
 DASHBOARDS_BASE_PATH="."  # change if executing not from file's original Git location
-DASHBOARD_NAME_SUFFIX=`date +%Y-%m-%d`  # adjust if no extra info wanted besides the imported dashboard name
+DASHBOARD_NAME_SUFFIX=  # adjust if no extra info wanted besides the imported dashboard name
+# DASHBOARD_NAME_SUFFIX=`date +%Y-%m-%d`
 
 DEFAULT_DATASOURCE_ID=$(psql -qXAt -c "select id from data_source where is_default")
 if [[ $? -ne 0 ]] ; then
