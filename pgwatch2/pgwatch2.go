@@ -2841,8 +2841,8 @@ func ConfigFileToMonitoredDatabases(configFilePath string) ([]MonitoredDatabase,
 	}
 	// TODO check mod timestamp or hash, from a global "caching map"
 	c := make([]MonitoredDatabase, 0) // there can be multiple configs in a single file
-	confContent = []byte(os.ExpandEnv(string(yamlFile)))
-	err = yaml.Unmarshal(confContent, &c)
+	yamlFile = []byte(os.ExpandEnv(string(yamlFile)))
+	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {
 		log.Errorf("Unmarshaling error: %v", err)
 		return hostList, err
