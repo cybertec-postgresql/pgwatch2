@@ -1,0 +1,27 @@
+{{- if .Values.pgwatch2.persistentVolumes.database.enabled -}}
+{{- if not .Values.pgwatch2.persistentVolumes.database.existingClaim -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  {{- if .Values.pgwatch2.persistentVolumes.database.annotations }}
+  annotations:
+{{ toYaml .Values.pgwatch2.persistentVolumes.database.annotations | indent 4 }}
+  {{- end }}
+  labels:
+{{ include "pgwatch2.labels" . | indent 4 }}
+  name: {{ include "pgwatch2.fullname" . }}-database
+spec:
+  accessModes:
+{{ toYaml .Values.pgwatch2.persistentVolumes.database.accessModes | indent 4 }}
+{{- if .Values.pgwatch2.persistentVolumes.database.storageClass }}
+{{- if (eq "-" .Values.pgwatch2.persistentVolumes.database.storageClass) }}
+  storageClassName: ""
+{{- else }}
+  storageClassName: "{{ .Values.pgwatch2.persistentVolumes.database.storageClass }}"
+{{- end }}
+{{- end }}
+  resources:
+    requests:
+      storage: "{{ .Values.pgwatch2.persistentVolumes.database.size }}"
+{{- end -}}
+{{- end -}}
