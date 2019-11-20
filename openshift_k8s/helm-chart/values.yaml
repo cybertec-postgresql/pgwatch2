@@ -1,0 +1,102 @@
+pgwatch2:
+  testDBEnabled: true
+  datastore: postgres
+  persistentVolumes:
+    config:
+      enabled: true
+      annotations: {}
+      accessModes:
+        - ReadWriteOnce
+      existingClaim: ""
+      mountPath: /pgwatch2/persistent-config
+      size: 2Gi
+    database:
+      enabled: true
+      annotations: {}
+      accessModes:
+        - ReadWriteOnce
+      existingClaim: ""
+      mountPath: /var/lib/postgresql
+      size: 4Gi
+
+web:
+  service:
+    type: ClusterIP
+    servicePort: 80
+  noAnonymous: false
+  user: admin
+  password: pgwatch2admin # password will be auto generated if emtpy
+  ingress:
+    enabled: false
+    annotations: {}
+    host: pgwatch2-web.local
+    tls: []
+    #  - secretName: chart-web-tls
+    #    hosts:
+    #      - pgwatch2-web.local
+
+grafana:
+  service:
+    type: ClusterIP
+    servicePort: 3000
+  noAnonymous: false
+  user: admin
+  password: pgwatch2admin # password will be auto generated if emtpy
+  ingress:
+    enabled: false
+    annotations: {}
+    host: pgwatch2-grafana.local
+    tls: []
+    #  - secretName: chart-grafana-tls
+    #    hosts:
+    #      - pgwatch2-grafana.local
+
+
+exporter:
+  service:
+    type: ClusterIP
+    servicePort: 9187
+  ingress:
+    enabled: false
+    annotations: {}
+    host: pgwatch2-exporter.local
+    tls: []
+    #  - secretName: chart-exporter-tls
+    #    hosts:
+    #      - pgwatch2-exporter.local
+
+
+replicaCount: 1
+
+image:
+  repository: cybertec/pgwatch2-postgres
+  tag: 1.6.2
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+podSecurityContext: {}
+
+securityContext: {}
+
+resources:
+  limits:
+    cpu: 400m
+    memory: 512Mi
+  requests:
+    cpu: 400m
+    memory: 512Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

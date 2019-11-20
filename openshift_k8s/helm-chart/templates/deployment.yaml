@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pgwatch2.fullname" . }}
+  labels:
+{{ include "pgwatch2.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "pgwatch2.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "pgwatch2.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ template "pgwatch2.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- if .Values.pgwatch2.testDBEnabled }}
+            - name: PW2_TESTDB
+              value: "1"
+            {{- else }}
+            - name: NOTESTDB
+              value: "1"
+            {{- end }}
+            - name: PW2_DATASTORE
+              value: "{{ .Values.pgwatch2.datastore }}"
+            {{- if .Values.web.noAnonymous }}
+            - name: PW2_WEBNOANONYMOUS
+              value: "{{ .Values.web.noAnonymous }}"
+            - name: PW2_WEBUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "pgwatch2.fullname" . }}-web
+                  key: user
+            - name: PW2_WEBPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "pgwatch2.fullname" . }}-web
+                  key: password
+            {{- end }}
+            {{- if .Values.grafana.noAnonymous }}
+            - name: PW2_GRAFANANOANONYMOUS
+              value: "{{ .Values.grafana.noAnonymous }}"
+            - name: PW2_GRAFANAUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "pgwatch2.fullname" . }}-grafana
+                  key: user
+            - name: PW2_GRAFANAPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "pgwatch2.fullname" . }}-grafana
+                  key: password
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: exporter
+              containerPort: 9187
+              protocol: TCP
+            - name: grafana
+              containerPort: 3000
+              protocol: TCP
+            - name: database
+              containerPort: 5432
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 3
+          volumeMounts:
+            - name: config-volume
+              mountPath: {{ .Values.pgwatch2.persistentVolumes.config.mountPath }}
+            - name: database-volume
+              mountPath: {{ .Values.pgwatch2.persistentVolumes.database.mountPath }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: config-volume
+        {{- if .Values.pgwatch2.persistentVolumes.config.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ if .Values.pgwatch2.persistentVolumes.config.existingClaim }}{{ .Values.pgwatch2.persistentVolumes.config.existingClaim }}{{- else }}{{ include "pgwatch2.fullname" . }}-config{{- end }}
+        {{- else }}
+          emptyDir:
+        {{ end }}
+        - name: database-volume
+        {{- if .Values.pgwatch2.persistentVolumes.database.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ if .Values.pgwatch2.persistentVolumes.database.existingClaim }}{{ .Values.pgwatch2.persistentVolumes.database.existingClaim }}{{- else }}{{ include "pgwatch2.fullname" . }}-database{{- end }}
+        {{ else }}
+        emptyDir:
+        {{ end }}
+        {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
