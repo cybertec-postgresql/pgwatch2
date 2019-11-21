@@ -4,16 +4,12 @@ pgwatch2:
 
 web:
   service:
-    type: ClusterIP
+    type: NodePort
     servicePort: 8080
-#    nodePort: 30000
+    nodePort: 30000
   noAnonymous: false
-#  user: pgwatch2
-#  password: password
-  ingress:
-    enabled: false
-    annotations:
-      nginx.ingress.kubernetes.io/rewrite-target: /$1
+  user: pgwatch2
+  password: password
 
 exporter:
   service:
@@ -29,7 +25,5 @@ grafana:
     servicePort: 3000
     nodePort: 30002
   noAnonymous: false
-  ingress:
-    enabled: true
-#  user: pgwatch2
-#  password: password
+  user: pgwatch2
+  password: password

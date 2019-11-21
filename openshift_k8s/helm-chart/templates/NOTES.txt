@@ -1,4 +1,4 @@
-1. Get the application URL by running these commands:
+1. Get the application URL of pgwatch2 by running these commands:
 {{- if .Values.web.ingress.enabled }}
   http{{ if $.Values.web.ingress.tls }}s{{ end }}://{{ .Values.web.ingress.host }}
 {{- else if contains "NodePort" .Values.web.service.type }}
