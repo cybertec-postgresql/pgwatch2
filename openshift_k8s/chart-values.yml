@@ -1,6 +1,5 @@
 pgwatch2:
   testDBEnabled: true
-  datastore: prometheus
 
 web:
   service:
