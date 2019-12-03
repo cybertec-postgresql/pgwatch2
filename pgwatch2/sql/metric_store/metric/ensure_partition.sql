@@ -10,6 +10,9 @@ RETURNS void AS
   expects the "metrics_template" table to exist.
 */
 $SQL$
+DECLARE
+    l_template_table text := 'admin.metrics_template';
+    l_unlogged text := '';
 BEGIN
   
   IF NOT EXISTS (SELECT 1
@@ -18,8 +21,11 @@ BEGIN
                     AND schemaname = 'public')
   THEN
     --RAISE NOTICE 'creating partition % ...', metric;
-   
-    EXECUTE format($$CREATE TABLE IF NOT EXISTS public.%s (LIKE admin.metrics_template INCLUDING INDEXES)$$, quote_ident(metric));
+    IF metric ~ 'realtime' THEN
+        l_template_table := 'admin.metrics_template_realtime';
+        l_unlogged := 'UNLOGGED';
+    END IF;
+    EXECUTE format($$CREATE %s TABLE IF NOT EXISTS public.%s (LIKE %s INCLUDING INDEXES)$$, l_unlogged, quote_ident(metric), l_template_table);
     EXECUTE format($$COMMENT ON TABLE public.%s IS 'pgwatch2-generated-metric-lvl'$$, quote_ident(metric));
   END IF;
 

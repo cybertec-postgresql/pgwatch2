@@ -137,7 +137,7 @@ BEGIN
             'subpartitions.' || quote_ident(c.relname) as time_partition_name,
             pg_catalog.pg_get_expr(c.relpartbound, c.oid) as limits,
             (regexp_match(pg_catalog.pg_get_expr(c.relpartbound, c.oid),
-                E'TO \\((''.*?'')'))[1]::timestamp < (current_date  - '1day'::interval * older_than_days) is_old
+                E'TO \\((''.*?'')'))[1]::timestamp < (current_date  - '1day'::interval * (case when c.relname::text ~ 'realtime' then 0 else older_than_days end)) is_old
         FROM
             pg_class c
           JOIN

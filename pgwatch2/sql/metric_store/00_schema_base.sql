@@ -54,6 +54,8 @@ RETURNS boolean AS
 $SQL$
 DECLARE
   l_schema_type text;
+  l_template_table text := 'admin.metrics_template';
+  l_unlogged text := '';
 BEGIN
   SELECT schema_type INTO l_schema_type FROM admin.storage_schema_type;
 
@@ -62,13 +64,17 @@ BEGIN
                     WHERE tablename = metric
                       AND schemaname = 'public')
     THEN
+      IF metric ~ 'realtime' THEN
+          l_template_table := 'admin.metrics_template_realtime';
+          l_unlogged := 'UNLOGGED';
+      END IF;
 
       IF l_schema_type = 'metric' THEN
-        EXECUTE format($$CREATE TABLE public."%s" (LIKE admin.metrics_template INCLUDING INDEXES)$$, metric);
+        EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES)$$, l_unlogged, metric, l_template_table);
       ELSIF l_schema_type = 'metric-time' THEN
-        EXECUTE format($$CREATE TABLE public."%s" (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY RANGE (time)$$, metric);
+        EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES) PARTITION BY RANGE (time)$$, l_unlogged, metric, l_template_table);
       ELSIF l_schema_type = 'metric-dbname-time' THEN
-        EXECUTE format($$CREATE TABLE public."%s" (LIKE admin.metrics_template INCLUDING INDEXES) PARTITION BY LIST (dbname)$$, metric);
+        EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES) PARTITION BY LIST (dbname)$$, l_unlogged, metric, l_template_table);
       END IF;
 
       EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);

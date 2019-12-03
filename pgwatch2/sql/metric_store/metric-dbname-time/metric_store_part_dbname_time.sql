@@ -46,6 +46,24 @@ COMMENT ON TABLE subpartitions."mymetric_mydbname_y2019w01" IS 'pgwatch2-generat
 
 */
 
+
+/* "realtime" metrics are non-persistent and have 1d retention */
+
+-- drop table if exists metrics_template_realtime;
+create unlogged table admin.metrics_template_realtime (
+    time timestamptz not null default now(),
+    dbname text not null,
+    data jsonb not null,
+    tag_data jsonb,  -- no index!
+    check (false)
+);
+
+comment on table admin.metrics_template_realtime is 'used as a template for all new realtime metric definitions';
+
+-- create index on admin.metrics_template using brin (dbname, time) with (pages_per_range=32);  /* consider BRIN instead for large data amounts */
+create index on admin.metrics_template_realtime (dbname, time);
+
+
 RESET ROLE;
 
 insert into admin.storage_schema_type select 'metric-dbname-time';

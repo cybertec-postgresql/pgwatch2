@@ -28,3 +28,10 @@ For cases where the available presets are not satisfactory / applicable. All dat
 When you're planning to monitor lots of databases or with very low intervals, i.e. generating a lot of data, but not selecting
 all of it actively (alerting / Grafana) then it would make sense to consider BRIN indexes to save a lot on storage space. See
 the according commented out line in the table template definition file.
+
+# Notice on "realtime" metrics
+
+Metrics that have the string 'realtime' in them are handled differently on storage level to draw less resources:
+
+ * They're not normal persistent tables but UNLOGGED tables, meaning they're not WAL-logged and cleared on crash
+ * Such subpartitions are dropped after 1d
