@@ -5,7 +5,7 @@ SELECT
     extract(epoch FROM (now() - query_start))::int AS duration_s,
     (wait_event_type IS NOT NULL)::int AS waiting,
     array_to_string(pg_blocking_pids(pid), ',') as blocking_pids,
-    ltrim(regexp_replace(query, E'[ \\t\\n\\r]+' , ' ', 'g'))::varchar(200) AS query
+    ltrim(regexp_replace(query, E'[ \\t\\n\\r]+' , ' ', 'g'))::varchar(300) AS query
 FROM
     pg_stat_activity
 WHERE

@@ -10,7 +10,7 @@ SELECT
         else
             null
     end as blocking_pids,
-    ltrim(regexp_replace(query, E'[ \\t\\n\\r]+' , ' ', 'g'))::varchar(200) AS query
+    ltrim(regexp_replace(query, E'[ \\t\\n\\r]+' , ' ', 'g'))::varchar(300) AS query
 FROM
     pg_stat_activity sa
 WHERE
