@@ -1,6 +1,6 @@
 SELECT
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-    pid,
+    pid as tag_pid,
     usename::text AS user,
     extract(epoch FROM (now() - query_start))::int AS duration_s,
     waiting::int,

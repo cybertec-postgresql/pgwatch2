@@ -34,8 +34,8 @@
       "pageSize": null,
       "showHeader": true,
       "sort": {
-        "col": null,
-        "desc": false
+        "col": 3,
+        "desc": true
       },
       "styles": [
         {
@@ -116,44 +116,71 @@
           "type": "string",
           "unit": "short",
           "valueMaps": []
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Time",
+          "thresholds": [],
+          "type": "hidden",
+          "unit": "short"
         }
       ],
       "targets": [
         {
-          "format": "table",
-          "group": [],
-          "metricColumn": "none",
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT\n  last(\"user\") AS \"user\",\n  last(\"duration_s\") AS \"duration\",\n  last(\"waiting\") AS \"waiting\",\n  last(\"blocking_pids\") AS \"blocking_pids\",\n  last(\"query\") AS \"query\"\nFROM\n  stat_activity_realtime\nWHERE\n  $timeFilter\n  AND dbname = '$dbname'\nGROUP BY pid",
           "rawQuery": true,
-          "rawSql": "SELECT\n  tag_data->>'pid' AS pid,\n  data->>'user' AS user,\n  (data->'duration_s')::int AS duration,\n  data->>'waiting' AS waiting,\n  coalesce(data->>'blocking_pids', '') AS blocking_pids,\n  data->>'query' AS query\nFROM\n  stat_activity_realtime\nWHERE\n  dbname = '$dbname'\n  AND time = (SELECT max(time) FROM stat_activity_realtime WHERE dbname = '$dbname' AND $__timeFilter(time))\n  AND (data->'duration_s')::int > $min_duration_s\nORDER BY\n  duration DESC\nLIMIT 25\n\n\n\n\n\n\n\n\n\n\n\n\n",
           "refId": "A",
+          "resultFormat": "table",
           "select": [
             [
               {
                 "params": [
                   "value"
                 ],
-                "type": "column"
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
               }
             ]
           ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
+          "tags": []
         }
       ],
-      "timeFrom": null,
+      "timeFrom": "5s",
       "timeShift": null,
       "title": "Stat Activity",
       "transform": "table",
       "type": "table"
     }
   ],
-  "refresh": "5s",
+  "refresh": "2s",
   "schemaVersion": 21,
   "style": "dark",
   "tags": [],
@@ -162,14 +189,14 @@
       {
         "allValue": null,
         "datasource": null,
-        "definition": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics WHERE metric = 'stat_activity_realtime' ORDER BY 1;",
+        "definition": "SHOW TAG VALUES FROM \"stat_activity_realtime\" WITH KEY = \"dbname\"",
         "hide": 0,
         "includeAll": false,
         "label": null,
         "multi": false,
         "name": "dbname",
         "options": [],
-        "query": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics WHERE metric = 'stat_activity_realtime' ORDER BY 1;",
+        "query": "SHOW TAG VALUES FROM \"stat_activity_realtime\" WITH KEY = \"dbname\"",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -190,6 +217,7 @@
         "name": "min_duration_s",
         "options": [
           {
+            "selected": true,
             "text": "1",
             "value": "1"
           }
