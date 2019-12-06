@@ -104,6 +104,22 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": null,
+          "mappingType": 1,
+          "pattern": "/^last_/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "dtdurations"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
           "decimals": 2,
           "pattern": "/.*/",
           "thresholds": [],
@@ -135,7 +151,7 @@
           "policy": "default",
           "query": "select \"dbname\",   \"table_full_name\", top(\"total_relation_size_b\", $top ) as \"total_relation_size\", \"data_size\"  from (SELECT last(\"total_relation_size_b\") as \"total_relation_size_b\", last(\"table_size_b\") as \"data_size\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(3650d), dbname, table_full_name  fill(none))",
           "rawQuery": true,
-          "rawSql": "SELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0)) as data_size\nFROM\n  table_stats\nWHERE\n  time IN (select max(time) from table_stats where $__timeFilter(time) AND dbname in ($dbname) group by dbname)\n  AND dbname IN ($dbname)  -- idea: show only primaries?\nGROUP BY 1, 2\nORDER BY 3 DESC NULLS LAST\nLIMIT $top\n",
+          "rawSql": "SELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0)) as data_size,\n  max((data->'seconds_since_last_vacuum')::int) as last_vacuum,\n  max((data->'seconds_since_last_analyze')::int) as last_analyze\nFROM\n  table_stats\nWHERE\n  time IN (select max(time) from table_stats where $__timeFilter(time) AND dbname in ($dbname) group by dbname)\n  AND dbname IN ($dbname)  -- idea: show only primaries?\nGROUP BY 1, 2\nORDER BY 3 DESC NULLS LAST\nLIMIT $top\n",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -172,7 +188,7 @@
       "datasource": null,
       "fontSize": "100%",
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 24,
         "x": 0,
         "y": 6
@@ -253,6 +269,22 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": null,
+          "mappingType": 1,
+          "pattern": "/^last_/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "dtdurations"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
           "decimals": 2,
           "pattern": "/.*/",
           "thresholds": [],
@@ -284,7 +316,7 @@
           "policy": "default",
           "query": "select \"dbname\",   \"table_full_name\", top(\"table_size\", $top ) as \"data_size\",  \"total_relation_size\"  from (SELECT last(\"total_relation_size_b\") as \"total_relation_size\", last(\"table_size_b\") as \"table_size\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY  dbname, table_full_name  fill(none))",
           "rawQuery": true,
-          "rawSql": "SELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0)) as data_size\nFROM\n  table_stats\nWHERE\n  time IN (select max(time) from table_stats where $__timeFilter(time) AND dbname in ($dbname) group by dbname)\n  AND dbname IN ($dbname)  -- idea: show only primaries?\nGROUP BY 1, 2\nORDER BY 4 DESC NULLS LAST\nLIMIT $top\n",
+          "rawSql": "SELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0)) as data_size,\n  max((data->'seconds_since_last_vacuum')::int) as last_vacuum,\n  max((data->'seconds_since_last_analyze')::int) as last_analyze  \nFROM\n  table_stats\nWHERE\n  time IN (select max(time) from table_stats where $__timeFilter(time) AND dbname in ($dbname) group by dbname)\n  AND dbname IN ($dbname)  -- idea: show only primaries?\nGROUP BY 1, 2\nORDER BY 4 DESC NULLS LAST\nLIMIT $top\n",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -324,7 +356,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 13
       },
       "id": 5,
       "links": [],
@@ -402,6 +434,22 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": null,
+          "mappingType": 1,
+          "pattern": "/^last_/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "dtdurations"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
           "decimals": 2,
           "pattern": "/.*/",
           "thresholds": [],
@@ -433,7 +481,7 @@
           "policy": "default",
           "query": "select dbname, table_full_name,  top(growth, $top)  as growth from (SELECT spread(\"total_relation_size_b\") as growth FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY dbname, table_full_name fill(none))",
           "rawQuery": true,
-          "rawSql": "SELECT\n  dbname,\n  table_full_name,\n  max(last_value) - max(first_value) as growth,\n  max(last_value) as total_relation_size\nFROM (\n  SELECT\n    dbname,\n    tag_data->>'table_full_name' as table_full_name,\n    first_value((data->'total_relation_size_b')::int8) over w,\n    last_value((data->'total_relation_size_b')::int8) over w\n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time)\n    AND dbname IN ($dbname)  -- idea: show only primaries?\n    WINDOW w AS (partition by dbname, tag_data->>'table_full_name' order by time rows BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)\n) x\nGROUP BY 1, 2\nORDER BY 3 DESC NULLS LAST\nLIMIT $top\n",
+          "rawSql": "SELECT\n  dbname,\n  table_full_name,\n  max(last_value) - max(first_value) as growth,\n  max(last_value) as total_relation_size,\n  max(last_vacuum) as last_vacuum,\n  max(last_analyze) as last_analyze\nFROM (\n  SELECT\n    dbname,\n    tag_data->>'table_full_name' as table_full_name,\n    first_value((data->'total_relation_size_b')::int8) over w,\n    last_value((data->'total_relation_size_b')::int8) over w,\n    last_value((data->'seconds_since_last_vacuum')::int8) over w as last_vacuum,\n    last_value((data->'seconds_since_last_analyze')::int8) over w as last_analyze\n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time)\n    AND dbname IN ($dbname)  -- idea: show only primaries?\n    WINDOW w AS (partition by dbname, tag_data->>'table_full_name' order by time rows BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)\n) x\nGROUP BY 1, 2\nORDER BY 3 DESC NULLS LAST\nLIMIT $top\n",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -471,10 +519,10 @@
       "description": "",
       "fontSize": "100%",
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 19
       },
       "id": 4,
       "links": [],
@@ -552,6 +600,22 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": null,
+          "mappingType": 1,
+          "pattern": "/^last_/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "dtdurations"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
           "decimals": 2,
           "pattern": "/.*/",
           "thresholds": [],
@@ -583,7 +647,7 @@
           "policy": "default",
           "query": "select \"dbname\", top(\"seq_scan\", $top) as \"seq_scan\",  \"table_full_name\", table_size from (select mean(\"seq_scan\") as \"seq_scan\", last(\"table_size\") as \"table_size\" from (SELECT non_negative_derivative(last(\"seq_scan\"), 1h) as \"seq_scan\", last(\"table_size_b\") as \"table_size\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter AND \"table_size_b\" > 10000000 GROUP BY time($__interval), dbname, table_full_name fill(none)) GROUP BY dbname, table_full_name fill(none))\n",
           "rawQuery": true,
-          "rawSql": "SELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'seq_scan')::int8) - min((data->'seq_scan')::int8) as seq_scan,\n  max((data->'table_size_b')::int8) + coalesce(max((data->'toast_size_b')::int8), 0) as table_size  -- a bit simpliefied, window functions better...\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\n  AND (data->'total_relation_size_b')::int8 > 10000000\nGROUP BY\n  1, 2\nORDER BY\n  3 DESC\nLIMIT\n  $top",
+          "rawSql": "SELECT\n  *,\n  (select (data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0) from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as table_size,\n  (select (data->'seconds_since_last_vacuum')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_vacuum,\n  (select (data->'seconds_since_last_analyze')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'seq_scan')::int8) - min((data->'seq_scan')::int8) as seq_scan\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\n  AND (data->'total_relation_size_b')::int8 > 10000000\nGROUP BY\n  1, 2\nHAVING\n  max((data->'seq_scan')::int8) > min((data->'seq_scan')::int8)\nORDER BY\n  3 DESC\nLIMIT\n  $top\n) ts",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -624,10 +688,11 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 26
       },
       "id": 6,
       "links": [],
+      "options": {},
       "pageSize": null,
       "scroll": true,
       "showHeader": true,
@@ -702,6 +767,22 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": null,
+          "mappingType": 1,
+          "pattern": "/^last_/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "dtdurations"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
           "decimals": 2,
           "pattern": "/.*/",
           "thresholds": [],
@@ -733,7 +814,7 @@
           "policy": "default",
           "query": "select dbname, table_full_name, top(ins, $top) as \"ins\" from (select mean(ins) as \"ins\" from (SELECT non_negative_derivative(last(\"n_tup_ins\"), 1h) as \"ins\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h), dbname, table_full_name fill(0)) GROUP BY dbname, table_full_name)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_ins')::int8) - min((data->'n_tup_ins')::int8) as ins,\n  max((data->'total_relation_size_b')::int8) as total_relation_size  -- a bit simpliefied, window functions better...\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nORDER BY\n  3 DESC NULLS LAST, 4 DESC NULLS LAST\nLIMIT\n  $top",
+          "rawSql": "SELECT\n  *,\n  (select (data->'total_relation_size_b')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as total_relation_size,  \n  (select (data->'seconds_since_last_vacuum')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_vacuum,\n  (select (data->'seconds_since_last_analyze')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_ins')::int8) - min((data->'n_tup_ins')::int8) as ins\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'n_tup_ins')::int8) > min((data->'n_tup_ins')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) ts",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -774,7 +855,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 32
       },
       "id": 7,
       "links": [],
@@ -852,6 +933,22 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": null,
+          "mappingType": 1,
+          "pattern": "/^last_/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "dtdurations"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
           "decimals": 2,
           "pattern": "/.*/",
           "thresholds": [],
@@ -883,7 +980,7 @@
           "policy": "default",
           "query": "select dbname, table_full_name, top(ins, $top) as \"upd\" from (select mean(ins) as \"ins\" from (SELECT non_negative_derivative(last(\"n_tup_upd\"), 1h) as \"ins\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h), dbname, table_full_name fill(0)) GROUP BY dbname, table_full_name)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_upd')::int8) - min((data->'n_tup_upd')::int8) as upd,\n  max((data->'total_relation_size_b')::int8) as total_relation_size  -- a bit simpliefied, window functions better...\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nORDER BY\n  3 DESC NULLS LAST, 4 DESC NULLS LAST\nLIMIT\n  $top",
+          "rawSql": "SELECT\n  *,\n  (select (data->'total_relation_size_b')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as total_relation_size,  \n  (select (data->'seconds_since_last_vacuum')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_vacuum,\n  (select (data->'seconds_since_last_analyze')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_upd')::int8) - min((data->'n_tup_upd')::int8) as upd -- assumes no reset\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'n_tup_upd')::int8) > min((data->'n_tup_upd')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) ts",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -924,7 +1021,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 38
       },
       "id": 8,
       "links": [],
@@ -1002,6 +1099,22 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": null,
+          "mappingType": 1,
+          "pattern": "/^last_/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "dtdurations"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
           "decimals": 2,
           "pattern": "/.*/",
           "thresholds": [],
@@ -1033,7 +1146,7 @@
           "policy": "default",
           "query": "select dbname, table_full_name, top(ins, $top) as \"del\" from (select mean(ins) as \"ins\"  from (SELECT non_negative_derivative(last(\"n_tup_del\"), 1h) as \"ins\"  FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h), dbname, table_full_name fill(0)) GROUP BY dbname, table_full_name)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_del')::int8) - min((data->'n_tup_del')::int8) as del,\n  max((data->'total_relation_size_b')::int8) as total_relation_size  -- a bit simpliefied, window functions better...\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nORDER BY\n  3 DESC NULLS LAST, 4 DESC NULLS LAST\nLIMIT\n  $top",
+          "rawSql": "SELECT\n  *,\n  (select (data->'total_relation_size_b')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as total_relation_size,\n  (select (data->'seconds_since_last_vacuum')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_vacuum,\n  (select (data->'seconds_since_last_analyze')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_del')::int8) - min((data->'n_tup_del')::int8) as del\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'n_tup_del')::int8) > min((data->'n_tup_del')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) ts\n",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -1067,11 +1180,12 @@
     },
     {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2019/05/Cybertec_Logo_wei%C3%9F-transparent_300x80px-01.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "datasource": null,
       "gridPos": {
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 44
       },
       "id": 10,
       "links": [],
