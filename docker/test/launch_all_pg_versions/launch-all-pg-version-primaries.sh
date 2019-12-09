@@ -23,7 +23,7 @@ function start_pg {
     fi
   fi
 
-  container_info=$(docker inspect "pg${ver}" &>/dev/null)
+  container_info=$(docker inspect --type container "pg${ver}" &>/dev/null)
   if [ $? -ne 0 ]; then
     echo "starting PG $full_ver on port $port ..."
     echo "docker run -d --name pg${ver} -v $volume:/var/lib/postgresql/data -p $port:5432 $POSTGRES_IMAGE_BASE:$full_ver"
