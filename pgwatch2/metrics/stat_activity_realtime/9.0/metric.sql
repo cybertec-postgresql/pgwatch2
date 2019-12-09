@@ -2,6 +2,8 @@ SELECT
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     pid as tag_pid,
     usename::text AS user,
+    application_name AS appname,
+    coalesce(client_addr::text, 'local') AS ip,
     extract(epoch FROM (now() - query_start))::int AS duration_s,
     waiting::int,
     case when sa.waiting then

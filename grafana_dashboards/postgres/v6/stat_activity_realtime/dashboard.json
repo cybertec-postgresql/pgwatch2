@@ -124,7 +124,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT\n  tag_data->>'pid' AS pid,\n  data->>'user' AS user,\n  (data->'duration_s')::int AS duration,\n  data->>'waiting' AS waiting,\n  coalesce(data->>'blocking_pids', '') AS blocking_pids,\n  data->>'query' AS query\nFROM\n  stat_activity_realtime\nWHERE\n  dbname = '$dbname'\n  AND time = (SELECT max(time) FROM stat_activity_realtime WHERE dbname = '$dbname' AND $__timeFilter(time))\n  AND (data->'duration_s')::int > $min_duration_s\nORDER BY\n  duration DESC\nLIMIT 25\n\n\n\n\n\n\n\n\n\n\n\n\n",
+          "rawSql": "SELECT\n  tag_data->>'pid' AS pid,\n  data->>'user' AS user,\n  data->>'appname' AS appname,\n  data->>'ip' AS ip,\n  (data->'duration_s')::int AS duration,\n  data->>'waiting' AS waiting,\n  coalesce(data->>'blocking_pids', '') AS blocking_pids,\n  data->>'query' AS query\nFROM\n  stat_activity_realtime\nWHERE\n  dbname = '$dbname'\n  AND time = (SELECT max(time) FROM stat_activity_realtime WHERE dbname = '$dbname' AND $__timeFilter(time))\n  AND (data->'duration_s')::int > $min_duration_s\nORDER BY\n  duration DESC\nLIMIT 25\n\n\n\n\n\n\n\n\n\n\n\n\n",
           "refId": "A",
           "select": [
             [

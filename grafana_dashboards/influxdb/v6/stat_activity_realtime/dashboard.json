@@ -34,7 +34,7 @@
       "pageSize": null,
       "showHeader": true,
       "sort": {
-        "col": 3,
+        "col": 5,
         "desc": true
       },
       "styles": [
@@ -152,7 +152,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT\n  last(\"user\") AS \"user\",\n  last(\"duration_s\") AS \"duration\",\n  last(\"waiting\") AS \"waiting\",\n  last(\"blocking_pids\") AS \"blocking_pids\",\n  last(\"query\") AS \"query\"\nFROM\n  stat_activity_realtime\nWHERE\n  $timeFilter\n  AND dbname = '$dbname'\nGROUP BY pid",
+          "query": "SELECT\n  last(\"user\") AS \"user\",\n  last(\"appname\") AS \"appname\",\n  last(\"ip\") AS \"ip\",\n  last(\"duration_s\") AS \"duration\",\n  last(\"waiting\") AS \"waiting\",\n  last(\"blocking_pids\") AS \"blocking_pids\",\n  last(\"query\") AS \"query\"\nFROM\n  stat_activity_realtime\nWHERE\n  $timeFilter\n  AND dbname = '$dbname'\nGROUP BY pid",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "table",

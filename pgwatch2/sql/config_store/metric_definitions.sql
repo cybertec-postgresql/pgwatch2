@@ -3459,6 +3459,8 @@ SELECT
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     pid as tag_pid,
     usename::text AS user,
+    application_name AS appname,
+    coalesce(client_addr::text, 'local') AS ip,
     extract(epoch FROM (now() - query_start))::int AS duration_s,
     waiting::int,
     case when sa.waiting then
@@ -3490,6 +3492,8 @@ SELECT
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     pid as tag_pid,
     usename::text AS user,
+    application_name AS appname,
+    coalesce(client_addr::text, 'local') AS ip,
     extract(epoch FROM (now() - query_start))::int AS duration_s,
     waiting::int,
     case when sa.waiting then
@@ -3521,6 +3525,8 @@ SELECT
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     pid as tag_pid,
     usename::text AS user,
+    application_name AS appname,
+    coalesce(client_addr::text, 'local') AS ip,
     extract(epoch FROM (now() - query_start))::int AS duration_s,
     (wait_event_type IS NOT NULL)::int AS waiting,
     array_to_string(pg_blocking_pids(pid), ',') as blocking_pids,
@@ -3546,7 +3552,9 @@ $sql$
 SELECT
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     pid as tag_pid,
-    usename AS user,
+    usename::text AS user,
+    application_name AS appname,
+    coalesce(client_addr::text, 'local') AS ip,
     extract(epoch FROM (now() - query_start))::int AS duration_s,
     (coalesce(wait_event_type, '') IN ('LWLockNamed', 'Lock', 'BufferPin'))::int AS waiting,
     array_to_string(pg_blocking_pids(pid), ',') as blocking_pids,
