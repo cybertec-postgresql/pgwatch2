@@ -21,6 +21,7 @@
     {
       "columns": [],
       "datasource": null,
+      "description": "NB! Most views here assume that there was no stats reset in the selected time range!",
       "fontSize": "100%",
       "gridPos": {
         "h": 6,
@@ -1179,13 +1180,164 @@
       "type": "table"
     },
     {
+      "columns": [],
+      "datasource": null,
+      "description": "Based on pg_statio_user_tables. NB! Assumes  8KB page size (change the query if not so). Also note that due to OS file system cache only some reads will hit the disk",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 11,
+      "links": [],
+      "options": {},
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 2,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens 'Table details' dashboard for that table",
+          "linkUrl": "/dashboard/db/table-details?var-dbname=${__cell_0}&var-table_full_name=${__cell}&from=$__from&to=$__to",
+          "mappingType": 1,
+          "pattern": "table_full_name",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "total_relation_size",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": null,
+          "mappingType": 1,
+          "pattern": "/^last_/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "dtdurations"
+        },
+        {
+          "alias": "",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 1,
+          "pattern": "blks_read",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        }
+      ],
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "table_stats",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select dbname, table_full_name, top(ins, $top) as \"del\" from (select mean(ins) as \"ins\"  from (SELECT non_negative_derivative(last(\"n_tup_del\"), 1h) as \"ins\"  FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h), dbname, table_full_name fill(0)) GROUP BY dbname, table_full_name)",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  *,\n  (select (data->'seconds_since_last_vacuum')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_vacuum,\n  (select (data->'seconds_since_last_analyze')::int from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  8192 * (coalesce(max((data->'heap_blks_read')::int8) - min((data->'heap_blks_read')::int8), 0) + coalesce(max((data->'toast_blks_read')::int8) - min((data->'toast_blks_read')::int8), 0) + coalesce(max((data->'tidx_blks_read')::int8) - min((data->'tidx_blks_read')::int8), 0)) as blks_read\nFROM\n  table_io_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'heap_blks_read')::int8) > min((data->'heap_blks_read')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) ts\n",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "total_relation_size_b"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Most block IO reads",
+      "transform": "table",
+      "type": "table"
+    },
+    {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2019/05/Cybertec_Logo_wei%C3%9F-transparent_300x80px-01.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
       "datasource": null,
       "gridPos": {
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 50
       },
       "id": 10,
       "links": [],
