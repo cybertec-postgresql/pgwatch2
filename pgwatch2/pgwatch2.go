@@ -2129,7 +2129,15 @@ func CheckForRecommendationsAndStore(dbUnique string, vme DBVersionMapEntry) ([]
 			ret_data = append(ret_data, d)
 		}
 	}
-
+	if len(ret_data) == 0 {	// insert a dummy entry minimally so that Grafana can show at least a dropdown
+		dummy := make(map[string]interface{})
+		dummy["tag_reco_topic"] = "dummy"
+		dummy["tag_object_name"] = "-"
+		dummy["recommendation"] = "no recommendations"
+		dummy[EPOCH_COLUMN_NAME] = start_time_epoch_ns
+		dummy["major_ver"] = PgVersionDecimalToMajorVerFloat(dbUnique, vme.Version)
+		ret_data = append(ret_data, dummy)
+	}
 	return ret_data, nil, total_duration
 }
 

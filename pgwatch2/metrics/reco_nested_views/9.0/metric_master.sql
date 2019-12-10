@@ -38,11 +38,11 @@ UNION ALL
      AND v.oid <> views.view  -- avoid loop
 )
 SELECT
-  'overly_nested_views'::text AS reco_topic,
-  full_name as object_name,
+  'overly_nested_views'::text AS tag_reco_topic,
+  full_name as tag_object_name,
   'overly nested views can affect performance' recommendation,
   'nesting_depth: ' || max(level) AS extra_info
 FROM views
 GROUP BY 1, 2
-HAVING max(level) > 1
+HAVING max(level) > 5
 ORDER BY max(level) DESC;

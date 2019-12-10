@@ -8,12 +8,12 @@ q_total as (
   select count(*) from pg_roles where rolcanlogin
 )
 select
-  'superuser_count'::text as reco_topic,
-  '-' as object_name,
+  'superuser_count'::text as tag_reco_topic,
+  '-' as tag_object_name,
   'too many superusers detected - review recommended' as recommendation,
   format('%s active superusers, %s total active users', q_su.count, q_total.count) as extra_info
 from
   q_su, q_total
 where
-  q_su.count > 1
+  q_su.count > 10
 ;
