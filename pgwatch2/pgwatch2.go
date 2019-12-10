@@ -193,6 +193,8 @@ const DBTYPE_PATRONI = "patroni"
 const DBTYPE_PATRONI_CONT = "patroni-continuous-discovery"
 const MONITORED_DBS_DATASTORE_SYNC_INTERVAL_SECONDS = 600			// write actively monitored DBs listing to metrics store after so many seconds
 const MONITORED_DBS_DATASTORE_SYNC_METRIC_NAME = "configured_dbs"	// FYI - for Postgres datastore there's also the admin.all_unique_dbnames table with all recent DB unique names with some metric data
+const RECO_PREFIX = "reco_"		// special handling for metrics with such prefix, data stored in RECO_METRIC_NAME
+const RECO_METRIC_NAME = "recommendations"
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT} // used for informational purposes
@@ -1746,7 +1748,7 @@ func GetMetricVersionProperties(metric string, vme DBVersionMapEntry, metricDefM
 
 	_, ok := mdm[metric]
 	if !ok || len(mdm[metric]) == 0 {
-		log.Warning("metric", metric, "not found")
+		log.Debug("metric", metric, "not found")
 		return MetricVersionProperties{}, errors.New("metric SQL not found")
 	}
 
@@ -2088,6 +2090,59 @@ func DetectConfigurationChanges(dbUnique string, vme DBVersionMapEntry, storage_
 	return change_counts
 }
 
+func GetAllRecoMetricsForVersion(vme DBVersionMapEntry) map[string]MetricVersionProperties {
+	mvp_map := make(map[string]MetricVersionProperties)
+
+	metric_def_map_lock.RLock()
+	defer metric_def_map_lock.RUnlock()
+	for m := range metric_def_map {
+		if strings.HasPrefix(m, RECO_PREFIX) {
+			mvp, err := GetMetricVersionProperties(m, vme, metric_def_map)
+			if err != nil {
+				log.Warningf("Could not get SQL definition for metric \"%s\", PG %s", m, vme.VersionStr)
+			} else {
+				mvp_map[m] = mvp
+			}
+		}
+	}
+	return mvp_map
+}
+
+func CheckForRecommendationsAndStore(dbUnique string, vme DBVersionMapEntry) ([]map[string]interface{}, error, time.Duration) {
+	ret_data := make([]map[string]interface{}, 0)
+	var total_duration time.Duration
+	start_time_epoch_ns := time.Now().UnixNano()
+
+	reco_metrics := GetAllRecoMetricsForVersion(vme)
+	log.Infof("Processing %d recommendation metrics for \"%s\"", len(reco_metrics), dbUnique)
+
+	for m, mvp := range reco_metrics {
+		data, err, duration := DBExecReadByDbUniqueName(dbUnique, m, useConnPooling, mvp.Sql)
+		total_duration += duration
+		if err != nil {
+			log.Errorf("[%s:%s] Could not execute recommendations SQL: %v", dbUnique, m, err)
+			continue
+		}
+		for _, d := range data {
+			d[EPOCH_COLUMN_NAME] = start_time_epoch_ns
+			d["major_ver"] = PgVersionDecimalToMajorVerFloat(dbUnique, vme.Version)
+			ret_data = append(ret_data, d)
+		}
+	}
+
+	return ret_data, nil, total_duration
+}
+
+func PgVersionDecimalToMajorVerFloat(dbUnique string, pgVer decimal.Decimal) float64 {
+	ver_float, _ := pgVer.Float64()
+
+	if ver_float >= 10 {
+		return math.Floor(ver_float)
+	} else {
+		return ver_float
+	}
+}
+
 func CheckForPGObjectChangesAndStore(dbUnique string, vme DBVersionMapEntry, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) {
 	sproc_counts := DetectSprocChanges(dbUnique, vme, storage_ch, host_state) // TODO some of Detect*() code could be unified...
 	table_counts := DetectTableChanges(dbUnique, vme, storage_ch, host_state)
@@ -2150,6 +2205,9 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	var err, firstErr error
 	var sql string
 	var retryWithSuperuserSQL = true
+	var data []map[string]interface{}
+	var duration time.Duration
+	var md MonitoredDatabase
 
 	if msg.DBType == DBTYPE_PG {
 		vme, err = DBGetPGVersion(msg.DBUniqueName, false)
@@ -2165,7 +2223,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	}
 
 	mvp, err := GetMetricVersionProperties(msg.MetricName, vme, nil)
-	if err != nil {
+	if err != nil && msg.MetricName != RECO_METRIC_NAME {
 		epoch, ok := last_sql_fetch_error.Load(msg.MetricName + ":" + db_pg_version.String())
 		if !ok || ((time.Now().Unix() - epoch.(int64)) > 3600) { // complain only 1x per hour
 			log.Warningf("Failed to get SQL for metric '%s', version '%s': %v", msg.MetricName, vme.VersionStr, err)
@@ -2184,7 +2242,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 		sql = mvp.SqlSU
 		retryWithSuperuserSQL = false
 	}
-	if sql == "" && msg.MetricName != "change_events" {
+	if sql == "" && ! (msg.MetricName == "change_events" || msg.MetricName == RECO_METRIC_NAME) {
 		// let's ignore dummy SQL-s
 		log.Debugf("[%s:%s] Ignoring fetch message - got an empty/dummy SQL string", msg.DBUniqueName, msg.MetricName)
 		return nil, nil
@@ -2197,8 +2255,10 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 
 	if msg.MetricName == "change_events" && context != CONTEXT_PROMETHEUS_SCRAPE { // special handling, multiple queries + stateful
 		CheckForPGObjectChangesAndStore(msg.DBUniqueName, vme, storage_ch, host_state) // TODO no host_state for Prometheus currently
+	} else if msg.MetricName == RECO_METRIC_NAME && context != CONTEXT_PROMETHEUS_SCRAPE {
+		data, err, duration = CheckForRecommendationsAndStore(msg.DBUniqueName, vme)
 	} else {
-		data, err, duration := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
+		data, err, duration = DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
 
 		if err != nil {
 			// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
@@ -2226,7 +2286,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 			}
 			return nil, err
 		} else {
-			md, err := GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
+			md, err = GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
 			if err != nil {
 				log.Errorf("[%s:%s] could not get monitored DB details", msg.DBUniqueName, err)
 				return nil, err
@@ -2237,18 +2297,17 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 				data = FilterPgbouncerData(data, md.DBName)
 			}
 
-			if addRealDbname || addSystemIdentifier {
-				db_pg_version_map_lock.RLock()
-				ver, _ := db_pg_version_map[msg.DBUniqueName]
-				db_pg_version_map_lock.RUnlock()
-				data = AddDbnameSysinfoIfNotExistsToQueryResultData(msg, data, ver)
-			}
-
-			return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags,
-				MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
 		}
 	}
-	return nil, nil
+	if addRealDbname || addSystemIdentifier {
+		db_pg_version_map_lock.RLock()
+		ver, _ := db_pg_version_map[msg.DBUniqueName]
+		db_pg_version_map_lock.RUnlock()
+		data = AddDbnameSysinfoIfNotExistsToQueryResultData(msg, data, ver)
+	}
+
+	return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags,
+		MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
 }
 
 func AddDbnameSysinfoIfNotExistsToQueryResultData(msg MetricFetchMessage, data []map[string]interface{}, ver DBVersionMapEntry) []map[string]interface{} {
@@ -2726,7 +2785,7 @@ func ParseMetricColumnAttrsFromString(jsonAttrs string) MetricColumnAttrs {
 	return c
 }
 
-// expected is following structure: metric_name/pg_ver/metric.sql
+// expected is following structure: metric_name/pg_ver/metric(_master|standby).sql
 func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metrics_map := make(map[string]map[decimal.Decimal]MetricVersionProperties)
 	rIsDigitOrPunctuation := regexp.MustCompile("^[\\d\\.]+$")
@@ -3673,12 +3732,22 @@ func main() {
 				}
 			}
 
-			for metric := range metric_config {
+			for metric_name := range metric_config {
+				metric := metric_name
+				metric_def_ok := false
+
+				if strings.HasPrefix(metric, RECO_PREFIX) {
+					metric = RECO_METRIC_NAME
+				}
 				interval := metric_config[metric]
 
-				metric_def_map_lock.RLock()
-				_, metric_def_ok := metric_def_map[metric]
-				metric_def_map_lock.RUnlock()
+				if metric == RECO_METRIC_NAME {
+					metric_def_ok = true
+				} else {
+					metric_def_map_lock.RLock()
+					_, metric_def_ok = metric_def_map[metric]
+					metric_def_map_lock.RUnlock()
+				}
 
 				var db_metric string = db_unique + ":" + metric
 				_, ch_ok := control_channels[db_metric]
