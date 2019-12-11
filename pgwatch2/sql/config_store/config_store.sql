@@ -155,6 +155,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "index_stats": 900,
     "locks": 60,
     "locks_mode": 60,
+    "recommendations": 43200,
     "replication": 120,
     "replication_slots": 120,
     "settings": 7200,
