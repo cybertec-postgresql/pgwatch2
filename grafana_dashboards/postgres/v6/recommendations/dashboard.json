@@ -1,0 +1,614 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Needs \"recommendations\" metric to be enabled",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "More than 10 superusers is already suspicious",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 3,
+      "options": {},
+      "pageSize": null,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        }
+      ],
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  dbname,\n  data->>'major_ver' AS pg_major_ver,\n  tag_data->>'object_name' AS object_name,\n  data->>'recommendation' AS recommendation,\n  data->>'extra_info' AS extra_info\nFROM\n  recommendations\nWHERE\n  time IN (SELECT max(time) FROM recommendations WHERE $__timeFilter(time) GROUP BY dbname)\n  AND dbname IN ($dbname)\n  AND tag_data->>'reco_topic' = 'superuser_count'\nORDER BY\n  dbname, object_name",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Overusage of SUPERUSER",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 4,
+      "options": {},
+      "pageSize": null,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        }
+      ],
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  dbname,\n  '-' AS pg_major_ver,\n  '-' AS object_name,\n  'long running queries block autovacuum and thereby cause bloat' AS recommendation,\n  'longest_query_seconds: '|| max((data->'longest_query_seconds')::int)::text AS extra_info\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  AND dbname IN ($dbname)\n  AND (data->'longest_query_seconds')::int > 6\nGROUP BY\n  dbname\nORDER BY\n  max((data->'longest_query_seconds')::int) DESC NULLS LAST, dbname",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Overly long queries",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 10,
+      "options": {},
+      "pageSize": null,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        }
+      ],
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  dbname,\n  (select data->>'server_version' from settings s where s.dbname = x.dbname order by time desc limit 1) AS pg_major_ver,\n  'autovacuum_max_workers' as object_name,\n  'if most / all autovacuum worker slots are busy or AV runs for hourse then this could hint at incorrect AV params or too much workload' as recommendation,\n  'max. active autovacuum workers: ' || max_av_workers || ' (of total ' || (select (data->'autovacuum_max_workers')::int from settings s where s.dbname = x.dbname order by time desc limit 1) || '); max. AV duration (seconds): ' || longest_autovacuum_seconds as extra_info\nFROM (\nSELECT\n  dbname,\n  max((data->'av_workers')::int) as max_av_workers,\n  coalesce(max((data->'longest_autovacuum_seconds')::int), 0) as longest_autovacuum_seconds\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  AND dbname IN ($dbname)\nGROUP BY\n  dbname\n) x\nWHERE\n  (max_av_workers > 1 AND max_av_workers::numeric / (select (data->'autovacuum_max_workers')::int from settings s where s.dbname = x.dbname order by time desc limit 1)  >= 0.6)\n  OR\n  (longest_autovacuum_seconds > 1800)",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Possible AUTOVACUUM problems",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 5,
+      "options": {},
+      "pageSize": null,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        }
+      ],
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  dbname,\n  data->>'major_ver' AS pg_major_ver,\n  tag_data->>'object_name' AS object_name,\n  data->>'recommendation' AS recommendation,\n  data->>'extra_info' AS extra_info\nFROM\n  recommendations\nWHERE\n  time IN (SELECT max(time) FROM recommendations WHERE $__timeFilter(time) GROUP BY dbname)\n  AND dbname IN ($dbname)\n  AND tag_data->>'reco_topic' = 'sprocs_wo_search_path'\nORDER BY\n  dbname, object_name",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "SECURITY DEFINER without fixed \"search_path\"",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 6,
+      "options": {},
+      "pageSize": null,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        }
+      ],
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  dbname,\n  data->>'major_ver' AS pg_major_ver,\n  tag_data->>'object_name' AS object_name,\n  data->>'recommendation' AS recommendation,\n  data->>'extra_info' AS extra_info\nFROM\n  recommendations\nWHERE\n  time IN (SELECT max(time) FROM recommendations WHERE $__timeFilter(time) GROUP BY dbname)\n  AND dbname IN ($dbname)\n  AND tag_data->>'reco_topic' = 'default_public_schema_privs'\nORDER BY\n  dbname, object_name",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "PUBLIC schemas with default privileges",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "Assumes that \"pg_qualstats\" extension and superuser or according access grants on the monitored host",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 7,
+      "options": {},
+      "pageSize": null,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        }
+      ],
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  dbname,\n  data->>'major_ver' AS pg_major_ver,\n  tag_data->>'object_name' AS object_name,\n  data->>'recommendation' AS recommendation,\n  data->>'extra_info' AS extra_info\nFROM\n  recommendations\nWHERE\n  time IN (SELECT max(time) FROM recommendations WHERE $__timeFilter(time) GROUP BY dbname)\n  AND dbname IN ($dbname)\n  AND tag_data->>'reco_topic' = 'create_index'\nORDER BY\n  dbname, object_name",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Possibly missing indexes",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "Unused indexes bigger than 0.5% of total DB size",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "id": 8,
+      "options": {},
+      "pageSize": null,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        }
+      ],
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  dbname,\n  data->>'major_ver' AS pg_major_ver,\n  tag_data->>'object_name' AS object_name,\n  data->>'recommendation' AS recommendation,\n  data->>'extra_info' AS extra_info\nFROM\n  recommendations\nWHERE\n  time IN (SELECT max(time) FROM recommendations WHERE $__timeFilter(time) GROUP BY dbname)\n  AND dbname IN ($dbname)\n  AND tag_data->>'reco_topic' = 'drop_index'\nORDER BY\n  dbname, object_name",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Unused indexes",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 2,
+      "options": {},
+      "pageSize": null,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        }
+      ],
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  dbname,\n  data->>'major_ver' AS pg_major_ver,\n  tag_data->>'object_name' AS object_name,\n  data->>'recommendation' AS recommendation,\n  data->>'extra_info' AS extra_info\nFROM\n  recommendations\nWHERE\n  time IN (SELECT max(time) FROM recommendations WHERE $__timeFilter(time) GROUP BY dbname)\n  AND dbname IN ($dbname)\n  AND tag_data->>'reco_topic' = 'overly_nested_views'\nORDER BY\n  dbname, object_name",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Deeply nested views",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2019/05/Cybertec_Logo_wei%C3%9F-transparent_300x80px-01.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "datasource": null,
+      "description": "",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "id": 9,
+      "mode": "html",
+      "options": {},
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  dbname,\n  data->>'major_ver' AS pg_major_ver,\n  tag_data->>'object_name' AS object_name,\n  data->>'recommendation' AS recommendation,\n  data->>'extra_info' AS extra_info\nFROM\n  recommendations\nWHERE\n  time IN (SELECT max(time) FROM recommendations WHERE $__timeFilter(time) GROUP BY dbname)\n  AND dbname IN ($dbname)\n  AND tag_data->>'reco_topic' = 'drop_index'\nORDER BY\n  dbname, object_name",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    }
+  ],
+  "schemaVersion": 20,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": null,
+        "definition": "SELECT DISTINCT dbname FROM recommendations WHERE time > now() - '2d'::interval ORDER BY 1;",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "dbname",
+        "options": [],
+        "query": "SELECT DISTINCT dbname FROM recommendations WHERE time > now() - '2d'::interval ORDER BY 1;",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "",
+  "title": "Recommendations",
+  "uid": null,
+  "version": 1
+}
