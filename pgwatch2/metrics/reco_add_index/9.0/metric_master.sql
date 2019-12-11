@@ -5,4 +5,7 @@ select
   ddl as recommendation,
   'qual execution count: '|| execution_count as extra_info
 from
-  pg_qualstats_indexes_ddl;
+  pg_qualstats_indexes_ddl
+order by
+  execution_count desc
+limit 25;

@@ -3577,3 +3577,215 @@ LIMIT 25;
 $sql$,
 '{"prometheus_all_gauge_columns": true}'
 );
+
+/* RECO */
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
+values (
+'reco_add_index',
+9.0,
+$sql$
+/* assumes the pg_qualstats extension and superuser or select grants on pg_qualstats_indexes_ddl view */
+select
+  'create_index' as tag_reco_topic,
+  quote_ident(nspname::text)||'.'||quote_ident(relid::text) as tag_object_name,
+  ddl as recommendation,
+  'qual execution count: '|| execution_count as extra_info
+from
+  pg_qualstats_indexes_ddl
+order by
+  execution_count desc
+limit 25;
+$sql$,
+'{"prometheus_all_gauge_columns": true}',
+true
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
+values (
+'reco_default_public_schema',
+9.0,
+$sql$
+select
+  'default_public_schema_privs' as tag_reco_topic,
+  nspname::text as tag_object_name,
+  'REVOKE CREATE ON SCHEMA public FROM PUBLIC;' as recommendation,
+  'only authorized users should be allowed to create new objects' as extra_info
+from
+  pg_namespace
+where
+  nspname = 'public'
+  and nspacl::text ~ E'[,\\{]+=U?C/'
+;
+$sql$,
+'{"prometheus_all_gauge_columns": true}',
+true
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
+values (
+'reco_drop_index',
+9.0,
+$sql$
+/* assumes the pg_qualstats extension */
+select
+  'drop_index' as tag_reco_topic,
+  quote_ident(schemaname)||'.'||quote_ident(indexrelname) as tag_object_name,
+  'DROP INDEX ' || quote_ident(schemaname)||'.'||quote_ident(indexrelname) || ';' as recommendation,
+  'NB! Before dropping make sure to also check replica pg_stat_user_indexes.idx_scan count if using them for queries' as extra_info
+from
+  pg_stat_user_indexes
+  join
+  pg_index using (indexrelid)
+where
+  idx_scan = 0
+  and ((pg_relation_size(indexrelid)::numeric / (pg_database_size(current_database()))) > 0.005 /* 0.5% DB size threshold */
+    or indisvalid)
+  and not indisprimary
+;
+$sql$,
+'{"prometheus_all_gauge_columns": true}',
+true
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
+values (
+'reco_drop_index',
+9.4,
+$sql$
+/* assumes the pg_qualstats extension */
+select
+  'drop_index' as tag_reco_topic,
+  quote_ident(schemaname)||'.'||quote_ident(indexrelname) as tag_object_name,
+  'DROP INDEX ' || quote_ident(schemaname)||'.'||quote_ident(indexrelname) || ';' as recommendation,
+  'NB! Make sure to also check replica pg_stat_user_indexes.idx_scan count if using them for queries' as extra_info
+from
+  pg_stat_user_indexes
+  join
+  pg_index using (indexrelid)
+where
+  idx_scan = 0
+  and ((pg_relation_size(indexrelid)::numeric / (pg_database_size(current_database()))) > 0.005 /* 0.5% DB size threshold */
+    or indisvalid)
+  and not indisprimary
+  and not indisreplident
+;
+$sql$,
+'{"prometheus_all_gauge_columns": true}',
+true
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
+values (
+'reco_nested_views',
+9.0,
+$sql$
+WITH RECURSIVE views AS (
+   -- get the directly depending views
+   SELECT v.oid::regclass AS view,
+          format('%s.%s', quote_ident(n.nspname), quote_ident(v.relname)) as full_name,
+          1 AS level
+   FROM pg_depend AS d
+      JOIN pg_rewrite AS r
+         ON r.oid = d.objid
+      JOIN pg_class AS v
+         ON v.oid = r.ev_class
+      JOIN pg_namespace AS n
+         ON n.oid = v.relnamespace
+   WHERE v.relkind = 'v'
+     AND NOT n.nspname = ANY(array['information_schema', E'pg\\_%'])
+     AND NOT v.relname LIKE E'pg\\_%'
+     AND d.classid = 'pg_rewrite'::regclass
+     AND d.refclassid = 'pg_class'::regclass
+     AND d.deptype = 'n'
+UNION ALL
+   -- add the views that depend on these
+   SELECT v.oid::regclass,
+          format('%s.%s', quote_ident(n.nspname), quote_ident(v.relname)) as full_name,
+          views.level + 1
+   FROM views
+      JOIN pg_depend AS d
+         ON d.refobjid = views.view
+      JOIN pg_rewrite AS r
+         ON r.oid = d.objid
+      JOIN pg_class AS v
+         ON v.oid = r.ev_class
+      JOIN pg_namespace AS n
+         ON n.oid = v.relnamespace
+   WHERE v.relkind = 'v'
+     AND NOT n.nspname = ANY(array['information_schema', E'pg\\_%'])
+     AND d.classid = 'pg_rewrite'::regclass
+     AND d.refclassid = 'pg_class'::regclass
+     AND d.deptype = 'n'
+     AND v.oid <> views.view  -- avoid loop
+)
+SELECT
+  'overly_nested_views'::text AS tag_reco_topic,
+  full_name as tag_object_name,
+  'overly nested views can affect performance' recommendation,
+  'nesting_depth: ' || max(level) AS extra_info
+FROM views
+GROUP BY 1, 2
+HAVING max(level) > 5
+ORDER BY max(level) DESC;
+$sql$,
+'{"prometheus_all_gauge_columns": true}',
+true
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
+values (
+'reco_sprocs_wo_search_path',
+9.0,
+$sql$
+with q_sprocs as (
+select
+  format('%s.%s', quote_ident(nspname), quote_ident(proname)) as sproc_name,
+  'alter function ' || proname || '(' || pg_get_function_arguments(p.oid) || ') set search_path = X;' as fix_sql
+from
+  pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where prosecdef and not 'search_path' = ANY(coalesce(proconfig, '{}'::text[]))
+)
+select
+  'sprocs_wo_search_path' as tag_reco_topic,
+  sproc_name as tag_object_name,
+  fix_sql as recommendation,
+  'functions without fixed search_path can be potentially abused by malicious users if used objects are not fully qualified' as extra_info
+from
+  q_sprocs
+order by
+   tag_object_name, extra_info;
+$sql$,
+'{"prometheus_all_gauge_columns": true}',
+true
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
+values (
+'reco_superusers',
+9.0,
+$sql$
+/* reco_* metrics have special handling - all results are stored actually under one 'recommendations' metric  and
+ following text columns are expected:  reco_topic, object_name, recommendation, extra_info.
+*/
+with q_su as (
+  select count(*) from pg_roles where rolcanlogin and rolsuper
+),
+q_total as (
+  select count(*) from pg_roles where rolcanlogin
+)
+select
+  'superuser_count'::text as tag_reco_topic,
+  '-' as tag_object_name,
+  'too many superusers detected - review recommended' as recommendation,
+  format('%s active superusers, %s total active users', q_su.count, q_total.count) as extra_info
+from
+  q_su, q_total
+where
+  q_su.count >= 10
+;
+$sql$,
+'{"prometheus_all_gauge_columns": true}',
+true
+);
