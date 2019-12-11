@@ -3746,6 +3746,7 @@ from
   pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
   where prosecdef and not 'search_path' = ANY(coalesce(proconfig, '{}'::text[]))
+  and not pg_catalog.obj_description(p.oid, 'pg_proc') ~ 'pgwatch2'
 )
 select
   'sprocs_wo_search_path' as tag_reco_topic,
