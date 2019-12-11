@@ -18,4 +18,6 @@ select
     from get_stat_activity() where backend_type = 'autovacuum worker' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active' and backend_type = 'client backend') as longest_query_seconds,
-  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx,
+  (select count(*) from sa_snapshot where state = 'active' and backend_type = 'autovacuum worker') as av_workers
+;

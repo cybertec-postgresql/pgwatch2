@@ -18,4 +18,6 @@ select
     (select extract(epoch from (now() - xact_start))::int
      from pg_stat_activity where current_query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
     (select extract(epoch from max(now() - query_start))::int
-     from sa_snapshot where current_query != '<IDLE>') as longest_query_seconds;
+     from sa_snapshot where current_query != '<IDLE>') as longest_query_seconds,
+    (select count(*) from pg_stat_activity where datname = current_database() and current_query like 'autovacuum:%') as av_workers
+;

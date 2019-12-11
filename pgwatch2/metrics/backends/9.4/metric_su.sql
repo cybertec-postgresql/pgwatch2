@@ -19,4 +19,6 @@ select
    from pg_stat_activity where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active') as longest_query_seconds,
-  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx,
+  (select count(*) from pg_stat_activity where datname = current_database() and query like 'autovacuum:%') as av_workers
+;

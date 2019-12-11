@@ -10,8 +10,8 @@ from
 select
   'sprocs_wo_search_path' as tag_reco_topic,
   sproc_name as tag_object_name,
-  'functions without fixed search_path can be potentially abused by malicious users if used objects are not fully qualified' as recommendation,
-  'to fix: ' || fix_sql as extra_info
+  fix_sql as recommendation,
+  'functions without fixed search_path can be potentially abused by malicious users if used objects are not fully qualified' as extra_info
 from
   q_sprocs
 order by

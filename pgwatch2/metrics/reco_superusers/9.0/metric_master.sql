@@ -15,5 +15,5 @@ select
 from
   q_su, q_total
 where
-  q_su.count > 10
+  q_su.count >= 10
 ;
