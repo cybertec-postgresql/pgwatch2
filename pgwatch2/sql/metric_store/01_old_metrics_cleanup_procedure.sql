@@ -13,6 +13,7 @@ $SQL$
   and pg_catalog.obj_description(c.oid, 'pg_class') = 'pgwatch2-generated-metric-lvl'
   order by 1
 $SQL$ LANGUAGE sql;
+REVOKE EXECUTE ON FUNCTION admin.get_top_level_metric_tables() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION admin.get_top_level_metric_tables() TO pgwatch2;
 
 
@@ -37,6 +38,7 @@ BEGIN
   RETURN i;
 END;
 $SQL$ LANGUAGE plpgsql;
+REVOKE EXECUTE ON FUNCTION admin.drop_all_metric_tables() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION admin.drop_all_metric_tables() TO pgwatch2;
 
 
@@ -61,6 +63,7 @@ BEGIN
   RETURN i;
 END;
 $SQL$ LANGUAGE plpgsql;
+REVOKE EXECUTE ON FUNCTION admin.truncate_all_metric_tables() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION admin.truncate_all_metric_tables() TO pgwatch2;
 
 
@@ -113,6 +116,7 @@ BEGIN
   RETURN i;
 END;
 $SQL$ LANGUAGE plpgsql;
+REVOKE EXECUTE ON FUNCTION admin.remove_single_dbname_data(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION admin.remove_single_dbname_data(text) TO pgwatch2;
 
 
@@ -172,4 +176,5 @@ BEGIN
   RETURN i;
 END;
 $SQL$ LANGUAGE plpgsql;
+REVOKE EXECUTE ON FUNCTION admin.drop_old_time_partitions(int,bool) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION admin.drop_old_time_partitions(int,bool) TO pgwatch2;

@@ -1962,9 +1962,9 @@ values (
 $sql$
 BEGIN;
 
-CREATE EXTENSION IF NOT EXISTS pgstattuple;
+CREATE EXTENSION IF NOT EXISTS pgstattuple SCHEMA public;
 
-CREATE OR REPLACE FUNCTION get_table_bloat_approx(
+CREATE OR REPLACE FUNCTION public.get_table_bloat_approx(
   OUT approx_free_percent double precision, OUT approx_free_space double precision,
   OUT dead_tuple_percent double precision, OUT dead_tuple_len double precision
 ) AS
@@ -1978,15 +1978,17 @@ $$
       pg_class c
       join
       pg_namespace n on n.oid = c.relnamespace
-      join lateral pgstattuple_approx(c.oid) on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables
+      join lateral public.pgstattuple_approx(c.oid) on (c.oid not in (select relation from pg_locks where mode = 'AccessExclusiveLock'))  -- skip locked tables
     where
       relkind in ('r', 'm')
       and c.relpages >= 128 -- tables >1mb
       and not n.nspname like any (array[E'pg\\_%', 'information_schema'])
-$$ LANGUAGE sql SECURITY DEFINER;
+$$ LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog,pg_temp;
 
-GRANT EXECUTE ON FUNCTION get_table_bloat_approx() TO pgwatch2;
-COMMENT ON FUNCTION get_table_bloat_approx() is 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_table_bloat_approx() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_table_bloat_approx() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_table_bloat_approx() is 'created for pgwatch2';
 
 COMMIT;
 $sql$,
@@ -2002,7 +2004,7 @@ $sql$
 -- small modifications to SQL from https://github.com/ioguix/pgsql-bloat-estimation
 -- NB! monitoring user needs SELECT grant on all tables or a SECURITY DEFINER wrapper around that SQL
 
-CREATE OR REPLACE FUNCTION get_table_bloat_approx_sql(
+CREATE OR REPLACE FUNCTION public.get_table_bloat_approx_sql(
       OUT full_table_name text,
       OUT approx_bloat_percent double precision,
       OUT approx_bloat_bytes double precision,
@@ -2010,6 +2012,7 @@ CREATE OR REPLACE FUNCTION get_table_bloat_approx_sql(
     ) RETURNS SETOF RECORD
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = pg_catalog,pg_temp
 AS $$
 
 SELECT
@@ -2125,8 +2128,10 @@ FROM (
  ) s4
 $$;
 
-GRANT EXECUTE ON FUNCTION get_table_bloat_approx_sql() TO pgwatch2;
-COMMENT ON FUNCTION get_table_bloat_approx_sql() is 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_table_bloat_approx_sql() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_table_bloat_approx_sql() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_table_bloat_approx_sql() is 'created for pgwatch2';
 
 $sql$,
 true
@@ -2140,7 +2145,7 @@ $sql$
 -- small modifications to SQL from https://github.com/ioguix/pgsql-bloat-estimation
 -- NB! monitoring user needs SELECT grant on all tables or a SECURITY DEFINER wrapper around that SQL
 
-CREATE OR REPLACE FUNCTION get_table_bloat_approx_sql(
+CREATE OR REPLACE FUNCTION public.get_table_bloat_approx_sql(
       OUT full_table_name text,
       OUT approx_bloat_percent double precision,
       OUT approx_bloat_bytes double precision,
@@ -2148,6 +2153,7 @@ CREATE OR REPLACE FUNCTION get_table_bloat_approx_sql(
     ) RETURNS SETOF RECORD
 LANGUAGE sql
 SECURITY DEFINER
+SET search_path = pg_catalog,pg_temp
 AS $$
 
 SELECT
@@ -2263,8 +2269,10 @@ FROM (
  ) s4
 $$;
 
-GRANT EXECUTE ON FUNCTION get_table_bloat_approx_sql() TO pgwatch2;
-COMMENT ON FUNCTION get_table_bloat_approx_sql() is 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_table_bloat_approx_sql() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_table_bloat_approx_sql() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_table_bloat_approx_sql() is 'created for pgwatch2';
 
 $sql$,
 true
@@ -2889,16 +2897,17 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS plpythonu;
 
-CREATE OR REPLACE FUNCTION get_load_average(OUT load_1min float, OUT load_5min float, OUT load_15min float) AS
+CREATE OR REPLACE FUNCTION public.get_load_average(OUT load_1min float, OUT load_5min float, OUT load_15min float) AS
 $$
 from os import getloadavg
 la = getloadavg()
 return [la[0], la[1], la[2]]
-$$ LANGUAGE plpythonu VOLATILE SECURITY DEFINER;
+$$ LANGUAGE plpythonu VOLATILE SECURITY DEFINER SET search_path = pg_catalog,pg_temp;
 
-GRANT EXECUTE ON FUNCTION get_load_average() TO pgwatch2;
+REVOKE EXECUTE ON FUNCTION public.get_load_average() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_load_average() TO pgwatch2;
 
-COMMENT ON FUNCTION get_load_average() is 'created for pgwatch2';
+COMMENT ON FUNCTION public.get_load_average() is 'created for pgwatch2';
 
 COMMIT;
 $sql$,
@@ -2912,14 +2921,14 @@ values (
 'get_stat_statements',
 9.0,
 $sql$
-CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements SCHEMA public;
 
 DO $OUTER$
 DECLARE
   l_sproc_text text := $_SQL_$
-CREATE OR REPLACE FUNCTION get_stat_statements() RETURNS SETOF pg_stat_statements AS
+CREATE OR REPLACE FUNCTION public.get_stat_statements() RETURNS SETOF public.pg_stat_statements AS
 $$
-  select s.* from pg_stat_statements s join pg_database d on d.oid = s.dbid and d.datname = current_database()
+  select s.* from public.pg_stat_statements s join pg_database d on d.oid = s.dbid and d.datname = current_database()
 $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 $_SQL_$;
 BEGIN
@@ -2927,10 +2936,11 @@ BEGIN
   		regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'),
         E'\\d+\\.?\\d+?')
       )[1]::double precision > 9.1 THEN   --parameters normalized only from 9.2
-    EXECUTE 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements';
+    EXECUTE 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements SCHEMA public';
     EXECUTE format(l_sproc_text);    
-    EXECUTE 'GRANT EXECUTE ON FUNCTION get_stat_statements() TO pgwatch2';
-    EXECUTE 'COMMENT ON FUNCTION get_stat_statements() IS ''created for pgwatch2''';
+    EXECUTE 'REVOKE EXECUTE ON FUNCTION public.get_stat_statements() FROM PUBLIC';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_stat_statements() TO pgwatch2';
+    EXECUTE 'COMMENT ON FUNCTION public.get_stat_statements() IS ''created for pgwatch2''';
   END IF;
 END;
 $OUTER$;
@@ -2960,16 +2970,16 @@ DO $OUTER$
 DECLARE
   l_pgver double precision;
   l_sproc_text_pre92 text := $SQL$
-CREATE OR REPLACE FUNCTION get_stat_activity() RETURNS SETOF pg_stat_activity AS
+CREATE OR REPLACE FUNCTION public.get_stat_activity() RETURNS SETOF pg_stat_activity AS
 $$
   select * from pg_stat_activity where datname = current_database() and procpid != pg_backend_pid()
-$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = pg_catalog,pg_temp;
 $SQL$;
   l_sproc_text_92_plus text := $SQL$
-CREATE OR REPLACE FUNCTION get_stat_activity() RETURNS SETOF pg_stat_activity AS
+CREATE OR REPLACE FUNCTION public.get_stat_activity() RETURNS SETOF pg_stat_activity AS
 $$
   select * from pg_stat_activity where datname = current_database() and pid != pg_backend_pid()
-$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = pg_catalog,pg_temp;
 $SQL$;
 BEGIN
   SELECT ((regexp_matches(
@@ -2979,8 +2989,10 @@ BEGIN
 END;
 $OUTER$;
 
-GRANT EXECUTE ON FUNCTION get_stat_activity() TO pgwatch2;
-COMMENT ON FUNCTION get_stat_activity() IS 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_stat_activity() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_stat_activity() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_stat_activity() IS 'created for pgwatch2';
 
 $sql$,
 'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
@@ -3058,12 +3070,13 @@ $sql$
 */
 CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
 
-CREATE OR REPLACE FUNCTION get_psutil_cpu(
+CREATE OR REPLACE FUNCTION public.get_psutil_cpu(
 	OUT cpu_utilization float8, OUT load_1m_norm float8, OUT load_1m float8, OUT load_5m_norm float8, OUT load_5m float8,
     OUT "user" float8, OUT system float8, OUT idle float8, OUT iowait float8, OUT irqs float8, OUT other float8
 )
  LANGUAGE plpythonu
  SECURITY DEFINER
+ SET search_path = pg_catalog,pg_temp
 AS $FUNCTION$
 
 from os import getloadavg
@@ -3091,8 +3104,10 @@ return t.cpu_utilization_info, la[0] / cpu_count(), la[0], la[1] / cpu_count(), 
 
 $FUNCTION$;
 
-GRANT EXECUTE ON FUNCTION get_psutil_cpu() TO pgwatch2;
-COMMENT ON FUNCTION get_psutil_cpu() IS 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_psutil_cpu() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_psutil_cpu() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_psutil_cpu() IS 'created for pgwatch2';
 
 
 $sql$,
@@ -3123,12 +3138,13 @@ $sql$
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
 CREATE EXTENSION IF NOT EXISTS plpythonu; -- NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es
 
-CREATE OR REPLACE FUNCTION get_psutil_mem(
+CREATE OR REPLACE FUNCTION public.get_psutil_mem(
 	OUT total float8, OUT used float8, OUT free float8, OUT buff_cache float8, OUT available float8, OUT percent float8,
 	OUT swap_total float8, OUT swap_used float8, OUT swap_free float8, OUT swap_percent float8
 )
  LANGUAGE plpythonu
  SECURITY DEFINER
+ SET search_path = pg_catalog,pg_temp
 AS $FUNCTION$
 from psutil import virtual_memory, swap_memory
 vm = virtual_memory()
@@ -3136,8 +3152,10 @@ sw = swap_memory()
 return vm.total, vm.used, vm.free, vm.buffers + vm.cached, vm.available, vm.percent, sw.total, sw.used, sw.free, sw.percent
 $FUNCTION$;
 
-GRANT EXECUTE ON FUNCTION get_psutil_mem() TO pgwatch2;
-COMMENT ON FUNCTION get_psutil_mem() IS 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_psutil_mem() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_psutil_mem() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_psutil_mem() IS 'created for pgwatch2';
 
 $sql$,
 '{"prometheus_all_gauge_columns": true}',
@@ -3168,7 +3186,7 @@ $sql$
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
 CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
 
-CREATE OR REPLACE FUNCTION get_psutil_disk(
+CREATE OR REPLACE FUNCTION public.get_psutil_disk(
 	OUT dir_or_tablespace text, OUT path text, OUT total float8, OUT used float8, OUT free float8, OUT percent float8
 )
  RETURNS SETOF record
@@ -3224,8 +3242,10 @@ return ret_list
 
 $FUNCTION$;
 
-GRANT EXECUTE ON FUNCTION get_psutil_disk() TO pgwatch2;
-COMMENT ON FUNCTION get_psutil_disk() IS 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_psutil_disk() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_psutil_disk() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_psutil_disk() IS 'created for pgwatch2';
 
 $sql$,
 '{"prometheus_all_gauge_columns": true}',
@@ -3258,19 +3278,22 @@ $sql$
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
 CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
 
-CREATE OR REPLACE FUNCTION get_psutil_disk_io_total(
+CREATE OR REPLACE FUNCTION public.get_psutil_disk_io_total(
 	OUT read_count float8, OUT write_count float8, OUT read_bytes float8, OUT write_bytes float8
 )
  LANGUAGE plpythonu
  SECURITY DEFINER
+ SET search_path = pg_catalog,pg_temp
 AS $FUNCTION$
 from psutil import disk_io_counters
 dc = disk_io_counters(perdisk=False)
 return dc.read_count, dc.write_count, dc.read_bytes, dc.write_bytes
 $FUNCTION$;
 
-GRANT EXECUTE ON FUNCTION get_psutil_disk_io_total() TO pgwatch2;
-COMMENT ON FUNCTION get_psutil_disk_io_total() IS 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_psutil_disk_io_total() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_psutil_disk_io_total() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_psutil_disk_io_total() IS 'created for pgwatch2';
 
 $sql$,
 '{"prometheus_all_gauge_columns": true}',
@@ -3303,13 +3326,15 @@ values (
 10,
 $sql$
 
-CREATE OR REPLACE FUNCTION get_wal_size() RETURNS int8 AS
+CREATE OR REPLACE FUNCTION public.get_wal_size() RETURNS int8 AS
 $$
 select (sum((pg_stat_file('pg_wal/' || name)).size))::int8 from pg_ls_waldir()
-$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = pg_catalog,pg_temp;
 
-GRANT EXECUTE ON FUNCTION get_wal_size() TO pgwatch2;
-COMMENT ON FUNCTION get_wal_size() IS 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_wal_size() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_wal_size() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_wal_size() IS 'created for pgwatch2';
 
 $sql$,
 'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
@@ -3378,13 +3403,15 @@ values (
 9.0,
 $sql$
 
-CREATE OR REPLACE FUNCTION get_stat_replication() RETURNS SETOF pg_stat_replication AS
+CREATE OR REPLACE FUNCTION public.get_stat_replication() RETURNS SETOF pg_stat_replication AS
 $$
   select * from pg_stat_replication
-$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = pg_catalog,pg_temp;
 
-GRANT EXECUTE ON FUNCTION get_stat_replication() TO pgwatch2;
-COMMENT ON FUNCTION get_stat_replication() IS 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_stat_replication() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_stat_replication() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_stat_replication() IS 'created for pgwatch2';
 
 $sql$,
 'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',

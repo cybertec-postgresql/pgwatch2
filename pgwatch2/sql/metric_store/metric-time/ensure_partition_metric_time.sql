@@ -96,4 +96,5 @@ BEGIN
 END;
 $SQL$ LANGUAGE plpgsql;
 
+REVOKE EXECUTE ON FUNCTION admin.ensure_partition_metric_time(text,timestamp with time zone,integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION admin.ensure_partition_metric_time(text,timestamp with time zone,integer) TO pgwatch2;

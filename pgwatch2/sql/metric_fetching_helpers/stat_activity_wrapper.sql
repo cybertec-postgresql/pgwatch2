@@ -8,16 +8,16 @@ DO $OUTER$
 DECLARE
   l_pgver double precision;
   l_sproc_text_pre92 text := $SQL$
-CREATE OR REPLACE FUNCTION get_stat_activity() RETURNS SETOF pg_stat_activity AS
+CREATE OR REPLACE FUNCTION public.get_stat_activity() RETURNS SETOF pg_stat_activity AS
 $$
   select * from pg_stat_activity where datname = current_database() and procpid != pg_backend_pid()
-$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = pg_catalog,pg_temp;
 $SQL$;
   l_sproc_text_92_plus text := $SQL$
-CREATE OR REPLACE FUNCTION get_stat_activity() RETURNS SETOF pg_stat_activity AS
+CREATE OR REPLACE FUNCTION public.get_stat_activity() RETURNS SETOF pg_stat_activity AS
 $$
   select * from pg_stat_activity where datname = current_database() and pid != pg_backend_pid()
-$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = pg_catalog,pg_temp;
 $SQL$;
 BEGIN
   SELECT ((regexp_matches(
@@ -27,5 +27,7 @@ BEGIN
 END;
 $OUTER$;
 
-GRANT EXECUTE ON FUNCTION get_stat_activity() TO pgwatch2;
-COMMENT ON FUNCTION get_stat_activity() IS 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_stat_activity() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_stat_activity() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_stat_activity() IS 'created for pgwatch2';

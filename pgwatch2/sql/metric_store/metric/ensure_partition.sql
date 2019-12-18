@@ -32,4 +32,5 @@ BEGIN
 END;
 $SQL$ LANGUAGE plpgsql;
 
+REVOKE EXECUTE ON FUNCTION admin.ensure_partition_metric(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION admin.ensure_partition_metric(text) TO pgwatch2;

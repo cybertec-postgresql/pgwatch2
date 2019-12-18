@@ -1,12 +1,13 @@
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
 CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
 
-CREATE OR REPLACE FUNCTION get_psutil_disk(
+CREATE OR REPLACE FUNCTION public.get_psutil_disk(
 	OUT dir_or_tablespace text, OUT path text, OUT total float8, OUT used float8, OUT free float8, OUT percent float8
 )
  RETURNS SETOF record
  LANGUAGE plpythonu
  SECURITY DEFINER
+ SET search_path = pg_catalog,pg_temp
 AS $FUNCTION$
 
 from os import stat
@@ -57,5 +58,7 @@ return ret_list
 
 $FUNCTION$;
 
-GRANT EXECUTE ON FUNCTION get_psutil_disk() TO pgwatch2;
-COMMENT ON FUNCTION get_psutil_disk() IS 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_psutil_disk() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_psutil_disk() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_psutil_disk() IS 'created for pgwatch2';

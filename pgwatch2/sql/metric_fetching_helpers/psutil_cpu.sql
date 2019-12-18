@@ -4,12 +4,13 @@
 */
 CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
 
-CREATE OR REPLACE FUNCTION get_psutil_cpu(
+CREATE OR REPLACE FUNCTION public.get_psutil_cpu(
 	OUT cpu_utilization float8, OUT load_1m_norm float8, OUT load_1m float8, OUT load_5m_norm float8, OUT load_5m float8,
     OUT "user" float8, OUT system float8, OUT idle float8, OUT iowait float8, OUT irqs float8, OUT other float8
 )
  LANGUAGE plpythonu
  SECURITY DEFINER
+ SET search_path = pg_catalog,pg_temp
 AS $FUNCTION$
 
 from os import getloadavg
@@ -37,5 +38,7 @@ return t.cpu_utilization_info, la[0] / cpu_count(), la[0], la[1] / cpu_count(), 
 
 $FUNCTION$;
 
-GRANT EXECUTE ON FUNCTION get_psutil_cpu() TO pgwatch2;
-COMMENT ON FUNCTION get_psutil_cpu() IS 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_psutil_cpu() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_psutil_cpu() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_psutil_cpu() IS 'created for pgwatch2';

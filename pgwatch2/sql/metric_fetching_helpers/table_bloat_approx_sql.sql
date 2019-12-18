@@ -1,7 +1,7 @@
 -- small modifications to SQL from https://github.com/ioguix/pgsql-bloat-estimation
 -- NB! monitoring user needs SELECT grant on all tables or a SECURITY DEFINER wrapper around that SQL
 
-CREATE OR REPLACE FUNCTION get_table_bloat_approx_sql(
+CREATE OR REPLACE FUNCTION public.get_table_bloat_approx_sql(
     OUT full_table_name text,
     OUT approx_bloat_percent double precision,
     OUT approx_bloat_bytes double precision,
@@ -9,6 +9,7 @@ CREATE OR REPLACE FUNCTION get_table_bloat_approx_sql(
 ) RETURNS SETOF RECORD
     LANGUAGE sql
     SECURITY DEFINER
+    SET search_path = pg_catalog,pg_temp
 AS $$
 
 SELECT
@@ -124,5 +125,7 @@ FROM (
      ) s4
 $$;
 
-GRANT EXECUTE ON FUNCTION get_table_bloat_approx_sql() TO pgwatch2;
-COMMENT ON FUNCTION get_table_bloat_approx_sql() is 'created for pgwatch2';
+REVOKE EXECUTE ON FUNCTION public.get_table_bloat_approx_sql() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_table_bloat_approx_sql() TO pgwatch2;
+
+COMMENT ON FUNCTION public.get_table_bloat_approx_sql() is 'created for pgwatch2';

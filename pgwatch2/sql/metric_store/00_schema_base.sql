@@ -86,6 +86,7 @@ BEGIN
   RETURN false;
 END;
 $SQL$ LANGUAGE plpgsql;
+REVOKE EXECUTE ON FUNCTION admin.ensure_dummy_metrics_table(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION admin.ensure_dummy_metrics_table(text) TO pgwatch2;
 
 
