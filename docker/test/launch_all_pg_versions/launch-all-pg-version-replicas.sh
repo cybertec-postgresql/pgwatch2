@@ -92,14 +92,14 @@ function launch_replica_image {
 	fi
 
 	echo "creating volume $volume_name for PG replica ver $full_ver..."
-	create_vol=$(docker volume create $volume_name &>/dev/null)
+	create_vol=$(docker volume create $volume_name &>/tmp/mk_docker_volume.log)
 	if [ $? -ne 0 ]; then
 	  echo "could not create volume for replica $full_ver:"
 	  exit 1
 	fi
 
  	# get master IP and then freeze
-    MASTER_IP=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' pg$ver)
+    MASTER_IP=$(docker inspect --type container --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' pg$ver)
     if [ $? -ne 0 ] ; then
       echo "could not get master IP for container pg$ver"
       exit 1
@@ -144,7 +144,7 @@ function launch_replica_image {
 
 	# start replica with port+1000
 	echo "starting image pg${ver}-repl on port $repl_port ..."
-  container_info=$(docker inspect "pg${ver}-repl" &>/dev/null)
+  container_info=$(docker inspect --type container "pg${ver}-repl" &>/dev/null)
   if [ $? -ne 0 ]; then
     echo "docker run -d --name pg${ver}-repl -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 $POSTGRES_IMAGE_BASE:$full_ver"
     docker run -d --name "pg${ver}-repl" -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 ${POSTGRES_IMAGE_BASE}:${full_ver} &>/tmp/pg-docker-run-all.out
@@ -152,7 +152,7 @@ function launch_replica_image {
       $(grep "is already in use" /tmp/pg-docker-run-all.out &>/dev/null)
       if [[ $? -eq 0 ]] ; then
         echo "$full_ver replica already running on port $repl_port..."
-        continue
+        return
       else
         echo "could not start docker PG replica $full_ver on port $repl_port"
         docker unpause pg$ver
@@ -175,14 +175,14 @@ function launch_replica_image {
   if [ "$POSTGRES_IMAGE_BASE" == "postgres" ]; then
 
     echo "apt update"
-    docker exec -it pg${ver}-repl apt update #&>/dev/null
+    docker exec -it pg${ver}-repl apt update &>/tmp/apt_update.out
 
     if (( $(echo "$full_ver < 12" |bc -l) )); then
       echo "apt install -y --force-yes postgresql-plpython-${full_ver} python-psutil"
-      docker exec -it pg${ver}-repl apt install -y --force-yes postgresql-plpython-${full_ver} python-psutil # &>/dev/null
+      docker exec -it pg${ver}-repl apt install -y --force-yes postgresql-plpython-${full_ver} python-psutil &>/tmp/apt_install.out
     else
       echo "apt install -y --allow-unauthenticated postgresql-plpython3-${full_ver} python3-psutil"
-      docker exec -it pg${ver}-repl apt install -y --allow-unauthenticated postgresql-plpython3-${full_ver} python3-psutil # &>/dev/null
+      docker exec -it pg${ver}-repl apt install -y --allow-unauthenticated postgresql-plpython3-${full_ver} python3-psutil &>/tmp/apt_install.out
     fi
     if [ $? -ne 0 ]; then
       echo "could not install postgresql-plpython-${full_ver}"
@@ -212,7 +212,7 @@ for x in $PGVERS ; do
   master_port="543${ver}"
   repl_port=$((master_port+1000))
 
-  master_port=$(docker inspect --format='{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}' pg$ver)
+  master_port=$(docker inspect --type container --format='{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}' pg$ver)
   echo "enabling replication settings for $full_ver master container ..."
   enable_primary_replication $full_ver $ver $master_port
 
