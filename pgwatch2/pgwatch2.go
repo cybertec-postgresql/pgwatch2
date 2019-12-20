@@ -2853,7 +2853,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 					continue
 				}
 
-				validMetricDefs := 0
+				foundMetricDefFiles := make(map[string]bool) // to warn on accidental duplicates
 				for _, md := range metricDefs {
 					if strings.HasPrefix(md.Name(), "metric") && strings.HasSuffix(md.Name(), ".sql") {
 						p := path.Join(folder, f.Name(), pgVer.Name(), md.Name())
@@ -2862,10 +2862,11 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 							log.Errorf("Failed to read metric definition at: %s", p)
 							continue
 						}
-						validMetricDefs++
-						if validMetricDefs > 1 && !strings.Contains(md.Name(), "_su") {
+						_, exists := foundMetricDefFiles[md.Name()]
+						if exists {
 							log.Warningf("Multiple definitions found for metric [%s:%s], using the last one (%s)...", f.Name(), pgVer.Name(), md.Name())
 						}
+						foundMetricDefFiles[md.Name()] = true
 
 						//log.Debugf("Metric definition for \"%s\" ver %s: %s", f.Name(), pgVer.Name(), metric_sql)
 						mvpVer, ok := metrics_map[f.Name()]
