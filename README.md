@@ -350,7 +350,7 @@ one database is to be monitored) and instead "Host config" JSON field should be 
 ```
 {
 "dcs_type": "etcd",
-"dcs_endpoints": ["127.0.0.1:2379"],
+"dcs_endpoints": ["http://127.0.0.1:2379"],
 "scope": "batman",
 "namespace": "/service/"
 }
