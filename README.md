@@ -701,8 +701,8 @@ for pre-built packages).
    all old ones and re-insert everything from the latest metric definition SQL file.
 
    ```
-   pg_dump -t pgwatch2.metrics pgwatch2 > old_metrics.sql  # a just-in-case backup
-   psql -U pgwatch2 -c "truncate pgwatch2.metrics" pgwatch2
+   pg_dump -U pgwatch2 -t pgwatch2.metric pgwatch2 > old_metric.sql  # a just-in-case backup
+   psql -U pgwatch2 -c "truncate pgwatch2.metric" pgwatch2
    psql -U pgwatch2 -f pgwatch2/sql/config_store/metric_definitions.sql pgwatch2
    # or when using pre-built packages
    # psql -U pgwatch2 -f /etc/pgwatch2/sql/config_store/metric_definitions.sql pgwatch2
