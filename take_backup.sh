@@ -10,7 +10,7 @@ BACKUP_FOLDER=pgwatch2_backup_$NAME
 
 # change these as needed!
 PGHOST=127.0.0.1
-PGPORT=5434
+PGPORT=5432
 PGUSER=pgwatch2
 PGPASSWORD=pgwatch2admin
 PGWATCHDATABASE=pgwatch2
@@ -67,12 +67,24 @@ echo "done!"
 # 5. restore both Postgres DB dumps
 #       psql -f ~/pgwatch2_backups/pgwatch2_backup_20170123/pgwatch2_config.sql pgwatch2
 #       psql -f ~/pgwatch2_backups/pgwatch2_backup_20170123/grafana_config.sql pgwatch2_grafana
-# 6. log into the running Docker image and kill the InfluxDB process (as restoring requires it)
+# 6. Restore InfluxDB metrics data. Depending on InfluxDB version there are 2 paths: offline for 1.5 and lesser or oline
+# for 1.5+
+#
+# Offline steps for pre v1.5:
+#
+#  * log into the running Docker image and kill the InfluxDB process (as restoring requires it)
 #       pkill influxd
-# 7. restore InfluxDB meta files
+#  * restore InfluxDB meta files
 #       influxd restore -metadir /var/lib/influxdb/meta /pgwatch2_backups/influxdb_backup
-# 8. restore InfluxDB data files (real metric infos)
+#  * restore InfluxDB data files (real metric infos)
 #       influxd restore -database pgwatch2 -datadir /var/lib/influxdb/data /pgwatch2_backups/influxdb_backup
-# 9. restart the Docker image
+#
+# Online steps for v1.5+:
+#
+#  * drop the exising empty pgwatch2 DB if any
+#  * do the online restore
+#       influxd restore -db pgwatch2 -online $BACKUP_FOLDER/influxdb_backup/
+#
+# 7. restart the Docker image and check that old config and metrics are there
 #        docker stop pw2 && docker start pw2
-# 10. done!
+# 8. done!
