@@ -10,7 +10,6 @@ $$
 
 import subprocess
 ret_list = []
-errors=0
 
 #disk_detect_cmd='smartctl --scan | cut -d " " -f3 | grep mega' # for Lenovo ServerRAID M1210
 disk_detect_cmd='lsblk -io KNAME,TYPE | grep '' disk'' | cut -d " " -f1 | sort'
