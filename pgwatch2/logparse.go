@@ -397,6 +397,9 @@ func tryDetermineLogMessagesLanguage(mdb MonitoredDatabase) string {
 		return ""
 	}
 	lang := data[0]["lc_messages"].(string)
+	if lang == "en" {
+		return lang
+	}
 	_, ok := PG_SEVERITIES_LOCALE[lang]
 	if !ok {
 		log.Warningf("[%s] Server log language '%s' is not yet mapped, assuming severities in english: %+v", mdb.DBUniqueName, lang, PG_SEVERITIES)
