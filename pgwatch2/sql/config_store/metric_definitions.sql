@@ -3884,3 +3884,13 @@ from
 $sql$,
 '{"prometheus_all_gauge_columns": true}'
 );
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'server_log_event_counts',
+9.0,
+$sql$
+/* dummy placeholder - special handling in code */
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
+);
