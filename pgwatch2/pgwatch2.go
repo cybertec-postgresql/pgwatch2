@@ -70,15 +70,17 @@ type MonitoredDatabase struct {
 }
 
 type HostConfigAttrs struct {
-	DcsType      string   `yaml:"dcs_type"`
-	DcsEndpoints []string `yaml:"dcs_endpoints"`
-	Scope        string
-	Namespace    string
-	Username     string
-	Password     string
-	CAFile       string `yaml:"ca_file"`
-	CertFile     string `yaml:"cert_file"`
-	KeyFile      string `yaml:"key_file"`
+	DcsType              string   `yaml:"dcs_type"`
+	DcsEndpoints         []string `yaml:"dcs_endpoints"`
+	Scope                string
+	Namespace            string
+	Username             string
+	Password             string
+	CAFile               string `yaml:"ca_file"`
+	CertFile             string `yaml:"cert_file"`
+	KeyFile              string `yaml:"key_file"`
+	LogsGlobPath         string `yaml:"logs_glob_path"`    // default $data_directory / $log_directory / *.csvlog
+    LogsMatchRegex       string `yaml:"logs_match_regex"`  // default is for CSVLOG format. needs to capture following named groups: log_time, user_name, database_name and error_severity
 }
 
 type PatroniClusterMember struct {
@@ -2393,6 +2395,13 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 		if err != nil {
 			log.Errorf("Could not add newly found gatherer [%s:%s] to the 'all_distinct_dbname_metrics' listing table: %v", dbUniqueName, metricName, err)
 		}
+
+		EnsureMetricDummy(metricName) // ensure that there is at least an empty top-level table not to get ugly Grafana notifications
+	}
+
+	if metricName == POSTGRESQL_LOG_PARSING_METRIC_NAME {
+		logparseLoop(dbUniqueName, metricName, config_map, control_ch, store_ch)		// no return
+		return
 	}
 
 	for {
@@ -2473,10 +2482,6 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 			} else {
 				StoreMetrics(metricStoreMessages, store_ch)
 			}
-		}
-
-		if opts.Datastore == DATASTORE_POSTGRES {
-			EnsureMetricDummy(metricName) // ensure that there is at least an empty top-level table not to ugly Grafana notifications
 		}
 
 		if opts.TestdataDays > 0 { // covers errors & no data
@@ -3257,6 +3262,7 @@ type Options struct {
 	SystemIdentifierField     string `long:"system-identifier-field" description:"Tag key for system identifier value if --add-system-identifier" env:"PW2_SYSTEM_IDENTIFIER_FIELD" default:"sys_id"`
 	ServersRefreshLoopSeconds int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERVERS_REFRESH_LOOP_SECONDS" default:"120"`
 	Version                   bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
+
 }
 
 var opts Options

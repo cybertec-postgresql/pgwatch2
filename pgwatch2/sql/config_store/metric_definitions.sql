@@ -1751,7 +1751,7 @@ FROM
   pg_class AS d
 WHERE
   d.oid = b.relfilenode
-GROUP BY 
+GROUP BY
   relkind;
 $sql$,
 '{"prometheus_gauge_columns": ["size_b"]}'
@@ -2928,7 +2928,7 @@ BEGIN
         E'\\d+\\.?\\d+?')
       )[1]::double precision > 9.1 THEN   --parameters normalized only from 9.2
     EXECUTE 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements';
-    EXECUTE format(l_sproc_text);    
+    EXECUTE format(l_sproc_text);
     EXECUTE 'GRANT EXECUTE ON FUNCTION get_stat_statements() TO pgwatch2';
     EXECUTE 'COMMENT ON FUNCTION get_stat_statements() IS ''created for pgwatch2''';
   END IF;
