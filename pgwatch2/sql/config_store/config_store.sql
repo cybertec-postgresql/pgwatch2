@@ -158,6 +158,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "recommendations": 43200,
     "replication": 120,
     "replication_slots": 120,
+    "server_log_event_counts": 60,
     "settings": 7200,
     "sproc_stats": 180,
     "stat_statements": 180,
