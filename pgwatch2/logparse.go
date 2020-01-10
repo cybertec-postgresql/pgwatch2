@@ -3,18 +3,14 @@ package main
 import (
 	"bufio"
 	"io"
+	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
-	"os"
-	"path/filepath"
-	"sync"
 	"time"
 )
 
-var logFilesToTail = make(chan string, 10000) // main loop adds, worker fetches
-var logFilesToTailLock = sync.RWMutex{}
-var lastParsedLineTimestamp time.Time
 var PG_SEVERITIES = [...]string{"DEBUG", "INFO", "NOTICE", "WARNING", "ERROR", "LOG", "FATAL", "PANIC"}
 var PG_SEVERITIES_LOCALE = map[string]map[string]string{
 	"de": {"DEBUG": "DEBUG", "LOG": "LOG", "INFO": "INFO", "HINWEIS": "NOTICE", "WARNUNG": "WARNING", "FEHLER": "ERROR", "FATAL": "FATAL", "PANIK": "PANIC"},
