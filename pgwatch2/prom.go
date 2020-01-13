@@ -57,6 +57,10 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	}
 	for name, md := range monitoredDatabases {
 		for metric, interval := range md.Metrics {
+			if metric == "change_events" {
+				log.Warningf("[%s] Skipping change_events metric as host state is not supported for Prometheus currently", md.DBUniqueName)
+				continue
+			}
 			if interval > 0 {
 				log.Debugf("scraping [%s:%s]...", md.DBUniqueName, metric)
 				metricStoreMessages, err := FetchMetrics( // TODO conn pooling
