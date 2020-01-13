@@ -197,6 +197,8 @@ const MONITORED_DBS_DATASTORE_SYNC_INTERVAL_SECONDS = 600			// write actively mo
 const MONITORED_DBS_DATASTORE_SYNC_METRIC_NAME = "configured_dbs"	// FYI - for Postgres datastore there's also the admin.all_unique_dbnames table with all recent DB unique names with some metric data
 const RECO_PREFIX = "reco_"		// special handling for metrics with such prefix, data stored in RECO_METRIC_NAME
 const RECO_METRIC_NAME = "recommendations"
+const SPECIAL_METRIC_CHANGE_EVENTS = "change_events"
+const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT} // used for informational purposes
@@ -2388,6 +2390,9 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 	failed_fetches := 0
 
 	if opts.TestdataDays > 0 {
+		if metricName == SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS || metricName == SPECIAL_METRIC_CHANGE_EVENTS {
+			return
+		}
 		testDataGenerationModeWG.Add(1)
 	}
 	if opts.Datastore == DATASTORE_POSTGRES && opts.TestdataDays == 0 {
@@ -2399,7 +2404,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 		EnsureMetricDummy(metricName) // ensure that there is at least an empty top-level table not to get ugly Grafana notifications
 	}
 
-	if metricName == POSTGRESQL_LOG_PARSING_METRIC_NAME {
+	if metricName == SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS {
 		logparseLoop(dbUniqueName, metricName, config_map, control_ch, store_ch)		// no return
 		return
 	}

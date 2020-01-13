@@ -25,7 +25,6 @@ var PG_SEVERITIES_LOCALE = map[string]map[string]string{
 }
 
 const CSVLOG_DEFAULT_REGEX  = `^^(?P<log_time>.*?),"?(?P<user_name>.*?)"?,"?(?P<database_name>.*?)"?,(?P<process_id>\d+),"?(?P<connection_from>.*?)"?,(?P<session_id>.*?),(?P<session_line_num>\d+),"?(?P<command_tag>.*?)"?,(?P<session_start_time>.*?),(?P<virtual_transaction_id>.*?),(?P<transaction_id>.*?),(?P<error_severity>\w+),`
-const POSTGRESQL_LOG_PARSING_METRIC_NAME = "server_log_event_counts"
 const CSVLOG_DEFAULT_GLOB_SUFFIX = "*.csv"
 
 func getFileWithLatestTimestamp(files []string) (string, time.Time) {
@@ -103,7 +102,7 @@ func eventCountsToMetricStoreMessages(eventCounts, eventCountsTotal map[string]i
 	var data []map[string]interface{}
 	data = append(data, allSeverityCounts)
 	return []MetricStoreMessage{{DBUniqueName: mdb.DBUniqueName, DBType: mdb.DBType,
-			MetricName: POSTGRESQL_LOG_PARSING_METRIC_NAME, Data: data, CustomTags: mdb.CustomTags}}
+			MetricName: SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS, Data: data, CustomTags: mdb.CustomTags}}
 }
 
 
