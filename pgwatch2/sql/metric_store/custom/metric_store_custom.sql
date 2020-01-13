@@ -22,6 +22,6 @@ comment on table public.metrics is 'a master table for "custom" mode';
 
 /* suggested indexes */
 create index on public.metrics (dbname, metric, time);
-create index on public.metrics using gin (metric, tag_data, time);
+create index on public.metrics using gin (metric, tag_data, time) where tag_data notnull;
 
 RESET ROLE;

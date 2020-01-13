@@ -23,7 +23,7 @@ comment on table admin.metrics_template is 'used as a template for all new metri
 
 -- create index on admin.metrics_template using brin (dbname, time);  /* consider BRIN instead for large data amounts */
 create index on admin.metrics_template (dbname, time);
-create index on admin.metrics_template using gin (dbname, tag_data, time);
+create index on admin.metrics_template using gin (dbname, tag_data, time) where tag_data notnull;
 
 /*
  something like below will be done by the gatherer AUTOMATICALLY:
