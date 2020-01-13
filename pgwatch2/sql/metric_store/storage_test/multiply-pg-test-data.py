@@ -12,7 +12,7 @@ import logging
 import time
 
 ## ADJUST AS NEEDED ##
-METRICSCONN_STR = "host=localhost port=5434 dbname=postgres user=pgwatch2"
+METRICSCONN_STR = "host=localhost port=5432 dbname=pgwatch2_metrics user=pgwatch2"
 HOW_MANY_TIME_TO_DOUBLE = 1   # i.e. when having 1d of data, 5 means there will be 1m (1*2*2*2*2*2)
 LOGLVL = logging.INFO   # logging.DEBUG
 
@@ -21,7 +21,7 @@ with q_interval as (    -- determine interval from 2 sequential rows
 	select * from (
 		select time - lag(time) over (order by time) as metric_interval
 		from public.{metric}
-		where dbname = (select dbname from public.all_distinct_dbname_metrics dd
+		where dbname = (select dbname from admin.all_distinct_dbname_metrics dd
                         where exists (select * from public.{metric} where dbname = dd.dbname) limit 1)
         order by time
         limit 2
@@ -40,7 +40,7 @@ from
 	q_interval
 order by 1, 2;
 """
-SQL_SCHEMA_TYPE = "select schema_type from public.storage_schema_type"
+SQL_SCHEMA_TYPE = "select schema_type from admin.storage_schema_type"
 SQL_CREATE_PARTITIONS_METRIC_TIME = """
 with q_timespan as (
     select
@@ -50,7 +50,7 @@ with q_timespan as (
         public.{metric}
 )
 select
-    public.ensure_partition_metric_time('{metric}', gs)
+    admin.ensure_partition_metric_time('{metric}', gs)
 from 
     q_timespan, generate_series(start_time, end_time, '1d'::interval) gs
 """
@@ -63,14 +63,14 @@ with q_timespan as (
         public.{metric}
 ),
 q_distinct_dbnames as (
-    select distinct dbname from public.all_distinct_dbname_metrics
+    select distinct dbname from admin.all_distinct_dbname_metrics
 )
 select
-    public.ensure_partition_metric_dbname_time('{metric}', dbname, gs)
+    admin.ensure_partition_metric_dbname_time('{metric}', dbname, gs)
 from 
     q_timespan, q_distinct_dbnames, generate_series(start_time, end_time, '1d'::interval) gs
 """
-SQL_GET_TOP_LEVEL_metricS = "select table_name from public.get_top_level_metric_tables()"
+SQL_GET_TOP_LEVEL_metricS = "select table_name from admin.get_top_level_metric_tables()"
 SLEEP_SECONDS_BETWEEN_ROUNDS = 5
 
 
