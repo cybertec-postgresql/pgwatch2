@@ -2529,7 +2529,7 @@ func UpdateMetricDefinitionMap(newMetrics map[string]map[decimal.Decimal]MetricV
 	metric_def_map = newMetrics
 	metric_def_map_lock.Unlock()
 	//log.Debug("metric_def_map:", metric_def_map)
-	log.Info("metrics definitions refreshed - nr. found:", len(newMetrics))
+	log.Debug("metrics definitions refreshed - nr. found:", len(newMetrics))
 }
 
 func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
@@ -3275,6 +3275,7 @@ type Options struct {
 	SystemIdentifierField     string `long:"system-identifier-field" description:"Tag key for system identifier value if --add-system-identifier" env:"PW2_SYSTEM_IDENTIFIER_FIELD" default:"sys_id"`
 	ServersRefreshLoopSeconds int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERVERS_REFRESH_LOOP_SECONDS" default:"120"`
 	Version                   bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
+	Ping                      bool   `long:"ping" description:"Try to connect to all configured DB-s, report errors and then exit" env:"PW2_PING"`
 
 }
 
@@ -3461,7 +3462,7 @@ func main() {
 
 	useConnPooling = StringToBoolOrFail(opts.ConnPooling, "--conn-pooling")
 
-	if opts.InternalStatsPort > 0 {
+	if opts.InternalStatsPort > 0  && !opts.Ping {
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", opts.InternalStatsPort))
 		if err != nil {
 			log.Fatalf("Could not start the internal statistics interface on port %d. Set --internal-stats-port to an open port or to 0 to disable. Err: %v", opts.InternalStatsPort, err)
@@ -3478,94 +3479,99 @@ func main() {
 	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
 	persist_ch := make(chan []MetricStoreMessage, 10000)
 	var buffered_persist_ch chan []MetricStoreMessage
-	if opts.BatchingDelayMs > 0 && opts.Datastore != DATASTORE_PROMETHEUS {
-		buffered_persist_ch = make(chan []MetricStoreMessage, 10000) // "staging area" for metric storage batching, when enabled
-		log.Info("starting MetricsBatcher...")
-		go MetricsBatcher(DATASTORE_INFLUX, opts.BatchingDelayMs, buffered_persist_ch, persist_ch)
-	}
 
-	if opts.Datastore == "graphite" {
-		if opts.GraphiteHost == "" || opts.GraphitePort == "" {
-			log.Fatal("--graphite-host/port needed!")
+	if !opts.Ping {
+
+		if opts.BatchingDelayMs > 0 && opts.Datastore != DATASTORE_PROMETHEUS {
+			buffered_persist_ch = make(chan []MetricStoreMessage, 10000) // "staging area" for metric storage batching, when enabled
+			log.Info("starting MetricsBatcher...")
+			go MetricsBatcher(DATASTORE_INFLUX, opts.BatchingDelayMs, buffered_persist_ch, persist_ch)
 		}
-		graphite_port, _ := strconv.ParseInt(opts.GraphitePort, 10, 64)
-		InitGraphiteConnection(opts.GraphiteHost, int(graphite_port))
-		log.Info("starting GraphitePersister...")
-		go MetricsPersister(DATASTORE_GRAPHITE, persist_ch)
-	} else if opts.Datastore == "influx" {
-		retentionPeriod := InfluxDefaultRetentionPolicyDuration
-		if opts.InfluxRetentionDays > 0 {
-			retentionPeriod = opts.InfluxRetentionDays
-		}
-		// check connection and store connection string
-		conn_str, err := InitAndTestInfluxConnection("1", opts.InfluxHost, opts.InfluxPort, opts.InfluxDbname, opts.InfluxUser,
-			opts.InfluxPassword, opts.InfluxSSL, opts.InfluxSSLSkipVerify, retentionPeriod)
-		if err != nil {
-			log.Fatal("Could not initialize InfluxDB", err)
-		}
-		InfluxConnectStrings[0] = conn_str
-		if len(opts.InfluxHost2) > 0 { // same check for Influx host
-			if len(opts.InfluxPort2) == 0 {
-				log.Fatal("Invalid Influx II connect info")
+
+		if opts.Datastore == "graphite" {
+			if opts.GraphiteHost == "" || opts.GraphitePort == "" {
+				log.Fatal("--graphite-host/port needed!")
 			}
-			conn_str, err = InitAndTestInfluxConnection("2", opts.InfluxHost2, opts.InfluxPort2, opts.InfluxDbname2, opts.InfluxUser2,
-				opts.InfluxPassword2, opts.InfluxSSL2, opts.InfluxSSLSkipVerify2, retentionPeriod)
+			graphite_port, _ := strconv.ParseInt(opts.GraphitePort, 10, 64)
+			InitGraphiteConnection(opts.GraphiteHost, int(graphite_port))
+			log.Info("starting GraphitePersister...")
+			go MetricsPersister(DATASTORE_GRAPHITE, persist_ch)
+		} else if opts.Datastore == "influx" {
+			retentionPeriod := InfluxDefaultRetentionPolicyDuration
+			if opts.InfluxRetentionDays > 0 {
+				retentionPeriod = opts.InfluxRetentionDays
+			}
+			// check connection and store connection string
+			conn_str, err := InitAndTestInfluxConnection("1", opts.InfluxHost, opts.InfluxPort, opts.InfluxDbname, opts.InfluxUser,
+				opts.InfluxPassword, opts.InfluxSSL, opts.InfluxSSLSkipVerify, retentionPeriod)
 			if err != nil {
-				log.Fatal("Could not initialize InfluxDB II", err)
+				log.Fatal("Could not initialize InfluxDB", err)
 			}
-			InfluxConnectStrings[1] = conn_str
-			influx_host_count = 2
+			InfluxConnectStrings[0] = conn_str
+			if len(opts.InfluxHost2) > 0 { // same check for Influx host
+				if len(opts.InfluxPort2) == 0 {
+					log.Fatal("Invalid Influx II connect info")
+				}
+				conn_str, err = InitAndTestInfluxConnection("2", opts.InfluxHost2, opts.InfluxPort2, opts.InfluxDbname2, opts.InfluxUser2,
+					opts.InfluxPassword2, opts.InfluxSSL2, opts.InfluxSSLSkipVerify2, retentionPeriod)
+				if err != nil {
+					log.Fatal("Could not initialize InfluxDB II", err)
+				}
+				InfluxConnectStrings[1] = conn_str
+				influx_host_count = 2
+			}
+			log.Info("InfluxDB connection(s) OK")
+
+			log.Info("starting InfluxPersister...")
+			go MetricsPersister(DATASTORE_INFLUX, persist_ch)
+		} else if opts.Datastore == DATASTORE_JSON {
+			if len(opts.JsonStorageFile) == 0 {
+				log.Fatal("--datastore=json requires --json-storage-file to be set")
+			}
+			jsonOutFile, err := os.Create(opts.JsonStorageFile) // test file path writeability
+			if err != nil {
+				log.Fatalf("Could not create JSON storage file: %s", err)
+			}
+			err = jsonOutFile.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Warningf("In JSON ouput mode. Gathered metrics will be written to \"%s\"...", opts.JsonStorageFile)
+			go MetricsPersister(DATASTORE_JSON, persist_ch)
+		} else if opts.Datastore == DATASTORE_POSTGRES {
+			if len(opts.PGMetricStoreConnStr) == 0 {
+				log.Fatal("--datastore=postgres requires --pg-metric-store-conn-str to be set")
+			}
+
+			InitAndTestMetricStoreConnection(opts.PGMetricStoreConnStr, true)
+
+			PGSchemaType = CheckIfPGSchemaInitializedOrFail()
+
+			log.Info("starting PostgresPersister...")
+			go MetricsPersister(DATASTORE_POSTGRES, persist_ch)
+
+			log.Info("starting UniqueDbnamesListingMaintainer...")
+			go UniqueDbnamesListingMaintainer(true)
+
+			if opts.PGRetentionDays > 0 && (PGSchemaType == "metric" ||
+				PGSchemaType == "metric-time" || PGSchemaType == "metric-dbname-time") && opts.TestdataDays == 0 {
+				log.Info("starting old Postgres metrics cleanup job...")
+				go OldPostgresMetricsDeleter(opts.PGRetentionDays, PGSchemaType)
+			}
+
+		} else if opts.Datastore == DATASTORE_PROMETHEUS {
+			if opts.TestdataDays > 0 || opts.TestdataMultiplier > 0 {
+				log.Fatal("Test data generation mode cannot be used with Prometheus data store")
+			}
+
+			go StartPrometheusExporter(opts.PrometheusPort)
+		} else {
+			log.Fatal("Unknown datastore. Check the --datastore param")
 		}
-		log.Info("InfluxDB connection(s) OK")
 
-		log.Info("starting InfluxPersister...")
-		go MetricsPersister(DATASTORE_INFLUX, persist_ch)
-	} else if opts.Datastore == DATASTORE_JSON {
-		if len(opts.JsonStorageFile) == 0 {
-			log.Fatal("--datastore=json requires --json-storage-file to be set")
-		}
-		jsonOutFile, err := os.Create(opts.JsonStorageFile) // test file path writeability
-		if err != nil {
-			log.Fatalf("Could not create JSON storage file: %s", err)
-		}
-		err = jsonOutFile.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Warningf("In JSON ouput mode. Gathered metrics will be written to \"%s\"...", opts.JsonStorageFile)
-		go MetricsPersister(DATASTORE_JSON, persist_ch)
-	} else if opts.Datastore == DATASTORE_POSTGRES {
-		if len(opts.PGMetricStoreConnStr) == 0 {
-			log.Fatal("--datastore=postgres requires --pg-metric-store-conn-str to be set")
-		}
-
-		InitAndTestMetricStoreConnection(opts.PGMetricStoreConnStr, true)
-
-		PGSchemaType = CheckIfPGSchemaInitializedOrFail()
-
-		log.Info("starting PostgresPersister...")
-		go MetricsPersister(DATASTORE_POSTGRES, persist_ch)
-
-		log.Info("starting UniqueDbnamesListingMaintainer...")
-		go UniqueDbnamesListingMaintainer(true)
-
-		if opts.PGRetentionDays > 0 && (PGSchemaType == "metric" ||
-			PGSchemaType == "metric-time" || PGSchemaType == "metric-dbname-time") && opts.TestdataDays == 0 {
-			log.Info("starting old Postgres metrics cleanup job...")
-			go OldPostgresMetricsDeleter(opts.PGRetentionDays, PGSchemaType)
-		}
-
-	} else if opts.Datastore == DATASTORE_PROMETHEUS {
-		if opts.TestdataDays > 0 || opts.TestdataMultiplier > 0 {
-			log.Fatal("Test data generation mode cannot be used with Prometheus data store")
-		}
-
-		go StartPrometheusExporter(opts.PrometheusPort)
-	} else {
-		log.Fatal("Unknown datastore. Check the --datastore param")
+		daemon.SdNotify(false, "READY=1") // Notify systemd, does nothing outside of systemd
 	}
 
-	daemon.SdNotify(false, "READY=1") // Notify systemd, does nothing outside of systemd
 	first_loop := true
 	var monitored_dbs []MonitoredDatabase
 	var last_metrics_refresh_time int64
@@ -3735,17 +3741,17 @@ func main() {
 					}
 				}
 
-				if (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && db_type == DBTYPE_PG && !ver.IsInRecovery {
+				if !opts.Ping && (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && db_type == DBTYPE_PG && !ver.IsInRecovery {
 					log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
 					TryCreateMetricsFetchingHelpers(db_unique)
 				}
 
-				if opts.Datastore != DATASTORE_PROMETHEUS {
+				if opts.Datastore != DATASTORE_PROMETHEUS && !opts.Ping {
 					time.Sleep(time.Millisecond * 100) // not to cause a huge load spike when starting the daemon with 100+ monitored DBs
 				}
 			}
 
-			if opts.Datastore == DATASTORE_PROMETHEUS {
+			if opts.Datastore == DATASTORE_PROMETHEUS || opts.Ping {
 				continue
 			}
 
@@ -3813,6 +3819,14 @@ func main() {
 			}
 		}
 
+		if opts.Ping {
+			if len(failedInitialConnectHosts) > 0 {
+				log.Errorf("Could not reach %d configured DB host out of %d", len(failedInitialConnectHosts), len(monitored_dbs))
+				os.Exit(len(failedInitialConnectHosts))
+			}
+			log.Infof("All configured %d DB hosts were reachable", len(monitored_dbs))
+			os.Exit(0)
+		}
 		if opts.Datastore == DATASTORE_PROMETHEUS { // special behaviour, no "ahead of time" metric collection
 			log.Debugf("main sleeping %ds...", opts.ServersRefreshLoopSeconds)
 			time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
