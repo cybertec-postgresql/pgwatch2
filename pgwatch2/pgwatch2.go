@@ -1158,6 +1158,7 @@ func UniqueDbnamesListingMaintainer(daemonMode bool) {
 	SELECT dbname FROM t WHERE dbname NOTNULL ORDER BY 1
 	`
 	sql_delete := `DELETE FROM admin.all_distinct_dbname_metrics WHERE NOT dbname = ANY($1) and metric = $2 RETURNING *`
+	sql_delete_all := `DELETE FROM admin.all_distinct_dbname_metrics WHERE metric = $1 RETURNING *`
 	sql_add := `
 		INSERT INTO admin.all_distinct_dbname_metrics SELECT u, $2 FROM (select unnest($1::text[]) as u) x
 		WHERE NOT EXISTS (select * from admin.all_distinct_dbname_metrics where dbname = u and metric = $2)
@@ -1179,30 +1180,37 @@ func UniqueDbnamesListingMaintainer(daemonMode bool) {
 				found_dbnames_arr := make([]string, 0)
 				metric_name := strings.Replace(dr["table_name"].(string), "public.", "", 1)
 
+				log.Debugf("Refreshing all_distinct_dbname_metrics listing for metric: %s", metric_name)
 				ret, err := DBExecRead(metricDb, METRICDB_IDENT, fmt.Sprintf(sql_distinct, dr["table_name"], dr["table_name"]))
 				if err != nil {
 					log.Errorf("Could not refresh Postgres all_distinct_dbname_metrics listing table for '%s': %s", metric_name, err)
 					break
 				}
 				for _, dr_dbname := range ret {
-					found_dbnames_map[dr_dbname["dbname"].(string)] = true
+					found_dbnames_map[dr_dbname["dbname"].(string)] = true // "set" behaviour, don't want duplicates
 				}
-				if len(found_dbnames_map) == 0 {
-					continue
-				}
+
 				// delete all that are not known and add all that are not there
 				for k, _ := range found_dbnames_map {
 					found_dbnames_arr = append(found_dbnames_arr, k)
 				}
+				if len(found_dbnames_arr) == 0 {	// delete all entries for given metric
+					log.Debugf("Deleting Postgres all_distinct_dbname_metrics listing table entries for metric '%s':", metric_name)
+					ret, err = DBExecRead(metricDb, METRICDB_IDENT, sql_delete_all, metric_name)
+					if err != nil {
+						log.Errorf("Could not delete Postgres all_distinct_dbname_metrics listing table entries for metric '%s': %s", metric_name, err)
+					}
+					continue
+				}
 				ret, err = DBExecRead(metricDb, METRICDB_IDENT, sql_delete, pq.Array(found_dbnames_arr), metric_name)
 				if err != nil {
-					log.Errorf("Could not refresh Postgres all_distinct_dbname_metrics listing table for '%s':", metric_name, err)
+					log.Errorf("Could not refresh Postgres all_distinct_dbname_metrics listing table for metric '%s': %s", metric_name, err)
 				} else if len(ret) > 0 {
 					log.Infof("Removed %d stale entries from all_distinct_dbname_metrics listing table for metric: %s", len(ret), metric_name)
 				}
 				ret, err = DBExecRead(metricDb, METRICDB_IDENT, sql_add, pq.Array(found_dbnames_arr), metric_name)
 				if err != nil {
-					log.Errorf("Could not refresh Postgres all_distinct_dbname_metrics listing table for '%s':", metric_name, err)
+					log.Errorf("Could not refresh Postgres all_distinct_dbname_metrics listing table for metric '%s': %s", metric_name, err)
 				} else if len(ret) > 0 {
 					log.Infof("Added %d entry to the Postgres all_distinct_dbname_metrics listing table for metric: %s", len(ret), metric_name)
 				}
