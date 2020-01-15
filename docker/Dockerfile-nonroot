@@ -62,6 +62,10 @@ RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.13.6.linux-amd64.tar.
     && chmod -R g=u /pgwatch2/webpy /pgwatch2/persistent-config \
     && grafana-cli plugins install savantly-heatmap-panel
 
+# both Python 2 and 3 only there for the "transition" period, to not brake some people upgrading to a newer image.
+# at some point Python2 should be dropped completely.
+RUN pip3 install psutil
+
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
 
 # For showing all component versions via :8080/versions. Assuming project is cloned from Github here
