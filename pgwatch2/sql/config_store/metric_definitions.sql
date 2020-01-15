@@ -2887,14 +2887,14 @@ values (
 $sql$
 BEGIN;
 
-CREATE EXTENSION IF NOT EXISTS plpythonu;
+CREATE EXTENSION IF NOT EXISTS plpython3u;
 
 CREATE OR REPLACE FUNCTION get_load_average(OUT load_1min float, OUT load_5min float, OUT load_15min float) AS
 $$
 from os import getloadavg
 la = getloadavg()
 return [la[0], la[1], la[2]]
-$$ LANGUAGE plpythonu VOLATILE SECURITY DEFINER;
+$$ LANGUAGE plpython3u VOLATILE SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION get_load_average() TO pgwatch2;
 
@@ -3056,13 +3056,13 @@ $sql$
     NB! "psutil" is known to behave differently depending on the used version and operating system, so if getting
     errors please adjust to your needs. "psutil" documentation here: https://psutil.readthedocs.io/en/latest/
 */
-CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
+CREATE EXTENSION IF NOT EXISTS plpython3u; /* NB! "plpython3u" might need changing to "plpythonu" (Python 2) everywhere for older OS-es */
 
 CREATE OR REPLACE FUNCTION get_psutil_cpu(
 	OUT cpu_utilization float8, OUT load_1m_norm float8, OUT load_1m float8, OUT load_5m_norm float8, OUT load_5m float8,
     OUT "user" float8, OUT system float8, OUT idle float8, OUT iowait float8, OUT irqs float8, OUT other float8
 )
- LANGUAGE plpythonu
+ LANGUAGE plpython3u
  SECURITY DEFINER
 AS $FUNCTION$
 
@@ -3121,13 +3121,13 @@ values (
 9.1,
 $sql$
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
-CREATE EXTENSION IF NOT EXISTS plpythonu; -- NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es
+CREATE EXTENSION IF NOT EXISTS plpython3u; -- NB! "plpython3u" might need changing to "plpythonu" (Python 2) everywhere for older OS-es
 
 CREATE OR REPLACE FUNCTION get_psutil_mem(
 	OUT total float8, OUT used float8, OUT free float8, OUT buff_cache float8, OUT available float8, OUT percent float8,
 	OUT swap_total float8, OUT swap_used float8, OUT swap_free float8, OUT swap_percent float8
 )
- LANGUAGE plpythonu
+ LANGUAGE plpython3u
  SECURITY DEFINER
 AS $FUNCTION$
 from psutil import virtual_memory, swap_memory
@@ -3166,13 +3166,13 @@ values (
 9.1,
 $sql$
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
-CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
+CREATE EXTENSION IF NOT EXISTS plpython3u; /* NB! "plpython3u" might need changing to "plpythonu" (Python 2) everywhere for older OS-es */
 
 CREATE OR REPLACE FUNCTION get_psutil_disk(
 	OUT dir_or_tablespace text, OUT path text, OUT total float8, OUT used float8, OUT free float8, OUT percent float8
 )
  RETURNS SETOF record
- LANGUAGE plpythonu
+ LANGUAGE plpython3u
  SECURITY DEFINER
 AS $FUNCTION$
 
@@ -3256,12 +3256,12 @@ values (
 $sql$
 
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
-CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
+CREATE EXTENSION IF NOT EXISTS plpython3u; /* NB! "plpython3u" might need changing to "plpythonu" (Python 2) everywhere for older OS-es */
 
 CREATE OR REPLACE FUNCTION get_psutil_disk_io_total(
 	OUT read_count float8, OUT write_count float8, OUT read_bytes float8, OUT write_bytes float8
 )
- LANGUAGE plpythonu
+ LANGUAGE plpython3u
  SECURITY DEFINER
 AS $FUNCTION$
 from psutil import disk_io_counters
@@ -3587,10 +3587,10 @@ values (
 $sql$
 /* assumes the pg_qualstats extension and superuser or select grants on pg_qualstats_indexes_ddl view */
 select
-  'create_index' as tag_reco_topic,
+  'create_index'::text as tag_reco_topic,
   quote_ident(nspname::text)||'.'||quote_ident(relid::text) as tag_object_name,
   ddl as recommendation,
-  'qual execution count: '|| execution_count as extra_info
+  ('qual execution count: '|| execution_count)::text as extra_info
 from
   pg_qualstats_indexes_ddl
 order by
@@ -3607,10 +3607,10 @@ values (
 9.0,
 $sql$
 select
-  'default_public_schema_privs' as tag_reco_topic,
+  'default_public_schema_privs'::text as tag_reco_topic,
   nspname::text as tag_object_name,
-  'REVOKE CREATE ON SCHEMA public FROM PUBLIC;' as recommendation,
-  'only authorized users should be allowed to create new objects' as extra_info
+  'REVOKE CREATE ON SCHEMA public FROM PUBLIC;'::text as recommendation,
+  'only authorized users should be allowed to create new objects'::text as extra_info
 from
   pg_namespace
 where
@@ -3629,10 +3629,10 @@ values (
 $sql$
 /* assumes the pg_qualstats extension */
 select
-  'drop_index' as tag_reco_topic,
+  'drop_index'::text as tag_reco_topic,
   quote_ident(schemaname)||'.'||quote_ident(indexrelname) as tag_object_name,
-  'DROP INDEX ' || quote_ident(schemaname)||'.'||quote_ident(indexrelname) || ';' as recommendation,
-  'NB! Before dropping make sure to also check replica pg_stat_user_indexes.idx_scan count if using them for queries' as extra_info
+  ('DROP INDEX ' || quote_ident(schemaname)||'.'||quote_ident(indexrelname) || ';')::text as recommendation,
+  'NB! Before dropping make sure to also check replica pg_stat_user_indexes.idx_scan count if using them for queries'::text as extra_info
 from
   pg_stat_user_indexes
   join
@@ -3655,10 +3655,10 @@ values (
 $sql$
 /* assumes the pg_qualstats extension */
 select
-  'drop_index' as tag_reco_topic,
+  'drop_index'::text as tag_reco_topic,
   quote_ident(schemaname)||'.'||quote_ident(indexrelname) as tag_object_name,
-  'DROP INDEX ' || quote_ident(schemaname)||'.'||quote_ident(indexrelname) || ';' as recommendation,
-  'NB! Make sure to also check replica pg_stat_user_indexes.idx_scan count if using them for queries' as extra_info
+  ('DROP INDEX ' || quote_ident(schemaname)||'.'||quote_ident(indexrelname) || ';')::text as recommendation,
+  'NB! Make sure to also check replica pg_stat_user_indexes.idx_scan count if using them for queries'::text as extra_info
 from
   pg_stat_user_indexes
   join
@@ -3721,9 +3721,9 @@ UNION ALL
 )
 SELECT
   'overly_nested_views'::text AS tag_reco_topic,
-  full_name as tag_object_name,
-  'overly nested views can affect performance' recommendation,
-  'nesting_depth: ' || max(level) AS extra_info
+  full_name::text as tag_object_name,
+  'overly nested views can affect performance'::text recommendation,
+  ('nesting_depth: ' || coalesce (max(level), '-')))::text AS extra_info
 FROM views
 GROUP BY 1, 2
 HAVING max(level) > 5
@@ -3749,10 +3749,10 @@ from
   and not pg_catalog.obj_description(p.oid, 'pg_proc') ~ 'pgwatch2'
 )
 select
-  'sprocs_wo_search_path' as tag_reco_topic,
-  sproc_name as tag_object_name,
-  fix_sql as recommendation,
-  'functions without fixed search_path can be potentially abused by malicious users if used objects are not fully qualified' as extra_info
+  'sprocs_wo_search_path'::text as tag_reco_topic,
+  sproc_name::text as tag_object_name,
+  fix_sql::text as recommendation,
+  'functions without fixed search_path can be potentially abused by malicious users if used objects are not fully qualified'::text as extra_info
 from
   q_sprocs
 order by
@@ -3778,8 +3778,8 @@ q_total as (
 )
 select
   'superuser_count'::text as tag_reco_topic,
-  '-' as tag_object_name,
-  'too many superusers detected - review recommended' as recommendation,
+  '-'::text as tag_object_name,
+  'too many superusers detected - review recommended'::text as recommendation,
   format('%s active superusers, %s total active users', q_su.count, q_total.count) as extra_info
 from
   q_su, q_total

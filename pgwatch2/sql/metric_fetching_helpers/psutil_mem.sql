@@ -1,11 +1,11 @@
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
-CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
+CREATE EXTENSION IF NOT EXISTS plpython3u; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
 
 CREATE OR REPLACE FUNCTION get_psutil_mem(
 	OUT total float8, OUT used float8, OUT free float8, OUT buff_cache float8, OUT available float8, OUT percent float8,
 	OUT swap_total float8, OUT swap_used float8, OUT swap_free float8, OUT swap_percent float8
 )
- LANGUAGE plpythonu
+ LANGUAGE plpython3u
  SECURITY DEFINER
 AS $FUNCTION$
 from psutil import virtual_memory, swap_memory

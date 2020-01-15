@@ -9,8 +9,8 @@ q_total as (
 )
 select
   'superuser_count'::text as tag_reco_topic,
-  '-' as tag_object_name,
-  'too many superusers detected - review recommended' as recommendation,
+  '-'::text as tag_object_name,
+  'too many superusers detected - review recommended'::text as recommendation,
   format('%s active superusers, %s total active users', q_su.count, q_total.count) as extra_info
 from
   q_su, q_total

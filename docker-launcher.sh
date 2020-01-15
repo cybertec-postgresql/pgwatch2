@@ -64,7 +64,7 @@ su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9
 su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf pgwatch2 </pgwatch2/sql/metric_fetching_helpers/psutil_disk_io_total.sql" postgres
 
 if [ -n "$PW2_TESTDB" ] ; then
-  su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf pgwatch2 </pgwatch2/bootstrap/insert_test_monitored_db.sql" postgres
+  su -c "/usr/lib/postgresql/9.5/bin/postgres --single -j -D /var/lib/postgresql/9.5/main -c config_file=/etc/postgresql/9.5/main/postgresql.conf pgwatch2 </pgwatch2/bootstrap/insert_test_monitored_db_influx.sql" postgres
 fi
 
 touch /pgwatch2/persistent-config/db-bootstrap-done-marker

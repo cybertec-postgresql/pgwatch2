@@ -45,6 +45,10 @@ RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.13.6.linux-amd64.tar.
     && grafana-cli plugins install savantly-heatmap-panel \
     && pip3 install supervisor && mkdir /var/log/supervisor
 
+# both Python 2 and 3 only there for the "transition" period, to not brake some people upgrading to a newer image.
+# at some point Python2 should be dropped completely.
+RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get -qy install postgresql-11-pg-qualstats postgresql-plpython3-11 && pip3 install psutil
+
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
 
 
@@ -52,7 +56,7 @@ ADD grafana_dashboards /pgwatch2/grafana_dashboards
 COPY supervisord-postgres.conf /etc/supervisor/supervisord.conf
 
 # NB! When security is a concern one should definitely alter "pgwatch2" password in change_pw.sql and maybe modify pg_hba.conf accordingly
-COPY postgresql.conf /etc/postgresql/11/main/pgwatch_postgresql.conf
+COPY postgresql_18.04.conf /etc/postgresql/11/main/pgwatch_postgresql.conf
 COPY pg_hba.conf /etc/postgresql/11/main/pg_hba.conf
 COPY docker-launcher-postgres.sh postgresql.conf pg_hba.conf /pgwatch2/
 

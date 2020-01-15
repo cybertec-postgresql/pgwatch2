@@ -75,6 +75,8 @@ su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/psutil_cpu.sql"
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/psutil_mem.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/psutil_disk.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/psutil_disk_io_total.sql" postgres
+su -c "psql -d pgwatch2 -c 'create extension pg_qualstats'" postgres
+su -c "psql -d pgwatch2 -c 'grant select on pg_qualstats_indexes_ddl to pgwatch2'" postgres
 
 if [ -n "$PW2_TESTDB" ] ; then
   su -c "psql -d pgwatch2 -f /pgwatch2/bootstrap/insert_test_monitored_db.sql" postgres

@@ -240,7 +240,7 @@ shared_preload_libraries = 'pg_stat_statements'
 After restarting the server install the extensions as superuser
 ```
 CREATE EXTENSION pg_stat_statements;
-CREATE EXTENSION plpythonu;
+CREATE EXTENSION plpython3u;
 ```
 
 Now also install the wrapper functions (under superuser role) for enabling "Stat statement" and CPU load info fetching for non-superusers
@@ -271,7 +271,11 @@ to all Statistics Collector views without any other "superuser behaviour". See [
 for documentation on such special system roles. Note that currently most out-of-the-box metrics first rely on the helpers
 as v10 is relatively new still, and only when fetching fails, direct access with the "Privileged SQL" is tried.
 
-* For gathering OS statistics (CPU, IO, disk) there are helpers and metrics provided, based on the "psutil" Python package...but from user reports seems the package behaviour differentiates slightly based on the Linux distro / Kernel version used, so small adjustments might be needed there (e.g. remove a non-existen column). Minimum usable Kernel version required is 3.3. Also note that SQL helpers functions are currently defined for Python 2, so for Python 3 you need to change the `LANGUAGE plpythonu` part.
+* For gathering OS statistics (CPU, IO, disk) there are helpers and metrics provided, based on the "psutil" Python
+package...but from user reports seems the package behaviour differentiates slightly based on the Linux distro / Kernel
+version used, so small adjustments might be needed there (e.g. remove a non-existen column). Minimum usable Kernel version
+required is 3.3. Also note that SQL helpers functions are currently defined for Python 3, so for older Python 2 you need
+to change the `LANGUAGE plpython3u` part.
 
 # Running without helper / wrapper functions
 

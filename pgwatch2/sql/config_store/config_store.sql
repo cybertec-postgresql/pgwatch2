@@ -2,7 +2,7 @@ create schema if not exists pgwatch2 authorization pgwatch2;
 
 create extension if not exists pg_stat_statements; -- NB! for demo purposes only, can fail
 
-create extension if not exists plpythonu; -- NB! for demo purposes only, to enable CPU load gathering
+create extension if not exists plpython3u; -- NB! for demo purposes only, to enable CPU load gathering
 
 set search_path to pgwatch2, public;
 
@@ -156,6 +156,38 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "locks": 60,
     "locks_mode": 60,
     "recommendations": 43200,
+    "replication": 120,
+    "replication_slots": 120,
+    "server_log_event_counts": 60,
+    "settings": 7200,
+    "sproc_stats": 180,
+    "stat_statements": 180,
+    "stat_statements_calls": 60,
+    "table_io_stats": 600,
+    "table_stats": 300,
+    "wal": 60,
+    "wal_size": 120,
+    "change_events": 300,
+    "table_bloat_approx_summary_sql": 7200,
+    "kpi": 120,
+    "stat_ssl": 120,
+    "psutil_cpu": 120,
+    "psutil_mem": 120,
+    "psutil_disk": 120,
+    "psutil_disk_io_total": 120,
+    "wal_receiver": 120
+    }'),
+    ('full_influx', 'almost all available metrics for a even deeper performance understanding',
+    '{
+    "archiver": 60,
+    "backends": 60,
+    "bgwriter": 60,
+    "cpu_load": 60,
+    "db_stats": 60,
+    "db_size": 300,
+    "index_stats": 900,
+    "locks": 60,
+    "locks_mode": 60,
     "replication": 120,
     "replication_slots": 120,
     "server_log_event_counts": 60,

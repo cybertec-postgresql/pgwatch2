@@ -1,7 +1,7 @@
 FROM ubuntu:16.04
 
 RUN apt-get -q update \
-    && apt-get -qy install wget apt-transport-https vim git postgresql postgresql-plpython-9.5 libfontconfig python3-pip python-pip libssl-dev libpq-dev \
+    && apt-get -qy install wget apt-transport-https vim git postgresql postgresql-plpython3-9.5 postgresql-plpython-9.5 libfontconfig python3-pip python-pip libssl-dev libpq-dev \
     && pip install -U pip && pip3 install -U pip \
     && locale-gen "en_US.UTF-8" && apt autoremove -y \
     && pg_dropcluster 9.5 main ; pg_createcluster --locale en_US.UTF-8 9.5 main \
@@ -50,6 +50,10 @@ RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.13.6.linux-amd64.tar.
     && rm /tmp/go.tar.gz \
     && rm -rf /usr/local/go /root/go \
     && grafana-cli plugins install savantly-heatmap-panel
+
+# both Python 2 and 3 only there for the "transition" period, to not brake some people upgrading to a newer image.
+# at some point Python2 should be dropped completely.
+RUN pip3 install psutil
 
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
 

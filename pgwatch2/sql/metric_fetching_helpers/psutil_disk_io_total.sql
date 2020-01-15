@@ -1,10 +1,10 @@
 /* Pre-requisites: PL/Pythonu and "psutil" Python package (e.g. pip install psutil) */
-CREATE EXTENSION IF NOT EXISTS plpythonu; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
+CREATE EXTENSION IF NOT EXISTS plpython3u; /* NB! "plpythonu" might need changing to "plpython3u" everywhere for new OS-es */
 
 CREATE OR REPLACE FUNCTION get_psutil_disk_io_total(
 	OUT read_count float8, OUT write_count float8, OUT read_bytes float8, OUT write_bytes float8
 )
- LANGUAGE plpythonu
+ LANGUAGE plpython3u
  SECURITY DEFINER
 AS $FUNCTION$
 from psutil import disk_io_counters
