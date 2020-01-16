@@ -62,11 +62,12 @@ For a complete list of all supported Docker environment variables see [ENV_VARIA
 * Multiple configuration options (YAML, PostgreSQL, ENV) supporting both "push" and "pull" models
 * Possible to monitoring all or a subset of DBs of a PostgreSQL cluster
 * Global or DB level configuration of metrics/intervals
-* Kubernetes/OpenShift ready
+* Kubernetes/OpenShift ready with sample templates and a Helm chart
 * PgBouncer, AWS RDS and Patroni support
 * Internal health-check API to monitor metrics gathering status
 * Built-in security with SSL connections and passwords encryption
 * Very low resource requirements for the collector even when monitoring hundreds of DBs
+* Log parsing capabilities when using local / push mode collector setup. See below for details.
 
 
 # Project background
@@ -366,6 +367,15 @@ are currently supported only without authentication.
 Also if you don't use the replicas actively for queries then it might make sense to decrease the volume of gathered
 metrics and to disable the monitoring of standby-s with the "Master mode only?" checkbox.
 
+## Log parsing feature
+
+As of v1.7.0 the metrics collector daemon, when installed on the DB server (pereferably with YAML config), has capabilities
+to parse the database server logs. Out-of-the-box it will though only work when logs are written in CVSLOG format. For other
+formats user needs to specify a regex that parses out as a named group following fields: database_name, error_severity.
+See [here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/logparse.go#L27) for an example regex.
+
+NB! Note that only the event counts are stored, by severity, for the monitored DB and for the whole instance - no error
+texts or username infos! The metric name to enable log parsing is "server_log_event_counts".
 
 # Adding metrics
 
