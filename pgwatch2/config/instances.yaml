@@ -40,6 +40,8 @@
     ca_file:
     cert_file:
     cert_key:
+    logs_glob_path: "/tmp/*.csv"
+    logs_match_regex: ^(?P<log_time>.*?),"?(?P<user_name>.*?)"?,"?(?P<database_name>.*?)"?,(?P<process_id>\d+),"?(?P<connection_from>.*?)"?,(?P<session_id>.*?),(?P<session_line_num>\d+),"?(?P<command_tag>.*?)"?,(?P<session_start_time>.*?),(?P<virtual_transaction_id>.*?),(?P<transaction_id>.*?),(?P<error_severity>\w+),
   stmt_timeout: 5
   preset_metrics:
   custom_metrics:

@@ -375,7 +375,9 @@ formats user needs to specify a regex that parses out as a named group following
 See [here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/logparse.go#L27) for an example regex.
 
 NB! Note that only the event counts are stored, by severity, for the monitored DB and for the whole instance - no error
-texts or username infos! The metric name to enable log parsing is "server_log_event_counts".
+texts or username infos! The metric name to enable log parsing is "server_log_event_counts". Also note that for auto-detection
+of log destination / setting to work the monitoring user needs superuser / pg_monitor rights - if this is not possible
+then log settings need to be specified manually under "Host config" as seen for example [here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/config/instances.yaml).
 
 # Adding metrics
 
