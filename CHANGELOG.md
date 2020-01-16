@@ -11,34 +11,6 @@ or a specific version
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
 
-## v1.6.2 [2019-09-27]
-
-* Gatherer improvement - support password/cert authentication for Patroni and etcd
-* Gatherer improvement - make pgwatch2 "superuser" aware. Superusers don't need helpers any more for non-Python metrics
-* Gatherer fix - in YAML mode statement timeout config file sample didn't match the actual parsing key
-* Metrics store fix - correct "metric-dbname-time" model weekly partition creation
-* Metrics store improvement - gatherer would not always recover from PG storage failures and restart was needed
-* Gatherer improvement - make SystemD service template to re-start on failure
-* Gatherer improvement - remove built-in statement timeout override for bloat queries
-* Gatherer improvement - always set statement timeout explicitly before any metric queries to avoid a corner case
-* Dashboards - new "Postgres Version Overview" dash
-* Dashboards - new "Stat Statements SQL Search" dash for finding execution stats for matching SQL texts
-* Dashboards - by default filter out pgwatch2 generated metric fetching queries in Stat Statements Top 
-* Dashboards - Health-check description updates and minor corrections
-* Metrics - add 'wal_size' (10+) to 'exhaustive' preset
-* Metrics - replace accurate "pgstattuple" based bloat info gathering with SQL based estimates in preset configs
-* Metrics - correct older (9.0/9.1) "backends" and "kpi" metrics
-* Metrics - add Autovacuum info to "settings" and "table_stats" + display on PG "health-check" dash
-* Metrics - "kpi" was failing on replicas for some PG versions
-* Docker - fix case where setting PW2_GRAFANASSL=0 still enabled SSL
-* Docker - make "Health-check" the default dashboard / splash screen
-* Docker component update: Influx 1.7.8, Grafana 6.3.6, Go 1.12.10
-
-NB! When migrating old "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
-applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2/sql/config_store/migrations/ if using
-ther pre-built packages) folder.
-
-
 ## v1.7.0 [2020-01-16]
 
 * New feature - sever log parsing. Only counts by severity. Assumes local gatherer setup with CSVLOG format by default.
@@ -66,6 +38,35 @@ ther pre-built packages) folder.
 * Infra - add scripts to launch all Postgres versions in Docker and do smoke testing for the pgwatch2 Docker images.
 * Infra - RPM / DEB / Tar buils now also include Grafana dashboards + import scripts so all batteries are now included.
 * Documentation - many smaller README corrections, custom installs, backups, Patroni, etc.
+
+NB! When migrating old "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
+applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2/sql/config_store/migrations/ if using
+ther pre-built packages) folder.
+
+
+
+## v1.6.2 [2019-09-27]
+
+* Gatherer improvement - support password/cert authentication for Patroni and etcd
+* Gatherer improvement - make pgwatch2 "superuser" aware. Superusers don't need helpers any more for non-Python metrics
+* Gatherer fix - in YAML mode statement timeout config file sample didn't match the actual parsing key
+* Metrics store fix - correct "metric-dbname-time" model weekly partition creation
+* Metrics store improvement - gatherer would not always recover from PG storage failures and restart was needed
+* Gatherer improvement - make SystemD service template to re-start on failure
+* Gatherer improvement - remove built-in statement timeout override for bloat queries
+* Gatherer improvement - always set statement timeout explicitly before any metric queries to avoid a corner case
+* Dashboards - new "Postgres Version Overview" dash
+* Dashboards - new "Stat Statements SQL Search" dash for finding execution stats for matching SQL texts
+* Dashboards - by default filter out pgwatch2 generated metric fetching queries in Stat Statements Top 
+* Dashboards - Health-check description updates and minor corrections
+* Metrics - add 'wal_size' (10+) to 'exhaustive' preset
+* Metrics - replace accurate "pgstattuple" based bloat info gathering with SQL based estimates in preset configs
+* Metrics - correct older (9.0/9.1) "backends" and "kpi" metrics
+* Metrics - add Autovacuum info to "settings" and "table_stats" + display on PG "health-check" dash
+* Metrics - "kpi" was failing on replicas for some PG versions
+* Docker - fix case where setting PW2_GRAFANASSL=0 still enabled SSL
+* Docker - make "Health-check" the default dashboard / splash screen
+* Docker component update: Influx 1.7.8, Grafana 6.3.6, Go 1.12.10
 
 NB! When migrating old "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
 applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2/sql/config_store/migrations/ if using
