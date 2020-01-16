@@ -39,6 +39,38 @@ applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2
 ther pre-built packages) folder.
 
 
+## v1.7.0 [DRAFT]
+
+* New feature - sever log parsing. Only counts by severity. Assumes local gatherer setup with CSVLOG format by default.
+* New feature - "ping" to check connectivity to configured DBs. No metrics gathered. Use the --ping flag / PW2_PING env. var.
+* New feature - "realtime" metrics/dashboards, e.g. "Stat activity realtime". Thanks to RealPage Inc. for sponsoring the feature!
+* New feature - recommendations engine. List violation of best practices + index advice (pg_qualstats). Thanks to RealPage Inc.!
+* New dashboard - "Global health" to summarize uptime / health of all instances, similar to Oracle Enterprise Manager overview.
+* Gatherer improvement - when a metric's normal SQL fails, try superuser / direct SQL (if any defined for the metric).
+* Gatherer improvement - allow substitution of env variables in YAML monitoring configs. Thanks @rockaut!
+* Gatherer improvement - write list of configured DBs back to metrics store for easier health / downtime checks.
+* K8s - added HELM chart. Thanks @jinnerbichler!
+* Metrics - fix db_stats, tables_stats, table_hashes and bgwriter for old (9.0-9.2) PG versions.
+* Metrics - auto-create helper definitions also for Python "psutil" based metrics helpers.
+* Metrics - add "get_load_average_copy" helper to get CPU load also without Python (v9.5+).
+* Dashboards - add script to import / delete all pgwatch dashboards from command line.
+* Dashboards - various minor additions / corrections, especially for Postgres dashboards.
+* Dashboards - add last vacuum/analyze infos to "tables top" (PG only).
+* Dashboards - add "users" column to "Stat Statements Top".
+* Web UI metrics page - make Active DBs listing fit in the column.
+* PG metrics DB - save space with partial indexes if there's no "tag" data.
+* PG metrics DB - correct Grafana dbname / metric cache table (admin.all_distinct_dbname_metrics) cleanup.
+* Docker - make possible to set all verbosity levels via ENV.
+* Docker and metrics - make Python 3 the default for helpers / images instead of EOL Python 2.
+* Docker component update - Influx 1.7.9, Grafana 6.5.2, Go 1.13.6.
+* Infra - add scripts to launch all Postgres versions in Docker and do smoke testing for the pgwatch2 Docker images.
+* Documentation - many smaller README corrections, custom installs, backups, Patroni, etc.
+
+NB! When migrating old "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
+applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2/sql/config_store/migrations/ if using
+ther pre-built packages) folder.
+
+
 ## v1.6.1 [2019-08-13]
 
 * Config DB fix - allow 'patroni-continuous-discovery' DB type available in YAML mode
