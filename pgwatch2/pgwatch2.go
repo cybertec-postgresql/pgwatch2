@@ -39,7 +39,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var GitVersionHash = "" // Will be set by "go build"!
+var commit = "" // Git hash. Will be set on build time by build_gatherer.sh / goreleaser
+var date = "" // Will be set on build time by build_gatherer.sh / goreleaser
 
 type MonitoredDatabase struct {
 	DBUniqueName         string `yaml:"unique_name"`
@@ -65,7 +66,6 @@ type MonitoredDatabase struct {
 	IsEnabled            bool              `yaml:"is_enabled"`
 	CustomTags           map[string]string `yaml:"custom_tags"` // ignored on graphite
 	HostConfig           HostConfigAttrs   `yaml:"host_config"`
-	//JdbcConnStr          string            `yaml: "jdbc_conn_str"`
 	OnlyIfMaster bool `yaml:"only_if_master"`
 }
 
@@ -3292,11 +3292,11 @@ func main() {
 	}
 
 	if opts.Version {
-		if GitVersionHash == "" {
-			fmt.Println("Git version not set! Use the 'build_gatherer.sh' script to build the binary or use 'go build  -ldflags \"-X 'main.GitVersionHash=`git show -s --format=\"%H (%ci)\" HEAD`\"' ...")
+		if commit == "" {
+			fmt.Println("Git version not set! Use the 'build_gatherer.sh' script to build the binary or specify 'commit' and 'date' via -ldflags...")
 			os.Exit(1)
 		}
-		fmt.Println(GitVersionHash)
+		fmt.Println(fmt.Sprintf("%s (%s)", commit, date))
 		os.Exit(0)
 	}
 
