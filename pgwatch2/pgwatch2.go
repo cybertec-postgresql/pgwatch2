@@ -3209,6 +3209,9 @@ func SyncMonitoredDBsToDatastore(monitored_dbs []MonitoredDatabase, persistance_
 			db["tag_group"] = mdb.Group
 			db["master_only"] = mdb.OnlyIfMaster
 			db["epoch_ns"] = now.UnixNano()
+			for k, v := range mdb.CustomTags {
+				db["tag_" + k] = v
+			}
 			var data = [](map[string]interface{}){db}
 			msms = append(msms, MetricStoreMessage{DBUniqueName: mdb.DBUniqueName, MetricName: MONITORED_DBS_DATASTORE_SYNC_METRIC_NAME,
 				Data: data})
