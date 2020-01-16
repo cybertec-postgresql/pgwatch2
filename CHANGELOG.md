@@ -39,7 +39,7 @@ applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2
 ther pre-built packages) folder.
 
 
-## v1.7.0 [DRAFT]
+## v1.7.0 [2020-01-16]
 
 * New feature - sever log parsing. Only counts by severity. Assumes local gatherer setup with CSVLOG format by default.
 * New feature - "ping" to check connectivity to configured DBs. No metrics gathered. Use the --ping flag / PW2_PING env. var.
@@ -64,6 +64,7 @@ ther pre-built packages) folder.
 * Docker and metrics - make Python 3 the default for helpers / images instead of EOL Python 2.
 * Docker component update - Influx 1.7.9, Grafana 6.5.2, Go 1.13.6.
 * Infra - add scripts to launch all Postgres versions in Docker and do smoke testing for the pgwatch2 Docker images.
+* Infra - RPM / DEB / Tar buils now also include Grafana dashboards + import scripts so all batteries are now included.
 * Documentation - many smaller README corrections, custom installs, backups, Patroni, etc.
 
 NB! When migrating old "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
