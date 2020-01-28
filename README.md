@@ -465,9 +465,8 @@ similar to initial installing, as the collector doesn't have any state on its ow
 ## Adding new DBs to monitoring (and removing those shut down)
 
 Here the most typical way is to write some script that parses the company's internal inventory database / files and
-makes according INSERT-s into the pgwatch2.monitored_db table directly. One could also use the Web UI page "API" (see [here]
-(https://github.com/cybertec-postgresql/pgwatch2/blob/master/docker/test/smoke_test_docker_image.sh#L44) for an example)
-, but direct access is of course more flexible.
+makes according INSERT-s into the pgwatch2.monitored_db table directly. One could also use the Web UI page "API", (see [here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/docker/test/smoke_test_docker_image.sh#L44) for an example)),
+but direct access is of course more flexible.
 
 ## Metrics maintenance
 
@@ -483,8 +482,8 @@ NB! If you add your own custom metrics make sure not to delete them!
 Couple of times a year also main dashboards get updates, so same as with metrics - makes sense to refresh them occasionally.
 The delete / import scripts are [here](https://github.com/cybertec-postgresql/pgwatch2/tree/master/grafana_dashboards).
 
-NB! As the scripts by default first delete all pgwatch2 created dashboards, you should take care when you've changed them
-- which is a typical thing to do actully. So a good idea is to rename the dashboards you've changed to something else.
+NB! As the scripts by default first delete all pgwatch2 created dashboards, you should take care when you've changed them -
+which is a typical thing to do actully. So a good idea is to rename the dashboards you've changed to something else.
 
 ## Storage monitoring
 
