@@ -55,6 +55,7 @@ archives:
       - ./pgwatch2/config/**/*
       - ./pgwatch2/sql/**/*
       - ./pgwatch2/startup-scripts/**/*
+      - ./pgwatch2/bootstrap/**/*
       - ./README.md
 nfpms:
   -
@@ -120,6 +121,7 @@ nfpms:
       "./pgwatch2/metrics/**/*": "/etc/pgwatch2/metrics"
       "./pgwatch2/config/**/*": "/etc/pgwatch2/config"
       "./pgwatch2/sql/**/*": "/etc/pgwatch2/sql"
+      "./pgwatch2/bootstrap/**/*": "/etc/pgwatch2/bootstrap"
       "./pgwatch2/startup-scripts/pgwatch2.service": "/etc/pgwatch2/startup-scripts/pgwatch2.service"
       "./grafana_dashboards/**/*": "/etc/pgwatch2/grafana-dashboards"
       "./README.md": "/etc/pgwatch2/README.md"
