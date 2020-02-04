@@ -80,6 +80,8 @@ For more background on the project motivations and design goals see the original
 * [Feature pack 2](https://www.cybertec-postgresql.com/en/updates-for-the-pgwatch2-postgres-monitoring-tool/)
 * [Feature pack 3](https://www.cybertec-postgresql.com/en/pgwatch2-feature-pack-3/)
 * [Feature pack 4](https://www.cybertec-postgresql.com/en/major-feature-update-for-the-pgwatch2-postgres-monitoring-tool/)
+* [Feature pack 5](https://www.cybertec-postgresql.com/en/version-1-6-of-pgwatch2-postgresql-monitoring-tool-released/)
+* [Feature pack 6](https://www.cybertec-postgresql.com/en/pgwatch2-v1-7-0-released/)
 
 # Limitations / Performance expectations
 
@@ -451,6 +453,21 @@ docker run --rm -p 3000:3000 -p 8080:8080 -e PW2_ADHOC_CONN_STR="postgresql://us
 NB! Using PW2_ADHOC_CREATE_HELPERS (tries to create all of the metrics fetching helpers automatically on the monitored DB)
 assumes superuser privileges and does not clean up the helpers on exitings so for a permanent setting one could
 change the user to an unprivileged 'pgwatch2' user.
+
+# Prometheus mode
+
+In v1.6.0 support for one of the most popular metrics gathering solutions – Prometheus, was added. When the "datastore"
+parameter is set to "prometheus" then the pgwatch2 metrics collector doesn't do any normal interval-based fetching but
+listens on port 9187 (changeable) for scrape requests configured and performed on Prometheus side. Returned metrics belong
+to "pgwatch2" namespace (a prefix basically) and is changeable via the "--prometheus-namespace" flag. Also important to
+note - in this mode the pgwatch2 agent should be now run on all individual DB hosts, not centrally. While technically
+possible though, it would counter the core idea of Prometheus and would make scrapes also longer, risking timeouts.
+FYI – the functionality has some overlap with the existing "postgres_exporter" project but also provides more flexibility
+in metrics configuration and all config changes are applied "online".
+
+Also note that Prometheus can only store numerical metric data values so not all metrics produce same values as for example
+with PostgreSQL storage - so due to that there's also a separate "preset config" for named "prometheus".
+
 
 # General recommendations for long term pgwatch2 installations
 
