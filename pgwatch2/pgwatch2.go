@@ -2627,6 +2627,7 @@ func queryDB(clnt client.Client, cmd string) (res []client.Result, err error) {
 func InitAndTestInfluxConnection(HostId, InfluxHost, InfluxPort, InfluxDbname, InfluxUser, InfluxPassword, InfluxSSL, SkipSSLCertVerify string, RetentionPeriod int64) (string, error) {
 	log.Infof("Testing Influx connection to host %s: %s, port: %s, DB: %s", HostId, InfluxHost, InfluxPort, InfluxDbname)
 	var connect_string string
+	var pgwatchDbExists bool = false
 	skipSSLCertVerify, _ := strconv.ParseBool(SkipSSLCertVerify)
 
 	if b, _ := strconv.ParseBool(InfluxSSL); b == true {
@@ -2665,8 +2666,37 @@ retry:
 		log.Debug("Found db:", db_arr[0])
 		if InfluxDbname == db_arr[0] {
 			log.Info(fmt.Sprintf("Database '%s' existing", InfluxDbname))
-			return connect_string, nil
+			pgwatchDbExists = true
+			break
 		}
+	}
+	if pgwatchDbExists {
+		var currentRetentionAsString string
+		// get current retention period
+		res, err := queryDB(c, fmt.Sprintf("SHOW RETENTION POLICIES ON %s", InfluxDbname))
+		if err != nil {
+			log.Errorf("Could not check Influx retention policies: %v", err)
+			return connect_string, err
+		}
+		for _, rp := range res[0].Series[0].Values {
+			log.Debugf("Found retention policy: %+v", rp)
+			if opts.InfluxRetentionName == rp[0].(string) {
+				// duration is represented as "720h0m0s" so construct similar string from --iretentiondays input
+				currentRetentionAsString = rp[1].(string)
+				break
+			}
+		}
+		targetRetentionAsString := fmt.Sprintf("%dh0m0s", RetentionPeriod * 24)
+		if currentRetentionAsString != targetRetentionAsString {
+			log.Warningf("InfluxDB retention policy change detected, changing from %s to %s ...", currentRetentionAsString, targetRetentionAsString)
+			isql := fmt.Sprintf("ALTER RETENTION POLICY %s ON %s DURATION %dd REPLICATION 1 SHARD DURATION 1d", opts.InfluxRetentionName, InfluxDbname, RetentionPeriod)
+			log.Warningf("Executing: %s", isql)
+			res, err = queryDB(c, isql)
+			if err != nil {
+				log.Fatalf("Could not change the retention policy: %v", err)
+			}
+		}
+		return connect_string, nil
 	}
 
 	log.Warningf("Database '%s' not found! Creating with %d retention and retention policy name \"%s\"...", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
@@ -2837,7 +2867,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 				log.Warningf("Ignoring metric '%s' as name not fitting pattern: %s", f.Name(), metricNamePattern)
 				continue
 			}
-			log.Debugf("Processing metric: %s", f.Name())
+			//log.Debugf("Processing metric: %s", f.Name())
 			pgVers, err := ioutil.ReadDir(path.Join(folder, f.Name()))
 			if err != nil {
 				log.Error(err)
@@ -2863,7 +2893,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 					log.Errorf("Could not parse \"%s\" to Decimal: %s", pgVer.Name(), err)
 					continue
 				}
-				log.Debugf("Found %s", pgVer.Name())
+				//log.Debugf("Found %s", pgVer.Name())
 
 				metricDefs, err := ioutil.ReadDir(path.Join(folder, f.Name(), pgVer.Name()))
 				if err != nil {
