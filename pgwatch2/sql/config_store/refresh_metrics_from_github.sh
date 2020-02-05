@@ -26,15 +26,12 @@ else
 fi
 
 echo "getting new metric definitions from Github ..."
-#wget -q -O $METRICS_TMP_FILE $GITHUB_METRICS
+wget -q -O $METRICS_TMP_FILE $GITHUB_METRICS
 if [[ "$?" -ne 0 ]] ; then
   echo "could not fetch new metrics defs from Github, check the URL / connectivity ..."
   exit 1
 fi
 echo "OK. stored to $METRICS_TMP_FILE"
-
-
-# DEFAULT_DATASOURCE_ID=$(psql -qXAt -c "select id from data_source where is_default")
 
 if [ "$DRY_RUN" -eq 0 ]; then
   echo "saving a backup of old metric definitions to $METRICS_BACKUP_FILE ..."
