@@ -3300,6 +3300,26 @@ $sql$,
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
 values (
 'get_wal_size',
+9.0,
+$sql$
+
+CREATE OR REPLACE FUNCTION get_wal_size() RETURNS int8 AS
+$$
+select sum((pg_stat_file('pg_xlog/'||f)).size)::int8 from (select pg_ls_dir('pg_xlog') f) ls
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION get_wal_size() TO pgwatch2;
+COMMENT ON FUNCTION get_wal_size() IS 'created for pgwatch2';
+
+$sql$,
+'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
+true
+);
+
+/* Stored procedure for getting WAL folder size */
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
+values (
+'get_wal_size',
 10,
 $sql$
 
@@ -3316,11 +3336,20 @@ $sql$,
 true
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_sql_su)
 values (
 'wal_size',
 9.0,
-$sql$$sql$
+$sql$
+select
+    (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+    get_wal_size() as wal_size_b;
+$sql$,
+$sql$
+select
+    (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+    sum((pg_stat_file('pg_xlog/'||f)).size)::int8 as wal_size_b from (select pg_ls_dir('pg_xlog') f) ls;
+$sql$
 );
 
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_sql_su)
