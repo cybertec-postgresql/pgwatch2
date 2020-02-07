@@ -205,7 +205,7 @@ like "minimal", "basic" or "exhaustive" (monitored_db.preset_config table) or a 
 The queries should always include a "epoch_ns" column and "tag_" prefix can be used for columns that should be tags
 (thus indexed) in InfluxDB.
 * a list of available metrics together with some instructions is also visible from the "Documentation" dashboard
-* some predefine metrics (cpu_load, stat_statements) require installing helper functions (look into "pgwatch2/sql" folder) on monitored DBs 
+* some predefine metrics (cpu_load, stat_statements) require installing helper functions (look into "pgwatch2/metrics/00_helpers" folder) on monitored DBs2
 * for effective graphing you want to familiarize yourself with basic InfluxQL and the non_negative_derivative() function
 which is very handy as Postgres statistics are mostly evergrowing counters. Documentation [here](https://docs.influxdata.com/influxdb/latest/query_language/functions/#non-negative-derivative).
 * for troubleshooting, logs for the components are visible under http://127.0.0.1:8080/logs/[pgwatch2|postgres|webui|influxdb|grafana] or by logging
@@ -225,10 +225,12 @@ GRANT pg_monitor TO pgwatch2;   // v10+
 ```
 * If monitoring below v10 servers and not using superuser and don't also want to grant "pg_monitor" to the monitoring user,
 define the helper function to enable monitoring of some "protected" internal information, like active sessions info. If
-using a superuser login (not recommended for remote "pulling", but only "pushing") you can skip this step.
+using a superuser login (not recommended for remote "pulling", but only "pushing") you can skip this step. Note that there
+might not be an exact Postgres version match for your helper, then replace $pgver with the next smallest version number
+for the respective helper.
 
 ```
-psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/stat_activity_wrapper.sql mydb
+psql -h mydb.com -U superuser -f pgwatch2/metrics/00_helpers/$pgver/get_stat_activity/$pgver/metrics.sql mydb
 ```
 
 * Additionally for extra insights ("Stat statements" dashboard and CPU load) it's also recommended to install the `pg_stat_statement`
@@ -248,12 +250,12 @@ CREATE EXTENSION plpython3u;
 
 Now also install the wrapper functions (under superuser role) for enabling "Stat statement" and CPU load info fetching for non-superusers
 ```
-psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/stat_statements_wrapper.sql mydb
-psql -h mydb.com -U superuser -f pgwatch2/sql/metric_fetching_helpers/cpu_load_plpythonu.sql mydb
+psql -h mydb.com -U superuser -f pgwatch2/metrics/00_helpers/get_stat_statements/$pgver/metrics.sql mydb
+psql -h mydb.com -U superuser -f pgwatch2/metrics/00_helpers/get_load_average/$pgver/metrics.sql mydb
 ```
 
 For more detailed statistics (OS monitoring, table bloat, WAL size, etc) it is recommended to install also all other helpers
-found from the `pgwatch2/sql/metric_fetching_helpers` folder (or `pgwatch2/metrics/00_helpers` for YAML based setup).
+found from the `pgwatch2/metrics/00_helpers` folder or do it automatically by using the rollout_helper.py script found in 00_helpers folder.
 As of v1.6.0 though helpers are not needed for Postgres-native metrics (e.g. WAL size) if a privileged user (superuser or has pg_monitor GRANT)
 is used as all Postres-protected metrics have also "privileged" SQL-s defined for direct access. Another good way to take
 ensure that helpers get installed is to 1st run as superuser, by checking the `Auto-create helpers?` checkbox
@@ -282,7 +284,7 @@ to change the `LANGUAGE plpython3u` part.
 
 # Running without helper / wrapper functions
 
-Helpers/wrappers are not needed actually, they just provide a bit more information. For unprivileged users (developers)
+Helpers/wrappers are not needed actually, they just provide a bit more information for unprivileged users - thus for developers
 with no means to install any wrappers as superuser it's also possible to benefit from pgwatch2 - for such use cases e.g.
 the "unprivileged" preset metrics profile and the according ["DB overview Unprivileged / Developer" dashboard](https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/overview_developer.png)
 is a good starting point as it only assumes existance of `pg_stat_statements` which is available at all cloud providers.
