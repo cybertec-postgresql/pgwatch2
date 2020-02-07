@@ -131,6 +131,9 @@ def do_roll_out(md, pgver):
         sql = hp['sql']
         if args.monitoring_user != 'pgwatch2':  # change helper definitions so that 'grant execute' is done for the monitoring role specified in the configuration
             sql = re.sub(r'(?i)TO\s+pgwatch2', 'TO ' + args.monitoring_user, sql)
+        if args.python2:
+            sql = sql.replace('plpython3u', 'plpythonu')
+
         all_dbs, err = executeOnRemoteHost(sql, md['md_hostname'], md['md_port'], md['md_dbname'], args.user, args.password, quiet=True)
         if err:
             logging.debug('failed to roll out %s: %s', hp['helper'], err)
@@ -172,6 +175,7 @@ def main():
     argp.add_argument('--helpers', dest='helpers', help='Roll out only listed (comma separated) helpers. By default all will be tried to roll out')
     argp.add_argument('--excluded-helpers', dest='excluded_helpers', default='get_load_average_windows,get_load_average_copy,get_smart_health_per_device', help='Do not try to roll out these by default. Clear list if needed')
     argp.add_argument('--template1', dest='template1', action='store_true', default=False, help='Install helpers into template1 so that all newly craeted DBs will get them automatically') # TODO
+    argp.add_argument('--python2', dest='python2', action='store_true', default=False, help='Use Python v2 (EOL) instead of default v3 in PL/Python helpers')
     argp.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False, help='More chat')
 
     rollout_dbs = []
