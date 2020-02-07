@@ -174,11 +174,13 @@ def main():
     argp.add_argument('-m', '--mode', dest='mode', default='configdb', help='[configdb|single|instance] - instance = all non-template DBs')
     argp.add_argument('--helpers', dest='helpers', help='Roll out only listed (comma separated) helpers. By default all will be tried to roll out')
     argp.add_argument('--excluded-helpers', dest='excluded_helpers', default='get_load_average_windows,get_load_average_copy,get_smart_health_per_device', help='Do not try to roll out these by default. Clear list if needed')
-    argp.add_argument('--template1', dest='template1', action='store_true', default=False, help='Install helpers into template1 so that all newly craeted DBs will get them automatically') # TODO
+    argp.add_argument('--template1', dest='template1', action='store_true', default=False, help='Install helpers into template1 so that all newly craeted DBs will get them automatically')
     argp.add_argument('--python2', dest='python2', action='store_true', default=False, help='Use Python v2 (EOL) instead of default v3 in PL/Python helpers')
     argp.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False, help='More chat')
 
     rollout_dbs = []
+    unique_host_port_pairs = set()
+
     global args
     args = argp.parse_args()
 
@@ -219,9 +221,22 @@ def main():
             logging.info('DB #%s: [%s] %s@%s skipping as not a primary', i, db['md_unique_name'], db['md_hostname'], db['md_port'])
             continue
         logging.warning('DB #%s: [%s] %s@%s/%s on version %s', i, db['md_unique_name'], db['md_hostname'], db['md_port'], db['md_dbname'], pgver)
+
         if args.confirm:
             ok, total = do_roll_out(db, pgver)
             logging.warning('%s / %s succeeded', ok, total)
+
+            if args.template1 and (db['md_hostname'], db['md_port']) not in unique_host_port_pairs: # try template1 rollout only once per instance
+                db_t1 = db.copy()
+                db_t1['md_dbname'] = 'template1'
+                logging.warning('DB #%s TEMPLATE1: [%s] %s@%s/%s on version %s', i, db['md_unique_name'], db['md_hostname'],
+                                db['md_port'], db_t1['md_dbname'], pgver)
+                ok_t1, total_t1 = do_roll_out(db_t1, pgver)
+                ok += ok_t1
+                total += total_t1
+                logging.warning('%s / %s succeeded', ok_t1, total_t1)
+
+                unique_host_port_pairs.add((db['md_hostname'], db['md_port']))
 
     logging.info('done')
 
