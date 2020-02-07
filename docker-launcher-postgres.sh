@@ -65,16 +65,17 @@ else
   su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-time/metric_store_part_time.sql" postgres
   su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-time/ensure_partition_metric_time.sql" postgres
 fi
-su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/cpu_load_plpythonu.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/stat_statements_wrapper.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/stat_activity_wrapper.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/table_bloat_approx.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/table_bloat_approx_sql.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/wal_size.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/psutil_cpu.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/psutil_mem.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/psutil_disk.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/sql/metric_fetching_helpers/psutil_disk_io_total.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_load_average/9.0/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_statements/9.2/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_activity/9.2/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_replication/9.0/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_table_bloat_approx/9.5/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_table_bloat_approx_sql/9.0/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_wal_size/10/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_psutil_cpu/9.1/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_psutil_mem/9.1/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_psutil_disk/9.1/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_psutil_disk_io_total/9.1/metric.sql" postgres
 su -c "psql -d pgwatch2 -c 'create extension pg_qualstats'" postgres
 su -c "psql -d pgwatch2 -c 'grant select on pg_qualstats_indexes_ddl to pgwatch2'" postgres
 
