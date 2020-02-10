@@ -47,13 +47,13 @@ $$
 	return min((sys - idl) *100 / sys, 100)
 $$ LANGUAGE plpython3u;
 
-CREATE OR REPLACE FUNCTION get_load_average() RETURNS load_average AS
+CREATE OR REPLACE FUNCTION get_load_average_windows() RETURNS load_average AS
 $$
 	SELECT val, val, val FROM cpu() AS cpu_now(val);
 $$ LANGUAGE sql;
 
-GRANT EXECUTE ON FUNCTION get_load_average() TO pgwatch2;
+GRANT EXECUTE ON FUNCTION get_load_average_windows() TO pgwatch2;
 
-COMMENT ON FUNCTION get_load_average() is 'created for pgwatch2';
+COMMENT ON FUNCTION get_load_average_windows() is 'created for pgwatch2';
 
 COMMIT;
