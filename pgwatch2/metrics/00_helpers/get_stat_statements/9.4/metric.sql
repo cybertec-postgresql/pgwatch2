@@ -14,19 +14,10 @@ From v10 the "pg_monitor" system GRANT can be used for the same purpose so the w
 
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
-CREATE OR REPLACE FUNCTION get_stat_statements() RETURNS TABLE (
-	queryid int8, query text, calls int8, total_time float8, rows int8, shared_blks_hit int8, shared_blks_read int8,
-	shared_blks_dirtied int8, shared_blks_written int8, local_blks_hit int8, local_blks_read int8, local_blks_dirtied int8,
-	local_blks_written int8, temp_blks_read int8, temp_blks_written int8, blk_read_time float8, blk_write_time float8,
-  userid int8, dbid int8
-) AS
+CREATE OR REPLACE FUNCTION get_stat_statements() RETURNS SETOF pg_stat_statements AS
 $$
   select
-    /* for versions <9.4 we need to spoof the queryid column to make data usable /linkable in Grafana */
-    (regexp_replace(md5(s.query), E'\\D', '', 'g'))::varchar(10)::int8 as queryid,
-  	s.query, s.calls, s.total_time, s.rows, s.shared_blks_hit, s.shared_blks_read, s.shared_blks_dirtied, s.shared_blks_written,
-  	s.local_blks_hit, s.local_blks_read, s.local_blks_dirtied, s.local_blks_written, s.temp_blks_read, s.temp_blks_written,
-  	s.blk_read_time, s.blk_write_time, s.userid::int8, s.dbid::int8
+    s.*
   from
     pg_stat_statements s
     join
