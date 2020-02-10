@@ -8,6 +8,7 @@ q_total as (
   select count(*) from pg_roles where rolcanlogin
 )
 select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'superuser_count'::text as tag_reco_topic,
   '-'::text as tag_object_name,
   'too many superusers detected - review recommended'::text as recommendation,

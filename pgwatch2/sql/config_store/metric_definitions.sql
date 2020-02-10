@@ -3650,6 +3650,7 @@ values (
 $sql$
 /* assumes the pg_qualstats extension and superuser or select grants on pg_qualstats_indexes_ddl view */
 select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'create_index'::text as tag_reco_topic,
   quote_ident(nspname::text)||'.'||quote_ident(relid::text) as tag_object_name,
   ddl as recommendation,
@@ -3670,6 +3671,7 @@ values (
 9.0,
 $sql$
 select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'default_public_schema_privs'::text as tag_reco_topic,
   nspname::text as tag_object_name,
   'REVOKE CREATE ON SCHEMA public FROM PUBLIC;'::text as recommendation,
@@ -3692,6 +3694,7 @@ values (
 $sql$
 /* assumes the pg_qualstats extension */
 select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'drop_index'::text as tag_reco_topic,
   quote_ident(schemaname)||'.'||quote_ident(indexrelname) as tag_object_name,
   ('DROP INDEX ' || quote_ident(schemaname)||'.'||quote_ident(indexrelname) || ';')::text as recommendation,
@@ -3718,6 +3721,7 @@ values (
 $sql$
 /* assumes the pg_qualstats extension */
 select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'drop_index'::text as tag_reco_topic,
   quote_ident(schemaname)||'.'||quote_ident(indexrelname) as tag_object_name,
   ('DROP INDEX ' || quote_ident(schemaname)||'.'||quote_ident(indexrelname) || ';')::text as recommendation,
@@ -3783,14 +3787,15 @@ UNION ALL
      AND v.oid <> views.view  -- avoid loop
 )
 SELECT
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'overly_nested_views'::text AS tag_reco_topic,
   full_name::text as tag_object_name,
   'overly nested views can affect performance'::text recommendation,
   'nesting_depth: ' || coalesce (max(level)::text, '-') AS extra_info
 FROM views
-GROUP BY 1, 2
+GROUP BY 1, 2, 3
 HAVING max(level) > 5
-ORDER BY max(level) DESC;
+ORDER BY max(level) DESC, full_name::text;
 $sql$,
 '{"prometheus_all_gauge_columns": true}',
 true
@@ -3812,6 +3817,7 @@ from
   and not pg_catalog.obj_description(p.oid, 'pg_proc') ~ 'pgwatch2'
 )
 select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'sprocs_wo_search_path'::text as tag_reco_topic,
   sproc_name::text as tag_object_name,
   fix_sql::text as recommendation,
@@ -3840,6 +3846,7 @@ q_total as (
   select count(*) from pg_roles where rolcanlogin
 )
 select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'superuser_count'::text as tag_reco_topic,
   '-'::text as tag_object_name,
   'too many superusers detected - review recommended'::text as recommendation,

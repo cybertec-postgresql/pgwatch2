@@ -9,6 +9,7 @@ from
   and not pg_catalog.obj_description(p.oid, 'pg_proc') ~ 'pgwatch2'
 )
 select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'sprocs_wo_search_path'::text as tag_reco_topic,
   sproc_name::text as tag_object_name,
   fix_sql::text as recommendation,

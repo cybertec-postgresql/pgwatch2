@@ -38,11 +38,12 @@ UNION ALL
      AND v.oid <> views.view  -- avoid loop
 )
 SELECT
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'overly_nested_views'::text AS tag_reco_topic,
   full_name::text as tag_object_name,
   'overly nested views can affect performance'::text recommendation,
   'nesting_depth: ' || coalesce(max(level)::text, '-') AS extra_info
 FROM views
-GROUP BY 1, 2
+GROUP BY 1, 2, 3
 HAVING max(level) > 5
-ORDER BY max(level) DESC;
+ORDER BY max(level) DESC, full_name::text;
