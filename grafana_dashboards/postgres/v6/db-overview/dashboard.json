@@ -964,7 +964,7 @@
       "description": "Last CPU load_5 value + 6h history. NB! Requires get_load_average() function making use of PL/Pythonu",
       "editable": true,
       "error": false,
-      "format": "percent",
+      "format": "none",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -1079,7 +1079,7 @@
       "thresholds": "",
       "timeFrom": "6h",
       "timeShift": null,
-      "title": "CPU Load",
+      "title": "CPU Load Avg.",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -1261,6 +1261,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -2070,7 +2071,7 @@
       "yaxes": [
         {
           "decimals": 1,
-          "format": "percent",
+          "format": "none",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -2094,6 +2095,7 @@
     },
     {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2019/05/Cybertec_Logo_wei%C3%9F-transparent_300x80px-01.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "datasource": null,
       "editable": true,
       "error": false,
       "gridPos": {

@@ -690,11 +690,11 @@
         "rgba(50, 172, 45, 0.97)"
       ],
       "datasource": null,
-      "decimals": null,
+      "decimals": 1,
       "description": "Avg. of all selected DB-s for the whole period",
       "editable": true,
       "error": false,
-      "format": "percent",
+      "format": "none",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -775,7 +775,7 @@
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "CPU Load",
+      "title": "CPU Load Avg.",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -1760,7 +1760,7 @@
       "yaxes": [
         {
           "decimals": 1,
-          "format": "percent",
+          "format": "none",
           "label": null,
           "logBase": 1,
           "max": null,
