@@ -2743,6 +2743,10 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 		log.Debug("%d helper definitions found from \"%s\"...", len(helpers), path.Join(opts.MetricsFolder, FILE_BASED_METRIC_HELPERS_DIR))
 
 		for helperName, _ := range helpers {
+			if strings.Contains(helperName, "windows") {
+				log.Infof("Skipping %s rollout. Windows helpers need to be rolled out manually", helperName)
+				continue
+			}
 			if !DoesFunctionExists(dbUnique, helperName) {
 
 				log.Debug("Trying to create metric fetching helpers for", dbUnique, helperName)
@@ -2771,6 +2775,10 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 		for _, row := range data {
 			metric := row["m_name"].(string)
 
+			if strings.Contains(metric, "windows") {
+				log.Infof("Skipping %s rollout. Windows helpers need to be rolled out manually", metric)
+				continue
+			}
 			if !DoesFunctionExists(dbUnique, metric) {
 
 				log.Debug("Trying to create metric fetching helpers for", dbUnique, metric)
