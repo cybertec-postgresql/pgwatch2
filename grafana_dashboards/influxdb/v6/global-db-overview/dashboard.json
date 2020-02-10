@@ -629,11 +629,11 @@
         "rgba(50, 172, 45, 0.97)"
       ],
       "datasource": null,
-      "decimals": null,
+      "decimals": 1,
       "description": "Avg. over the whole selected period",
       "editable": true,
       "error": false,
-      "format": "percent",
+      "format": "none",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -734,7 +734,7 @@
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "CPU Load",
+      "title": "CPU Load Avg.",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -1523,6 +1523,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "decimals": 1,
       "description": "Requires according \"metric fetching helpers\" on the monitored server",
       "fill": 1,
       "gridPos": {
@@ -1620,7 +1621,8 @@
       },
       "yaxes": [
         {
-          "format": "percent",
+          "decimals": 1,
+          "format": "none",
           "label": null,
           "logBase": 1,
           "max": null,

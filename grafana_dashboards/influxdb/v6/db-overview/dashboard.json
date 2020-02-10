@@ -27,6 +27,7 @@
         "#FF780A",
         "#F2495C"
       ],
+      "datasource": null,
       "decimals": 0,
       "description": "Last 5min data",
       "editable": true,
@@ -152,6 +153,7 @@
         "#FF780A",
         "#F2495C"
       ],
+      "datasource": null,
       "decimals": null,
       "description": "Last 5min data",
       "editable": true,
@@ -256,6 +258,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Current Transaction Per Second + last 6h history",
       "editable": true,
       "error": false,
@@ -374,6 +377,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Current Queries Per Second (>5min avg) + last 6h history",
       "editable": true,
       "error": false,
@@ -492,6 +496,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "description": "Current (5min+ avg) query runtime + last 6h history. Requires pg_stat_statements extension and the \"get_stat_statements\" helper function  from  the \"sql/metric_fetching_helpers\" folder on the monitored DB",
       "editable": true,
       "error": false,
@@ -733,6 +738,7 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
+      "datasource": null,
       "decimals": 1,
       "description": "Based on a pure SQL  based estimate for fast results. Needs \"get_table_bloat_approx_sql\" helper. Re-check with \"pgstattuple\" if numbers look suspicious!",
       "editable": true,
@@ -861,11 +867,12 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(50, 172, 45, 0.97)"
       ],
-      "decimals": null,
+      "datasource": null,
+      "decimals": 1,
       "description": "Last CPU load_5 value. NB! Requires get_load_average() function making use of PL/Pythonu",
       "editable": true,
       "error": false,
-      "format": "percent",
+      "format": "none",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -968,7 +975,7 @@
       "thresholds": "",
       "timeFrom": "6h",
       "timeShift": null,
-      "title": "CPU Load",
+      "title": "CPU Load Avg.",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -985,6 +992,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "",
       "editable": true,
       "error": false,
@@ -1213,6 +1221,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -1383,6 +1392,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "editable": true,
       "error": false,
       "fill": 1,
@@ -1593,6 +1603,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "editable": true,
       "error": false,
@@ -1786,6 +1797,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "description": "Based on get_stat_activity() helper",
       "fill": 1,
@@ -2047,6 +2059,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 2,
       "description": "Requires according \"metric fetching helpers\" on the monitored server",
       "fill": 1,
@@ -2188,7 +2201,7 @@
       "yaxes": [
         {
           "decimals": 1,
-          "format": "percent",
+          "format": "none",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -2212,6 +2225,7 @@
     },
     {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2019/05/Cybertec_Logo_wei%C3%9F-transparent_300x80px-01.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "datasource": null,
       "editable": true,
       "error": false,
       "gridPos": {
