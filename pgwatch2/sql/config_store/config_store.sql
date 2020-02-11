@@ -56,7 +56,7 @@ create table pgwatch2.monitored_db (
     CHECK (md_password_type in ('plain-text', 'aes-gcm-256'))
 );
 
-create unique index on monitored_db(md_hostname, md_port, md_dbname, md_is_enabled); -- prevent multiple active workers for the same db
+create unique index on monitored_db(md_hostname, md_port, md_dbname, md_is_enabled) where not md_dbtype ~ 'patroni'; -- prevent multiple active workers for the same db
 
 
 alter table pgwatch2.monitored_db add constraint preset_or_custom_config check
@@ -90,7 +90,7 @@ create table schema_version (
     sv_created_on timestamptz not null default now()
 );
 
-insert into pgwatch2.schema_version (sv_tag) values ('1.7.0');
+insert into pgwatch2.schema_version (sv_tag) values ('1.7.1');
 
 
 insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
