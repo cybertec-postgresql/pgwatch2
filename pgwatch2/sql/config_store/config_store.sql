@@ -1,9 +1,5 @@
 create schema if not exists pgwatch2 authorization pgwatch2;
 
-create extension if not exists pg_stat_statements; -- NB! for demo purposes only, can fail
-
-create extension if not exists plpython3u; -- NB! for demo purposes only, to enable CPU load gathering
-
 set search_path to pgwatch2, public;
 
 alter database pgwatch2 set search_path to pgwatch2, public;
