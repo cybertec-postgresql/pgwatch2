@@ -4,6 +4,9 @@ before:
   hooks:
     # weirdly goreleaser doesn't all to include outside of the Go build "root" so need to copy
     - cp -r grafana_dashboards ./pgwatch2/
+    - git archive --format tar --output /tmp/webpy.tar master webpy
+    - tar -xf /tmp/webpy.tar -C pgwatch2/
+    - rm /tmp/webpy.tar
 
 builds:
   - main: ./pgwatch2
@@ -51,6 +54,7 @@ archives:
     # `README*` and `CHANGELOG*` (case-insensitive).
     files:
       - ./grafana_dashboards/**/*
+      - ./webpy/**/*
       - ./pgwatch2/metrics/**/*
       - ./pgwatch2/config/**/*
       - ./pgwatch2/sql/**/*
@@ -124,6 +128,7 @@ nfpms:
       "./pgwatch2/bootstrap/**/*": "/etc/pgwatch2/bootstrap"
       "./pgwatch2/startup-scripts/pgwatch2.service": "/etc/pgwatch2/startup-scripts/pgwatch2.service"
       "./grafana_dashboards/**/*": "/etc/pgwatch2/grafana-dashboards"
+      "./pgwatch2/webpy/**/*": "/etc/pgwatch2/webpy"
       "./README.md": "/etc/pgwatch2/README.md"
 
     # Config files to add to your package. They are about the same as
