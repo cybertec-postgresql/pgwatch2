@@ -159,19 +159,22 @@ def main():
     argp = argparse.ArgumentParser(description='Roll out pgwatch2 metric fetching helpers to all monitored DB-s configured in config DB or to a specified DB / instance (all DBs)')
 
     # pgwatch2 config db connect info
-    argp.add_argument('--configdb-host', dest='configdb_host', default='', help='pgwatch2 config DB host (relevant in configdb mode)')
+    argp.add_argument('--configdb-host', dest='configdb_host', default='', help='pgwatch2 config DB host address')
     argp.add_argument('--configdb-dbname', dest='configdb_dbname', default='pgwatch2', help='pgwatch2 config DB dbname (relevant in configdb mode)')
     argp.add_argument('--configdb-port', dest='configdb_port', default='5432', help='pgwatch2 config DB port (relevant in configdb mode)')
     argp.add_argument('--configdb-user', dest='configdb_user', default='postgres', help='pgwatch2 config DB user (relevant in configdb mode)')
     argp.add_argument('--configdb-password', dest='configdb_password', default='', help='pgwatch2 config DB password (relevant in configdb mode)')
 
     # rollout target db connect info
-    argp.add_argument('-U', '--user', dest='user', default='postgres', help='Superuser username for helper function creation')
-    argp.add_argument('--password', dest='password', default='', help='Password for connecting to configDB + instances defined there. Leave empty to let .pgpass take effect')
+    argp.add_argument('--host', dest='host', help='Host address for explicit single DB / instance rollout')
+    argp.add_argument('--port', dest='port', default=5432, type=int, help='Port for explicit single DB / instance rollout')
+    argp.add_argument('--dbname', dest='dbname', help='Explicit dbname for rollout')
+    argp.add_argument('-U', '--user', dest='user', help='Superuser username for helper function creation')
+    argp.add_argument('--password', dest='password', default='', help='Superuser password for helper function creation. The .pgpass file can also be used instead')
     argp.add_argument('--monitoring-user', dest='monitoring_user', default='pgwatch2', help='The user getting execute privileges to created helpers (relevant for single or instance mode)')
 
     argp.add_argument('-c', '--confirm', dest='confirm', action='store_true', default=False, help='perform the actual rollout')
-    argp.add_argument('-m', '--mode', dest='mode', default='configdb', help='[configdb|single|instance] - instance = all non-template DBs')
+    argp.add_argument('-m', '--mode', dest='mode', default='', help='[configdb|single|instance] - instance = all non-template DBs')
     argp.add_argument('--helpers', dest='helpers', help='Roll out only listed (comma separated) helpers. By default all will be tried to roll out')
     argp.add_argument('--excluded-helpers', dest='excluded_helpers', default='get_load_average_windows,get_load_average_copy,get_smart_health_per_device', help='Do not try to roll out these by default. Clear list if needed')
     argp.add_argument('--template1', dest='template1', action='store_true', default=False, help='Install helpers into template1 so that all newly craeted DBs will get them automatically')
@@ -186,11 +189,22 @@ def main():
 
     logging.basicConfig(format='%(message)s', level=(logging.DEBUG if args.verbose else logging.WARNING))
 
-    if not args.mode or not args.mode.lower() in ['configdb', 'single', 'instance']:
-        logging.fatal('unknown --mode param value "%s". can be one of: [configdb|single|instance]', args.mode)
+    if not args.configdb_host:
+        logging.fatal('--configdb-host parameter required. currently reading helper definitions from folders directly is not yet supported')
         exit(1)
-    if args.mode == 'configdb' and not args.configdb_host:
-        logging.fatal('--configdb-host required when --mode=configdb')
+
+    if not args.mode or not args.mode.lower() in ['configdb-all', 'single-db', 'single-instance']:
+        logging.fatal('invalid --mode param value "%s". must be one of: [configdb-all|single-db|instance]', args.mode)
+        logging.fatal('     configdb-all - roll out helpers to all active DBs defined in pgwatch2 config DB')
+        logging.fatal('     single-db - roll out helpers on a single DB specified by --host, --port (5432*), --dbname and --user params')
+        logging.fatal('     single-instance - roll out helpers on all DB-s of an instance specified by --host, --port (5432*) and --user params')
+        exit(1)
+
+    if args.mode == 'single-db' and not (args.host and args.user and args.dbname):
+        logging.fatal('--host, --dbname, --user must be specified for explicit single DB rollout')
+        exit(1)
+    if args.mode == 'single-instance' and not (args.host and args.user):
+        logging.fatal('--host and --user must be specified for explicit single instance rollout')
         exit(1)
 
     if not args.user:
@@ -201,12 +215,12 @@ def main():
     if not args.confirm:
         logging.warning('starting in DRY-RUN mode, add --confirm to execute')
 
-    if args.mode == 'configdb':
+    if args.mode == 'configdb-all':
         rollout_dbs = get_active_dbs_from_configdb()
     else:
-        md = {'md_hostname': args.host, 'md_port': args.port, 'md_dbname': args.dbname, 'md_port': args.port, 'md_user': args.user, 'md_password': args.password,
-         'md_unique_name': 'ad-hoc', 'md_dbtype': 'postgres-continuous-discovery' if args.mode == 'instance' else 'postgres'}
-        if args.mode == 'instance':
+        md = {'md_hostname': args.host, 'md_port': args.port, 'md_dbname': args.dbname, 'md_user': args.user, 'md_password': args.password,
+              'md_unique_name': 'ad-hoc', 'md_dbtype': 'postgres-continuous-discovery' if args.mode == 'single-instance' else 'postgres'}
+        if args.mode == 'single-instance':
             rollout_dbs = resolve_configdb_host_to_dbs(md)
         else:   # single DB
             rollout_dbs = [md]
