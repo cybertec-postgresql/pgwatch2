@@ -145,7 +145,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select \"index_def\", \"max_index_size\", \"count\" from (select mode(\"index_def\") as \"index_def\", count(distinct(\"index_full_name_val\")), max(\"index_size_b\") as \"max_index_size\"  from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_def_hash\", \"dbname\") where \"count\" > 1 group by \"table_full_name\", \"index_def_hash\", \"dbname\"",
+          "query": "select \"index_def\", \"max_index_size\", \"count\" from (select mode(\"index_def\") as \"index_def\", count(\"index_full_name_val\"), max(\"index_size_b\") as \"max_index_size\"  from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"index_full_name_val\", \"table_full_name\", \"index_def_hash\", \"dbname\") where \"count\" > 1 group by \"table_full_name\", \"index_def_hash\", \"dbname\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "table",
