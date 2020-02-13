@@ -3,15 +3,15 @@
 
 # auto-detects PG ver, rolls-out all helpers not in exlude list, reports errors summary. dry-run first
 # can only read monitoring DBs config from config DB or when specified per single DB / instance
-
+import glob
 import re
 import psycopg2
 import psycopg2.extras
 import os
 import argparse
 import logging
-# import yaml
-
+import yaml
+from pathlib import Path
 
 args = None
 
@@ -116,7 +116,10 @@ def do_roll_out(md, pgver):
     ok = 0
     total = 0
 
-    helpers = get_helper_sqls_from_configdb(pgver)
+    if args.metrics_path:
+        helpers = get_helpers_from_filesystem(pgver)
+    else:
+        helpers = get_helper_sqls_from_configdb(pgver)
     if args.helpers or args.excluded_helpers:    # filter out unwanted helpers
         helpers_filtered = []
         if args.helpers:
@@ -144,19 +147,80 @@ def do_roll_out(md, pgver):
     return ok, total
 
 
-def get_helpers_from_filesystem(pgver):  # TODO
-    pass
+def get_helpers_from_filesystem(target_pgver):
+    ret = []    # [{'helper': 'get_x', 'sql': 'create ...',...}
+    target_pgver = float(target_pgver)
+    helpers = glob.glob(os.path.join(args.metrics_path, '*'))
+
+    for h in helpers:
+        if not os.path.isdir(h):
+            continue
+        vers = os.listdir(h)
+        numeric_vers = []
+        for v in vers:
+            try:
+                v_float = float(v)
+            except:
+                continue
+            if v_float >= 10 and h.endswith(".0"):
+                h = h.replace(".0", "")
+            numeric_vers.append((v, v_float))
+        if len(numeric_vers) == 0:
+            continue
+
+        numeric_vers.sort(key=lambda x: x[1])
+
+        best_matching_pgver = None
+        for nv, nv_float in numeric_vers:
+            if target_pgver >= nv_float:
+                best_matching_pgver = nv
+        if not best_matching_pgver:
+            logging.warning('could find suitable helper for %s target ver %s', h, target_pgver)
+            continue
+        # logging.warning('found suitable helper for %s target ver %s', h, best_matching_pgver)
+        with open(os.path.join(h, str(best_matching_pgver), 'metric.sql'), 'r') as f:
+            sql = f.read()
+        ret.append({'helper': Path(h).stem, 'sql': sql})
+
+    ret.sort(key=lambda x: x['helper'])
+    return ret
 
 
-def get_dbs_from_yaml_config(): # TODO
+# TODO handle libpq_conn_str
+def get_monitored_dbs_from_yaml_config():   # active entries ("is_enabled": true) only. configs can be in subfolders also - all YAML/YML files will be searched for
     ret = []
-# config = yaml.load(open(args.config))
-# logging.info('Read config %s', config)
+
+    for root, dirs, files in os.walk(args.config_path):
+        for f in files:
+            if f.lower().endswith('.yml') or f.lower().endswith('.yaml'):
+                logging.debug('found a config file: %s', os.path.join(root, f))
+                with open(os.path.join(root, f), 'r') as fp:
+                    config = fp.read()
+                try:
+                    monitored_dbs = yaml.load(config)
+                except:
+                    logging.error("skipping config file %s as could not parse YAML")
+                    continue
+                if not monitored_dbs or not type(monitored_dbs) == list:
+                    continue
+                for db in monitored_dbs:
+                    if db.get('is_enabled'):
+                        md = {'md_hostname': db.get('host'), 'md_port': db.get('port', 5432), 'md_dbname': db.get('dbname'),
+                              'md_user': db.get('user'), 'md_password': db.get('password'),
+                              'md_unique_name': db.get('unique_name'),
+                              'md_dbtype': db.get('dbtype')}
+                        [ret.append(e) for e in resolve_configdb_host_to_dbs(md)]
+
+    ret.sort(key=lambda x: x['md_unique_name'])
     return ret
 
 
 def main():
     argp = argparse.ArgumentParser(description='Roll out pgwatch2 metric fetching helpers to all monitored DB-s configured in config DB or to a specified DB / instance (all DBs)')
+
+    # to use file based helper / config definitions
+    argp.add_argument('--metrics-path', dest='metrics_path', default='.', help='Path to the folder containing helper definitions. Current working directory by default')
+    argp.add_argument('--config-path', dest='config_path', default='', help='Path including YAML based monitoring config files. Subfolders are supported the same as with collector')
 
     # pgwatch2 config db connect info
     argp.add_argument('--configdb-host', dest='configdb_host', default='', help='pgwatch2 config DB host address')
@@ -174,7 +238,7 @@ def main():
     argp.add_argument('--monitoring-user', dest='monitoring_user', default='pgwatch2', help='The user getting execute privileges to created helpers (relevant for single or instance mode)')
 
     argp.add_argument('-c', '--confirm', dest='confirm', action='store_true', default=False, help='perform the actual rollout')
-    argp.add_argument('-m', '--mode', dest='mode', default='', help='[configdb|single|instance] - instance = all non-template DBs')
+    argp.add_argument('-m', '--mode', dest='mode', default='', help='[configdb-all|yaml-all|single-db|single-instance]')
     argp.add_argument('--helpers', dest='helpers', help='Roll out only listed (comma separated) helpers. By default all will be tried to roll out')
     argp.add_argument('--excluded-helpers', dest='excluded_helpers', default='get_load_average_windows,get_load_average_copy,get_smart_health_per_device', help='Do not try to roll out these by default. Clear list if needed')
     argp.add_argument('--template1', dest='template1', action='store_true', default=False, help='Install helpers into template1 so that all newly craeted DBs will get them automatically')
@@ -189,15 +253,24 @@ def main():
 
     logging.basicConfig(format='%(message)s', level=(logging.DEBUG if args.verbose else logging.WARNING))
 
-    if not args.configdb_host:
-        logging.fatal('--configdb-host parameter required. currently reading helper definitions from folders directly is not yet supported')
-        exit(1)
-
-    if not args.mode or not args.mode.lower() in ['configdb-all', 'single-db', 'single-instance']:
+    if not args.mode or not args.mode.lower() in ['configdb-all', 'yaml-all', 'single-db', 'single-instance']:
         logging.fatal('invalid --mode param value "%s". must be one of: [configdb-all|single-db|instance]', args.mode)
         logging.fatal('     configdb-all - roll out helpers to all active DBs defined in pgwatch2 config DB')
+        logging.fatal('     yaml-all - roll out helpers to all active DBs defined in YAML configs')
         logging.fatal('     single-db - roll out helpers on a single DB specified by --host, --port (5432*), --dbname and --user params')
         logging.fatal('     single-instance - roll out helpers on all DB-s of an instance specified by --host, --port (5432*) and --user params')
+        exit(1)
+
+    if args.mode.lower() == 'configdb-all' and not args.configdb_host:
+        logging.fatal('--configdb-host parameter required with --configdb-all')
+        exit(1)
+
+    if args.mode.lower() == 'yaml-all' and not args.config_path:
+        logging.fatal('--config-path parameter (YAML definitions on monitored instances) required for \'yaml-all\' mode')
+        exit(1)
+
+    if not args.configdb_host and not args.metrics_path:
+        logging.fatal('one of --configdb-host or --metrics-path needs to be always specified')
         exit(1)
 
     if args.mode == 'single-db' and not (args.host and args.user and args.dbname):
@@ -217,6 +290,8 @@ def main():
 
     if args.mode == 'configdb-all':
         rollout_dbs = get_active_dbs_from_configdb()
+    elif args.mode == 'yaml-all':
+        rollout_dbs = get_monitored_dbs_from_yaml_config()
     else:
         md = {'md_hostname': args.host, 'md_port': args.port, 'md_dbname': args.dbname, 'md_user': args.user, 'md_password': args.password,
               'md_unique_name': 'ad-hoc', 'md_dbtype': 'postgres-continuous-discovery' if args.mode == 'single-instance' else 'postgres'}
