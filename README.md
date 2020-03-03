@@ -329,6 +329,9 @@ password protection - PW2_WEBNOANONYMOUS, PW2_WEBUSER, PW2_WEBPASSWORD.
 By default also the Docker component logs (Postgres, Influx, Grafana, Go daemon, Web UI itself) are exposed via the "/logs"
 endpoint. If this is not wanted set the PW2_WEBNOCOMPONENTLOGS env. variable.
 
+Note that if the "/logs" endpoint is wanted also in the custom setup mode (non-docker) then then some actual code changes
+are needed to specify where logs of all components are situated - see top of the pgwatch2.py file for that.
+
 ### Different "DB types" explained
 
 * postgres - connect data to a single to-be-monitored DB needs to be specified. When using the Web UI and "DB name" field is left empty, then
@@ -626,6 +629,13 @@ DB that is absolutely needed is the metrics storage DB, here Influx. All example
     for connect data and file paths though and also the "grafana_datasource.sql" part should be commented out if already
     executed in the previous step.
     
+    2.4. Optionally install also Grafana plugins
+    
+    Currently only one pre-configured dashboard (Biggest relations treemap) use an extra plugin. If needed install via:
+    ```
+    grafana-cli plugins install savantly-heatmap-panel
+    ```
+    
 4. Install Python 3 and start the Web UI
     
     NB! The Web UI is not strictly required but makes life a lot easier. Technically it would be fine also to manage connection
@@ -654,6 +664,12 @@ DB that is absolutely needed is the metrics storage DB, here Influx. All example
     NB! To get most out of your metrics some wrappers/extensions are required on the DB-s under monitoring.
     See section [Steps to configure your database for monitoring](https://github.com/cybertec-postgresql/pgwatch2#steps-to-configure-your-database-for-monitoring) on
     setup information.
+    
+    4.3. Exposing component logs (optional)
+    
+    Note that if the "/logs" endpoint is wanted also in the custom setup mode then then some actual code changes
+    are needed to specify where logs of all components are situated - see top of the pgwatch2.py file for that. Default
+    settings only make sure things work with the Docker images.
     
 5. Install Go and compile the gatherer
     
