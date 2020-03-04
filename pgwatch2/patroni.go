@@ -251,7 +251,9 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 			dbUnique = ce.DBUniqueName + "_" + m.Name
 		}
 		if ce.DBName != "" {
-			md = append(md, MonitoredDatabase{DBUniqueName: dbUnique,
+			md = append(md, MonitoredDatabase{
+				DBUniqueName: dbUnique,
+				DBUniqueNameOrig:  ce.DBUniqueName,
 				DBName:            ce.DBName,
 				Host:              host,
 				Port:              port,
@@ -294,7 +296,9 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 			}
 
 			for _, d := range data {
-				md = append(md, MonitoredDatabase{DBUniqueName: dbUnique + "_" + d["datname_escaped"].(string),
+				md = append(md,MonitoredDatabase{
+					DBUniqueName: dbUnique + "_" + d["datname_escaped"].(string),
+					DBUniqueNameOrig:  dbUnique,
 					DBName:            d["datname"].(string),
 					Host:              host,
 					Port:              port,

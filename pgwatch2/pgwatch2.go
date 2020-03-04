@@ -44,6 +44,7 @@ var date = "" // Will be set on build time by build_gatherer.sh / goreleaser
 
 type MonitoredDatabase struct {
 	DBUniqueName         string `yaml:"unique_name"`
+	DBUniqueNameOrig     string		// to preserve belonging to a specific instance for continuous modes where DBUniqueName will be dynamic
 	Group                string
 	Host                 string
 	Port                 string
@@ -117,6 +118,7 @@ type ControlMessage struct {
 
 type MetricFetchMessage struct {
 	DBUniqueName string
+	DBUniqueNameOrig string
 	MetricName   string
 	DBType       string
 	Interval     time.Duration
@@ -246,6 +248,17 @@ var addRealDbname bool
 var addSystemIdentifier bool
 var forceRecreatePGMetricPartitions = false // to signal override PG metrics storage cache
 var lastMonitoredDBsUpdate time.Time
+var instanceMetricCache = make(map[string]map[string]([]map[string]interface{}))     // [sysid][metric]lastly_fetched_data
+var instanceMetricCacheLock = sync.RWMutex{}
+var instanceMetricCacheTimestamp = make(map[string]map[string]time.Time)     // [sysid][metric]last_fetch_time
+var instanceMetricCacheTimestampLock = sync.RWMutex{}
+
+func IsPostgresDBType(dbType string) bool {
+	if dbType == DBTYPE_BOUNCER {
+		return false
+	}
+	return true
+}
 
 func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
 	var err error
@@ -491,7 +504,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 
 	}
 
-	if !adHocMode && md.DBType == DBTYPE_PG {
+	if !adHocMode && IsPostgresDBType(md.DBType) {
 		stmtTimeout := md.StmtTimeout
 		if stmtTimeout == 0 {
 			_, err = DBExecRead(conn, dbUnique, "SET statement_timeout TO 0")
@@ -580,6 +593,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 
 		md := MonitoredDatabase{
 			DBUniqueName:         row["md_unique_name"].(string),
+			DBUniqueNameOrig:     row["md_unique_name"].(string),
 			Host:                 row["md_hostname"].(string),
 			Port:                 row["md_port"].(string),
 			DBName:               row["md_dbname"].(string),
@@ -2420,7 +2434,7 @@ func deepCopyMetricStoreMessages(metricStoreMessages []MetricStoreMessage) []Met
 }
 
 // ControlMessage notifies of shutdown + interval change
-func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[string]float64, control_ch <-chan ControlMessage, store_ch chan<- []MetricStoreMessage) {
+func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName string, config_map map[string]float64, control_ch <-chan ControlMessage, store_ch chan<- []MetricStoreMessage) {
 	config := config_map
 	interval := config[metricName]
 	ticker := time.NewTicker(time.Millisecond * time.Duration(interval*1000))
@@ -2453,7 +2467,7 @@ func MetricGathererLoop(dbUniqueName, dbType, metricName string, config_map map[
 
 		t1 := time.Now()
 		metricStoreMessages, err := FetchMetrics(
-			MetricFetchMessage{DBUniqueName: dbUniqueName, MetricName: metricName, DBType: dbType},
+			MetricFetchMessage{DBUniqueName: dbUniqueName, DBUniqueNameOrig: dbUniqueNameOrig, MetricName: metricName, DBType: dbType},
 			host_state,
 			store_ch,
 			"")
@@ -3083,7 +3097,9 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 	}
 
 	for _, d := range data {
-		md = append(md, MonitoredDatabase{DBUniqueName: ce.DBUniqueName + "_" + d["datname_escaped"].(string),
+		md = append(md, MonitoredDatabase{
+			DBUniqueName: ce.DBUniqueName + "_" + d["datname_escaped"].(string),
+			DBUniqueNameOrig:  ce.DBUniqueName,
 			DBName:            d["datname"].(string),
 			Host:              ce.Host,
 			Port:              ce.Port,
@@ -3101,7 +3117,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 			CustomTags:        ce.CustomTags,
 			HostConfig:        ce.HostConfig,
 			OnlyIfMaster:      ce.OnlyIfMaster,
-			DBType:            DBTYPE_PG})
+			DBType:            ce.DBType})
 	}
 
 	return md, err
@@ -3755,6 +3771,7 @@ func main() {
 
 			metric_config := host.Metrics
 			db_unique := host.DBUniqueName
+			db_unique_orig := host.DBUniqueNameOrig
 			db_type := host.DBType
 
 			if host.PasswordType == "aes-gcm-256" && len(opts.AesGcmKeyphrase) == 0 && len(opts.AesGcmKeyphraseFile) == 0 {
@@ -3790,9 +3807,7 @@ func main() {
 					log.Infof("new host \"%s\" found, checking connectivity...", db_unique)
 				}
 
-				if db_type == DBTYPE_PG || db_type == DBTYPE_BOUNCER {
-					ver, err = DBGetPGVersion(db_unique, db_type, true)
-				}
+				ver, err = DBGetPGVersion(db_unique, db_type, true)
 				if err != nil {
 					if opts.AdHocConnString != "" {
 						log.Fatalf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err)
@@ -3812,7 +3827,7 @@ func main() {
 					}
 				}
 
-				if !opts.Ping && (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && db_type == DBTYPE_PG && !ver.IsInRecovery {
+				if !opts.Ping && (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && IsPostgresDBType(db_type) && !ver.IsInRecovery {
 					log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
 					TryCreateMetricsFetchingHelpers(db_unique)
 				}
@@ -3826,8 +3841,8 @@ func main() {
 				continue
 			}
 
-			if host.DBType == DBTYPE_PG {
-				ver, err := DBGetPGVersion(db_unique, host.DBType, false)
+			if IsPostgresDBType(host.DBType) {
+				ver, err := DBGetPGVersion(db_unique, host.DBType,false)
 				if err == nil { // ok to ignore error, re-tried on next loop
 					if ver.IsInRecovery && host.OnlyIfMaster {
 						log.Infof("[%s] to be removed from monitoring due to 'master only' property and status change", db_unique)
@@ -3863,9 +3878,9 @@ func main() {
 						log.Infof("starting gatherer for [%s:%s] with interval %v s", db_unique, metric, interval)
 						control_channels[db_metric] = make(chan ControlMessage, 1)
 						if opts.BatchingDelayMs > 0 {
-							go MetricGathererLoop(db_unique, db_type, metric, metric_config, control_channels[db_metric], buffered_persist_ch)
+							go MetricGathererLoop(db_unique, db_unique_orig, db_type, metric, metric_config, control_channels[db_metric], buffered_persist_ch)
 						} else {
-							go MetricGathererLoop(db_unique, db_type, metric, metric_config, control_channels[db_metric], persist_ch)
+							go MetricGathererLoop(db_unique, db_unique_orig, db_type, metric, metric_config, control_channels[db_metric], persist_ch)
 						}
 					}
 				} else if (!metric_def_ok && ch_ok) || interval <= 0 {

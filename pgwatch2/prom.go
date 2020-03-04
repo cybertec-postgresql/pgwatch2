@@ -64,7 +64,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			if interval > 0 {
 				log.Debugf("scraping [%s:%s]...", md.DBUniqueName, metric)
 				metricStoreMessages, err := FetchMetrics( // TODO conn pooling
-					MetricFetchMessage{DBUniqueName: name, MetricName: metric, DBType: md.DBType},
+					MetricFetchMessage{DBUniqueName: name, DBUniqueNameOrig: md.DBUniqueNameOrig, MetricName: metric, DBType: md.DBType},
 					nil,
 					nil,
 					CONTEXT_PROMETHEUS_SCRAPE)
