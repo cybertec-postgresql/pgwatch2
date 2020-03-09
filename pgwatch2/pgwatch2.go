@@ -201,7 +201,10 @@ const RECO_PREFIX = "reco_"		// special handling for metrics with such prefix, d
 const RECO_METRIC_NAME = "recommendations"
 const SPECIAL_METRIC_CHANGE_EVENTS = "change_events"
 const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
+const INSTANCE_LEVEL_METRICS_CACHE_MAX_SECONDS = 30 // caching to share instance level metrics between all DBs of a "continuous" type host
 
+var defaultInstanceLevelMetrics = map[string]int{"archiver": 1, "backup_age_pgbackrest": 1, "backup_age_walg": 1, "bgwriter": 1, "buffercache_by_db": 1, "buffercache_by_type": 1, "cpu_load": 1, "psutil_cpu": 1, "psutil_disk": 1, "psutil_disk_io_total": 1, "psutil_mem": 1,
+	"replication": 1, "replication_slots": 1, "smart_health_per_disk": 1, "wal": 1, "wal_receiver": 1, "wal_size": 1}	// will only be used if reading of metric properties fails TODO
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT} // used for informational purposes
 var configDb *sqlx.DB
@@ -248,9 +251,9 @@ var addRealDbname bool
 var addSystemIdentifier bool
 var forceRecreatePGMetricPartitions = false // to signal override PG metrics storage cache
 var lastMonitoredDBsUpdate time.Time
-var instanceMetricCache = make(map[string]map[string]([]map[string]interface{}))     // [sysid][metric]lastly_fetched_data
+var instanceMetricCache = make(map[string]([]map[string]interface{}))     // [dbUnique+metric]lastly_fetched_data
 var instanceMetricCacheLock = sync.RWMutex{}
-var instanceMetricCacheTimestamp = make(map[string]map[string]time.Time)     // [sysid][metric]last_fetch_time
+var instanceMetricCacheTimestamp = make(map[string]time.Time)     // [dbUnique+metric]last_fetch_time
 var instanceMetricCacheTimestampLock = sync.RWMutex{}
 
 func IsPostgresDBType(dbType string) bool {
@@ -1735,7 +1738,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				ver.VersionStr = matches[0]
 				ver.Version, _ = decimal.NewFromString(matches[0])
 			}
-		} else if dbType == DBTYPE_PG {
+		} else {
 			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
 			if err != nil {
 				if noCache {
@@ -2273,9 +2276,10 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	var err, firstErr error
 	var sql string
 	var retryWithSuperuserSQL = true
-	var data []map[string]interface{}
+	var data, cachedData []map[string]interface{}
 	var duration time.Duration
 	var md MonitoredDatabase
+	var fromCache, isCacheable bool
 
 	vme, err = DBGetPGVersion(msg.DBUniqueName, msg.DBType,false)
 	if err != nil {
@@ -2299,6 +2303,15 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	isCacheable = IsCacheableMetric(msg)
+	if isCacheable && msg.Interval.Seconds() > INSTANCE_LEVEL_METRICS_CACHE_MAX_SECONDS {
+		cachedData = GetFromInstanceCacheIfNotOlderThanSeconds(msg, INSTANCE_LEVEL_METRICS_CACHE_MAX_SECONDS)
+		if cachedData != nil && len(cachedData) > 0 {
+			fromCache = true
+			goto send_to_storage_channel
+		}
 	}
 
 retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL if it's defined
@@ -2365,6 +2378,13 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 
 		}
 	}
+
+	if isCacheable {
+		PutToInstanceCache(msg, data)
+	}
+
+send_to_storage_channel:
+
 	if addRealDbname || addSystemIdentifier {
 		db_pg_version_map_lock.RLock()
 		ver, _ := db_pg_version_map[msg.DBUniqueName]
@@ -2372,8 +2392,69 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 		data = AddDbnameSysinfoIfNotExistsToQueryResultData(msg, data, ver)
 	}
 
-	return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags,
-		MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
+	if fromCache {
+		log.Infof("[%s:%s] fetched %d rows from the instance cache", msg.DBUniqueName, msg.MetricName, len(cachedData))
+		return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: cachedData, CustomTags: md.CustomTags,
+			MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
+	} else {
+		return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags,
+			MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
+	}
+}
+
+func GetFromInstanceCacheIfNotOlderThanSeconds(msg MetricFetchMessage, maxAgeSeconds int64) []map[string]interface{} {
+	var clonedData []map[string]interface{}
+	instanceMetricCacheTimestampLock.RLock()
+	instanceMetricTS, ok := instanceMetricCacheTimestamp[msg.DBUniqueNameOrig + msg.MetricName]
+	instanceMetricCacheTimestampLock.RUnlock()
+	if !ok {
+		//log.Debugf("[%s:%s] no instance cache entry", msg.DBUniqueNameOrig, msg.MetricName)
+		return nil
+	}
+
+	if time.Now().Unix() - instanceMetricTS.Unix() > maxAgeSeconds {
+		//log.Debugf("[%s:%s] instance cache entry too old", msg.DBUniqueNameOrig, msg.MetricName)
+		return nil
+	}
+
+	log.Debugf("[%s:%s] reading metric data from instance cache of \"%s\"", msg.DBUniqueName, msg.MetricName, msg.DBUniqueNameOrig)
+	instanceMetricCacheLock.RLock()
+	instanceMetricData, ok := instanceMetricCache[msg.DBUniqueNameOrig + msg.MetricName]
+	if !ok {
+		instanceMetricCacheLock.RUnlock()
+		return nil
+	}
+	clonedData = deepCopyMetricData(instanceMetricData)
+	instanceMetricCacheLock.RUnlock()
+
+	return clonedData
+}
+
+func PutToInstanceCache(msg MetricFetchMessage, data []map[string]interface{}) {
+	if data == nil || len(data) == 0 {
+		return
+	}
+	dataCopy := deepCopyMetricData(data)
+	log.Debugf("[%s:%s] filling instance cache", msg.DBUniqueNameOrig, msg.MetricName)
+	instanceMetricCacheLock.Lock()
+	instanceMetricCache[msg.DBUniqueNameOrig + msg.MetricName] = dataCopy
+	instanceMetricCacheLock.Unlock()
+
+	instanceMetricCacheTimestampLock.Lock()
+	instanceMetricCacheTimestamp[msg.DBUniqueNameOrig + msg.MetricName] = time.Now()
+	instanceMetricCacheTimestampLock.Unlock()
+}
+
+func IsCacheableMetric(msg MetricFetchMessage) bool {
+
+	if !(msg.DBType == DBTYPE_PG_CONT || msg.DBType == DBTYPE_PATRONI_CONT) {
+		return false
+	}
+	_, ok := defaultInstanceLevelMetrics[msg.MetricName]
+	if !ok {
+		return false
+	}
+	return true
 }
 
 func AddDbnameSysinfoIfNotExistsToQueryResultData(msg MetricFetchMessage, data []map[string]interface{}, ver DBVersionMapEntry) []map[string]interface{} {
@@ -2431,6 +2512,20 @@ func deepCopyMetricStoreMessages(metricStoreMessages []MetricStoreMessage) []Met
 		new = append(new, m)
 	}
 	return new
+}
+
+func deepCopyMetricData(data []map[string]interface{}) []map[string]interface{} {
+	newData := make([]map[string]interface{}, len(data))
+
+	for i, dr := range data {
+		newRow := make(map[string]interface{})
+		for k, v := range dr {
+			newRow[k] = v
+		}
+		newData[i] = newRow
+	}
+
+	return newData
 }
 
 // ControlMessage notifies of shutdown + interval change
