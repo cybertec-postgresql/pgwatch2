@@ -1676,7 +1676,7 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 	}
 }
 
-func DBGetPGVersion(dbUnique string, noCache bool) (DBVersionMapEntry, error) {
+func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapEntry, error) {
 	var ver DBVersionMapEntry
 	var ok bool
 	sql := `
@@ -1701,36 +1701,58 @@ func DBGetPGVersion(dbUnique string, noCache bool) (DBVersionMapEntry, error) {
 		return ver, nil
 	} else {
 		log.Debug("determining DB version for", dbUnique)
-		data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
-		if err != nil {
-			if noCache {
+
+		if dbType == DBTYPE_BOUNCER {
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, "show version")
+			if err != nil {
 				return ver, err
+			}
+			if len(data) == 0 {
+				// surprisingly pgbouncer 'show version' outputs in pre v1.12 is emitted as 'NOTICE' which cannot be accessed from Go lib/pg
+				ver.Version, _ = decimal.NewFromString("0")
+				ver.VersionStr = "0"
 			} else {
-				log.Info("DBGetPGVersion failed, using old cached value", err)
-				return ver, nil
+				rPBVer := regexp.MustCompile("\\d+\\.+\\d+")	// "PgBouncer 1.12.0"
+				matches := rPBVer.FindStringSubmatch(data[0]["version"].(string))
+				if len(matches) != 1 {
+					log.Errorf("Unexpected PgBouncer version input: %s", data[0]["version"].(string))
+					return ver, errors.New(fmt.Sprintf("Unexpected PgBouncer version input: %s", data[0]["version"].(string)))
+				}
+				ver.VersionStr = matches[0]
+				ver.Version, _ = decimal.NewFromString(matches[0])
 			}
+		} else if dbType == DBTYPE_PG {
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
+			if err != nil {
+				if noCache {
+					return ver, err
+				} else {
+					log.Info("DBGetPGVersion failed, using old cached value", err)
+					return ver, nil
+				}
+			}
+			ver.Version, _ = decimal.NewFromString(data[0]["ver"].(string))
+			ver.VersionStr = data[0]["ver"].(string)
+			ver.IsInRecovery = data[0]["pg_is_in_recovery"].(bool)
+			ver.RealDbname = data[0]["current_database"].(string)
+
+			if ver.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) && addSystemIdentifier {
+				log.Debugf("determining system identifier version for %s (ver: %v)", dbUnique, ver.VersionStr)
+				data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_sysid)
+				if err == nil && len(data) > 0 {
+					ver.SystemIdentifier = data[0]["system_identifier"].(string)
+				}
+			}
+
+			log.Debugf("determining if monitoring user is a superuser for %s", dbUnique)
+			data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_su)
+			if err == nil {
+				ver.IsSuperuser = data[0]["rolsuper"].(bool)
+			}
+			log.Debugf("superuser=%v", ver.IsSuperuser)
 		}
-		ver.Version, _ = decimal.NewFromString(data[0]["ver"].(string))
-		ver.VersionStr = data[0]["ver"].(string)
-		ver.IsInRecovery = data[0]["pg_is_in_recovery"].(bool)
+
 		ver.LastCheckedOn = time.Now()
-		ver.RealDbname = data[0]["current_database"].(string)
-
-		if ver.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) && addSystemIdentifier {
-			log.Debugf("determining system identifier version for %s (ver: %v)", dbUnique, ver.VersionStr)
-			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_sysid)
-			if err == nil && len(data) > 0 {
-				ver.SystemIdentifier = data[0]["system_identifier"].(string)
-			}
-		}
-
-		log.Debugf("determining if monitoring user is a superuser for %s", dbUnique)
-		data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_su)
-		if err == nil {
-			ver.IsSuperuser = data[0]["rolsuper"].(bool)
-		}
-		log.Debugf("superuser=%v", ver.IsSuperuser)
-
 		db_pg_version_map_lock.Lock()
 		db_pg_version_map[dbUnique] = ver
 		db_pg_version_map_lock.Unlock()
@@ -2198,12 +2220,12 @@ func CheckForPGObjectChangesAndStore(dbUnique string, vme DBVersionMapEntry, sto
 	}
 }
 
-func FilterPgbouncerData(data []map[string]interface{}, database_to_keep string) []map[string]interface{} {
+func FilterPgbouncerData(data []map[string]interface{}, database_to_keep string, vme DBVersionMapEntry) []map[string]interface{} {
 	filtered_data := make([]map[string]interface{}, 0)
 
 	if len(database_to_keep) > 0 {
 		for _, dr := range data {
-			log.Debug("dr", dr)
+			//log.Debugf("bouncer dr: %+v", dr)
 			_, ok := dr["database"]
 			if !ok {
 				log.Warning("Expected 'database' key not found from pgbouncer_stats, not storing data")
@@ -2213,6 +2235,18 @@ func FilterPgbouncerData(data []map[string]interface{}, database_to_keep string)
 				continue // we only want pgbouncer stats for the DB specified in monitored_dbs.md_dbname
 			}
 			delete(dr, "database") // remove 'database' as we use 'dbname' by convention
+
+			numericCounterVer, _ := decimal.NewFromString("1.12")
+			if vme.Version.GreaterThanOrEqual(numericCounterVer) {	// v1.12 counters are of type numeric instead of int64
+				for k, v := range dr {
+					decimalCounter, err := decimal.NewFromString(string(v.([]uint8)))
+					if err != nil {
+						log.Errorf("Could not parse \"%+v\" to Decimal: %s", string(v.([]uint8)), err)
+						return filtered_data
+					}
+					dr[k] = decimalCounter.IntPart()	// technically could cause overflow...but highly unlikely for 2^63
+				}
+			}
 			filtered_data = append(filtered_data, dr)
 		}
 	}
@@ -2229,17 +2263,15 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	var duration time.Duration
 	var md MonitoredDatabase
 
-	if msg.DBType == DBTYPE_PG {
-		vme, err = DBGetPGVersion(msg.DBUniqueName, false)
-		if err != nil {
-			log.Error("failed to fetch pg version for ", msg.DBUniqueName, msg.MetricName, err)
-			return nil, err
-		}
-		db_pg_version = vme.Version
-	} else if msg.DBType == DBTYPE_BOUNCER {
+	vme, err = DBGetPGVersion(msg.DBUniqueName, msg.DBType,false)
+	if err != nil {
+		log.Error("failed to fetch pg version for ", msg.DBUniqueName, msg.MetricName, err)
+		return nil, err
+	}
+	db_pg_version = vme.Version
+
+	if msg.DBType == DBTYPE_BOUNCER {
 		db_pg_version = decimal.Decimal{} // version is 0.0 for all pgbouncer sql per convention
-		// as surprisingly pgbouncer 'show version' outputs it as 'NOTICE'
-		// which cannot be accessed from Go lib/pg
 	}
 
 	mvp, err := GetMetricVersionProperties(msg.MetricName, vme, nil)
@@ -2314,7 +2346,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 
 			log.Infof("[%s:%s] fetched %d rows in %.1f ms", msg.DBUniqueName, msg.MetricName, len(data), float64(duration.Nanoseconds())/1000000)
 			if msg.MetricName == "pgbouncer_stats" { // clean unwanted pgbouncer pool stats here as not possible in SQL
-				data = FilterPgbouncerData(data, md.DBName)
+				data = FilterPgbouncerData(data, md.DBName, vme)
 			}
 
 		}
@@ -2728,7 +2760,7 @@ func DoesFunctionExists(dbUnique, functionName string) bool {
 
 // Called once on daemon startup to try to create "metric fething helper" functions automatically
 func TryCreateMetricsFetchingHelpers(dbUnique string) error {
-	db_pg_version, err := DBGetPGVersion(dbUnique, false)
+	db_pg_version, err := DBGetPGVersion(dbUnique, DBTYPE_PG, false)
 	if err != nil {
 		log.Errorf("Failed to fetch pg version for \"%s\": %s", dbUnique, err)
 		return err
@@ -3758,10 +3790,8 @@ func main() {
 					log.Infof("new host \"%s\" found, checking connectivity...", db_unique)
 				}
 
-				if db_type == DBTYPE_PG {
-					ver, err = DBGetPGVersion(db_unique, true)
-				} else if db_type == DBTYPE_BOUNCER {
-					_, err, _ = DBExecReadByDbUniqueName(db_unique, "", false, "show version")
+				if db_type == DBTYPE_PG || db_type == DBTYPE_BOUNCER {
+					ver, err = DBGetPGVersion(db_unique, db_type, true)
 				}
 				if err != nil {
 					if opts.AdHocConnString != "" {
@@ -3797,7 +3827,7 @@ func main() {
 			}
 
 			if host.DBType == DBTYPE_PG {
-				ver, err := DBGetPGVersion(db_unique, false)
+				ver, err := DBGetPGVersion(db_unique, host.DBType, false)
 				if err == nil { // ok to ignore error, re-tried on next loop
 					if ver.IsInRecovery && host.OnlyIfMaster {
 						log.Infof("[%s] to be removed from monitoring due to 'master only' property and status change", db_unique)
