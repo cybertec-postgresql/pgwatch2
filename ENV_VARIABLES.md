@@ -59,6 +59,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_SERVERS_REFRESH_LOOP_SECONDS** Sleep time for the main loop. Default: 120
 - **PW2_VERSION** Show Git build version and exit.
 - **PW2_PING** Try to connect to all configured DB-s, report errors and then exit.
+- **PW2_INSTANCE_LEVEL_CACHE_MAX_SECONDS** Max allowed staleness for instance level metric data shared between DBs of an instance. Affects 'continuous' host types only
 
 
 ## Web UI

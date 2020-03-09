@@ -201,7 +201,6 @@ const RECO_PREFIX = "reco_"		// special handling for metrics with such prefix, d
 const RECO_METRIC_NAME = "recommendations"
 const SPECIAL_METRIC_CHANGE_EVENTS = "change_events"
 const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
-const INSTANCE_LEVEL_METRICS_CACHE_MAX_SECONDS = 30 // caching to share instance level metrics between all DBs of a "continuous" type host
 
 var defaultInstanceLevelMetrics = map[string]int{"archiver": 1, "backup_age_pgbackrest": 1, "backup_age_walg": 1, "bgwriter": 1, "buffercache_by_db": 1, "buffercache_by_type": 1, "cpu_load": 1, "psutil_cpu": 1, "psutil_disk": 1, "psutil_disk_io_total": 1, "psutil_mem": 1,
 	"replication": 1, "replication_slots": 1, "smart_health_per_disk": 1, "wal": 1, "wal_receiver": 1, "wal_size": 1}	// will only be used if reading of metric properties fails TODO
@@ -2306,8 +2305,8 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	}
 
 	isCacheable = IsCacheableMetric(msg)
-	if isCacheable && msg.Interval.Seconds() > INSTANCE_LEVEL_METRICS_CACHE_MAX_SECONDS {
-		cachedData = GetFromInstanceCacheIfNotOlderThanSeconds(msg, INSTANCE_LEVEL_METRICS_CACHE_MAX_SECONDS)
+	if isCacheable && msg.Interval.Seconds() > float64(opts.InstanceLevelCacheMaxSeconds) {
+		cachedData = GetFromInstanceCacheIfNotOlderThanSeconds(msg, opts.InstanceLevelCacheMaxSeconds)
 		if cachedData != nil && len(cachedData) > 0 {
 			fromCache = true
 			goto send_to_storage_channel
@@ -2446,7 +2445,6 @@ func PutToInstanceCache(msg MetricFetchMessage, data []map[string]interface{}) {
 }
 
 func IsCacheableMetric(msg MetricFetchMessage) bool {
-
 	if !(msg.DBType == DBTYPE_PG_CONT || msg.DBType == DBTYPE_PATRONI_CONT) {
 		return false
 	}
@@ -2562,7 +2560,7 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 
 		t1 := time.Now()
 		metricStoreMessages, err := FetchMetrics(
-			MetricFetchMessage{DBUniqueName: dbUniqueName, DBUniqueNameOrig: dbUniqueNameOrig, MetricName: metricName, DBType: dbType},
+			MetricFetchMessage{DBUniqueName: dbUniqueName, DBUniqueNameOrig: dbUniqueNameOrig, MetricName: metricName, DBType: dbType, Interval: time.Second*time.Duration(interval)},
 			host_state,
 			store_ch,
 			"")
@@ -3451,15 +3449,16 @@ type Options struct {
 	AesGcmKeyphraseFile     string `long:"aes-gcm-keyphrase-file" description:"File with decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE_FILE"`
 	AesGcmPasswordToEncrypt string `long:"aes-gcm-password-to-encrypt" description:"A special mode, returns the encrypted plain-text string and quits. Keyphrase(file) must be set. Useful for YAML mode" env:"PW2_AES_GCM_PASSWORD_TO_ENCRYPT"`
 	// NB! "Test data" mode needs to be combined with "ad-hoc" mode to get an initial set of metrics from a real source
-	TestdataMultiplier        int    `long:"testdata-multiplier" description:"For how many hosts to generate data" env:"PW2_TESTDATA_MULTIPLIER"`
-	TestdataDays              int    `long:"testdata-days" description:"For how many days to generate data" env:"PW2_TESTDATA_DAYS"`
-	AddRealDbname             string `long:"add-real-dbname" description:"Add real DB name to each captured metric" env:"PW2_ADD_REAL_DBNAME" default:"false"`
-	RealDbnameField           string `long:"real-dbname-field" description:"Tag key for real DB name if --add-real-dbname enabled" env:"PW2_REAL_DBNAME_FIELD" default:"real_dbname"`
-	AddSystemIdentifier       string `long:"add-system-identifier" description:"Add system identifier to each captured metric" env:"PW2_ADD_SYSTEM_IDENTIFIER" default:"false"`
-	SystemIdentifierField     string `long:"system-identifier-field" description:"Tag key for system identifier value if --add-system-identifier" env:"PW2_SYSTEM_IDENTIFIER_FIELD" default:"sys_id"`
-	ServersRefreshLoopSeconds int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERVERS_REFRESH_LOOP_SECONDS" default:"120"`
-	Version                   bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
-	Ping                      bool   `long:"ping" description:"Try to connect to all configured DB-s, report errors and then exit" env:"PW2_PING"`
+	TestdataMultiplier           int    `long:"testdata-multiplier" description:"For how many hosts to generate data" env:"PW2_TESTDATA_MULTIPLIER"`
+	TestdataDays                 int    `long:"testdata-days" description:"For how many days to generate data" env:"PW2_TESTDATA_DAYS"`
+	AddRealDbname                string `long:"add-real-dbname" description:"Add real DB name to each captured metric" env:"PW2_ADD_REAL_DBNAME" default:"false"`
+	RealDbnameField              string `long:"real-dbname-field" description:"Tag key for real DB name if --add-real-dbname enabled" env:"PW2_REAL_DBNAME_FIELD" default:"real_dbname"`
+	AddSystemIdentifier          string `long:"add-system-identifier" description:"Add system identifier to each captured metric" env:"PW2_ADD_SYSTEM_IDENTIFIER" default:"false"`
+	SystemIdentifierField        string `long:"system-identifier-field" description:"Tag key for system identifier value if --add-system-identifier" env:"PW2_SYSTEM_IDENTIFIER_FIELD" default:"sys_id"`
+	ServersRefreshLoopSeconds    int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERVERS_REFRESH_LOOP_SECONDS" default:"120"`
+	InstanceLevelCacheMaxSeconds int64 `long:"instance-level-cache-max-seconds" description:"Max allowed staleness for instance level metric data shared between DBs of an instance. Affects 'continuous' host types only" env:"PW2_INSTANCE_LEVEL_CACHE_MAX_SECONDS" default:"30"`
+	Version                      bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
+	Ping                         bool   `long:"ping" description:"Try to connect to all configured DB-s, report errors and then exit" env:"PW2_PING"`
 
 }
 
