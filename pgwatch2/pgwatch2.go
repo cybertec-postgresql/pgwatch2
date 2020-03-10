@@ -103,12 +103,17 @@ type MetricColumnAttrs struct {
 	PrometheusAllGaugeColumns bool     `yaml:"prometheus_all_gauge_columns"`
 }
 
+type MetricAttrs struct {
+	IsInstanceLevel    		  bool `yaml:"is_instance_level"`
+}
+
 type MetricVersionProperties struct {
 	Sql         string
 	SqlSU       string
 	MasterOnly  bool
 	StandbyOnly bool
 	ColumnAttrs MetricColumnAttrs // Prometheus Metric Type (Counter is default) and ignore list
+	MetricAttrs MetricAttrs
 }
 
 type ControlMessage struct {
@@ -202,8 +207,6 @@ const RECO_METRIC_NAME = "recommendations"
 const SPECIAL_METRIC_CHANGE_EVENTS = "change_events"
 const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
 
-var defaultInstanceLevelMetrics = map[string]int{"archiver": 1, "backup_age_pgbackrest": 1, "backup_age_walg": 1, "bgwriter": 1, "buffercache_by_db": 1, "buffercache_by_type": 1, "cpu_load": 1, "psutil_cpu": 1, "psutil_disk": 1, "psutil_disk_io_total": 1, "psutil_mem": 1,
-	"replication": 1, "replication_slots": 1, "smart_health_per_disk": 1, "wal": 1, "wal_receiver": 1, "wal_size": 1}	// will only be used if reading of metric properties fails TODO
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT} // used for informational purposes
 var configDb *sqlx.DB
@@ -2304,7 +2307,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 		return nil, err
 	}
 
-	isCacheable = IsCacheableMetric(msg)
+	isCacheable = IsCacheableMetric(msg, mvp)
 	if isCacheable && opts.InstanceLevelCacheMaxSeconds > 0 && msg.Interval.Seconds() > float64(opts.InstanceLevelCacheMaxSeconds) {
 		cachedData = GetFromInstanceCacheIfNotOlderThanSeconds(msg, opts.InstanceLevelCacheMaxSeconds)
 		if cachedData != nil && len(cachedData) > 0 {
@@ -2392,7 +2395,7 @@ send_to_storage_channel:
 	}
 
 	if fromCache {
-		log.Infof("[%s:%s] fetched %d rows from the instance cache", msg.DBUniqueName, msg.MetricName, len(cachedData))
+		log.Infof("[%s:%s] loaded %d rows from the instance cache", msg.DBUniqueName, msg.MetricName, len(cachedData))
 		return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: cachedData, CustomTags: md.CustomTags,
 			MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
 	} else {
@@ -2444,15 +2447,11 @@ func PutToInstanceCache(msg MetricFetchMessage, data []map[string]interface{}) {
 	instanceMetricCacheTimestampLock.Unlock()
 }
 
-func IsCacheableMetric(msg MetricFetchMessage) bool {
+func IsCacheableMetric(msg MetricFetchMessage, mvp MetricVersionProperties) bool {
 	if !(msg.DBType == DBTYPE_PG_CONT || msg.DBType == DBTYPE_PATRONI_CONT) {
 		return false
 	}
-	_, ok := defaultInstanceLevelMetrics[msg.MetricName]
-	if !ok {
-		return false
-	}
-	return true
+	return mvp.MetricAttrs.IsInstanceLevel
 }
 
 func AddDbnameSysinfoIfNotExistsToQueryResultData(msg MetricFetchMessage, data []map[string]interface{}, ver DBVersionMapEntry) []map[string]interface{} {
@@ -2673,7 +2672,15 @@ func UpdateMetricDefinitionMap(newMetrics map[string]map[decimal.Decimal]MetricV
 
 func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metric_def_map_new := make(map[string]map[decimal.Decimal]MetricVersionProperties)
-	sql := "select /* pgwatch2_generated */ m_name, m_pg_version_from::text, m_sql, m_master_only, m_standby_only, coalesce(m_column_attrs::text, '') as m_column_attrs, m_sql_su from pgwatch2.metric where m_is_active"
+	sql := `select /* pgwatch2_generated */ m_name, m_pg_version_from::text, m_sql, m_master_only, m_standby_only,
+			  coalesce(m_column_attrs::text, '') as m_column_attrs, coalesce(m_column_attrs::text, '') as m_column_attrs,
+			  coalesce(ma_metric_attrs::text, '') as ma_metric_attrs, m_sql_su
+			from
+              pgwatch2.metric
+              left join
+              pgwatch2.metric_attribute on (ma_metric_name = m_name)
+			where
+              m_is_active`
 
 	log.Info("updating metrics definitons from ConfigDB...")
 	data, err := DBExecRead(configDb, CONFIGDB_IDENT, sql)
@@ -2701,12 +2708,17 @@ func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decim
 		if row["m_column_attrs"].(string) != "" {
 			ca = ParseMetricColumnAttrsFromString(row["m_column_attrs"].(string))
 		}
+		ma := MetricAttrs{}
+		if row["ma_metric_attrs"].(string) != "" {
+			ma = ParseMetricAttrsFromString(row["ma_metric_attrs"].(string))
+		}
 		metric_def_map_new[row["m_name"].(string)][d] = MetricVersionProperties{
 			Sql:         row["m_sql"].(string),
 			SqlSU:       row["m_sql_su"].(string),
 			MasterOnly:  row["m_master_only"].(bool),
 			StandbyOnly: row["m_standby_only"].(bool),
 			ColumnAttrs: ca,
+			MetricAttrs: ma,
 		}
 	}
 	return metric_def_map_new, err
@@ -2978,8 +2990,34 @@ func ParseMetricColumnAttrsFromYAML(yamlPath string) MetricColumnAttrs {
 	return c
 }
 
+func ParseMetricAttrsFromYAML(yamlPath string) MetricAttrs {
+	c := MetricAttrs{}
+
+	yamlFile, err := ioutil.ReadFile(yamlPath)
+	if err != nil {
+		log.Errorf("Error reading file %s: %s", yamlFile, err)
+		return c
+	}
+
+	err = yaml.Unmarshal(yamlFile, &c)
+	if err != nil {
+		log.Errorf("Unmarshaling error: %v", err)
+	}
+	return c
+}
+
 func ParseMetricColumnAttrsFromString(jsonAttrs string) MetricColumnAttrs {
 	c := MetricColumnAttrs{}
+
+	err := yaml.Unmarshal([]byte(jsonAttrs), &c)
+	if err != nil {
+		log.Errorf("Unmarshaling error: %v", err)
+	}
+	return c
+}
+
+func ParseMetricAttrsFromString(jsonAttrs string) MetricAttrs {
+	c := MetricAttrs{}
 
 	err := yaml.Unmarshal([]byte(jsonAttrs), &c)
 	if err != nil {
@@ -3019,6 +3057,12 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 			if err != nil {
 				log.Error(err)
 				return metrics_map, err
+			}
+
+			var metricAttrs MetricAttrs
+			if _, err = os.Stat(path.Join(folder, f.Name(), "metric_attrs.yaml")); err == nil {
+				metricAttrs = ParseMetricAttrsFromYAML(path.Join(folder, f.Name(), "metric_attrs.yaml"))
+				//log.Debugf("Discovered following metric attributes for metric %s: %v", f.Name(), metricAttrs)
 			}
 
 			var metricColumnAttrs MetricColumnAttrs
@@ -3071,7 +3115,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 						}
 						mvp, ok = mvpVer[d]
 						if !ok {
-							mvp = MetricVersionProperties{Sql: string(metric_sql[:]), ColumnAttrs: metricColumnAttrs}
+							mvp = MetricVersionProperties{Sql: string(metric_sql[:]), ColumnAttrs: metricColumnAttrs, MetricAttrs: metricAttrs}
 						}
 
 						if strings.Contains(md.Name(), "_master") {

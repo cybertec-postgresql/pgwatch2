@@ -161,7 +161,7 @@
                     <td><input type="checkbox" name="m_is_helper" {% if row['m_is_helper'] %}checked{% endif %} title="Is helper?"></td>
                     <td><input type="checkbox" name="m_master_only" {% if row['m_master_only'] %}checked{% endif %} title="Master only?"></td>
                     <td><input type="checkbox" name="m_standby_only" {% if row['m_standby_only'] %}checked{% endif %} title="Standby only?"></td>
-                    <td><textarea name="ma_metric_attributes" cols="20" title="Metric attributes - will be applied to all version definitions">{{row['ma_metric_attributes']}}</textarea></td>
+                    <td><textarea name="ma_metric_attrs" cols="20" title="Metric attributes - will be applied to all version definitions">{{row['ma_metric_attrs']}}</textarea></td>
                     <td><textarea name="m_column_attrs" cols="30" title="Column attributes. Use to specify Prometheus Gauge type columns. 'Gauge' means non-cumulative columns.">{{row['m_column_attrs']}}</textarea></td>
                     <td>{{row['m_last_modified_on']}}</td>
                     <td><input type="submit" name="metric_save" value="Save" class="metric_save"></td>
@@ -180,7 +180,7 @@
                     <td><input type="checkbox" name="m_is_helper" title="Is helper?"></td>
                     <td><input type="checkbox" name="m_master_only" title="Master only?"></td>
                     <td><input type="checkbox" name="m_standby_only" title="Standby only?"></td>
-                    <td><textarea name="ma_metric_attributes" cols="20" title="Metric attributes - will be applied to all version definitions. Leave empty to use existing attributes!">{"is_instance_level": false}</textarea></td>
+                    <td><textarea name="ma_metric_attrs" cols="20" title="Metric attributes - will be applied to all version definitions. Leave empty to use existing attributes!">{"is_instance_level": false}</textarea></td>
                     <td><textarea name="m_column_attrs" cols="30" title="Column attributes. Use to specify Prometheus Gauge type columns. 'Gauge' means non-cumulative columns.">{"prometheus_all_gauge_columns": true}</textarea></td>
                     <td></td>
                     <td><input type="submit" name="metric_new" value="New"></td>
@@ -209,6 +209,8 @@
             <dd>Only relevant for Prometheus output to correctly set the (suggested, not validated) metric type. GAUGE = value changing with every scrape, COUNTER = value is normally incremented (like most postgres statistics)</dd>
             <dt>prometheus_gauge_columns (default: [])</dt>
             <dd>Only relevant for Prometheus output to correctly set the (suggested, not validated) metric type. List of GAUGE  (value changing with every scrape) columns for the given metric. When not set all columns are considered to be of type COUNTER</dd>
+            <dt>prometheus_ignored_columns (default: [])</dt>
+            <dd>Only relevant for Prometheus output. For cases where we don't want some columns to be exposed</dd>
         </dl>
     </div>
 </div>

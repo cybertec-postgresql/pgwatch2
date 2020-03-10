@@ -82,13 +82,13 @@ create table metric (
 create table metric_attribute (
     ma_metric_name          text not null primary key,
     ma_last_modified_on     timestamptz not null default now(),
-    ma_metric_attributes    jsonb not null,
+    ma_metric_attrs    jsonb not null,
 
     check (ma_metric_name ~ '^[a-z0-9_]+$')
 );
 
 -- mark instance level metrics for metrics defined by pgwatch
-insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attributes)
+insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
 select m, '{"is_instance_level": true}'
 from unnest(
    array['archiver', 'backup_age_pgbackrest', 'backup_age_walg', 'bgwriter', 'buffercache_by_db', 'buffercache_by_type',

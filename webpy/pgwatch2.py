@@ -121,7 +121,7 @@ def get_all_metrics():
         select
           m_id, m_name, m_pg_version_from, m_sql, m_sql_su, coalesce(m_comment, '') as m_comment, m_is_active, m_is_helper,
           date_trunc('second', m_last_modified_on::timestamp) as m_last_modified_on, m_master_only, m_standby_only,
-          coalesce(m_column_attrs::text, '') as m_column_attrs, coalesce(ma_metric_attributes::text, '') as ma_metric_attributes
+          coalesce(m_column_attrs::text, '') as m_column_attrs, coalesce(ma_metric_attrs::text, '') as ma_metric_attrs
         from
           pgwatch2.metric
           left join
@@ -439,16 +439,16 @@ def update_metric(params):
             update
               pgwatch2.metric_attribute
             set
-              ma_metric_attributes = %(ma_metric_attributes)s,
+              ma_metric_attrs = %(ma_metric_attrs)s,
               ma_last_modified_on = now()
             where
               ma_metric_name = %(m_name)s
             returning *
         )
-        insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attributes)
+        insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
         select
           %(m_name)s,
-          %(ma_metric_attributes)s
+          %(ma_metric_attrs)s
         where
           (select count(*) from q_try_upd) = 0
     """
@@ -457,7 +457,7 @@ def update_metric(params):
     _, err = datadb.execute(sql_metric, params, quiet=True)
     if err:
         raise Exception('Failed to update "metric" table: ' + err)
-    if params.get('ma_metric_attributes'):
+    if params.get('ma_metric_attrs'):
         _, err = datadb.execute(sql_metric_attribute, params, quiet=True)
         if err:
             return 'Failed to update "metric_attribute": ' + err
@@ -475,16 +475,16 @@ def insert_metric(params):
     """
     sql_metric_attribute = """
         insert into
-          pgwatch2.metric_attribute (ma_metric_name, ma_metric_attributes)
+          pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
         select
-          %(m_name)s, %(ma_metric_attributes)s
+          %(m_name)s, %(ma_metric_attrs)s
     """
     cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper', 'm_master_only', 'm_standby_only'])
     cherrypy_empty_text_to_nulls(params, ['m_column_attrs'])
     ret, err = datadb.execute(sql, params, quiet=True)
     if err:
         raise Exception('Failed to insert into "metric": ' + err)
-    if params.get('ma_metric_attributes'):
+    if params.get('ma_metric_attrs'):
         _, err = datadb.execute(sql_metric_attribute, params, quiet=True)
         if err:
             msg = 'Failed to insert metric attributes into "metric_attribute": ' + err
