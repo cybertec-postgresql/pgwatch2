@@ -11,6 +11,26 @@ or a specific version
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
 
+## v1.7.1 [DRAFT]
+
+* Gatherer fix - support for PgBouncer v1.12.0+. This latest release changed counter data types.
+* Gatherer fix - config DB mode allowed only one continuous discovery Patroni host.
+* Gatherer improvement - introduce caching for instance level metrics to reduce load with multi-DB instances. Affects only the 'continous' DB types and is customizable.
+* Documentation - many smaller README corrections, custom installs, backups, Patroni, etc.
+* Metrics - new metric + PL/Python helper to fetch WAL-G backup status via the DB.
+* Metrics - new metric + PL/Python helper to fetch pgBackRest backup status via the DB.
+* Metrics - add a Bash script to easily refresh SQL based metric definitions (refresh_metrics_from_github.sh).
+* Docker components update - Grafana 6.6.1, Influx 1.7.10, Go 1.13.7.
+* Readme - add info on Prometheus usage, supported PG versions, recommendations for long term setups and exposing logs over the Web UI.
+* Project structure - get rid of duplicate helper definitions for SQL and YAML modes using symlinks.
+* Web UI - metrics page contents fit better now onto the screen and textareas are resizeable in all directions.
+* Packages - include also Web UI sources in DEB/RPM/tar builds so that Web UI could be immediately launched.
+
+NB! When migrating existing "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
+applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2/sql/config_store/migrations/ if using
+ther pre-built packages) folder.
+
+
 ## v1.7.0 [2020-01-16]
 
 * New feature - sever log parsing. Only counts by severity. Assumes local gatherer setup with CSVLOG format by default.
