@@ -183,14 +183,20 @@ class Root:
                 pgwatch2.delete_preset_config(params)
                 messages.append('Config "{}" deleted!'.format(params['pc_name']))
             if params.get('metric_save'):
-                pgwatch2.update_metric(params)
+                msg = pgwatch2.update_metric(params)
                 messages.append('Metric "{}" updated!'.format(params['m_name']))
+                if msg:
+                    messages.append(msg)
             elif params.get('metric_new'):
-                id = pgwatch2.insert_metric(params)
+                id, msg = pgwatch2.insert_metric(params)
                 messages.append('Metric with ID "{}" added!'.format(id))
+                if msg:
+                    messages.append(msg)
             elif params.get('metric_delete'):
-                pgwatch2.delete_metric(params)
+                msg = pgwatch2.delete_metric(params)
                 messages.append('Metric "{}" deleted!'.format(params['m_name']))
+                if msg:
+                    messages.append(msg)
 
             preset_configs = pgwatch2.get_preset_configs()
             metrics_list = pgwatch2.get_active_metrics_with_versions()

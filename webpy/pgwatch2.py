@@ -120,9 +120,12 @@ def get_all_metrics():
     sql = """
         select
           m_id, m_name, m_pg_version_from, m_sql, m_sql_su, coalesce(m_comment, '') as m_comment, m_is_active, m_is_helper,
-          date_trunc('second', m_last_modified_on) as m_last_modified_on, m_master_only, m_standby_only, coalesce(m_column_attrs::text, '') as m_column_attrs
+          date_trunc('second', m_last_modified_on::timestamp) as m_last_modified_on, m_master_only, m_standby_only,
+          coalesce(m_column_attrs::text, '') as m_column_attrs, coalesce(ma_metric_attributes::text, '') as ma_metric_attributes
         from
           pgwatch2.metric
+          left join
+          pgwatch2.metric_attribute on (ma_metric_name = m_name)
         order by
           m_is_active desc, m_name, m_pg_version_from
     """
@@ -413,7 +416,7 @@ def delete_preset_config(params):
 
 
 def update_metric(params):
-    sql = """
+    sql_metric = """
         update
           pgwatch2.metric
         set
@@ -431,14 +434,38 @@ def update_metric(params):
         where
           m_id = %(m_id)s
     """
+    sql_metric_attribute = """
+        with q_try_upd as (
+            update
+              pgwatch2.metric_attribute
+            set
+              ma_metric_attributes = %(ma_metric_attributes)s,
+              ma_last_modified_on = now()
+            where
+              ma_metric_name = %(m_name)s
+            returning *
+        )
+        insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attributes)
+        select
+          %(m_name)s,
+          %(ma_metric_attributes)s
+        where
+          (select count(*) from q_try_upd) = 0
+    """
     cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper', 'm_master_only', 'm_standby_only'])
     cherrypy_empty_text_to_nulls(params, ['m_column_attrs'])
-    ret, err = datadb.execute(sql, params)
+    _, err = datadb.execute(sql_metric, params, quiet=True)
     if err:
-        raise Exception('Failed to update "metric": ' + err)
+        raise Exception('Failed to update "metric" table: ' + err)
+    if params.get('ma_metric_attributes'):
+        _, err = datadb.execute(sql_metric_attribute, params, quiet=True)
+        if err:
+            return 'Failed to update "metric_attribute": ' + err
+    return None
 
 
 def insert_metric(params):
+    msg = ''
     sql = """
         insert into
           pgwatch2.metric (m_name, m_pg_version_from, m_sql, m_sql_su, m_comment, m_is_active, m_is_helper, m_master_only, m_standby_only, m_column_attrs)
@@ -446,21 +473,46 @@ def insert_metric(params):
           (%(m_name)s, %(m_pg_version_from)s, %(m_sql)s, %(m_sql_su)s, %(m_comment)s, %(m_is_active)s, %(m_is_helper)s, %(m_master_only)s, %(m_standby_only)s, %(m_column_attrs)s)
         returning m_id
     """
+    sql_metric_attribute = """
+        insert into
+          pgwatch2.metric_attribute (ma_metric_name, ma_metric_attributes)
+        select
+          %(m_name)s, %(ma_metric_attributes)s
+    """
     cherrypy_checkboxes_to_bool(params, ['m_is_active', 'm_is_helper', 'm_master_only', 'm_standby_only'])
     cherrypy_empty_text_to_nulls(params, ['m_column_attrs'])
-    ret, err = datadb.execute(sql, params)
+    ret, err = datadb.execute(sql, params, quiet=True)
     if err:
         raise Exception('Failed to insert into "metric": ' + err)
-    return ret[0]['m_id']
+    if params.get('ma_metric_attributes'):
+        _, err = datadb.execute(sql_metric_attribute, params, quiet=True)
+        if err:
+            msg = 'Failed to insert metric attributes into "metric_attribute": ' + err
+
+    return ret[0]['m_id'], msg
 
 
 def delete_metric(params):
+    msg = ''
     sql = """
         delete from pgwatch2.metric where m_id = %(m_id)s
     """
-    ret, err = datadb.execute(sql, params)
+    sql_metric_attribute = """
+        delete from pgwatch2.metric_attribute
+        where ma_metric_name = %(m_name)s
+        and (select count(*) from pgwatch2.metric where m_name = %(m_name)s) = 0
+    """
+
+    _, err = datadb.execute(sql, params, quiet=True)
     if err:
         raise Exception('Failed to delete from "metric": ' + err)
+
+    ret, err = datadb.execute(sql_metric_attribute, params, quiet=True)
+    if err:
+        msg = 'Failed to delete orphaned "metric_attribute" entry: ' + err
+    elif ret and len(ret) == 1 and int(ret[0]['rows_affected']) > 0:
+        msg = 'Delete also orphaned "metric_attribute" entry'
+    return msg
 
 
 def get_all_dbnames():

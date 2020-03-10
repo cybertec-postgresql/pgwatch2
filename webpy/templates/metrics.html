@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Pgwatch2 :: Metrics and preset configs</title>
     <link rel="stylesheet" href="/static/bootstrap-4.3.1-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/custom.css">
 </head>
 <body>
 
@@ -128,17 +129,18 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <td>Metric</td>
-                <td>PG version from</td>
+                <td size="18">Metric</td>
+                <td size="3">PG ver.<br/>from</td>
                 <td title="NB! 'epoch_ns' column needs to be always present">SQL</td>
                 <td title="Will be used instead of normal SQL if monitoring user is a superuser (recommended only on localhost usage) or if first try with normal SQL fails. Helps to avoid creating helper functions (aka altering the DB state in any way) for Postgres-native metrics">Privileged SQL</td>
                 <td>Comment</td>
-                <td>Is active?</td>
-                <td title="Code for metric fetching helpers. Not to be used for normal metrics gathering">Is helper?</td>
-                <td title="Execute only on masters">Master only?</td>
-                <td title="Execute only on standbys">Standby only?</td>
+                <td>Is<br/>active?</td>
+                <td title="Code for metric fetching helpers. Not to be used for normal metrics gathering">Is<br/>helper?</td>
+                <td title="Execute only on masters">Master<br/>only?</td>
+                <td title="Execute only on standbys">Standby<br/>only?</td>
+                <td title="Metric attributes - will be applied to all version definitions">Metric attributes</td>
                 <td title="Column attributes. Use to specify Prometheus Gauge type columns. 'Gauge' means non-cumulative columns.">Column attributes</td>
-                <td>Last modified</td>
+                <td title="Config server TZ">Last modified</td>
                 <td></td>
                 <td></td>
             </tr>
@@ -149,16 +151,17 @@
                 <form action="/metrics" method="post">
                     <td>
                         <input type="hidden" name="m_id" value="{{row['m_id']}}">
-                        <input type="text" name="m_name" value="{{row['m_name']|e}}" title="Metric name. Lowercase alphanumerics and underscores allowed." pattern="[a-z0-9_]+">
+                        <input type="text" size="18" name="m_name" value="{{row['m_name']|e}}" title="Metric name. Lowercase alphanumerics and underscores allowed." pattern="[a-z0-9_]+">
                     </td>
-                    <td><input type="text" name="m_pg_version_from" value="{{row['m_pg_version_from']}}" title="Version from"></td>
-                    <td><textarea name="m_sql" cols="50" title="SQL for metric">{{row['m_sql']}}</textarea></td>
-                    <td><textarea name="m_sql_su" cols="50" title="Privileged (superuser or pg_monitor grant) SQL for metric">{{row['m_sql_su']}}</textarea></td>
-                    <td><input type="text" name="m_comment" value="{{row['m_comment']}}" title="Comment"></td>
+                    <td><input type="text" size="3" name="m_pg_version_from" value="{{row['m_pg_version_from']}}" title="Version from"></td>
+                    <td><textarea name="m_sql" cols="35" title="SQL for metric">{{row['m_sql']}}</textarea></td>
+                    <td><textarea name="m_sql_su" cols="35" title="Privileged (superuser or pg_monitor grant) SQL for metric">{{row['m_sql_su']}}</textarea></td>
+                    <td><input type="text" size="12" name="m_comment" value="{{row['m_comment']}}" title="Comment"></td>
                     <td><input type="checkbox" name="m_is_active" {% if row['m_is_active'] %}checked{% endif %} title="Is active?"></td>
                     <td><input type="checkbox" name="m_is_helper" {% if row['m_is_helper'] %}checked{% endif %} title="Is helper?"></td>
                     <td><input type="checkbox" name="m_master_only" {% if row['m_master_only'] %}checked{% endif %} title="Master only?"></td>
                     <td><input type="checkbox" name="m_standby_only" {% if row['m_standby_only'] %}checked{% endif %} title="Standby only?"></td>
+                    <td><textarea name="ma_metric_attributes" cols="20" title="Metric attributes - will be applied to all version definitions">{{row['ma_metric_attributes']}}</textarea></td>
                     <td><textarea name="m_column_attrs" cols="30" title="Column attributes. Use to specify Prometheus Gauge type columns. 'Gauge' means non-cumulative columns.">{{row['m_column_attrs']}}</textarea></td>
                     <td>{{row['m_last_modified_on']}}</td>
                     <td><input type="submit" name="metric_save" value="Save" class="metric_save"></td>
@@ -168,15 +171,16 @@
             {% endfor %}
             <tr>
                 <form action="/metrics" method="post">
-                    <td><input type="text" name="m_name" value="" title="Metric name. Lowercase alphanumerics and underscores allowed." pattern="[a-z0-9_]+"></td>
-                    <td><input type="text" name="m_pg_version_from" value="9.0" title="Version from"></td>
-                    <td><textarea name="m_sql" cols="50" title="SQL for metric">SELECT (extract(epoch from now()) * 1e9)::int8 as epoch_ns, ...</textarea></td>
-                    <td><textarea name="m_sql_su" cols="50" title="Privileged (superuser or pg_monitor grant) SQL for metric"></textarea></td>
-                    <td><input type="text" name="m_comment" value=""  title="Comment"></td>
+                    <td><input type="text" size="18" name="m_name" value="" title="Metric name. Lowercase alphanumerics and underscores allowed." pattern="[a-z0-9_]+"></td>
+                    <td><input type="text" size="3" name="m_pg_version_from" value="9.0" title="Version from"></td>
+                    <td><textarea name="m_sql" cols="35" title="SQL for metric">SELECT (extract(epoch from now()) * 1e9)::int8 as epoch_ns, ...</textarea></td>
+                    <td><textarea name="m_sql_su" cols="35" title="Privileged (superuser or pg_monitor grant) SQL for metric"></textarea></td>
+                    <td><input type="text" size="12" name="m_comment" value=""  title="Comment"></td>
                     <td><input type="checkbox" name="m_is_active"  title="Is active?" checked></td>
                     <td><input type="checkbox" name="m_is_helper" title="Is helper?"></td>
                     <td><input type="checkbox" name="m_master_only" title="Master only?"></td>
                     <td><input type="checkbox" name="m_standby_only" title="Standby only?"></td>
+                    <td><textarea name="ma_metric_attributes" cols="20" title="Metric attributes - will be applied to all version definitions. Leave empty to use existing attributes!">{"is_instance_level": false}</textarea></td>
                     <td><textarea name="m_column_attrs" cols="30" title="Column attributes. Use to specify Prometheus Gauge type columns. 'Gauge' means non-cumulative columns.">{"prometheus_all_gauge_columns": true}</textarea></td>
                     <td></td>
                     <td><input type="submit" name="metric_new" value="New"></td>
@@ -187,7 +191,25 @@
     </table>
     <div class="alert alert-info">
       <strong>NB! </strong>Metric fetching SQL-s should always have the "epoch_ns" column present (otherwise server time will be used). Additionally columns with "tag_" prefix will be
-        turned into indexed tags in InfluxDB or stored in the indexed "metrics.tag_data" column for Postgres for fast access. Also "dbname" (DB unique name) column will always be added by the framework
+        turned into indexed tags in InfluxDB or stored in the indexed "$metric_name.tag_data" column for Postgres for fast access. Also "dbname" (DB unique name) column will always be added by the framework
+    </div>
+    <div class="alert alert-primary">
+      <h4>Available metric attributes:</h4>
+        <dl>
+            <dt>is_instance_level (default: false)</dt>
+            <dd>Instance level metrics can be cached and shared between multiple DBs of a single instance to reduce query load on server. Default caching period is 30s,
+                use the --instance-level-cache-max-seconds (PW2_INSTANCE_LEVEL_CACHE_MAX_SECONDS env.) gatherer param to change or set to 0 to disable. Caching will only
+                be applied to 'continuous' DB types and only if metric interval is bigger than the --instance-level-cache-max-seconds value.</dd>
+        </dl>
+    </div>
+    <div class="alert alert-secondary">
+      <h4>Available column attributes:</h4>
+        <dl>
+            <dt>prometheus_all_gauge_columns (default: false}</dt>
+            <dd>Only relevant for Prometheus output to correctly set the (suggested, not validated) metric type. GAUGE = value changing with every scrape, COUNTER = value is normally incremented (like most postgres statistics)</dd>
+            <dt>prometheus_gauge_columns (default: [])</dt>
+            <dd>Only relevant for Prometheus output to correctly set the (suggested, not validated) metric type. List of GAUGE  (value changing with every scrape) columns for the given metric. When not set all columns are considered to be of type COUNTER</dd>
+        </dl>
     </div>
 </div>
 
