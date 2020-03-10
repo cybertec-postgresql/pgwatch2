@@ -2305,7 +2305,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	}
 
 	isCacheable = IsCacheableMetric(msg)
-	if isCacheable && msg.Interval.Seconds() > float64(opts.InstanceLevelCacheMaxSeconds) {
+	if isCacheable && opts.InstanceLevelCacheMaxSeconds > 0 && msg.Interval.Seconds() > float64(opts.InstanceLevelCacheMaxSeconds) {
 		cachedData = GetFromInstanceCacheIfNotOlderThanSeconds(msg, opts.InstanceLevelCacheMaxSeconds)
 		if cachedData != nil && len(cachedData) > 0 {
 			fromCache = true
@@ -2378,7 +2378,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 		}
 	}
 
-	if isCacheable {
+	if isCacheable && opts.InstanceLevelCacheMaxSeconds > 0 && msg.Interval.Seconds() > float64(opts.InstanceLevelCacheMaxSeconds) {
 		PutToInstanceCache(msg, data)
 	}
 
@@ -3456,7 +3456,7 @@ type Options struct {
 	AddSystemIdentifier          string `long:"add-system-identifier" description:"Add system identifier to each captured metric" env:"PW2_ADD_SYSTEM_IDENTIFIER" default:"false"`
 	SystemIdentifierField        string `long:"system-identifier-field" description:"Tag key for system identifier value if --add-system-identifier" env:"PW2_SYSTEM_IDENTIFIER_FIELD" default:"sys_id"`
 	ServersRefreshLoopSeconds    int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERVERS_REFRESH_LOOP_SECONDS" default:"120"`
-	InstanceLevelCacheMaxSeconds int64 `long:"instance-level-cache-max-seconds" description:"Max allowed staleness for instance level metric data shared between DBs of an instance. Affects 'continuous' host types only" env:"PW2_INSTANCE_LEVEL_CACHE_MAX_SECONDS" default:"30"`
+	InstanceLevelCacheMaxSeconds int64 `long:"instance-level-cache-max-seconds" description:"Max allowed staleness for instance level metric data shared between DBs of an instance. Affects 'continuous' host types only. Set to 0 to disable" env:"PW2_INSTANCE_LEVEL_CACHE_MAX_SECONDS" default:"30"`
 	Version                      bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
 	Ping                         bool   `long:"ping" description:"Try to connect to all configured DB-s, report errors and then exit" env:"PW2_PING"`
 
