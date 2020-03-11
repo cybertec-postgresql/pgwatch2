@@ -2398,6 +2398,11 @@ send_to_storage_channel:
 	}
 
 	if fromCache {
+		md, err = GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
+		if err != nil {
+			log.Errorf("[%s:%s] could not get monitored DB details", msg.DBUniqueName, err)
+			return nil, err
+		}
 		log.Infof("[%s:%s] loaded %d rows from the instance cache", msg.DBUniqueName, msg.MetricName, len(cachedData))
 		return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: cachedData, CustomTags: md.CustomTags,
 			MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
@@ -3075,7 +3080,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 			}
 
 			for _, pgVer := range pgVers {
-				if strings.HasSuffix(pgVer.Name(), ".md") || pgVer.Name() == "column_attrs.yaml" {
+				if strings.HasSuffix(pgVer.Name(), ".md") || pgVer.Name() == "column_attrs.yaml" || pgVer.Name() == "metric_attrs.yaml" {
 					continue
 				}
 				if !rIsDigitOrPunctuation.MatchString(pgVer.Name()) {
