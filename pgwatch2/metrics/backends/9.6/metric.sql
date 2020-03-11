@@ -5,6 +5,7 @@ select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot) as total,
   (select count(*) from pg_stat_activity where pid != pg_backend_pid()) as instance_total,
+current_setting('max_connections')::int as max_connections,
   (select count(*) from sa_snapshot where state = 'active') as active,
   (select count(*) from sa_snapshot where state = 'idle') as idle,
   (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
