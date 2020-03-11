@@ -1870,9 +1870,9 @@ $sql$,
 
 
 /* blocking_locks - based on https://wiki.postgresql.org/wiki/Lock_dependency_information.
- not sure if it makes sense though, locks are quite volatile normally */
+ needs fast intervals though as locks are quite volatile normally, thus could be costly */
 -- not usable for Prometheus
-insert into pgwatch2.metric(m_name, m_pg_version_from,m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_sql_su)
 values (
 'blocking_locks',
 9.2,
@@ -1909,6 +1909,57 @@ JOIN
     )
 JOIN
     get_stat_activity() AS other_stm
+    ON (
+        other_stm.pid = other.pid
+    )
+WHERE
+    NOT waiting.GRANTED
+AND
+    waiting.pid <> other.pid
+AND
+    other.GRANTED
+AND
+    waiting_stm.datname = current_database();
+$sql$,
+$sql$
+WITH sa_snapshot AS (
+  select * from pg_stat_activity
+  where datname = current_database()
+  and not query like 'autovacuum:%'
+  and pid != pg_backend_pid()
+)
+SELECT
+    (extract(epoch from now()) * 1e9)::int8 AS epoch_ns,
+    waiting.locktype           AS tag_waiting_locktype,
+    waiting_stm.usename        AS tag_waiting_user,
+    coalesce(waiting.mode, 'null'::text) AS tag_waiting_mode,
+    coalesce(waiting.relation::regclass::text, 'null') AS tag_waiting_table,
+    waiting_stm.query          AS waiting_query,
+    waiting.pid                AS waiting_pid,
+    other.locktype             AS other_locktype,
+    other.relation::regclass   AS other_table,
+    other_stm.query            AS other_query,
+    other.mode                 AS other_mode,
+    other.pid                  AS other_pid,
+    other_stm.usename          AS other_user
+FROM
+    pg_catalog.pg_locks AS waiting
+JOIN
+    sa_snapshot AS waiting_stm
+    ON (
+        waiting_stm.pid = waiting.pid
+    )
+JOIN
+    pg_catalog.pg_locks AS other
+    ON (
+        (
+            waiting."database" = other."database"
+        AND waiting.relation  = other.relation
+        )
+        OR waiting.transactionid = other.transactionid
+    )
+JOIN
+    sa_snapshot AS other_stm
     ON (
         other_stm.pid = other.pid
     )
