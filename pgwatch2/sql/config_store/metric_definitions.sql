@@ -11,6 +11,7 @@ with sa_snapshot as (
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot) as total,
+  (select count(*) from pg_stat_activity where procpid != pg_backend_pid()) as instance_total,
   (select count(*) from sa_snapshot where current_query != '<IDLE>') as active,
   (select count(*) from sa_snapshot where current_query = '<IDLE>') as idle,
   (select count(*) from sa_snapshot where current_query = '<IDLE> in transaction') as idleintransaction,
@@ -35,6 +36,7 @@ with sa_snapshot as (
 select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     (select count(*) from sa_snapshot) as total,
+    (select count(*) from pg_stat_activity where procpid != pg_backend_pid()) as instance_total,
     (select count(*) from sa_snapshot where current_query != '<IDLE>') as active,
     (select count(*) from sa_snapshot where current_query = '<IDLE>') as idle,
     (select count(*) from sa_snapshot where current_query = '<IDLE> in transaction') as idleintransaction,
@@ -61,6 +63,7 @@ with sa_snapshot as (
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot) as total,
+  (select count(*) from pg_stat_activity where pid != pg_backend_pid()) as instance_total,
   (select count(*) from sa_snapshot where state = 'active') as active,
   (select count(*) from sa_snapshot where state = 'idle') as idle,
   (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
@@ -85,6 +88,7 @@ with sa_snapshot as (
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot) as total,
+  (select count(*) from pg_stat_activity where pid != pg_backend_pid()) as instance_total,
   (select count(*) from sa_snapshot where state = 'active') as active,
   (select count(*) from sa_snapshot where state = 'idle') as idle,
   (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
@@ -111,6 +115,7 @@ with sa_snapshot as (
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot) as total,
+  (select count(*) from pg_stat_activity where pid != pg_backend_pid()) as instance_total,
   (select count(*) from sa_snapshot where state = 'active') as active,
   (select count(*) from sa_snapshot where state = 'idle') as idle,
   (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
@@ -136,6 +141,7 @@ with sa_snapshot as (
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot) as total,
+  (select count(*) from pg_stat_activity where pid != pg_backend_pid()) as instance_total,
   (select count(*) from sa_snapshot where state = 'active') as active,
   (select count(*) from sa_snapshot where state = 'idle') as idle,
   (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
@@ -163,6 +169,7 @@ with sa_snapshot as (
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot) as total,
+  (select count(*) from pg_stat_activity where pid != pg_backend_pid()) as instance_total,
   (select count(*) from sa_snapshot where state = 'active') as active,
   (select count(*) from sa_snapshot where state = 'idle') as idle,
   (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
@@ -188,6 +195,7 @@ with sa_snapshot as (
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot) as total,
+  (select count(*) from pg_stat_activity where pid != pg_backend_pid()) as instance_total,
   (select count(*) from sa_snapshot where state = 'active') as active,
   (select count(*) from sa_snapshot where state = 'idle') as idle,
   (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
@@ -215,6 +223,7 @@ with sa_snapshot as (
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot where backend_type = 'client backend') as total,
+  (select count(*) from pg_stat_activity where pid != pg_backend_pid()) as instance_total,
   (select count(*) from sa_snapshot where backend_type = 'background worker') as background_workers,
   (select count(*) from sa_snapshot where state = 'active' and backend_type = 'client backend') as active,
   (select count(*) from sa_snapshot where state = 'idle' and backend_type = 'client backend') as idle,
@@ -240,6 +249,7 @@ with sa_snapshot as (
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   (select count(*) from sa_snapshot where backend_type = 'client backend') as total,
+  (select count(*) from pg_stat_activity where pid != pg_backend_pid()) as instance_total,
   (select count(*) from sa_snapshot where backend_type = 'background worker') as background_workers,
   (select count(*) from sa_snapshot where state = 'active' and backend_type = 'client backend') as active,
   (select count(*) from sa_snapshot where state = 'idle' and backend_type = 'client backend') as idle,

@@ -7,6 +7,7 @@ with sa_snapshot as (
 select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     (select count(*) from sa_snapshot) as total,
+    (select count(*) from pg_stat_activity where procpid != pg_backend_pid()) as instance_total,
     (select count(*) from sa_snapshot where current_query != '<IDLE>') as active,
     (select count(*) from sa_snapshot where current_query = '<IDLE>') as idle,
     (select count(*) from sa_snapshot where current_query = '<IDLE> in transaction') as idleintransaction,
