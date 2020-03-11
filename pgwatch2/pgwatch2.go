@@ -3440,6 +3440,7 @@ func SyncMonitoredDBsToDatastore(monitored_dbs []MonitoredDatabase, persistance_
 			db["tag_group"] = mdb.Group
 			db["master_only"] = mdb.OnlyIfMaster
 			db["epoch_ns"] = now.UnixNano()
+			db["continuous_discovery_prefix"] = mdb.DBUniqueNameOrig
 			for k, v := range mdb.CustomTags {
 				db["tag_" + k] = v
 			}
