@@ -154,7 +154,7 @@ def update_monitored_db(params, cmd_args=None):
     password_plain = params['md_password']
     old_row_data = get_monitored_db_by_id(params['md_id'])
 
-    if params.get('md_password_type') == 'aes-gcm-256' and old_row_data.get('md_password_type') == 'plain-text':
+    if params.get('md_password_type') == 'aes-gcm-256' and old_row_data.get('md_password_type') == 'plain-text':    # NB! when changing this part also review set_bulk_password()
         if not cmd_args.aes_gcm_keyphrase:
             ret.append("FYI - not enabling password encryption as keyphrase/keyfile not specified on UI startup (hint: use the PW2_AES_GCM_KEYPHRASE env. variable or --aes-gcm-keyphrase param)")
             params['md_password_type'] = old_row_data['md_password_type']
@@ -560,6 +560,49 @@ def delete_postgres_metrics_for_all_inactive_hosts(active_dbs):
             logging.exception('Failed to drop data for: ' + dbname_to_delete)
 
     return list(to_delete)
+
+def disable_all_dbs():
+    sql = """update pgwatch2.monitored_db set md_is_enabled = false, md_last_modified_on = now() where md_is_enabled"""
+    ret, _ = datadb.execute(sql)
+    if ret and len(ret) == 1:
+        return ret[0]['rows_affected']
+    return '0'
+
+def enable_all_dbs():
+    sql = """update pgwatch2.monitored_db set md_is_enabled = true, md_last_modified_on = now() where not md_is_enabled"""
+    ret, _ = datadb.execute(sql)
+    if ret and len(ret) == 1:
+        return ret[0]['rows_affected']
+    return '0'
+
+def set_bulk_config(params):
+    sql = """update pgwatch2.monitored_db set md_preset_config_name = %(bulk_preset_config_name)s, md_config = null, md_last_modified_on = now() where md_preset_config_name != %(bulk_preset_config_name)s"""
+    ret, _ = datadb.execute(sql, params)
+    if ret and len(ret) == 1:
+        return ret[0]['rows_affected']
+    return '0'
+
+def set_bulk_timeout(params):
+    sql = """update pgwatch2.monitored_db set md_statement_timeout_seconds = %(bulk_timeout_seconds)s, md_last_modified_on = now() where md_statement_timeout_seconds != %(bulk_timeout_seconds)s"""
+    ret, _ = datadb.execute(sql, params)
+    if ret and len(ret) == 1:
+        return ret[0]['rows_affected']
+    return '0'
+
+def set_bulk_password(params, cmd_args):
+    err = ''
+    sql = """update pgwatch2.monitored_db set md_password_type = %(bulk_password_type)s,  md_password = %(bulk_password)s, md_last_modified_on = now() where (md_password, md_password_type) is distinct from (%(bulk_password)s, %(bulk_password_type)s)"""
+
+    if params.get('bulk_password_type') == 'aes-gcm-256':    # NB! when changing this part also review insert/update_monitored_db()
+        if not cmd_args.aes_gcm_keyphrase:
+            return "Password encryption not possible as keyphrase/keyfile not specified on UI startup - use the PW2_AES_GCM_KEYPHRASE env. variable or --aes-gcm-keyphrase/ aes-gcm-keyphrase-file params", 0
+
+        params['bulk_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, params.get('bulk_password'))
+
+    ret, _ = datadb.execute(sql, params)
+    if ret and len(ret) == 1:
+        return err, ret[0]['rows_affected']
+    return err, '0'
 
 
 if __name__ == '__main__':

@@ -24,6 +24,7 @@ or a specific version
 * Readme - add info on Prometheus usage, supported PG versions, recommendations for long term setups and exposing logs over the Web UI.
 * Project structure - get rid of duplicate helper definitions for SQL and YAML modes using symlinks.
 * Web UI - metrics page contents fit better now onto the screen and textareas are resizeable in all directions.
+* Web UI - new bulk database management buttons for enabling, disabling, password and config change over all defined DBs
 * Packages - include also Web UI sources in DEB/RPM/tar builds so that Web UI could be immediately launched.
 
 NB! When migrating existing "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be

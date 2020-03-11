@@ -132,6 +132,24 @@ class Root:
                     else:
                         deleted_dbnames = pgwatch2.delete_postgres_metrics_for_all_inactive_hosts(active_dbs)
                     messages.append('Data deleted for: {}'.format(','.join(deleted_dbnames)))
+                elif params.get('disable_all'):
+                    affected = pgwatch2.disable_all_dbs()
+                    messages.append('{} DBs disabled. It will take some minutes for this to become effective'.format(affected))
+                elif params.get('enable_all'):
+                    affected = pgwatch2.enable_all_dbs()
+                    messages.append('{} DBs enabled'.format(affected))
+                elif params.get('set_bulk_config'):
+                    affected = pgwatch2.set_bulk_config(params)
+                    messages.append("'{}' preset set as config for {} DBs. It will take some minutes for this to become effective".format(params.get('bulk_preset_config_name'), affected))
+                elif params.get('set_bulk_timeout'):
+                    affected = pgwatch2.set_bulk_timeout(params)
+                    messages.append("Timeout set for {} DBs".format(affected))
+                elif params.get('set_bulk_password'):
+                    err, affected = pgwatch2.set_bulk_password(params, cmd_args)
+                    if err:
+                        messages.append(err)
+                    else:
+                        messages.append("Password updated for {} DBs".format(affected))
             except Exception as e:
                 logging.exception('Changing DBs failed')
                 messages.append('ERROR: ' + str(e))

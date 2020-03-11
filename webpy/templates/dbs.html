@@ -127,7 +127,7 @@
                     <td><input type="text" name="md_user" value="{{row['md_user']|e}}" size="8"></td>
                     <td><input type="password" name="md_password" value="***" size="6" title="if left to default ***, password will not be changed"></td>
                     <td>
-                        <select name="md_password_type">
+                        <select name="md_password_type" title="NO KEY means password encryption cannot be used. Use the --aes-gcm-keyphrase or --aes-gcm-keyphrase-file parameter to set encryption key">
                             <option value="plain-text" {% if row['md_password_type'] == "plain-text" %}selected{% endif %}>plain-text</option>
                             <option value="aes-gcm-256"{% if row['md_password_type'] == "aes-gcm-256" %}selected{% endif %}>aes-gcm-256{%if not aes_gcm_enabled %} [NO KEY]{% endif %}</option>
                         </select>
@@ -189,7 +189,7 @@
                     <td><input type="text" name="md_user" value="" size="8"></td>
                     <td><input type="password" name="md_password" value="" size="6"></td>
                     <td>
-                        <select name="md_password_type">
+                        <select name="md_password_type" title="NO KEY means password encryption cannot be used. Use the --aes-gcm-keyphrase or --aes-gcm-keyphrase-file parameter to set encryption key">
                             <option value="plain-text">plain-text</option>
                             <option value="aes-gcm-256">aes-gcm-256{%if not aes_gcm_enabled %} [NO KEY]{% endif %}</option>
                         </select>
@@ -233,6 +233,37 @@
     </table>
 </div>  <!-- table -->
 </div>  <!-- row -->
+
+<div class="row" style="margin-left: 10px">
+    <div class="col">
+    <h3>Bulk database management</h3>
+        <form action="/dbs" method="post">
+        <input type="submit" id="disable_all" name="disable_all" value="Disable all DBs">
+        <input type="submit" id="enable_all" name="enable_all" value="Enable all DBs">
+        <br />
+        <br />
+        <select name="bulk_preset_config_name" id="bulk_preset_config_name">
+            <option value="" title="Empty. 'Custom config' must be filled" ></option>
+            {% for pc in preset_configs %}
+            <option value="{{pc['pc_name']|e}}" title="{{pc['pc_description']|e}}">{{pc['pc_name']|e}}</option>
+            {% endfor %}
+        </select>
+        <input type="submit" id="set_bulk_config" name="set_bulk_config" value="Set a preset config for all DBs">
+        <br />
+        <br />
+        <input type="text" name="bulk_timeout_seconds" value="" size="10" title="default: 5">
+        <input type="submit" id="set_bulk_timeout" name="set_bulk_timeout" value="Set statement timeout for all DBs (in seconds)">
+        <br />
+        <br />
+        <input type="password" name="bulk_password" value="" size="10">
+        <select name="bulk_password_type" title="NO KEY means password encryption cannot be used. Use the --aes-gcm-keyphrase or --aes-gcm-keyphrase-file parameter to set encryption key">
+            <option value="plain-text">plain-text</option>
+            <option value="aes-gcm-256">aes-gcm-256{%if not aes_gcm_enabled %} [NO KEY]{% endif %}</option>
+        </select>
+        <input type="submit" id="set_bulk_password" name="set_bulk_password" value="Set new password for all DBs">
+        </form>
+    </div>
+</div>
 
 <div class="row" style="margin-left: 10px">
     <div class="col">
@@ -310,6 +341,14 @@
                 return false;
             }
             return confirm('Are you sure you want to delete all gathered metrics for DB: "' + $("#single_unique_name").val() + '" ?')
+        });
+
+        $("#disable_all").click(function(event){
+            return confirm('Are you sure you want to disable all DBs and stop metrics gathering?')
+        });
+
+        $("#set_bulk_password").click(function(event){
+            return confirm('Are you sure you want to change all passwords?')
         });
 
         $(".save").add('.new').click(function(event){

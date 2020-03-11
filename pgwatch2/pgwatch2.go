@@ -633,6 +633,9 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			resolved, err := ResolveDatabasesFromConfigEntry(md)
 			if err != nil {
 				log.Errorf("Failed to resolve DBs for \"%s\": %s", md.DBUniqueName, err)
+				if md.PasswordType == "aes-gcm-256" && opts.AesGcmKeyphrase == "" {
+					log.Errorf("No decryption key set. Use the --aes-gcm-keyphrase or --aes-gcm-keyphrase params to set")
+				}
 				continue
 			}
 			temp_arr := make([]string, 0)
