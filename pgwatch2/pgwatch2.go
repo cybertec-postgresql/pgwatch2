@@ -2919,7 +2919,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 					log.Warning("Failed to create a metric fetching helper for", dbUnique, helperName)
 					log.Warning(err)
 				} else {
-					log.Warning("Successfully created metric fetching helper for", dbUnique, helperName)
+					log.Infof("Successfully created metric fetching helper for", dbUnique, helperName)
 				}
 			}
 		}
