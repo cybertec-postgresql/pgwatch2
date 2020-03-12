@@ -386,7 +386,7 @@
             var custom_config = $(this).parent().parent().find("[name='md_config']").val();
             var preset_config = $(this).parent().parent().find("[name='md_preset_config_name']").val();
             if (custom_config.trim() == '' && preset_config == '') {
-                alert('Preset OR custom config needs to be specifief!');
+                alert('Preset OR custom config needs to be specified, i.e. only one of these fields must be filled!');
                 return false;
             }
 
