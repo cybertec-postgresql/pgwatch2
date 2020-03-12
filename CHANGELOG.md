@@ -16,16 +16,20 @@ or a specific version
 * Gatherer fix - support for PgBouncer v1.12.0+. This latest release changed counter data types.
 * Gatherer fix - config DB mode allowed only one continuous discovery Patroni host.
 * Gatherer improvement - introduce caching for instance level metrics to reduce load with multi-DB instances. Affects only the 'continous' DB types and is customizable.
-* Documentation - many smaller README corrections, custom installs, backups, Patroni, etc.
+* Dashboards - 2 new 'DB Overview' panels + 3 new panels for 'Global health'
 * Metrics - new metric + PL/Python helper to fetch WAL-G backup status via the DB.
 * Metrics - new metric + PL/Python helper to fetch pgBackRest backup status via the DB.
+* Metrics - backend.max_connections, psutil_cpu rounding, other smaller adjustments
 * Metrics - add a Bash script to easily refresh SQL based metric definitions (refresh_metrics_from_github.sh).
 * Docker components update - Grafana 6.6.1, Influx 1.7.10, Go 1.13.7.
-* Readme - add info on Prometheus usage, supported PG versions, recommendations for long term setups and exposing logs over the Web UI.
+* Documentation - add info on Prometheus usage, supported PG versions, recommendations for long term setups and exposing logs over the Web UI.
+* Documentation - many smaller README corrections, custom installs, backups, Patroni, etc.
 * Project structure - get rid of duplicate helper definitions for SQL and YAML modes using symlinks.
 * Web UI - metrics page contents fit better now onto the screen and textareas are resizeable in all directions.
+* Web UI - metrics page footer now explains supported metric / column attributes
 * Web UI - new bulk database management buttons for enabling, disabling, password and config change over all defined DBs
 * Packages - include also Web UI sources in DEB/RPM/tar builds so that Web UI could be immediately launched.
+* Docker component update - Influx 1.7.10, Grafana 6.6.2, Go 1.14.
 
 NB! When migrating existing "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
 applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2/sql/config_store/migrations/ if using
