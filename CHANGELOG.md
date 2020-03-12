@@ -29,7 +29,9 @@ or a specific version
 
 NB! When migrating existing "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
 applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2/sql/config_store/migrations/ if using
-ther pre-built packages) folder.
+ther pre-built packages) folder. Also it is recommended to refresh all the metric definitions as they're constantly improved.
+For that there's also a refresh_metrics_from_github.sh script provided. YAML based setups don't need any extra actions besides
+refreshing from Git or installing the new RPM / DEB / Tar packages.
 
 
 ## v1.7.0 [2020-01-16]
