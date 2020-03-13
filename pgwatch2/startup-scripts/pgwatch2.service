@@ -4,7 +4,7 @@ Description=Pgwatch2 Gathering Daemon
 [Service]
 User=pgwatch2
 Type=notify
-ExecStart=/usr/local/bin/pgwatch2 -c /usr/local/etc/pgwatch2/instances.yaml -m /usr/local/share/pgwatch2/metrics/
+ExecStart=/usr/bin/pgwatch2-daemon -c /etc/pgwatch2/config/instances.yaml -m /etc/pgwatch2/metrics/
 Restart=on-failure
 
 [Install]

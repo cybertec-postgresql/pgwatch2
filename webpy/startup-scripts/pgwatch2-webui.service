@@ -9,8 +9,8 @@ Environment="PW2_PGHOST=localhost"
 
 Type=simple
 User=pgwatch2
-WorkingDirectory=/usr/local/share/pgwatch2/webpy
-ExecStart=/usr/bin/python3 /usr/local/share/pgwatch2/webpy/web.py
+WorkingDirectory=/etc/pgwatch2/webpy
+ExecStart=/usr/bin/python3 /etc/pgwatch2/webpy/web.py
 
 [Install]
 WantedBy=multi-user.target
