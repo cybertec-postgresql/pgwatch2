@@ -11,7 +11,7 @@ or a specific version
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
 
-## v1.7.1 [DRAFT]
+## v1.7.1 [2020-03-13]
 
 * Gatherer fix - support for PgBouncer v1.12.0+. This latest release changed counter data types.
 * Gatherer fix - config DB mode allowed only one continuous discovery Patroni host.
@@ -21,7 +21,6 @@ or a specific version
 * Metrics - new metric + PL/Python helper to fetch pgBackRest backup status via the DB.
 * Metrics - backend.max_connections, psutil_cpu rounding, other smaller adjustments
 * Metrics - add a Bash script to easily refresh SQL based metric definitions (refresh_metrics_from_github.sh).
-* Docker components update - Grafana 6.6.1, Influx 1.7.10, Go 1.13.7.
 * Documentation - add info on Prometheus usage, supported PG versions, recommendations for long term setups and exposing logs over the Web UI.
 * Documentation - many smaller README corrections, custom installs, backups, Patroni, etc.
 * Project structure - get rid of duplicate helper definitions for SQL and YAML modes using symlinks.
@@ -29,6 +28,7 @@ or a specific version
 * Web UI - metrics page footer now explains supported metric / column attributes
 * Web UI - new bulk database management buttons for enabling, disabling, password and config change over all defined DBs
 * Packages - include also Web UI sources in DEB/RPM/tar builds so that Web UI could be immediately launched.
+* SystemD template - sync paths with those used by DEB/RPM/tar builds
 * Docker component update - Influx 1.7.10, Grafana 6.6.2, Go 1.14.
 
 NB! When migrating existing "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
