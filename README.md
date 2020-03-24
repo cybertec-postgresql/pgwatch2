@@ -655,9 +655,11 @@ DB that is absolutely needed is the metrics storage DB, here Influx. All example
     4.1. Start the Web UI
     ```
     cd webpy
-    python3 web.py
+    python3 web.py  # with defaults - PG config DB and Influx metrics DB on localhost
+    # OR with PG config DB and metrics DB on localhost
+    python3 web.py --datastore=postgres --pg-metric-store-conn-str="dbname=pgwatch2_metrics user=pgwatch2"
     ```
-    Default port for the Web UI: 8080
+    Default port for the Web UI: 8080. See web.py --help for all options.
     
     4.2. Configure DB-s to monitor from "/dbs" page
     
