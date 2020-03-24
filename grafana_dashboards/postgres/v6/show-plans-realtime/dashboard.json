@@ -25,7 +25,7 @@
       "description": "Based on the \"pg_show_plans\" extension and \"pg_stat_activity\" infos",
       "fontSize": "100%",
       "gridPos": {
-        "h": 26,
+        "h": 22,
         "w": 24,
         "x": 0,
         "y": 0
@@ -96,7 +96,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT\n  (data->'max_s')::int AS max_duration,\n  (data->'avg_s')::int AS avg_duration,\n  (data->'count')::int AS count,\n  data->>'users' AS users,\n  data->>'query' AS query,\n  data->>'plan' AS plan\nFROM\n  show_plans_realtime\nWHERE\n  time = (select max(time) from show_plans_realtime where $__timeFilter(time) group by dbname)\nORDER BY\n max_duration DESC\nLIMIT\n  25\n",
+          "rawSql": "SELECT\n  (data->'max_s')::int AS max_duration,\n  (data->'avg_s')::int AS avg_duration,\n  (data->'count')::int AS count,\n  data->>'users' AS users,\n  data->>'query' AS query,\n  data->>'plan' AS plan\nFROM\n  show_plans_realtime\nWHERE\n  time = (select max(time) from show_plans_realtime where $__timeFilter(time) and dbname = '$dbname' group by dbname)\n  AND dbname = '$dbname'\nORDER BY\n max_duration DESC\nLIMIT\n  25\n",
           "refId": "A",
           "select": [
             [
@@ -131,7 +131,7 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 22
       },
       "id": 4,
       "mode": "html",
@@ -152,14 +152,14 @@
       {
         "allValue": null,
         "datasource": null,
-        "definition": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics WHERE metric = 'stat_activity_realtime' ORDER BY 1;",
+        "definition": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics WHERE metric = 'show_plans_realtime' ORDER BY 1;",
         "hide": 0,
         "includeAll": false,
         "label": null,
         "multi": false,
         "name": "dbname",
         "options": [],
-        "query": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics WHERE metric = 'stat_activity_realtime' ORDER BY 1;",
+        "query": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics WHERE metric = 'show_plans_realtime' ORDER BY 1;",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
