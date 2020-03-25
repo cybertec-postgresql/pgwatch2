@@ -3956,10 +3956,9 @@ func main() {
 
 				ver, err = DBGetPGVersion(db_unique, db_type, true)
 				if err != nil {
+					log.Errorf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err)
 					if opts.AdHocConnString != "" {
-						log.Fatalf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err)
-					} else {
-						log.Errorf("could not start metric gathering for DB \"%s\" due to connection problem: %s", db_unique, err)
+						log.Errorf("will retry in %ds...", opts.ServersRefreshLoopSeconds)
 					}
 					failedInitialConnectHosts[db_unique] = true
 					continue
