@@ -235,6 +235,7 @@ var preset_metric_def_map map[string]map[string]float64 // read from metrics fol
 /// internal statistics calculation
 var lastSuccessfulDatastoreWriteTime time.Time
 var totalMetricsFetchedCounter uint64
+var totalMetricsReusedFromCacheCounter uint64
 var totalMetricsDroppedCounter uint64
 var totalDatasetsFetchedCounter uint64
 var metricPointsPerMinuteLast5MinAvg int64 = -1 // -1 means the summarization ticker has not yet run
@@ -2404,9 +2405,11 @@ send_to_storage_channel:
 			return nil, err
 		}
 		log.Infof("[%s:%s] loaded %d rows from the instance cache", msg.DBUniqueName, msg.MetricName, len(cachedData))
+		atomic.AddUint64(&totalMetricsReusedFromCacheCounter, uint64(len(cachedData)))
 		return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: cachedData, CustomTags: md.CustomTags,
 			MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
 	} else {
+		atomic.AddUint64(&totalMetricsFetchedCounter, uint64(len(data)))
 		return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags,
 			MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
 	}
@@ -2487,7 +2490,6 @@ func AddDbnameSysinfoIfNotExistsToQueryResultData(msg MetricFetchMessage, data [
 func StoreMetrics(metrics []MetricStoreMessage, storage_ch chan<- []MetricStoreMessage) (int, error) {
 
 	if len(metrics) > 0 {
-		atomic.AddUint64(&totalMetricsFetchedCounter, uint64(len(metrics)))
 		atomic.AddUint64(&totalDatasetsFetchedCounter, 1)
 		storage_ch <- metrics
 		return len(metrics), nil
@@ -3333,6 +3335,7 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 {
 	"secondsFromLastSuccessfulDatastoreWrite": %d,
 	"totalMetricsFetchedCounter": %d,
+	"totalMetricsReusedFromCacheCounter": %d,
 	"totalDatasetsFetchedCounter": %d,
 	"metricPointsPerMinuteLast5MinAvg": %v,
 	"metricsDropped": %d,
@@ -3342,6 +3345,7 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	now := time.Now()
 	secondsFromLastSuccessfulDatastoreWrite := int64(now.Sub(lastSuccessfulDatastoreWriteTime).Seconds())
 	totalMetrics := atomic.LoadUint64(&totalMetricsFetchedCounter)
+	cacheMetrics := atomic.LoadUint64(&totalMetricsReusedFromCacheCounter)
 	totalDatasets := atomic.LoadUint64(&totalDatasetsFetchedCounter)
 	metricsDropped := atomic.LoadUint64(&totalMetricsDroppedCounter)
 	gathererUptimeSeconds := uint64(now.Sub(gathererStartTime).Seconds())
@@ -3350,7 +3354,7 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	if metricPointsPerMinute == -1 { // calculate avg. on the fly if 1st summarization hasn't happened yet
 		metricPointsPerMinute = int64((totalMetrics * 60) / gathererUptimeSeconds)
 	}
-	io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, secondsFromLastSuccessfulDatastoreWrite, totalMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, gathererUptimeSeconds))
+	io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, gathererUptimeSeconds))
 }
 
 func StartStatsServer(port int64) {
