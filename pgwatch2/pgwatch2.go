@@ -235,6 +235,8 @@ var preset_metric_def_map map[string]map[string]float64 // read from metrics fol
 /// internal statistics calculation
 var lastSuccessfulDatastoreWriteTimeEpoch int64
 var datastoreWriteFailuresCounter uint64
+var datastoreWriteSuccessCounter uint64
+var datastoreTotalWriteTimeMicroseconds uint64
 var totalMetricsFetchedCounter uint64
 var totalMetricsReusedFromCacheCounter uint64
 var totalMetricsDroppedCounter uint64
@@ -772,6 +774,8 @@ retry:
 				len(storeMessages), conn_id, float64(t_diff.Nanoseconds())/1000000.0)
 		}
 		atomic.StoreInt64(&lastSuccessfulDatastoreWriteTimeEpoch, t1.Unix())
+		atomic.AddUint64(&datastoreTotalWriteTimeMicroseconds, uint64(t_diff.Microseconds()))
+		atomic.AddUint64(&datastoreWriteSuccessCounter, 1)
 	} else {
 		atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 	}
@@ -1015,6 +1019,8 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 				len(storeMessages), float64(t_diff.Nanoseconds())/1000000)
 		}
 		atomic.StoreInt64(&lastSuccessfulDatastoreWriteTimeEpoch, t1.Unix())
+		atomic.AddUint64(&datastoreTotalWriteTimeMicroseconds, uint64(t_diff.Microseconds()))
+		atomic.AddUint64(&datastoreWriteSuccessCounter, 1)
 	}
 	return err
 }
@@ -1463,13 +1469,15 @@ func SendToGraphite(dbname, measurement string, data [](map[string]interface{}))
 	log.Debug("Sending", len(metrics), "metric points to Graphite...")
 	t1 := time.Now()
 	err := graphiteConnection.SendMetrics(metrics)
-	t2 := time.Now()
+	t_diff := time.Now().Sub(t1)
 	if err != nil {
 		atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 		log.Error("could not send metric to Graphite:", err)
 	} else {
 		atomic.StoreInt64(&lastSuccessfulDatastoreWriteTimeEpoch, t1.Unix())
-		log.Debug("Sent in ", (t2.Sub(t1).Nanoseconds())/1000, "us")
+		atomic.AddUint64(&datastoreTotalWriteTimeMicroseconds, uint64(t_diff.Microseconds()))
+		atomic.AddUint64(&datastoreWriteSuccessCounter, 1)
+		log.Debug("Sent in ", t_diff.Microseconds(), "us")
 	}
 
 	return err
@@ -3360,6 +3368,8 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	"metricPointsPerMinuteLast5MinAvg": %v,
 	"metricsDropped": %d,
 	"datastoreWriteFailuresCounter": %d,
+	"datastoreSuccessfulWritesCounter": %d,
+	"datastoreAvgSuccessfulWriteTimeMillis": %.1f,
 	"gathererUptimeSeconds": %d
 }
 `
@@ -3370,13 +3380,16 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	totalDatasets := atomic.LoadUint64(&totalDatasetsFetchedCounter)
 	metricsDropped := atomic.LoadUint64(&totalMetricsDroppedCounter)
 	datastoreFailures := atomic.LoadUint64(&datastoreWriteFailuresCounter)
+	datastoreSuccess := atomic.LoadUint64(&datastoreWriteSuccessCounter)
+	datastoreTotalTimeMicros := atomic.LoadUint64(&datastoreTotalWriteTimeMicroseconds) // successful writes only
+	datastoreAvgSuccessfulWriteTimeMillis := float64(datastoreTotalTimeMicros) / float64(datastoreSuccess) / 1000.0
 	gathererUptimeSeconds := uint64(now.Sub(gathererStartTime).Seconds())
 	var metricPointsPerMinute int64
 	metricPointsPerMinute = atomic.LoadInt64(&metricPointsPerMinuteLast5MinAvg)
 	if metricPointsPerMinute == -1 { // calculate avg. on the fly if 1st summarization hasn't happened yet
 		metricPointsPerMinute = int64((totalMetrics * 60) / gathererUptimeSeconds)
 	}
-	io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix() - secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, datastoreFailures, gathererUptimeSeconds))
+	io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix() - secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, gathererUptimeSeconds))
 }
 
 func StartStatsServer(port int64) {
