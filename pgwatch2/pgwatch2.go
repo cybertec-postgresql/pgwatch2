@@ -233,7 +233,8 @@ var fileBased = false
 var adHocMode = false
 var preset_metric_def_map map[string]map[string]float64 // read from metrics folder in "file mode"
 /// internal statistics calculation
-var lastSuccessfulDatastoreWriteTime time.Time
+var lastSuccessfulDatastoreWriteTimeEpoch int64
+var datastoreWriteFailuresCounter uint64
 var totalMetricsFetchedCounter uint64
 var totalMetricsReusedFromCacheCounter uint64
 var totalMetricsDroppedCounter uint64
@@ -687,6 +688,7 @@ retry:
 			time.Sleep(time.Millisecond * 200)
 			goto retry
 		}
+		atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 		return err
 	}
 	defer c.Close()
@@ -694,6 +696,7 @@ retry:
 	bp, err := client.NewBatchPoints(client.BatchPointsConfig{Database: opts.InfluxDbname})
 
 	if err != nil {
+		atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 		return err
 	}
 	rows_batched := 0
@@ -768,7 +771,9 @@ retry:
 			log.Infof("wrote %d/%d rows from %d metric sets to InfluxDB %s in %.1f ms", rows_batched, total_rows,
 				len(storeMessages), conn_id, float64(t_diff.Nanoseconds())/1000000.0)
 		}
-		lastSuccessfulDatastoreWriteTime = t1
+		atomic.StoreInt64(&lastSuccessfulDatastoreWriteTimeEpoch, t1.Unix())
+	} else {
+		atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 	}
 	return err
 }
@@ -897,6 +902,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		forceRecreatePGMetricPartitions = false
 	}
 	if err != nil {
+		atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 		return err
 	}
 
@@ -907,6 +913,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 	txn, err := metricDb.Begin()
 	if err != nil {
 		log.Error("Could not start Postgres metricsDB transaction:", err)
+		atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 		return err
 	}
 	defer func() {
@@ -930,6 +937,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 			stmt, err = txn.Prepare(pq.CopyIn("metrics", "time", "dbname", "metric", "data", "tag_data"))
 			if err != nil {
 				log.Error("Could not prepare COPY to 'metrics' table:", err)
+				atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 				return err
 			}
 		} else {
@@ -937,6 +945,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 			stmt, err = txn.Prepare(pq.CopyIn(metricName, "time", "dbname", "data", "tag_data"))
 			if err != nil {
 				log.Errorf("Could not prepare COPY to '%s' table: %v", metricName, err)
+				atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 				return err
 			}
 		}
@@ -945,6 +954,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 			jsonBytes, err := mapToJson(m.Data)
 			if err != nil {
 				log.Errorf("Skipping 1 metric for [%s:%s] due to JSON conversion error: %s", m.DBName, m.Metric, err)
+				atomic.AddUint64(&totalMetricsDroppedCounter, 1)
 				continue
 			}
 
@@ -952,6 +962,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 				jsonBytesTags, err := mapToJson(m.TagData)
 				if err != nil {
 					log.Errorf("Skipping 1 metric for [%s:%s] due to JSON conversion error: %s", m.DBName, m.Metric, err)
+					atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 					goto stmt_close
 				}
 				if PGSchemaType == "custom" {
@@ -961,6 +972,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 				}
 				if err != nil {
 					log.Error("Formatting 1 metric to COPY format failed: ", jsonBytesTags)
+					atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 					goto stmt_close
 				}
 			} else {
@@ -971,6 +983,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 				}
 				if err != nil {
 					log.Error("Formatting 1 metric to COPY format failed: ", err)
+					atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 					goto stmt_close
 				}
 			}
@@ -979,6 +992,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		_, err = stmt.Exec()
 		if err != nil {
 			log.Error("COPY to Postgres failed:", err)
+			atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 			if strings.Contains(err.Error(), "no partition") {
 				log.Warning("Some metric partitions might have been removed, halting all metric storage. Trying to re-create all needed partitions on next run")
 				forceRecreatePGMetricPartitions = true
@@ -1000,7 +1014,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 			log.Infof("wrote %d/%d rows from %d metric sets to Postgres in %.1f ms", rows_batched, total_rows,
 				len(storeMessages), float64(t_diff.Nanoseconds())/1000000)
 		}
-		lastSuccessfulDatastoreWriteTime = t1
+		atomic.StoreInt64(&lastSuccessfulDatastoreWriteTimeEpoch, t1.Unix())
 	}
 	return err
 }
@@ -1451,9 +1465,10 @@ func SendToGraphite(dbname, measurement string, data [](map[string]interface{}))
 	err := graphiteConnection.SendMetrics(metrics)
 	t2 := time.Now()
 	if err != nil {
+		atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 		log.Error("could not send metric to Graphite:", err)
 	} else {
-		lastSuccessfulDatastoreWriteTime = t1
+		atomic.StoreInt64(&lastSuccessfulDatastoreWriteTimeEpoch, t1.Unix())
 		log.Debug("Sent in ", (t2.Sub(t1).Nanoseconds())/1000, "us")
 	}
 
@@ -1575,6 +1590,7 @@ func WriteMetricsToJsonFile(msgArr []MetricStoreMessage, jsonPath string) error 
 
 	jsonOutFile, err := os.Create(jsonPath)
 	if err != nil {
+		atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 		return err
 	}
 	defer jsonOutFile.Close()
@@ -1591,6 +1607,7 @@ func WriteMetricsToJsonFile(msgArr []MetricStoreMessage, jsonPath string) error 
 		}
 		err = enc.Encode(dataRow)
 		if err != nil {
+			atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 			return err
 		}
 	}
@@ -1646,6 +1663,9 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 					} else if data_store == DATASTORE_GRAPHITE {
 						for _, m := range msg_arr {
 							err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO does Graphite library support batching?
+							if err != nil {
+								atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
+							}
 						}
 					} else if data_store == DATASTORE_JSON {
 						err = WriteMetricsToJsonFile(msg_arr, opts.JsonStorageFile)
@@ -2921,7 +2941,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 					log.Warning("Failed to create a metric fetching helper for", dbUnique, helperName)
 					log.Warning(err)
 				} else {
-					log.Infof("Successfully created metric fetching helper for", dbUnique, helperName)
+					log.Info("Successfully created metric fetching helper for", dbUnique, helperName)
 				}
 			}
 		}
@@ -3339,22 +3359,24 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	"totalDatasetsFetchedCounter": %d,
 	"metricPointsPerMinuteLast5MinAvg": %v,
 	"metricsDropped": %d,
+	"datastoreWriteFailuresCounter": %d,
 	"gathererUptimeSeconds": %d
 }
 `
 	now := time.Now()
-	secondsFromLastSuccessfulDatastoreWrite := int64(now.Sub(lastSuccessfulDatastoreWriteTime).Seconds())
+	secondsFromLastSuccessfulDatastoreWrite := atomic.LoadInt64(&lastSuccessfulDatastoreWriteTimeEpoch)
 	totalMetrics := atomic.LoadUint64(&totalMetricsFetchedCounter)
 	cacheMetrics := atomic.LoadUint64(&totalMetricsReusedFromCacheCounter)
 	totalDatasets := atomic.LoadUint64(&totalDatasetsFetchedCounter)
 	metricsDropped := atomic.LoadUint64(&totalMetricsDroppedCounter)
+	datastoreFailures := atomic.LoadUint64(&datastoreWriteFailuresCounter)
 	gathererUptimeSeconds := uint64(now.Sub(gathererStartTime).Seconds())
 	var metricPointsPerMinute int64
 	metricPointsPerMinute = atomic.LoadInt64(&metricPointsPerMinuteLast5MinAvg)
 	if metricPointsPerMinute == -1 { // calculate avg. on the fly if 1st summarization hasn't happened yet
 		metricPointsPerMinute = int64((totalMetrics * 60) / gathererUptimeSeconds)
 	}
-	io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, gathererUptimeSeconds))
+	io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix() - secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, datastoreFailures, gathererUptimeSeconds))
 }
 
 func StartStatsServer(port int64) {
