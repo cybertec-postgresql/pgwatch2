@@ -2882,7 +2882,7 @@ retry:
 			log.Warningf("Executing: %s", isql)
 			res, err = queryDB(c, isql)
 			if err != nil {
-				log.Fatalf("Could not change the retention policy: %v", err)
+				log.Errorf("Could not change InfluxDB retention policy - manul review / correction recommended: %v", err)
 			}
 		}
 		return connect_string, nil
