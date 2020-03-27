@@ -2859,7 +2859,7 @@ retry:
 			break
 		}
 	}
-	if pgwatchDbExists {
+	if pgwatchDbExists && RetentionPeriod > 0 {
 		var currentRetentionAsString string
 		// get current retention period
 		res, err := queryDB(c, fmt.Sprintf("SHOW RETENTION POLICIES ON %s", InfluxDbname))
@@ -3522,7 +3522,7 @@ type Options struct {
 	InfluxPassword2      string `long:"ipassword2" description:"Influx password II" default:"root" env:"PW2_IPASSWORD2"`
 	InfluxSSL2           string `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
 	InfluxSSLSkipVerify2 string `long:"issl-skip-verify2" description:"Skip Influx Cert validation i.e. allows self-signed certs" default:"true" env:"PW2_ISSL_SKIP_VERIFY2"`
-	InfluxRetentionDays  int64  `long:"iretentiondays" description:"Retention period in days [default: 30]" env:"PW2_IRETENTIONDAYS"`
+	InfluxRetentionDays  int64  `long:"iretentiondays" description:"Retention period in days. Set to 0 to use database defaults for an existing DB [default: 30]" env:"PW2_IRETENTIONDAYS"`
 	InfluxRetentionName  string `long:"iretentionname" description:"Retention policy name. [Default: pgwatch_def_ret]" default:"pgwatch_def_ret" env:"PW2_IRETENTIONNAME"`
 	GraphiteHost         string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
 	GraphitePort         string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
