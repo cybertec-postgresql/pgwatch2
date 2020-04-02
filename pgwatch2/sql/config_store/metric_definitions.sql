@@ -3985,7 +3985,7 @@ SELECT
   'nesting_depth: ' || coalesce (max(level)::text, '-') AS extra_info
 FROM views
 GROUP BY 1, 2, 3
-HAVING max(level) > 5
+HAVING max(level) > 3
 ORDER BY max(level) DESC, full_name::text;
 $sql$,
 '{"prometheus_all_gauge_columns": true}',
