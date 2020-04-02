@@ -34,7 +34,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_IDATABASE2** Secondary InfluxDB database. Default: pgwatch2
 - **PW2_ISSL2** Use SSL for Secondary InfluxDB. Default: False
 - **PW2_ISSL_SKIP_VERIFY2** Skip SSL cert validation. Allows self-signed certs. Default: true
-- **PW2_IRETENTIONDAYS** Influx metrics retention period in days. Default: 30
+- **PW2_IRETENTIONDAYS** Influx metrics retention period in days. Set to 0 to use database defaults for an existing DB. Default: 30
 - **PW2_IRETENTIONNAME** Influx retention policy name. Default: pgwatch_def_ret
 - **PW2_GRAPHITEHOST** Graphite host. Default: -
 - **PW2_GRAPHITEPORT** Graphite port. Default: -
