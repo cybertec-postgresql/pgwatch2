@@ -508,6 +508,68 @@
       "type": "table"
     },
     {
+      "columns": [],
+      "datasource": null,
+      "description": "More often than checkpoint_timeout / 2. To improve increase checkpoint_timeout  or max_wal_size, which will reduce total IO amount done due to the way how Full Page Writes are handled.",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "id": 11,
+      "options": {},
+      "pageSize": null,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        }
+      ],
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  dbname,\n  (select data->>'server_version' from settings s where s.dbname = y.dbname order by s.time desc limit 1) as pg_major_ver,\n  'global server settings' as object_name,\n  'Increase checkpoint_timeout or max_wal_size for more infrequent checkpoints, thereby reducing total IO' AS recommendation,\n  'avg. seconds between checkpoint requests: ' || avg_seconds_between_checkpoints_reqs::int8 as extra_info\nFROM (\nSELECT\n  dbname,\n  round((extract(epoch from max_time - min_time) / (max_req - min_req))::numeric, 1) as avg_seconds_between_checkpoints_reqs\nFROM (\n  SELECT\n    dbname,\n    min(time) as min_time,\n    max(time) as max_time,\n    min((data->'checkpoints_req')::int8) as min_req,\n    max((data->'checkpoints_req')::int8) as max_req\n  FROM\n    bgwriter\n  WHERE\n    $__timeFilter(time)\n  AND dbname IN ($dbname)\nGROUP BY\n  dbname\nHAVING\n  max((data->'checkpoints_req')::int8) > min((data->'checkpoints_req')::int8)\n) x\n) y\nWHERE\n  avg_seconds_between_checkpoints_reqs < (select extract(epoch from (data->>'checkpoint_timeout')::interval) / 2.0 from settings s where s.dbname = y.dbname order by s.time desc limit 1)\nORDER BY\n  avg_seconds_between_checkpoints_reqs\nLIMIT\n  25",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Checkpoints requested too often",
+      "transform": "table",
+      "type": "table"
+    },
+    {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2019/05/Cybertec_Logo_wei%C3%9F-transparent_300x80px-01.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
       "datasource": null,
       "description": "",
@@ -515,7 +577,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 45
       },
       "id": 9,
       "mode": "html",
