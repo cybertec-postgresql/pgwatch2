@@ -284,7 +284,7 @@
           "policy": "default",
           "query": "select \"index_size\", \"idx_scans_from_last_reset\" from (select last(\"index_size_b\") as \"index_size\", last(\"idx_scan\") as \"idx_scans_from_last_reset\", last(\"is_pk\") as \"is_pk\" from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_full_name\", \"dbname\") where  \"idx_scans_from_last_reset\" = 0 and \"is_pk\" = false group by \"table_full_name\", \"index_full_name\", \"dbname\"",
           "rawQuery": true,
-          "rawSql": "SELECT\n  dbname,\n  tag_data->>'index_full_name' as index_full_name,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'index_size_b')::int8) as index_size,\n  max((data->'idx_scan')::int8) as idx_scans_from_last_reset\nFROM\n  index_stats\nWHERE\n  time in (select max(time) from index_stats where $__timeFilter(time) AND dbname in ($dbname) group by dbname)\n  AND dbname in ($dbname)\n  AND (data->'idx_scan')::int8 = 0\nGROUP BY\n  1, 2, 3\nORDER BY\n  4 desc",
+          "rawSql": "SELECT\n  dbname,\n  tag_data->>'index_full_name' as index_full_name,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'index_size_b')::int8) as index_size,\n  max((data->'idx_scan')::int8) as idx_scans_from_last_reset\nFROM\n  index_stats\nWHERE\n  time in (select max(time) from index_stats where $__timeFilter(time) AND dbname in ($dbname) group by dbname)\n  AND dbname in ($dbname)\n  AND (data->'idx_scan')::int8 = 0\n  AND (data->'is_pk_int')::int8 = 0\nGROUP BY\n  1, 2, 3\nORDER BY\n  4 desc",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -313,7 +313,7 @@
         }
       ],
       "timeFrom": "15m",
-      "title": "Unused indexes",
+      "title": "Unused indexes (Non-PK)",
       "transform": "table",
       "type": "table"
     },

@@ -267,7 +267,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select \"index_size\", \"idx_scans_from_last_reset\" from (select last(\"index_size_b\") as \"index_size\", last(\"idx_scan\") as \"idx_scans_from_last_reset\", last(\"is_pk\") as \"is_pk\" from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_full_name\", \"dbname\") where  \"idx_scans_from_last_reset\" = 0 and \"is_pk\" = false group by \"table_full_name\", \"index_full_name\", \"dbname\"",
+          "query": "select \"index_size\", \"idx_scans_from_last_reset\" from (select last(\"index_size_b\") as \"index_size\", last(\"idx_scan\") as \"idx_scans_from_last_reset\", last(\"is_pk_int\") as \"is_pk_int\" from index_stats where \"dbname\" =~ /^$dbname$/  AND $timeFilter group by \"table_full_name\", \"index_full_name\", \"dbname\") where  \"idx_scans_from_last_reset\" = 0 and \"is_pk_int\" = 0 group by \"table_full_name\", \"index_full_name\", \"dbname\"",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "table",
@@ -289,7 +289,7 @@
         }
       ],
       "timeFrom": "15m",
-      "title": "Unused indexes",
+      "title": "Unused indexes (Non-PK)",
       "transform": "table",
       "type": "table"
     },
