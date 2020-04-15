@@ -2,11 +2,6 @@ with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     queryid::text as tag_queryid,
-    /*
-    NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
-    use the stat_statements_no_query_text metric instead, created specifically for this use case.
-    */
-    max(ltrim(regexp_replace(query, E'[ \\t\\n\\r]+' , ' ', 'g')))::varchar(16000) as tag_query,
     array_to_string(array_agg(distinct quote_ident(pg_get_userbyid(userid))), ',') as users,
     sum(s.calls)::int8 as calls,
     sum(s.total_time)::double precision as total_time,
@@ -19,7 +14,7 @@ with q_data as (
     sum(blk_read_time)::double precision as blk_read_time,
     sum(blk_write_time)::double precision as blk_write_time
   from
-    get_stat_statements() s
+    pg_stat_statements s
   where
     calls > 5
     and total_time > 0

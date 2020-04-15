@@ -82,7 +82,7 @@
           "policy": "default",
           "query": "SELECT non_negative_derivative(mean(\"total_time\")) / non_negative_derivative(mean(\"calls\")) FROM \"stat_statements\" WHERE \"queryid\" =~ /^$queryid$/ AND $timeFilter GROUP BY time($__interval), \"queryid\" fill(null)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg(case when c = c_lag then null else (tt - tt_lag) / (c - c_lag) end) as avg_runtime\nfrom (\n        select \n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          (data->>'total_time')::float8 as tt, lag((data->>'total_time')::float8) over w as tt_lag,\n          time\n        from stat_statements\n        where dbname = '$dbname' and tag_data @> '{\"queryid\": \"$queryid\"}'  and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere c >= c_lag\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg(case when c = c_lag then null else (tt - tt_lag) / (c - c_lag) end) as avg_runtime\nfrom (\n        select \n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          (data->>'total_time')::float8 as tt, lag((data->>'total_time')::float8) over w as tt_lag,\n          time\n        from $source_table\n        where dbname = '$dbname' and tag_data @> '{\"queryid\": \"$queryid\"}'  and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere c >= c_lag\ngroup by 1\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -230,7 +230,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(c - c_lag) as \"calls\"\nfrom (\n        select \n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          time, lag(time) over w as time_lag\n        from stat_statements\n        where dbname = '$dbname' and tag_data @> '{\"queryid\": \"$queryid\"}'  and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere c >= c_lag\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(c - c_lag) as \"calls\"\nfrom (\n        select \n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          time, lag(time) over w as time_lag\n        from $source_table\n        where dbname = '$dbname' and tag_data @> '{\"queryid\": \"$queryid\"}'  and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere c >= c_lag\ngroup by 1\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -378,7 +378,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(case when tt = tt_lag then null else tt - tt_lag end) as \"total_time\"\nfrom (\n        select\n          time,\n          (data->>'total_time')::float8 as tt, lag((data->>'total_time')::float8) over w as tt_lag\n        from stat_statements\n        where dbname = '$dbname' and tag_data @> '{\"queryid\": \"$queryid\"}'and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere tt >= tt_lag\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(case when tt = tt_lag then null else tt - tt_lag end) as \"total_time\"\nfrom (\n        select\n          time,\n          (data->>'total_time')::float8 as tt, lag((data->>'total_time')::float8) over w as tt_lag\n        from $source_table\n        where dbname = '$dbname' and tag_data @> '{\"queryid\": \"$queryid\"}'and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere tt >= tt_lag\ngroup by 1\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -521,7 +521,7 @@
           "policy": "default",
           "query": "SELECT non_negative_derivative(mean(\"shared_blks_hit\")) / (non_negative_derivative(mean(\"shared_blks_hit\")) + non_negative_derivative(mean(\"shared_blks_read\"))) * 100 FROM \"stat_statements\" WHERE \"queryid\" =~ /^$queryid$/ AND $timeFilter GROUP BY time($__interval), \"queryid\" fill(null)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg(case when hit = hit_lag and read = read_lag then null else ((hit-hit_lag)::numeric * 100) / ((hit-hit_lag) + (read-read_lag)) end) as \"sb_hit_ratio\"\nfrom (\n        select \n          (data->'shared_blks_hit')::int8 as hit, lag((data->'shared_blks_hit')::int8) over w as hit_lag,\n          (data->'shared_blks_read')::int8 as read, lag((data->'shared_blks_read')::int8) over w as read_lag,\n          time\n        from stat_statements\n        where dbname = '$dbname' and $__timeFilter(time) and tag_data @> '{\"queryid\": \"$queryid\"}'\n        window w as (order by time)\n) x\nwhere hit >= hit_lag and read >= read_lag\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg(case when hit = hit_lag and read = read_lag then null else ((hit-hit_lag)::numeric * 100) / ((hit-hit_lag) + (read-read_lag)) end) as \"sb_hit_ratio\"\nfrom (\n        select \n          (data->'shared_blks_hit')::int8 as hit, lag((data->'shared_blks_hit')::int8) over w as hit_lag,\n          (data->'shared_blks_read')::int8 as read, lag((data->'shared_blks_read')::int8) over w as read_lag,\n          time\n        from $source_table\n        where dbname = '$dbname' and $__timeFilter(time) and tag_data @> '{\"queryid\": \"$queryid\"}'\n        window w as (order by time)\n) x\nwhere hit >= hit_lag and read >= read_lag\ngroup by 1\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -669,7 +669,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(read-read_lag) as \"temp_blks_read\",\n  sum(written-written_lag) as \"temp_blks_written\"\nfrom (\n        select \n          (data->'temp_blks_read')::int8 as read, lag((data->'temp_blks_read')::int8) over w as read_lag,\n          (data->'temp_blks_written')::int8 as written, lag((data->'temp_blks_written')::int8) over w as written_lag,\n          time\n        from stat_statements\n        where dbname = '$dbname' and $__timeFilter(time) and tag_data @> '{\"queryid\": \"$queryid\"}'\n        window w as (order by time)\n) x\nwhere read >= read_lag and written >= written_lag\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(read-read_lag) as \"temp_blks_read\",\n  sum(written-written_lag) as \"temp_blks_written\"\nfrom (\n        select \n          (data->'temp_blks_read')::int8 as read, lag((data->'temp_blks_read')::int8) over w as read_lag,\n          (data->'temp_blks_written')::int8 as written, lag((data->'temp_blks_written')::int8) over w as written_lag,\n          time\n        from $source_table\n        where dbname = '$dbname' and $__timeFilter(time) and tag_data @> '{\"queryid\": \"$queryid\"}'\n        window w as (order by time)\n) x\nwhere read >= read_lag and written >= written_lag\ngroup by 1\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -818,7 +818,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(read-read_lag) as \"blk_read_time\",\n  sum(write-write_lag) as \"blk_write_time\"\nfrom (\n        select \n          (data->'blk_read_time')::int8 as read, lag((data->'blk_read_time')::int8) over w as read_lag,\n          (data->'blk_write_time')::int8 as write, lag((data->'blk_write_time')::int8) over w as write_lag,\n          time\n        from stat_statements\n        where dbname = '$dbname' and $__timeFilter(time) and tag_data @> '{\"queryid\": \"$queryid\"}'\n        window w as (order by time)\n) x\nwhere read >= read_lag and write>= write_lag\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(read-read_lag) as \"blk_read_time\",\n  sum(write-write_lag) as \"blk_write_time\"\nfrom (\n        select \n          (data->'blk_read_time')::int8 as read, lag((data->'blk_read_time')::int8) over w as read_lag,\n          (data->'blk_write_time')::int8 as write, lag((data->'blk_write_time')::int8) over w as write_lag,\n          time\n        from $source_table\n        where dbname = '$dbname' and $__timeFilter(time) and tag_data @> '{\"queryid\": \"$queryid\"}'\n        window w as (order by time)\n) x\nwhere read >= read_lag and write>= write_lag\ngroup by 1\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -960,7 +960,7 @@
           "policy": "default",
           "query": "SELECT ((non_negative_derivative(mean(\"blk_read_time\"))  + non_negative_derivative(mean(\"blk_write_time\"))) /  non_negative_derivative(mean(\"total_time\"))) * 100  FROM \"stat_statements\" WHERE \"queryid\" =~ /^$queryid$/ AND $timeFilter GROUP BY time($__interval), \"queryid\" fill(null)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg(case when tt = tt_lag then null else (read-read_lag+write-write_lag)::numeric*100 / (tt-tt_lag) end) as \"io_time_pct\"\nfrom (\n        select \n          (data->'blk_read_time')::int8 as read, lag((data->'blk_read_time')::int8) over w as read_lag,\n          (data->'blk_write_time')::int8 as write, lag((data->'blk_write_time')::int8) over w as write_lag,\n          (data->'total_time')::int8 as tt, lag((data->'total_time')::int8) over w as tt_lag,\n          time\n        from stat_statements\n        where dbname = '$dbname' and $__timeFilter(time) and tag_data @> '{\"queryid\": \"$queryid\"}'\n        window w as (order by time)\n) x\nwhere read >= read_lag and write>= write_lag\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg(case when tt = tt_lag then null else (read-read_lag+write-write_lag)::numeric*100 / (tt-tt_lag) end) as \"io_time_pct\"\nfrom (\n        select \n          (data->'blk_read_time')::int8 as read, lag((data->'blk_read_time')::int8) over w as read_lag,\n          (data->'blk_write_time')::int8 as write, lag((data->'blk_write_time')::int8) over w as write_lag,\n          (data->'total_time')::int8 as tt, lag((data->'total_time')::int8) over w as tt_lag,\n          time\n        from $source_table\n        where dbname = '$dbname' and $__timeFilter(time) and tag_data @> '{\"queryid\": \"$queryid\"}'\n        window w as (order by time)\n) x\nwhere read >= read_lag and write>= write_lag\ngroup by 1\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1109,7 +1109,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "select\n  tag_data->>'query' as \"Value\"\nfrom stat_statements\nwhere dbname = '$dbname' and tag_data @> '{\"queryid\": \"$queryid\"}'\norder by time desc\nlimit 1",
+          "rawSql": "select\n  tag_data->>'query' as \"Value\"\nfrom $source_table\nwhere dbname = '$dbname' and tag_data @> '{\"queryid\": \"$queryid\"}'\norder by time desc\nlimit 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1276,6 +1276,34 @@
         "refresh": 2,
         "skipUrlSync": false,
         "type": "interval"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "stat_statements",
+          "value": "stat_statements"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "source_table",
+        "options": [
+          {
+            "selected": true,
+            "text": "stat_statements",
+            "value": "stat_statements"
+          },
+          {
+            "selected": false,
+            "text": "stat_statements_no_query_text",
+            "value": "stat_statements_no_query_text"
+          }
+        ],
+        "query": "stat_statements,stat_statements_no_query_text",
+        "skipUrlSync": false,
+        "type": "custom"
       }
     ]
   },
