@@ -267,6 +267,9 @@ class Root:
     @logged_in
     @cherrypy.expose
     def stats_summary(self, **params):
+        if cmd_args.no_stats_summary:
+            raise Exception('Displaying summary statistics has been disabled')
+
         logging.debug('params: %s', params)
         messages = []
         data = []
@@ -293,7 +296,13 @@ class Root:
                 if page == 'stats-summary' and dbname:
                     data = pgwatch2_influx.get_db_overview(dbname) if cmd_args.datastore == 'influx' else pgwatch2.get_db_overview(dbname)
                 elif page == 'statements' and dbname:
-                    data = pgwatch2_influx.find_top_growth_statements(dbname,
+                    if cmd_args.datastore == 'influx':
+                        data = pgwatch2_influx.find_top_growth_statements(dbname,
+                                                                      sort_column,
+                                                                      start_time,
+                                                                      (end_time if end_time else datetime.utcnow().isoformat() + 'Z'))
+                    else:
+                        data = pgwatch2.find_top_growth_statements(dbname,
                                                                       sort_column,
                                                                       start_time,
                                                                       (end_time if end_time else datetime.utcnow().isoformat() + 'Z'))
@@ -338,6 +347,8 @@ if __name__ == '__main__':
                         default=(os.getenv('PW2_WEBPASSWORD') or 'pgwatch2admin'))
     parser.add_argument('--no-component-logs', help='Don''t expose component logs via the Web UI',
                         action='store_true', default=(str_to_bool_or_fail(os.getenv('PW2_WEBNOCOMPONENTLOGS')) or False))
+    parser.add_argument('--no-stats-summary', help='Don''t expose summary metrics and "top queries" on monitored DBs',
+                        action='store_true', default=(str_to_bool_or_fail(os.getenv('PW2_WEBNOSTATSSUMMARY')) or False))
     parser.add_argument('--aes-gcm-keyphrase', help='For encrypting password stored to configDB',
                         default=os.getenv('PW2_AES_GCM_KEYPHRASE'))
     parser.add_argument('--aes-gcm-keyphrase-file', help='For encrypting password stored to configDB. Read from a file on startup',

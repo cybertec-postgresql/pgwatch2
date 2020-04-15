@@ -4,6 +4,8 @@ import os
 import datadb
 import crypto
 import utils
+from datetime import datetime
+from datetime import timedelta
 
 
 SERVICES = {'pgwatch2': {'log_root': '/var/log/supervisor/', 'glob': 'pgwatch2-stderr*'},
@@ -12,6 +14,9 @@ SERVICES = {'pgwatch2': {'log_root': '/var/log/supervisor/', 'glob': 'pgwatch2-s
             'postgres': {'log_root': '/var/log/postgresql/', 'glob': 'postgresql-*.csv'},
             'webui': {'log_root': '/var/log/supervisor/', 'glob': 'webpy-stderr*'},
             }
+
+STATEMENT_SORT_COLUMNS = ['total_time', 'mean_time', 'calls', 'shared_blks_hit', 'shared_blks_read', 'shared_blks_written',
+                          'temp_blks_read', 'temp_blks_written', 'blk_read_time', 'blk_write_time']
 
 
 def get_last_log_lines(service='pgwatch2', lines=200):
@@ -828,10 +833,56 @@ def get_db_overview(dbname):
     data['Temporary Bytes (1h rate)'] = exec_for_time_pairs(
        temp_bytes_1h, dbname, time_pairs)
 
-
-
-
     return sorted(data.items(), key=lambda x: x[0])
+
+
+def find_top_growth_statements(dbname, sort_column, start_time=(datetime.utcnow() - timedelta(days=1)).isoformat() + 'Z',
+                               end_time=datetime.utcnow().isoformat() + 'Z', limit=20):
+    """start_time/end_time expect UTC date inputs currently!"""
+    if sort_column not in STATEMENT_SORT_COLUMNS:
+        raise Exception('unknown sort column: ' + sort_column)
+    ret = []        # list of dicts with all columns from "stat_statements"
+    sql = r"""
+    select
+      queryid,
+      query,
+      round(sum(total_time - total_time_lag)::numeric, 2) as total_time,
+      round(avg((total_time - total_time_lag)/(calls - calls_lag))::numeric, 2) as mean_time,
+      sum(calls - calls_lag) as calls,
+      sum(shared_blks_hit - shared_blks_hit_lag) as shared_blks_hit,
+      sum(shared_blks_read - shared_blks_read_lag) as shared_blks_read,
+      sum(shared_blks_written - shared_blks_written_lag) as shared_blks_written,
+      sum(temp_blks_written - temp_blks_written_lag) as temp_blks_written,
+      round(sum(blk_read_time - blk_read_time_lag)::numeric, 2) as blk_read_time,
+      round(sum(blk_write_time - blk_write_time_lag)::numeric, 2) as blk_write_time
+    from (
+      select
+        tag_data->>'queryid' as queryid,
+        tag_data->>'query' as query,
+        (data->>'total_time')::float8 as total_time, lag((data->>'total_time')::float8) over w as total_time_lag,
+        (data->>'calls')::float8 as calls, lag((data->>'calls')::float8) over w as calls_lag,
+        (data->>'shared_blks_hit')::float8 as shared_blks_hit, lag((data->>'shared_blks_hit')::float8) over w as shared_blks_hit_lag,
+        (data->>'shared_blks_read')::float8 as shared_blks_read, lag((data->>'shared_blks_read')::float8) over w as shared_blks_read_lag,
+        (data->>'shared_blks_written')::float8 as shared_blks_written, lag((data->>'shared_blks_written')::float8) over w as shared_blks_written_lag,
+        (data->>'temp_blks_read')::float8 as temp_blks_read, lag((data->>'temp_blks_read')::float8) over w as temp_blks_read_lag,
+        (data->>'temp_blks_written')::float8 as temp_blks_written, lag((data->>'temp_blks_written')::float8) over w as temp_blks_written_lag,
+        (data->>'blk_read_time')::float8 as blk_read_time, lag((data->>'blk_read_time')::float8) over w as blk_read_time_lag,
+        (data->>'blk_write_time')::float8 as blk_write_time, lag((data->>'blk_write_time')::float8) over w as blk_write_time_lag
+      from stat_statements
+        where dbname = %(dbname)s
+        and time between %(start_time)s and %(end_time)s
+        and not tag_data->>'query' ~* E'\\(extract\\(\\$\\d+\\W*from\\W*now\\(\\)\\)\\W?\\*\\W*\\$\\d+\\).*::\\w+\\W+as\\W+epoch_ns\\W*,'
+        and not tag_data->>'query' ~* E'/\\*\\W*pgwatch2_generated\\W*\\*/'
+      window w as (partition by tag_data->>'queryid' order by time)
+    ) x
+    where calls > calls_lag
+    group by 1, 2
+    order by {sort_column} desc
+    limit %(limit)s
+    """
+    data, _ = datadb.execute(sql.format(sort_column=sort_column), {'dbname': dbname, 'start_time': start_time, 'end_time': end_time, 'limit': limit}, on_metric_store=True)
+    return data
+
 
 
 if __name__ == '__main__':
