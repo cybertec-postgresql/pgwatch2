@@ -278,14 +278,20 @@ class Root:
         end_time = params.get('end_time', '')
 
         try:
+            if cmd_args.datastore not in ['influx', 'postgres']:
+                raise Exception('Summary statistics only available for InfluxDB or Postgres data stores')
+
             if sort_column not in pgwatch2_influx.STATEMENT_SORT_COLUMNS:
                 raise Exception('invalid "sort_column": ' + sort_column)
 
-            dbnames = [x['md_unique_name']
-                       for x in pgwatch2.get_all_monitored_dbs()]
+            if cmd_args.datastore == 'influx':
+                dbnames = pgwatch2_influx.get_active_dbnames()
+            else:
+                dbnames = pgwatch2.get_all_dbnames()
+
             if dbname:
                 if page == 'stats-summary' and dbname:
-                    data = pgwatch2_influx.get_db_overview(dbname)
+                    data = pgwatch2_influx.get_db_overview(dbname) if cmd_args.datastore == 'influx' else pgwatch2.get_db_overview(dbname)
                 elif page == 'statements' and dbname:
                     data = pgwatch2_influx.find_top_growth_statements(dbname,
                                                                       sort_column,
@@ -295,12 +301,14 @@ class Root:
             messages.append('ERROR - Could not connect to InfluxDB')
         except psycopg2.OperationalError:
             messages.append('ERROR - Could not connect to Postgres')
+        except Exception as e:
+            messages.append('ERROR - ' + str(e))
 
         tmpl = env.get_template('stats-summary.html')
         return tmpl.render(dbnames=dbnames, dbname=dbname, page=page, data=data, sort_column=sort_column,
                            start_time=start_time, end_time=end_time, grafana_baseurl=cmd_args.grafana_baseurl,
                            messages=messages, no_anonymous_access=cmd_args.no_anonymous_access, session=cherrypy.session,
-                           no_component_logs=cmd_args.no_component_logs)
+                           no_component_logs=cmd_args.no_component_logs, datastore=cmd_args.datastore)
 
 
 if __name__ == '__main__':

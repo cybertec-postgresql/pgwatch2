@@ -86,7 +86,7 @@ def series_to_dict(influx_raw_data, tag_name):
     return ret
 
 
-def exec_for_time_pairs(isql, dbname, pairs, decimal_digits=3):
+def exec_for_time_pairs(isql, dbname, pairs, decimal_digits=2):
     """pairs=[(time_literal_for_where, time_literal_for_group_by), ...]"""
     ret = []
     for where_time, group_by_time in pairs:
@@ -115,7 +115,7 @@ def get_db_overview(dbname):
 
     wal = """SELECT derivative(mean("xlog_location_b"), 1h)
         FROM "wal" WHERE "dbname" = '{}' AND time > now() - {} GROUP BY time({}) fill(none)"""
-    data['WAL Bytes (1h avg.)'] = exec_for_time_pairs(wal, dbname, time_pairs)
+    data['WAL Bytes (1h rate)'] = exec_for_time_pairs(wal, dbname, time_pairs)
 
     sb_ratio = """
         SELECT (non_negative_derivative(mean("blks_hit")) / (non_negative_derivative(mean("blks_hit")) + non_negative_derivative(mean("blks_read")))) * 100
@@ -134,50 +134,36 @@ def get_db_overview(dbname):
         SELECT non_negative_derivative(mean("tup_inserted"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['Tuples Inserted (1h avg.)'] = exec_for_time_pairs(
+    data['Tuples Inserted (1h rate)'] = exec_for_time_pairs(
         tup_inserted, dbname, time_pairs)
 
     tup_updated = """
         SELECT non_negative_derivative(mean("tup_updated"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['Tuples Updated (1h avg.)'] = exec_for_time_pairs(
+    data['Tuples Updated (1h rate)'] = exec_for_time_pairs(
         tup_updated, dbname, time_pairs)
 
     tup_deleted = """
         SELECT non_negative_derivative(mean("tup_deleted"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['Tuples Deleted (1h avg.)'] = exec_for_time_pairs(
+    data['Tuples Deleted (1h rate)'] = exec_for_time_pairs(
         tup_deleted, dbname, time_pairs)
 
     size_b = """
         SELECT derivative(mean("size_b"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['DB size change in bytes (1h avg.)'] = exec_for_time_pairs(
+    data['DB size change in bytes (1h)'] = exec_for_time_pairs(
         size_b, dbname, time_pairs)
 
     temp_bytes_1h = """
         SELECT derivative(mean("temp_bytes"), 1h)
             FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
     """
-    data['Temporary Bytes (1h avg.)'] = exec_for_time_pairs(
+    data['Temporary Bytes (1h)'] = exec_for_time_pairs(
         temp_bytes_1h, dbname, time_pairs)
-
-    blk_read_time_1h = """
-        SELECT non_negative_derivative(mean("blk_read_time"), 1h)
-            FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
-    """
-    data['Block Read Time (ms/1h)'] = exec_for_time_pairs(
-        blk_read_time_1h, dbname, time_pairs)
-
-    blk_write_time_1h = """
-        SELECT non_negative_derivative(mean("blk_write_time"), 1h)
-            FROM "db_stats" WHERE "dbname" = '{}' AND  time > now() - {} GROUP BY time({}) fill(none)
-    """
-    data['Block Write Time (ms/1h)'] = exec_for_time_pairs(
-        blk_write_time_1h, dbname, time_pairs)
 
     return sorted(data.items(), key=lambda x: x[0])
 

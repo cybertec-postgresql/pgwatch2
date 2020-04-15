@@ -604,6 +604,235 @@ def set_bulk_password(params, cmd_args):
         return err, ret[0]['rows_affected']
     return err, '0'
 
+def exec_for_time_pairs(sql, dbname, pairs, decimal_digits=2):
+    ret = []
+    for time_window, agg_interval in pairs:
+        data, err = datadb.execute(sql, {'dbname': dbname, 'time_window': time_window, 'agg_interval': agg_interval, 'decimal_digits': decimal_digits}, on_metric_store=True, quiet=True)
+        # print(data, err)
+        if not err and data:
+            ret.append(data[0]['metric'])
+    return ret
+
+
+def get_db_overview(dbname):
+    data = {}
+    time_pairs = [('7d', '1d'), ('1d', '1h'), ('1h', '10m')]
+
+    tps = """
+    select round(avg(avg::numeric), %(decimal_digits)s) as metric from (
+    select
+      extract(epoch from time)::int8 / extract(epoch from %(agg_interval)s::interval)::int as epoch,
+      avg( ((roll-roll_lag) + (comm-comm_lag)) / extract(epoch from (time - time_lag))  )
+    from (
+      select
+          time, lag(time) over w as time_lag,
+          (data->>'xact_rollback')::int8 as roll, lag((data->>'xact_rollback')::int8) over w as roll_lag,
+          (data->>'xact_commit')::int8 as comm, lag((data->>'xact_commit')::int8) over w as comm_lag
+      FROM
+          db_stats
+      WHERE
+        time > now() - %(time_window)s::interval
+        AND dbname = %(dbname)s
+        window w as (order by time)
+    ) x
+    WHERE (comm > comm_lag or roll > roll_lag) and time > time_lag
+    group by 1
+    ) y
+    """
+    data['TPS'] = exec_for_time_pairs(tps, dbname, time_pairs)
+
+    wal = """
+    select round(3600 * avg(avg::numeric), %(decimal_digits)s) as metric from (
+    select
+      time::int8 / extract(epoch from %(agg_interval)s::interval)::int as epoch,
+      avg((wal-wal_lag) / (time-lag_time))
+    from (
+            select
+              (data->>'xlog_location_b')::int8 as wal, lag((data->>'xlog_location_b')::int8) over w as wal_lag,
+              extract(epoch from time) as time,
+              lag(extract(epoch from time)) over w as lag_time
+            from wal
+            where
+            time > now() - %(time_window)s::interval
+            AND dbname = %(dbname)s
+            window w as (order by time)
+    ) x
+    where wal >= wal_lag and time > lag_time
+    group by 1
+    ) y
+    """
+    data['WAL Bytes (1h)'] = exec_for_time_pairs(wal, dbname, time_pairs)
+
+    sb_ratio = """
+    select round(avg(avg::numeric), %(decimal_digits)s) as metric from (
+    select
+      extract(epoch from time)::int8 / extract(epoch from %(agg_interval)s::interval)::int as epoch,
+      avg((hit-hit_lag)::numeric / ((hit-hit_lag) + (read-read_lag))*100)
+    from (
+            select
+              (data->>'blks_hit')::int8 as hit, lag((data->>'blks_hit')::int8) over w as hit_lag,
+              (data->>'blks_read')::int8 as read, lag((data->>'blks_read')::int8) over w as read_lag,
+              (data->>'xact_rollback')::int8 as roll, lag((data->>'xact_rollback')::int8) over w as roll_lag,
+              (data->>'xact_commit')::int8 as comm, lag((data->>'xact_commit')::int8) over w as comm_lag,
+              time
+            from db_stats
+            where
+            time > now() - %(time_window)s::interval
+            AND dbname = %(dbname)s
+            window w as (order by time)
+    ) x
+    where hit > hit_lag or read > read_lag
+    group by 1
+    ) y
+    """
+    data['Shared Buffers Hit Ratio'] = exec_for_time_pairs(sb_ratio, dbname, time_pairs)
+
+    rollback_ratio = """
+    select
+      round(avg(100 * (roll-roll_lag)::numeric / ((roll-roll_lag) + (comm-comm_lag))), %(decimal_digits)s) as metric
+    from (
+      select
+          time,
+          (data->>'xact_rollback')::int8 as roll, lag((data->>'xact_rollback')::int8) over w as roll_lag,
+          (data->>'xact_commit')::int8 as comm, lag((data->>'xact_commit')::int8) over w as comm_lag
+      FROM
+          db_stats
+      WHERE
+        time > now() - %(time_window)s::interval
+        AND dbname = %(dbname)s
+        window w as (order by time)
+    ) x
+    WHERE comm > comm_lag or roll > roll_lag
+    """
+    data['Rollback Ratio'] = exec_for_time_pairs(rollback_ratio, dbname, time_pairs)
+
+
+
+    tup_inserted = """
+    select round(avg(avg::numeric), %(decimal_digits)s) as metric from (
+    select
+      extract(epoch from time)::int8 / extract(epoch from %(agg_interval)s::interval)::int as epoch,
+      avg(3600*((ins-ins_lag) * (extract(epoch from %(agg_interval)s::interval))) / extract(epoch from time - time_lag))
+    from (
+            select
+              (data->>'tup_inserted')::int8 as ins, lag((data->>'tup_inserted')::int8) over w as ins_lag,
+              time, lag(time) over w as time_lag
+            from db_stats
+            where
+            time > now() - %(time_window)s::interval
+            AND dbname = %(dbname)s
+            window w as (order by time)
+    ) x
+    where ins >= ins_lag /*and upd >= upd_lag and del >= del_lag*/
+    group by 1
+    ) y
+    """
+    data['Tuples Inserted (1h rate)'] = exec_for_time_pairs(
+        tup_inserted, dbname, time_pairs)
+
+
+    tup_updated = """
+    select round(avg(avg::numeric), %(decimal_digits)s) as metric from (
+    select
+      extract(epoch from time)::int8 / extract(epoch from %(agg_interval)s::interval)::int as epoch,
+      avg(3600*((upd-upd_lag) * (extract(epoch from %(agg_interval)s::interval))) / extract(epoch from time - time_lag))
+    from (
+            select
+              (data->>'tup_updated')::int8 as upd, lag((data->>'tup_updated')::int8) over w as upd_lag,
+              time, lag(time) over w as time_lag
+            from db_stats
+            where
+            time > now() - %(time_window)s::interval
+            AND dbname = %(dbname)s
+            window w as (order by time)
+    ) x
+    where upd >= upd_lag
+    group by 1
+    ) y
+    """
+    data['Tuples Updated (1h rate)'] = exec_for_time_pairs(
+        tup_updated, dbname, time_pairs)
+
+
+    tup_deleted = """
+    select round(avg(avg::numeric), %(decimal_digits)s) as metric from (
+    select
+      extract(epoch from time)::int8 / extract(epoch from %(agg_interval)s::interval)::int as epoch,
+      avg(3600*((del-del_lag) * (extract(epoch from %(agg_interval)s::interval))) / extract(epoch from time - time_lag))
+    from (
+            select
+              (data->>'tup_deleted')::int8 as del, lag((data->>'tup_deleted')::int8) over w as del_lag,
+              time, lag(time) over w as time_lag
+            from db_stats
+            where
+            time > now() - %(time_window)s::interval
+            AND dbname = %(dbname)s
+            window w as (order by time)
+    ) x
+    where del >= del_lag
+    group by 1
+    ) y
+    """
+    data['Tuples Deleted (1h rate)'] = exec_for_time_pairs(
+        tup_deleted, dbname, time_pairs)
+
+    size_b = """
+    select round(avg(avg::numeric), %(decimal_digits)s) as metric from (
+        select
+          extract(epoch from time)::int8 / extract(epoch from %(agg_interval)s::interval)::int as epoch,
+          avg(3600 * (size_b - size_b_lag) / extract(epoch from time - time_lag))
+        from (
+          select
+            time, lag(time) over w as time_lag,
+            (data->>'size_b')::int8 as size_b,
+            lag((data->>'size_b')::int8) over w as size_b_lag
+          from
+            db_size
+          where
+            time > now() - %(time_window)s::interval
+            AND dbname = %(dbname)s
+          window w as (
+             order by time
+          )
+        ) x
+        where size_b >= size_b_lag
+        group by 1
+    ) y
+    """
+    data['DB size change in bytes (1h rate)'] = exec_for_time_pairs(
+      size_b, dbname, time_pairs)
+
+    temp_bytes_1h = """
+    select round(avg(avg::numeric), %(decimal_digits)s) as metric from (
+        select
+          extract(epoch from time)::int8 / extract(epoch from %(agg_interval)s::interval)::int as epoch,
+          avg(3600 * (temp_bytes - temp_bytes_lag) / extract(epoch from time - time_lag))
+        from (
+          select
+            time, lag(time) over w as time_lag,
+            (data->>'temp_bytes')::int8 as temp_bytes,
+            lag((data->>'temp_bytes')::int8) over w as temp_bytes_lag
+          from
+            db_stats
+          where
+            time > now() - %(time_window)s::interval
+            AND dbname = %(dbname)s
+          window w as (
+             order by time
+          )
+        ) x
+        where temp_bytes >= temp_bytes_lag
+        group by 1
+    ) y
+    """
+    data['Temporary Bytes (1h rate)'] = exec_for_time_pairs(
+       temp_bytes_1h, dbname, time_pairs)
+
+
+
+
+    return sorted(data.items(), key=lambda x: x[0])
+
 
 if __name__ == '__main__':
     # print(get_last_log_lines())
