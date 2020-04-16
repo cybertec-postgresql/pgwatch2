@@ -105,6 +105,7 @@ type MetricColumnAttrs struct {
 
 type MetricAttrs struct {
 	IsInstanceLevel    		  bool `yaml:"is_instance_level"`
+	MetricStorageName  		  string `yaml:"metric_storage_name"`
 }
 
 type MetricVersionProperties struct {
@@ -2426,6 +2427,10 @@ send_to_storage_channel:
 		data = AddDbnameSysinfoIfNotExistsToQueryResultData(msg, data, ver)
 	}
 
+	if mvp.MetricAttrs.MetricStorageName != "" {
+		log.Debugf("[%s] rerouting metric %s data to %s based on metric attributes", msg.DBUniqueName, msg.MetricName, mvp.MetricAttrs.MetricStorageName)
+		msg.MetricName = mvp.MetricAttrs.MetricStorageName
+	}
 	if fromCache {
 		md, err = GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
 		if err != nil {
