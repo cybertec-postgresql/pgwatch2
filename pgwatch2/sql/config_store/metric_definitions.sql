@@ -1,3 +1,7 @@
+/* METRIC DEFINITIONS + METRIC ATTRIBUTES below */
+
+-- truncate pgwatch2.metric;
+
 /* backends */
 
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_sql_su)
@@ -4736,3 +4740,21 @@ from
 $sql$,
 '{"prometheus_all_gauge_columns": true}'
 );
+
+
+
+/* Metric attributes */
+-- truncate pgwatch2.metric_attribute;
+
+-- mark instance level metrics for metrics defined by pgwatch
+insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
+select m, '{"is_instance_level": true}'
+from unnest(
+   array['archiver', 'backup_age_pgbackrest', 'backup_age_walg', 'bgwriter', 'buffercache_by_db', 'buffercache_by_type',
+  'cpu_load', 'psutil_cpu', 'psutil_disk', 'psutil_disk_io_total', 'psutil_mem', 'replication', 'replication_slots',
+  'smart_health_per_disk', 'wal', 'wal_receiver', 'wal_size']
+) m;
+
+-- dynamic re-routing of metric names
+insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
+    select 'stat_statements_no_query_text', '{"metric_storage_name": "stat_statements"}';

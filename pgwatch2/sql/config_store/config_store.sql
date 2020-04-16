@@ -87,16 +87,6 @@ create table metric_attribute (
     check (ma_metric_name ~ '^[a-z0-9_]+$')
 );
 
--- mark instance level metrics for metrics defined by pgwatch
-insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
-select m, '{"is_instance_level": true}'
-from unnest(
-   array['archiver', 'backup_age_pgbackrest', 'backup_age_walg', 'bgwriter', 'buffercache_by_db', 'buffercache_by_type',
-  'cpu_load', 'psutil_cpu', 'psutil_disk', 'psutil_disk_io_total', 'psutil_mem', 'replication', 'replication_slots',
-  'smart_health_per_disk', 'wal', 'wal_receiver', 'wal_size']
-) m;
-insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
-    select 'stat_statements_no_query_text', '{"metric_storage_name": "stat_statements"}';
 
 /* this should allow auto-rollout of schema changes for future (1.6+) releases. currently only informative */
 create table schema_version (
