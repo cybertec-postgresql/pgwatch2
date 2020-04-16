@@ -114,9 +114,10 @@ query. At any time only 2 metric fetching queries are running in parallel on the
 * The administrative Web UI doesn't have by default any security. Configurable via env. variables.
 * Viewing Grafana dashboards by default doesn't require login. Editing needs a password. Configurable via env. variables.
 * InfluxDB has no authentication in Docker setup, so one should just not expose the ports when having concerns.
-* Dashboards based on "pg_stat_statements" (Stat Statement Overview / Top) expose actual queries. They are mostly stripped
-of details though, but if no risks can be taken the dashboards (or at least according panels) should be deleted. As an alternative "pg_stat_statements_calls"
-can be used, which only records total runtimes and call counts.
+* Dashboards based on the "stat_statements" metric (Stat Statement Overview / Top) expose actual queries. They are
+mostly stripped of details though, but if no risks can be taken the dashboards (or at least according panels) should be
+deleted. Or as an alternative "stat_statements_no_query_text" or "pg_stat_statements_calls" metrics can be used, which
+don't store query texts.
 * Safe certificate connections to Postgres are supported as of v1.5.0
 * Encrypting/decrypting passwords stored in the config DB or in YAML config files possible from v1.5.0. An encryption passphrase/file needs to be specified then via PW2_AES_GCM_KEYPHRASE / PW2_AES_GCM_KEYPHRASE_FILE. By default passwords are stored in plaintext.
 
@@ -430,6 +431,18 @@ Collector columns are cumulative), but when this is not the case and the column 
 attributes should be decalared. For YAML based setups this means adding a "column_attrs.yaml" file in the metric's
 top folder and for Config DB based setup an according "column_attrs" JSON column should be filled.
 * NB! For Prometheus all text fields will be turned into tags / labels as only floats can be stored.
+
+### Metric attributes
+
+Besides column attributes starting from v1.7 there are also metric attributes which enable currently two special behaviours
+for some specific metrics:
+
+ * is_instance_level - enables caching, i.e. sharing of metric data between various databases of a single instance to
+   reduce load on the monitored server.
+ * metric_storage_name - enables dynamic "renaming" of metrics at storage level, i.e. declaring almost similar metrics
+   with different names but the data will be stored under one metric. Currently used (for out-of-the box metrics) only
+   for the 'stat_statements_no_query_text' metric, to not to store actualy query texts from the "pg_stat_statements"
+   extension for more security sensitive instances.
 
 # File based operation
 
