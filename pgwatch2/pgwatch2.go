@@ -2577,6 +2577,7 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 	var last_uptime_s int64 = -1 // used for "server restarted" event detection
 	var last_error_notification_time time.Time
 	failed_fetches := 0
+	metricNameForStorage := metricName
 
 	if opts.TestdataDays > 0 {
 		if metricName == SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS || metricName == SPECIAL_METRIC_CHANGE_EVENTS {
@@ -2585,12 +2586,24 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 		testDataGenerationModeWG.Add(1)
 	}
 	if opts.Datastore == DATASTORE_POSTGRES && opts.TestdataDays == 0 {
-		err := AddDBUniqueMetricToListingTable(dbUniqueName, metricName)
+		vme, err := DBGetPGVersion(dbUniqueName, dbType,false)
+		if err != nil {
+			log.Warningf("[%s][%s] Failed to determine possible re-routing name, Grafana dashboards with re-routed metrics might not show all hosts", dbUniqueName, metricName)
+		} else {
+			mvp, err := GetMetricVersionProperties(metricName, vme, nil)
+			if err != nil {
+				log.Warningf("[%s][%s] Failed to determine possible re-routing name, Grafana dashboards with re-routed metrics might not show all hosts", dbUniqueName, metricName)
+			} else if mvp.MetricAttrs.MetricStorageName != "" {
+				metricNameForStorage = mvp.MetricAttrs.MetricStorageName
+			}
+		}
+
+		err = AddDBUniqueMetricToListingTable(dbUniqueName, metricNameForStorage)
 		if err != nil {
 			log.Errorf("Could not add newly found gatherer [%s:%s] to the 'all_distinct_dbname_metrics' listing table: %v", dbUniqueName, metricName, err)
 		}
 
-		EnsureMetricDummy(metricName) // ensure that there is at least an empty top-level table not to get ugly Grafana notifications
+		EnsureMetricDummy(metricNameForStorage) // ensure that there is at least an empty top-level table not to get ugly Grafana notifications
 	}
 
 	if metricName == SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS {
