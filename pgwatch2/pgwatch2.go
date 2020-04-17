@@ -2332,7 +2332,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	if err != nil && msg.MetricName != RECO_METRIC_NAME {
 		epoch, ok := last_sql_fetch_error.Load(msg.MetricName + ":" + db_pg_version.String())
 		if !ok || ((time.Now().Unix() - epoch.(int64)) > 3600) { // complain only 1x per hour
-			log.Warningf("Failed to get SQL for metric '%s', version '%s': %v", msg.MetricName, vme.VersionStr, err)
+			log.Infof("Failed to get SQL for metric '%s', version '%s': %v", msg.MetricName, vme.VersionStr, err)
 			last_sql_fetch_error.Store(msg.MetricName+":"+db_pg_version.String(), time.Now().Unix())
 		}
 		if strings.Contains(err.Error(), "too old") {
@@ -2593,7 +2593,7 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 				log.Warningf("[%s][%s] Failed to determine possible re-routing name, Grafana dashboards with re-routed metrics might not show all hosts", dbUniqueName, metricName)
 			} else {
 				mvp, err := GetMetricVersionProperties(metricName, vme, nil)
-				if err != nil {
+				if err != nil && !strings.Contains(err.Error(), "too old") {
 					log.Warningf("[%s][%s] Failed to determine possible re-routing name, Grafana dashboards with re-routed metrics might not show all hosts", dbUniqueName, metricName)
 				} else if mvp.MetricAttrs.MetricStorageName != "" {
 					metricNameForStorage = mvp.MetricAttrs.MetricStorageName
