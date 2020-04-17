@@ -210,6 +210,7 @@ const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT} // used for informational purposes
+var specialMetrics = map[string]bool{RECO_METRIC_NAME: true, SPECIAL_METRIC_CHANGE_EVENTS: true, SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS: true}
 var configDb *sqlx.DB
 var metricDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
@@ -2586,19 +2587,21 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 		testDataGenerationModeWG.Add(1)
 	}
 	if opts.Datastore == DATASTORE_POSTGRES && opts.TestdataDays == 0 {
-		vme, err := DBGetPGVersion(dbUniqueName, dbType,false)
-		if err != nil {
-			log.Warningf("[%s][%s] Failed to determine possible re-routing name, Grafana dashboards with re-routed metrics might not show all hosts", dbUniqueName, metricName)
-		} else {
-			mvp, err := GetMetricVersionProperties(metricName, vme, nil)
+		if _, is_special_metric := specialMetrics[metricName]; !is_special_metric {
+			vme, err := DBGetPGVersion(dbUniqueName, dbType,false)
 			if err != nil {
 				log.Warningf("[%s][%s] Failed to determine possible re-routing name, Grafana dashboards with re-routed metrics might not show all hosts", dbUniqueName, metricName)
-			} else if mvp.MetricAttrs.MetricStorageName != "" {
-				metricNameForStorage = mvp.MetricAttrs.MetricStorageName
+			} else {
+				mvp, err := GetMetricVersionProperties(metricName, vme, nil)
+				if err != nil {
+					log.Warningf("[%s][%s] Failed to determine possible re-routing name, Grafana dashboards with re-routed metrics might not show all hosts", dbUniqueName, metricName)
+				} else if mvp.MetricAttrs.MetricStorageName != "" {
+					metricNameForStorage = mvp.MetricAttrs.MetricStorageName
+				}
 			}
 		}
 
-		err = AddDBUniqueMetricToListingTable(dbUniqueName, metricNameForStorage)
+		err := AddDBUniqueMetricToListingTable(dbUniqueName, metricNameForStorage)
 		if err != nil {
 			log.Errorf("Could not add newly found gatherer [%s:%s] to the 'all_distinct_dbname_metrics' listing table: %v", dbUniqueName, metricName, err)
 		}
