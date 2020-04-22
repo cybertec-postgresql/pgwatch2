@@ -563,49 +563,73 @@ outside of Docker.
 
 # Installing without Docker
 
-Below are sample steps to do a custom install from scratch using a Postgres configuration DB for both pgwatch2 config and
-Grafana config. NB! pgwatch2 config can also be stored YAML and Grafana can use embedded Sqlite DB so technically only
-DB that is absolutely needed is the metrics storage DB, here Influx. All examples assuming Ubuntu.
+Below are sample steps to do a custom install from scratch using Postgres for the pgwatch2 configuration DB, metrics DB and
+Grafana config DB. NB! pgwatch2 config can also be stored YAML and Grafana can use embedded Sqlite DB so technically only
+DB that is absolutely needed is the metrics storage DB, here Postgres (alternatives - InfluxDB, Prometheus, Graphite).
+All examples assuming Ubuntu.
 
-1. Install Postgres and create DB-s/roles for pgwatch2/Grafana
+1. Install Postgres.
+
+    The latest major version if possible, but minimally v11 is recommended for the metrics DB due to
+    partitioning speedup improvements and also older versions were missing some default JSONB casts so that some Grafana dashboards
+    need adjusting otherwise.
     
+    To get the latest Postgres versions PGDG repos are to be preferred over default disto repos:
+     * For Debian / Ubuntu based systems: https://wiki.postgresql.org/wiki/Apt
+     * For CentOS / RedHat based systems: https://yum.postgresql.org/
+
     ```
     sudo apt install postgresql
     ```
     Default port: 5432
-    
-    1.1. Create an User and a DB to hold Grafana config
+
+    1.a. Alternative flow for InfluxDB metrics storage (ignore for Postgres):
+
+        ```
+        INFLUX_LATEST=$(curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1)
+        wget https://dl.influxdata.com/influxdb/releases/influxdb_${INFLUX_LATEST}_amd64.deb
+        sudo dpkg -i influxdb_${INFLUX_LATEST}_amd64.deb
+        ```
+        Take a look/edit the Influx config at /etc/influxdb/influxdb.conf and it's recommend to create also a separate limited
+        login user e.g. "pgwatch2" to be used by the metrics gathering daemon to store metrics. See [here](https://docs.influxdata.com/influxdb/latest/administration/config/)
+        on configuring InfluxDB and [here](https://docs.influxdata.com/influxdb/latest/administration/authentication_and_authorization/)
+        for creating new users.
+
+        Default port for the API: 8086
+
+2. Create needed DB-s, roles and config tables for the pgwatch2 config and metrics DB-s and Grafana DB.
+
+    2.1. Create an user and a DB to hold Grafana config
     ```
     psql -c "create user pgwatch2_grafana password 'xyz'"
     psql -c "create database pgwatch2_grafana owner pgwatch2_grafana"
     ```
     
-    1.2. Create an User and a DB to hold pgwatch2 config
-    
+    2.2. Create an User and a DB to hold pgwatch2 config
     ```
     psql -c "create user pgwatch2 password 'xyz'"
     psql -c "create database pgwatch2 owner pgwatch2"
     ```
     
-    1.3 Roll out the pgwatch2 schema (will holds connection strings of DB-s to be monitored + metric definitions)
-    
+    2.3 Roll out the pgwatch2 config schema (will hold connection strings of DB-s to be monitored + metric definitions)
     ```
     psql -f pgwatch2/sql/config_store/config_store.sql pgwatch2
     psql -f pgwatch2/sql/config_store/metric_definitions.sql pgwatch2
     ```
-2. Install InfluxDB (for Postgres as metrics storage DB see instructions [here](https://github.com/cybertec-postgresql/pgwatch2/tree/master/pgwatch2/sql/metric_store))
     
+    2.4 Create an user and a DB to hold pgwatch2 gathered metrics
     ```
-    INFLUX_LATEST=$(curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1)
-    wget https://dl.influxdata.com/influxdb/releases/influxdb_${INFLUX_LATEST}_amd64.deb
-    sudo dpkg -i influxdb_${INFLUX_LATEST}_amd64.deb
+    psql -c "create database pgwatch2_metrics owner pgwatch2"
     ```
-    Take a look/edit the Influx config at /etc/influxdb/influxdb.conf and it's recommend to create also a separate limited
-    login user e.g. "pgwatch2" to be used by the metrics gathering daemon to store metrics. See [here](https://docs.influxdata.com/influxdb/latest/administration/config/)
-    on configuring InfluxDB and [here](https://docs.influxdata.com/influxdb/latest/administration/authentication_and_authorization/)
-    for creating new users.
+
+    2.5 Roll out the pgwatch2 metrics storage schema. Here one should 1st think how many databases will be monitored and
+    choose an according metrics storage schema - there are a couple of different options described [here](https://github.com/cybertec-postgresql/pgwatch2/tree/master/pgwatch2/sql/metric_store).
+    For a smaller amount (a couple dozen) of monitored DBs the "metric-time" is a good choice.
     
-    Default port for the API: 8086
+    NB! Default retention for Postgres storage is 2 weeks! To change, use the --pg-retention-days parameter for the gatherer (step 5).
+    ```
+    psql -f pgwatch2/sql/metric_store/roll_out_metric_time.sql pgwatch2_metrics
+    ```
 
 3. Install Grafana
     
