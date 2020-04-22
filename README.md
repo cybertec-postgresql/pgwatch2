@@ -584,18 +584,18 @@ All examples assuming Ubuntu.
     Default port: 5432
 
     1.a. Alternative flow for InfluxDB metrics storage (ignore for Postgres):
-        ```
-        INFLUX_LATEST=$(curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1)
-        wget https://dl.influxdata.com/influxdb/releases/influxdb_${INFLUX_LATEST}_amd64.deb
-        sudo dpkg -i influxdb_${INFLUX_LATEST}_amd64.deb
-        ```
-        
-        Take a look/edit the Influx config at /etc/influxdb/influxdb.conf and it's recommend to create also a separate limited
-        login user e.g. "pgwatch2" to be used by the metrics gathering daemon to store metrics. See [here](https://docs.influxdata.com/influxdb/latest/administration/config/)
-        on configuring InfluxDB and [here](https://docs.influxdata.com/influxdb/latest/administration/authentication_and_authorization/)
-        for creating new users.
+    ```
+    INFLUX_LATEST=$(curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1)
+    wget https://dl.influxdata.com/influxdb/releases/influxdb_${INFLUX_LATEST}_amd64.deb
+    sudo dpkg -i influxdb_${INFLUX_LATEST}_amd64.deb
+    ```
 
-        Default port for the API: 8086
+    Take a look/edit the Influx config at /etc/influxdb/influxdb.conf and it's recommend to create also a separate limited
+    login user e.g. "pgwatch2" to be used by the metrics gathering daemon to store metrics. See [here](https://docs.influxdata.com/influxdb/latest/administration/config/)
+    on configuring InfluxDB and [here](https://docs.influxdata.com/influxdb/latest/administration/authentication_and_authorization/)
+    for creating new users.
+
+    Default port for the API: 8086
 
 2. Create needed DB-s, roles and config tables for the pgwatch2 config and metrics DB-s and Grafana DB.
 
