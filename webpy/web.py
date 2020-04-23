@@ -157,11 +157,11 @@ class Root:
         try:
             active_dbnames = pgwatch2_influx.get_active_dbnames() if cmd_args.datastore == 'influx' else pgwatch2.get_all_dbnames()
         except (requests.exceptions.ConnectionError, influxdb.exceptions.InfluxDBClientError):
-            logging.exception('Influx ERROR')
-            messages.append('ERROR: Could not connect to InfluxDB')
+            logging.exception('ERROR getting DB listing from metrics DB: Could not connect to InfluxDB')
+            messages.append('ERROR getting DB listing from metrics DB: Could not connect to InfluxDB')
         except Exception as e:
-            logging.exception('ERROR')
-            messages.append('ERROR: ' + str(e))
+            logging.exception('ERROR getting DB listing from metrics DB')
+            messages.append('ERROR getting DB listing from metrics DB: ' + str(e))
 
         try:
             data = pgwatch2.get_all_monitored_dbs()
@@ -404,6 +404,8 @@ if __name__ == '__main__':
         logging.warning("config DB connection test failed: %s", err)
 
     if cmd_args.datastore == 'postgres':
+        if not cmd_args.pg_metric_store_conn_str:
+            raise Exception('--pg-metric-store-conn-str needed with --datastore=postgres')
         datadb.setConnectionStringForMetrics(cmd_args.pg_metric_store_conn_str)
         err = datadb.isMetricStoreConnectionOK()
         if err:
