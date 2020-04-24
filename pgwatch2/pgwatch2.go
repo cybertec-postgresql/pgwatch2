@@ -2907,15 +2907,15 @@ retry:
 			}
 		}
 		return connect_string, nil
-	}
-
-	log.Warningf("Database '%s' not found! Creating with %d retention and retention policy name \"%s\"...", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
-	isql := fmt.Sprintf("CREATE DATABASE %s WITH DURATION %dd REPLICATION 1 SHARD DURATION 1d NAME %s", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
-	res, err = queryDB(c, isql)
-	if err != nil {
-		log.Fatal(err)
-	} else {
-		log.Infof("Database 'pgwatch2' created on InfluxDB host %s:%s", InfluxHost, InfluxPort)
+	} else if !pgwatchDbExists {
+		log.Warningf("Database '%s' not found! Creating with %d retention and retention policy name \"%s\"...", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
+		isql := fmt.Sprintf("CREATE DATABASE %s WITH DURATION %dd REPLICATION 1 SHARD DURATION 1d NAME %s", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
+		res, err = queryDB(c, isql)
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			log.Infof("Database 'pgwatch2' created on InfluxDB host %s:%s", InfluxHost, InfluxPort)
+		}
 	}
 
 	return connect_string, nil
@@ -3794,7 +3794,7 @@ func main() {
 			go MetricsPersister(DATASTORE_GRAPHITE, persist_ch)
 		} else if opts.Datastore == "influx" {
 			retentionPeriod := InfluxDefaultRetentionPolicyDuration
-			if opts.InfluxRetentionDays > 0 {
+			if opts.InfluxRetentionDays >= 0 {
 				retentionPeriod = opts.InfluxRetentionDays
 			}
 			// check connection and store connection string
