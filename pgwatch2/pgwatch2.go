@@ -1896,7 +1896,7 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		prev_hash, ok := host_state["sproc_hashes"][obj_ident]
 		if ok { // we have existing state
 			if prev_hash != dr["md5"].(string) {
-				log.Warning("detected change in sproc:", dr["tag_sproc"], ", oid:", dr["tag_oid"])
+				log.Info("detected change in sproc:", dr["tag_sproc"], ", oid:", dr["tag_oid"])
 				dr["event"] = "alter"
 				detected_changes = append(detected_changes, dr)
 				host_state["sproc_hashes"][obj_ident] = dr["md5"].(string)
@@ -1904,7 +1904,7 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 			}
 		} else { // check for new / delete
 			if !first_run {
-				log.Warning("detected new sproc:", dr["tag_sproc"], ", oid:", dr["tag_oid"])
+				log.Info("detected new sproc:", dr["tag_sproc"], ", oid:", dr["tag_oid"])
 				dr["event"] = "create"
 				detected_changes = append(detected_changes, dr)
 				change_counts.Created += 1
@@ -1924,7 +1924,7 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 			_, ok := current_oid_map[sproc_ident]
 			if !ok {
 				splits := strings.Split(sproc_ident, ":")
-				log.Warning("detected delete of sproc:", splits[0], ", oid:", splits[1])
+				log.Info("detected delete of sproc:", splits[0], ", oid:", splits[1])
 				influx_entry := make(map[string]interface{})
 				influx_entry["event"] = "drop"
 				influx_entry["tag_sproc"] = splits[0]
@@ -1982,7 +1982,7 @@ func DetectTableChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		//log.Debug("inspecting table:", obj_ident, "hash:", prev_hash)
 		if ok { // we have existing state
 			if prev_hash != dr["md5"].(string) {
-				log.Warning("detected DDL change in table:", dr["tag_table"])
+				log.Info("detected DDL change in table:", dr["tag_table"])
 				dr["event"] = "alter"
 				detected_changes = append(detected_changes, dr)
 				host_state["table_hashes"][obj_ident] = dr["md5"].(string)
@@ -1990,7 +1990,7 @@ func DetectTableChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 			}
 		} else { // check for new / delete
 			if !first_run {
-				log.Warning("detected new table:", dr["tag_table"])
+				log.Info("detected new table:", dr["tag_table"])
 				dr["event"] = "create"
 				detected_changes = append(detected_changes, dr)
 				change_counts.Created += 1
@@ -2009,7 +2009,7 @@ func DetectTableChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		for table, _ := range host_state["table_hashes"] {
 			_, ok := current_table_map[table]
 			if !ok {
-				log.Warning("detected drop of table:", table)
+				log.Info("detected drop of table:", table)
 				influx_entry := make(map[string]interface{})
 				influx_entry["event"] = "drop"
 				influx_entry["tag_table"] = table
@@ -2066,7 +2066,7 @@ func DetectIndexChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		prev_hash, ok := host_state["index_hashes"][obj_ident]
 		if ok { // we have existing state
 			if prev_hash != (dr["md5"].(string) + dr["is_valid"].(string)) {
-				log.Warning("detected index change:", dr["tag_index"], ", table:", dr["table"])
+				log.Info("detected index change:", dr["tag_index"], ", table:", dr["table"])
 				dr["event"] = "alter"
 				detected_changes = append(detected_changes, dr)
 				host_state["index_hashes"][obj_ident] = dr["md5"].(string) + dr["is_valid"].(string)
@@ -2074,7 +2074,7 @@ func DetectIndexChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 			}
 		} else { // check for new / delete
 			if !first_run {
-				log.Warning("detected new index:", dr["tag_index"])
+				log.Info("detected new index:", dr["tag_index"])
 				dr["event"] = "create"
 				detected_changes = append(detected_changes, dr)
 				change_counts.Created += 1
@@ -2093,7 +2093,7 @@ func DetectIndexChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		for index_name, _ := range host_state["index_hashes"] {
 			_, ok := current_index_map[index_name]
 			if !ok {
-				log.Warning("detected drop of index_name:", index_name)
+				log.Info("detected drop of index_name:", index_name)
 				influx_entry := make(map[string]interface{})
 				influx_entry["event"] = "drop"
 				influx_entry["tag_index"] = index_name
@@ -2260,7 +2260,7 @@ func CheckForPGObjectChangesAndStore(dbUnique string, vme DBVersionMapEntry, sto
 	}
 	if message > "" {
 		message = "Detected changes for \"" + dbUnique + "\" [Created/Altered/Dropped]:" + message
-		log.Warning(message)
+		log.Info(message)
 		detected_changes_summary := make([](map[string]interface{}), 0)
 		influx_entry := make(map[string]interface{})
 		influx_entry["details"] = message
