@@ -2580,7 +2580,7 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 	failed_fetches := 0
 	metricNameForStorage := metricName
 
-	if opts.TestdataDays > 0 {
+	if opts.TestdataDays != 0 {
 		if metricName == SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS || metricName == SPECIAL_METRIC_CHANGE_EVENTS {
 			return
 		}
@@ -2660,12 +2660,16 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 				}
 			}
 
-			if opts.TestdataDays > 0 {
+			if opts.TestdataDays != 0 {
 				orig_msms := deepCopyMetricStoreMessages(metricStoreMessages)
 				log.Warningf("Generating %d days of data for [%s:%s]", opts.TestdataDays, dbUniqueName, metricName)
+				test_metrics_stored := 0
 				simulated_time := t1
 				end_time := t1.Add(time.Hour * time.Duration(opts.TestdataDays*24))
-				test_metrics_stored := 0
+
+				if opts.TestdataDays < 0 {
+					simulated_time, end_time = end_time, simulated_time
+				}
 
 				for simulated_time.Before(end_time) {
 					log.Debugf("Metric [%s], simulating time: %v", metricName, simulated_time)
@@ -2694,7 +2698,7 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 			}
 		}
 
-		if opts.TestdataDays > 0 { // covers errors & no data
+		if opts.TestdataDays != 0 { // covers errors & no data
 			testDataGenerationModeWG.Done()
 			return
 		}
@@ -3661,7 +3665,7 @@ func main() {
 		}
 		adHocMode = true
 	}
-	if opts.TestdataDays > 0 || opts.TestdataMultiplier > 0 {
+	if opts.TestdataDays != 0 || opts.TestdataMultiplier > 0 {
 		if len(opts.AdHocConnString) == 0 {
 			log.Fatal("Test mode requires --adhoc-conn-str!")
 		}
@@ -3856,7 +3860,7 @@ func main() {
 			}
 
 		} else if opts.Datastore == DATASTORE_PROMETHEUS {
-			if opts.TestdataDays > 0 || opts.TestdataMultiplier > 0 {
+			if opts.TestdataDays != 0 || opts.TestdataMultiplier > 0 {
 				log.Fatal("Test data generation mode cannot be used with Prometheus data store")
 			}
 
@@ -4125,7 +4129,7 @@ func main() {
 			continue
 		}
 
-		if opts.TestdataDays > 0 {
+		if opts.TestdataDays != 0 {
 			log.Info("Waiting for all metrics generation goroutines to stop ...")
 			time.Sleep(time.Second * 10) // with that time all different metric fetchers should have started
 			testDataGenerationModeWG.Wait()
