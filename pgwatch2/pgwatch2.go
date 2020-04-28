@@ -220,7 +220,6 @@ var metric_def_map_lock = sync.RWMutex{}
 var host_metric_interval_map = make(map[string]float64) // [db1_metric] = 30
 var db_pg_version_map = make(map[string]DBVersionMapEntry)
 var db_pg_version_map_lock = sync.RWMutex{}
-var InfluxDefaultRetentionPolicyDuration int64 = 30 // 30 days of monitoring data will be kept around. can be adjusted later on influx side if needed
 var monitored_db_cache map[string]MonitoredDatabase
 var monitored_db_cache_lock sync.RWMutex
 var monitored_db_conn_cache map[string]*sqlx.DB = make(map[string]*sqlx.DB)
@@ -3547,7 +3546,7 @@ type Options struct {
 	InfluxPassword2      string `long:"ipassword2" description:"Influx password II" default:"root" env:"PW2_IPASSWORD2"`
 	InfluxSSL2           string `long:"issl2" description:"Influx require SSL II" env:"PW2_ISSL2"`
 	InfluxSSLSkipVerify2 string `long:"issl-skip-verify2" description:"Skip Influx Cert validation i.e. allows self-signed certs" default:"true" env:"PW2_ISSL_SKIP_VERIFY2"`
-	InfluxRetentionDays  int64  `long:"iretentiondays" description:"Retention period in days. Set to 0 to use database defaults for an existing DB [default: 30]" env:"PW2_IRETENTIONDAYS"`
+	InfluxRetentionDays  int64  `long:"iretentiondays" description:"Retention period in days. Set to 0 to use database defaults for an existing DB [default: 30]" default:"30" env:"PW2_IRETENTIONDAYS"`
 	InfluxRetentionName  string `long:"iretentionname" description:"Retention policy name. [Default: pgwatch_def_ret]" default:"pgwatch_def_ret" env:"PW2_IRETENTIONNAME"`
 	GraphiteHost         string `long:"graphite-host" description:"Graphite host" env:"PW2_GRAPHITEHOST"`
 	GraphitePort         string `long:"graphite-port" description:"Graphite port" env:"PW2_GRAPHITEPORT"`
@@ -3797,13 +3796,9 @@ func main() {
 			log.Info("starting GraphitePersister...")
 			go MetricsPersister(DATASTORE_GRAPHITE, persist_ch)
 		} else if opts.Datastore == "influx" {
-			retentionPeriod := InfluxDefaultRetentionPolicyDuration
-			if opts.InfluxRetentionDays >= 0 {
-				retentionPeriod = opts.InfluxRetentionDays
-			}
 			// check connection and store connection string
 			conn_str, err := InitAndTestInfluxConnection("1", opts.InfluxHost, opts.InfluxPort, opts.InfluxDbname, opts.InfluxUser,
-				opts.InfluxPassword, opts.InfluxSSL, opts.InfluxSSLSkipVerify, retentionPeriod)
+				opts.InfluxPassword, opts.InfluxSSL, opts.InfluxSSLSkipVerify, opts.InfluxRetentionDays)
 			if err != nil {
 				log.Fatal("Could not initialize InfluxDB", err)
 			}
@@ -3813,7 +3808,7 @@ func main() {
 					log.Fatal("Invalid Influx II connect info")
 				}
 				conn_str, err = InitAndTestInfluxConnection("2", opts.InfluxHost2, opts.InfluxPort2, opts.InfluxDbname2, opts.InfluxUser2,
-					opts.InfluxPassword2, opts.InfluxSSL2, opts.InfluxSSLSkipVerify2, retentionPeriod)
+					opts.InfluxPassword2, opts.InfluxSSL2, opts.InfluxSSLSkipVerify2, opts.InfluxRetentionDays)
 				if err != nil {
 					log.Fatal("Could not initialize InfluxDB II", err)
 				}
