@@ -498,7 +498,7 @@
           "type": "hidden"
         },
         {
-          "alias": "IO time",
+          "alias": "CPU time",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
