@@ -3366,7 +3366,7 @@ $sql$
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
 values (
 'get_load_average',
-9.0,
+9.1,
 $sql$
 BEGIN;
 
@@ -4041,7 +4041,7 @@ $sql$,
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
 values (
 'get_stat_replication',
-9.0,
+9.2,
 $sql$
 
 CREATE OR REPLACE FUNCTION get_stat_replication() RETURNS SETOF pg_stat_replication AS
@@ -4249,7 +4249,7 @@ $sql$,
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
 values (
 'reco_add_index',
-9.0,
+9.1,
 $sql$
 /* assumes the pg_qualstats extension and superuser or select grants on pg_qualstats_indexes_ddl view */
 select
@@ -4271,7 +4271,7 @@ true
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
 values (
 'reco_default_public_schema',
-9.0,
+9.1,
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -4348,7 +4348,7 @@ true
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
 values (
 'reco_nested_views',
-9.0,
+9.1,
 $sql$
 WITH RECURSIVE views AS (
    -- get the directly depending views
@@ -4407,7 +4407,7 @@ true
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
 values (
 'reco_sprocs_wo_search_path',
-9.0,
+9.1,
 $sql$
 with q_sprocs as (
 select
@@ -4437,7 +4437,7 @@ true
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
 values (
 'reco_superusers',
-9.0,
+9.1,
 $sql$
 /* reco_* metrics have special handling - all results are stored actually under one 'recommendations' metric  and
  following text columns are expected:  reco_topic, object_name, recommendation, extra_info.
