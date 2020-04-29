@@ -2911,7 +2911,7 @@ retry:
 		}
 		return connect_string, nil
 	} else if !pgwatchDbExists {
-		log.Warningf("Database '%s' not found! Creating with %d retention and retention policy name \"%s\"...", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
+		log.Warningf("Database '%s' not found! Creating with %d days retention and retention policy name \"%s\"...", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
 		isql := fmt.Sprintf("CREATE DATABASE %s WITH DURATION %dd REPLICATION 1 SHARD DURATION 1d NAME %s", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
 		res, err = queryDB(c, isql)
 		if err != nil {
