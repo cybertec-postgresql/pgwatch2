@@ -26,8 +26,8 @@ function start_pg {
   container_info=$(docker inspect --type container "pg${ver}" &>/dev/null)
   if [ $? -ne 0 ]; then
     echo "starting PG $full_ver on port $port ..."
-    echo "docker run -d --name pg${ver} -v $volume:/var/lib/postgresql/data -p $port:5432 $POSTGRES_IMAGE_BASE:$full_ver"
-    docker run -d --name "pg${ver}" -v $volume:/var/lib/postgresql/data -p $port:5432 $POSTGRES_IMAGE_BASE:$full_ver &>/tmp/pg-docker-run-all.out
+    echo "docker run -d --name pg${ver} -v $volume:/var/lib/postgresql/data -p $port:5432 -e POSTGRES_HOST_AUTH_METHOD=trust $POSTGRES_IMAGE_BASE:$full_ver"
+    docker run -d --name "pg${ver}" -v $volume:/var/lib/postgresql/data -p $port:5432 -e POSTGRES_HOST_AUTH_METHOD=trust $POSTGRES_IMAGE_BASE:$full_ver &>/tmp/pg-docker-run-all.out
     if [ $? -ne 0 ]; then
       $(grep "is already in use" /tmp/pg-docker-run-all.out &>/dev/null)
       if [[ $? -eq 0 ]] ; then
@@ -41,7 +41,7 @@ function start_pg {
     docker start "pg${ver}"
   fi
 
-  sleep 5
+  sleep 10 # sometimes getting some weird Docker 'port used' problems without larger sleep...
 
   MASTER_VOL_PATH=$(docker volume inspect --format '{{ .Mountpoint }}' pg$ver)
   if [ $? -ne 0 ] ; then

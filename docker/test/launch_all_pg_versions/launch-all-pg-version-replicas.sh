@@ -146,8 +146,8 @@ function launch_replica_image {
 	echo "starting image pg${ver}-repl on port $repl_port ..."
   container_info=$(docker inspect --type container "pg${ver}-repl" &>/dev/null)
   if [ $? -ne 0 ]; then
-    echo "docker run -d --name pg${ver}-repl -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 $POSTGRES_IMAGE_BASE:$full_ver"
-    docker run -d --name "pg${ver}-repl" -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 ${POSTGRES_IMAGE_BASE}:${full_ver} &>/tmp/pg-docker-run-all.out
+    echo "docker run -d --name pg${ver}-repl -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 -e POSTGRES_HOST_AUTH_METHOD=trust $POSTGRES_IMAGE_BASE:$full_ver"
+    docker run -d --name "pg${ver}-repl" -v ${volume_name}:/var/lib/postgresql/data -p ${repl_port}:5432 -e POSTGRES_HOST_AUTH_METHOD=trust ${POSTGRES_IMAGE_BASE}:${full_ver} &>/tmp/pg-docker-run-all.out
     if [ $? -ne 0 ]; then
       $(grep "is already in use" /tmp/pg-docker-run-all.out &>/dev/null)
       if [[ $? -eq 0 ]] ; then
@@ -163,7 +163,7 @@ function launch_replica_image {
 	  docker start "pg${ver}-repl"
 	fi
 
-	sleep 5
+	sleep 10 # sometimes getting some weird Docker 'port used' problems without larger sleep...
 
     # unpause master
 	docker unpause pg$ver
