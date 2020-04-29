@@ -175,7 +175,7 @@ def get_helpers_from_filesystem(target_pgver):
             if target_pgver >= nv_float:
                 best_matching_pgver = nv
         if not best_matching_pgver:
-            logging.warning('could find suitable helper for %s target ver %s', h, target_pgver)
+            logging.warning('could not find suitable helper for %s target ver %s, skipping', h, target_pgver)
             continue
         # logging.warning('found suitable helper for %s target ver %s', h, best_matching_pgver)
         with open(os.path.join(h, str(best_matching_pgver), 'metric.sql'), 'r') as f:
