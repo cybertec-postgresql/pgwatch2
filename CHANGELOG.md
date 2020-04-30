@@ -11,6 +11,31 @@ or a specific version
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
 
+## v1.7.2 [2020-04-30]
+
+* Gatherer fix - allow using InfluxDB storage without a privileged user, not adjusting any retention policies if retention set to 0.
+* Gatherer feature - enable re-routing of metrics, thus slightly different metric definitions can be stored under one metric name.
+* Gatherer improvement - "ad-hoc" mode doesn't exit immediately if cannot connect to monitored DB on startup.
+* Gatherer improvement - stats port outputs now also counts for metrics reused from cache, datastore failures and average storage write times.
+* Gatherer improvement - reduce warnings on detected schema changes to INFO level.
+* Gatherer improvement - 'testdatadays' can now be also negative generating historic data.
+* New PG dashboard - 'Stat Statements Top (Visual)' based on pg_stat_statements data using new Grafana data links feature.
+* Dashboards - Top Tables made faster and added much faster version of Stat Statements Top that assumes no stats reset took place. PG only.
+* Dashboards - Recommendation dash (PG): new panel on too frequent checkpoint requests.
+* Dashboards - Index overview: don't consider PK indexes as "unused".
+* Metrics - new 'stat_statements_no_query_text' metric to hide query texts for "top SQL" statements in a convenient way.
+* Metrics - reduce precision for pg_stat_statements based and some others metrics as it took more space and made output harder to read.
+* Metrics - add 'logical_subscriptions' metric definition and include to the 'full' preset.
+* Web UI - metrics page contents fit better now onto the screen and textareas are resizeable in all directions.
+* Web UI - stats-summary page can now show a very high level summary of DB activities also from Postgres metric stores.
+* Documentation - many smaller README corrections on custom setup, Web UI configuration, Postgres metrics DB, metrics re-routing.
+* Documentation - add a sample regex to use log parsing functionality when using 'stderr' log destination instead of 'csvlog'.
+* Documentation - add a K8s template with pgwatch2 as sidecar in Prometheus mode.
+* Docker component update - Influx 1.8.0, Grafana 6.7.3, Go 1.14.2.
+* Docker - add scripts to build and launch all 'latest' images.
+
+NB! No config DB migrations are needed for this minor release if updating from v1.7.1.
+
 ## v1.7.1 [2020-03-13]
 
 * Gatherer fix - support for PgBouncer v1.12.0+. This latest release changed counter data types.
