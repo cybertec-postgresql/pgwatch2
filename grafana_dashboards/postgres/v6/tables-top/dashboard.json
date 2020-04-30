@@ -24,12 +24,12 @@
       "description": "NB! Most views here assume that there was no stats reset in the selected time range!",
       "fontSize": "100%",
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 24,
         "x": 0,
         "y": 0
       },
-      "id": 2,
+      "id": 12,
       "links": [],
       "pageSize": null,
       "scroll": true,
@@ -41,12 +41,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -63,6 +65,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -79,6 +82,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -99,6 +103,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -115,6 +120,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -152,7 +158,7 @@
           "policy": "default",
           "query": "select \"dbname\",   \"table_full_name\", top(\"total_relation_size_b\", $top ) as \"total_relation_size\", \"data_size\"  from (SELECT last(\"total_relation_size_b\") as \"total_relation_size_b\", last(\"table_size_b\") as \"data_size\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(3650d), dbname, table_full_name  fill(none))",
           "rawQuery": true,
-          "rawSql": "SELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0)) as data_size,\n  max((data->'seconds_since_last_vacuum')::int8) as last_vacuum,\n  max((data->'seconds_since_last_analyze')::int8) as last_analyze\nFROM\n  table_stats\nWHERE\n  time IN (select max(time) from table_stats where $__timeFilter(time) AND dbname in ($dbname) group by dbname)\n  AND dbname IN ($dbname)  -- idea: show only primaries?\nGROUP BY 1, 2\nORDER BY 3 DESC NULLS LAST\nLIMIT $top\n",
+          "rawSql": "select\n  x.*,\n  (data->'seconds_since_last_vacuum')::int8 as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nfrom (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0)) as data_size\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY 1, 2\nORDER BY 3 DESC NULLS LAST\nLIMIT $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true\n/*idea: show only primaries? */",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -194,7 +200,7 @@
         "x": 0,
         "y": 7
       },
-      "id": 3,
+      "id": 13,
       "links": [],
       "pageSize": null,
       "scroll": true,
@@ -206,12 +212,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -228,6 +236,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -244,6 +253,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -264,6 +274,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -280,6 +291,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -317,7 +329,7 @@
           "policy": "default",
           "query": "select \"dbname\",   \"table_full_name\", top(\"table_size\", $top ) as \"data_size\",  \"total_relation_size\"  from (SELECT last(\"total_relation_size_b\") as \"total_relation_size\", last(\"table_size_b\") as \"table_size\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY  dbname, table_full_name  fill(none))",
           "rawQuery": true,
-          "rawSql": "SELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0)) as data_size,\n  max((data->'seconds_since_last_vacuum')::int8) as last_vacuum,\n  max((data->'seconds_since_last_analyze')::int8) as last_analyze  \nFROM\n  table_stats\nWHERE\n  time IN (select max(time) from table_stats where $__timeFilter(time) AND dbname in ($dbname) group by dbname)\n  AND dbname IN ($dbname)  -- idea: show only primaries?\nGROUP BY 1, 2\nORDER BY 4 DESC NULLS LAST\nLIMIT $top\n",
+          "rawSql": "SELECT\n  x.*,\n  (data->'seconds_since_last_vacuum')::int8 as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0)) as data_size\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY 1, 2\nORDER BY 4 DESC NULLS LAST\nLIMIT $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and time BETWEEN '2020-04-28T19:33:58.235Z' AND '2020-04-29T20:33:58.235Z' order by time desc limit 1) y on true\n",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -371,12 +383,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -397,6 +411,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -413,6 +428,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -429,6 +445,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -445,6 +462,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -482,7 +500,7 @@
           "policy": "default",
           "query": "select dbname, table_full_name,  top(growth, $top)  as growth from (SELECT spread(\"total_relation_size_b\") as growth FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY dbname, table_full_name fill(none))",
           "rawQuery": true,
-          "rawSql": "SELECT\n  dbname,\n  table_full_name,\n  max(last_value) - max(first_value) as growth,\n  max(last_value) as total_relation_size,\n  max(last_vacuum) as last_vacuum,\n  max(last_analyze) as last_analyze\nFROM (\n  SELECT\n    dbname,\n    tag_data->>'table_full_name' as table_full_name,\n    first_value((data->'total_relation_size_b')::int8) over w,\n    last_value((data->'total_relation_size_b')::int8) over w,\n    last_value((data->'seconds_since_last_vacuum')::int8) over w as last_vacuum,\n    last_value((data->'seconds_since_last_analyze')::int8) over w as last_analyze\n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time)\n    AND dbname IN ($dbname)  -- idea: show only primaries?\n    WINDOW w AS (partition by dbname, tag_data->>'table_full_name' order by time rows BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)\n) x\nGROUP BY 1, 2\nORDER BY 3 DESC NULLS LAST\nLIMIT $top\n",
+          "rawSql": "SELECT\n  x.*,\n  (data->'seconds_since_last_vacuum')::int8 as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\n  SELECT\n    dbname,\n    tag_data->>'table_full_name' as table_full_name,\n    max((data->'total_relation_size_b')::int8) - min((data->'total_relation_size_b')::int8) as growth,\n    max((data->'total_relation_size_b')::int8) as total_relation_size\n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time)\n    AND dbname IN ($dbname)\n  GROUP BY 1, 2\n  ORDER BY growth DESC NULLS LAST\n  LIMIT $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true\n\n/*\n-- for fully correct but slow version:\nSELECT\n  dbname,\n  table_full_name,\n  max(last_value) - max(first_value) as growth,\n  max(last_value) as total_relation_size,\n  max(last_vacuum) as last_vacuum,\n  max(last_analyze) as last_analyze\nFROM (\n  SELECT\n    dbname,\n    tag_data->>'table_full_name' as table_full_name,\n    first_value((data->'total_relation_size_b')::int8) over w,\n    last_value((data->'total_relation_size_b')::int8) over w,\n    last_value((data->'seconds_since_last_vacuum')::int8) over w as last_vacuum,\n    last_value((data->'seconds_since_last_analyze')::int8) over w as last_analyze\n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time)\n    AND dbname IN ($dbname)\n    WINDOW w AS (partition by dbname, tag_data->>'table_full_name' order by time rows BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)\n) x\nGROUP BY 1, 2\nORDER BY 3 DESC NULLS LAST\nLIMIT $top\n*/",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -537,12 +555,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -550,7 +570,7 @@
             "rgba(50, 172, 45, 0.97)"
           ],
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 1,
+          "decimals": null,
           "mappingType": 1,
           "pattern": "seq_scan",
           "thresholds": [],
@@ -559,6 +579,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -575,6 +596,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -595,6 +617,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -611,6 +634,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -648,7 +672,7 @@
           "policy": "default",
           "query": "select \"dbname\", top(\"seq_scan\", $top) as \"seq_scan\",  \"table_full_name\", table_size from (select mean(\"seq_scan\") as \"seq_scan\", last(\"table_size\") as \"table_size\" from (SELECT non_negative_derivative(last(\"seq_scan\"), 1h) as \"seq_scan\", last(\"table_size_b\") as \"table_size\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter AND \"table_size_b\" > 10000000 GROUP BY time($__interval), dbname, table_full_name fill(none)) GROUP BY dbname, table_full_name fill(none))\n",
           "rawQuery": true,
-          "rawSql": "SELECT\n  *,\n  (select (data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0) from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as table_size,\n  (select (data->'seconds_since_last_vacuum')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_vacuum,\n  (select (data->'seconds_since_last_analyze')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'seq_scan')::int8) - min((data->'seq_scan')::int8) as seq_scan\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\n  AND (data->'total_relation_size_b')::int8 > 10000000\nGROUP BY\n  1, 2\nHAVING\n  max((data->'seq_scan')::int8) > min((data->'seq_scan')::int8)\nORDER BY\n  3 DESC\nLIMIT\n  $top\n) ts",
+          "rawSql": "SELECT\n  x.*,\n  (data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0) as table_size,\n  (data->'seconds_since_last_vacuum')::int8 as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'seq_scan')::int8) - min((data->'seq_scan')::int8) as seq_scan\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\n  AND (data->'total_relation_size_b')::int8 > 10000000\nGROUP BY\n  1, 2\nHAVING\n  max((data->'seq_scan')::int8) > min((data->'seq_scan')::int8)\nORDER BY\n  3 DESC\nLIMIT\n  $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and time BETWEEN '2020-04-28T19:33:58.235Z' AND '2020-04-29T20:33:58.235Z' order by time desc limit 1) y on true",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -693,7 +717,6 @@
       },
       "id": 6,
       "links": [],
-      "options": {},
       "pageSize": null,
       "scroll": true,
       "showHeader": true,
@@ -704,12 +727,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -730,6 +755,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -746,6 +772,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -762,6 +789,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -778,6 +806,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -815,7 +844,7 @@
           "policy": "default",
           "query": "select dbname, table_full_name, top(ins, $top) as \"ins\" from (select mean(ins) as \"ins\" from (SELECT non_negative_derivative(last(\"n_tup_ins\"), 1h) as \"ins\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h), dbname, table_full_name fill(0)) GROUP BY dbname, table_full_name)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  *,\n  (select (data->'total_relation_size_b')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as total_relation_size,  \n  (select (data->'seconds_since_last_vacuum')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_vacuum,\n  (select (data->'seconds_since_last_analyze')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_ins')::int8) - min((data->'n_tup_ins')::int8) as ins\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'n_tup_ins')::int8) > min((data->'n_tup_ins')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) ts",
+          "rawSql": "SELECT\n  x.*,\n  (data->'total_relation_size_b')::int8 as total_relation_size,\n  (data->'seconds_since_last_vacuum')::int8 as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_ins')::int8) - min((data->'n_tup_ins')::int8) as ins\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'n_tup_ins')::int8) > min((data->'n_tup_ins')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -870,12 +899,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -896,6 +927,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -912,6 +944,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -928,6 +961,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -944,6 +978,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -981,7 +1016,7 @@
           "policy": "default",
           "query": "select dbname, table_full_name, top(ins, $top) as \"upd\" from (select mean(ins) as \"ins\" from (SELECT non_negative_derivative(last(\"n_tup_upd\"), 1h) as \"ins\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h), dbname, table_full_name fill(0)) GROUP BY dbname, table_full_name)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  *,\n  (select (data->'total_relation_size_b')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as total_relation_size,  \n  (select (data->'seconds_since_last_vacuum')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_vacuum,\n  (select (data->'seconds_since_last_analyze')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_upd')::int8) - min((data->'n_tup_upd')::int8) as upd -- assumes no reset\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'n_tup_upd')::int8) > min((data->'n_tup_upd')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) ts",
+          "rawSql": "SELECT\n  x.*,\n  (data->'total_relation_size_b')::int8 as total_relation_size,  \n  (data->'seconds_since_last_vacuum')::int8  as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_upd')::int8) - min((data->'n_tup_upd')::int8) as upd -- assumes no reset\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'n_tup_upd')::int8) > min((data->'n_tup_upd')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -1036,12 +1071,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1062,6 +1099,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1078,6 +1116,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1094,6 +1133,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1110,6 +1150,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1147,7 +1188,7 @@
           "policy": "default",
           "query": "select dbname, table_full_name, top(ins, $top) as \"del\" from (select mean(ins) as \"ins\"  from (SELECT non_negative_derivative(last(\"n_tup_del\"), 1h) as \"ins\"  FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h), dbname, table_full_name fill(0)) GROUP BY dbname, table_full_name)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  *,\n  (select (data->'total_relation_size_b')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as total_relation_size,\n  (select (data->'seconds_since_last_vacuum')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_vacuum,\n  (select (data->'seconds_since_last_analyze')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_del')::int8) - min((data->'n_tup_del')::int8) as del\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'n_tup_del')::int8) > min((data->'n_tup_del')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) ts\n",
+          "rawSql": "SELECT\n  x.*,\n  (data->'total_relation_size_b')::int8 as total_relation_size,  \n  (data->'seconds_since_last_vacuum')::int8  as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'n_tup_del')::int8) - min((data->'n_tup_del')::int8) as del\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'n_tup_del')::int8) > min((data->'n_tup_del')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -1192,7 +1233,6 @@
       },
       "id": 11,
       "links": [],
-      "options": {},
       "pageSize": null,
       "scroll": true,
       "showHeader": true,
@@ -1203,12 +1243,14 @@
       "styles": [
         {
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1229,6 +1271,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1245,6 +1288,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1261,6 +1305,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1272,6 +1317,40 @@
           "thresholds": [],
           "type": "number",
           "unit": "bytes"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "data_size",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": null,
+          "mappingType": 1,
+          "pattern": "seq_scan",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
         }
       ],
       "targets": [
@@ -1298,7 +1377,7 @@
           "policy": "default",
           "query": "select dbname, table_full_name, top(ins, $top) as \"del\" from (select mean(ins) as \"ins\"  from (SELECT non_negative_derivative(last(\"n_tup_del\"), 1h) as \"ins\"  FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h), dbname, table_full_name fill(0)) GROUP BY dbname, table_full_name)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  *,\n  (select (data->'seconds_since_last_vacuum')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_vacuum,\n  (select (data->'seconds_since_last_analyze')::int8 from table_stats where dbname = ts.dbname and tag_data->>'table_full_name' = ts.table_full_name and $__timeFilter(time) order by time desc limit 1)  as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  8192 * (coalesce(max((data->'heap_blks_read')::int8) - min((data->'heap_blks_read')::int8), 0) + coalesce(max((data->'toast_blks_read')::int8) - min((data->'toast_blks_read')::int8), 0) + coalesce(max((data->'tidx_blks_read')::int8) - min((data->'tidx_blks_read')::int8), 0)) as blks_read\nFROM\n  table_io_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'heap_blks_read')::int8) > min((data->'heap_blks_read')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) ts\n",
+          "rawSql": "SELECT\n  x.*,\n  (data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0) as data_size,\n  (data->'seq_scan')::int8 - (select (data->'seq_scan')::int8 from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time limit 1) as seq_scan,\n  (data->'seconds_since_last_vacuum')::int8  as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  8192 * (coalesce(max((data->'heap_blks_read')::int8) - min((data->'heap_blks_read')::int8), 0) + coalesce(max((data->'toast_blks_read')::int8) - min((data->'toast_blks_read')::int8), 0) + coalesce(max((data->'tidx_blks_read')::int8) - min((data->'tidx_blks_read')::int8), 0)) as blks_read\nFROM\n  table_io_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'heap_blks_read')::int8) > min((data->'heap_blks_read')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true\n",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -1354,14 +1433,12 @@
     "list": [
       {
         "allValue": null,
-        "current": {
-          "text": "All",
-          "value": "$__all"
-        },
+        "current": null,
         "datasource": null,
         "definition": "",
         "hide": 0,
         "includeAll": true,
+        "index": -1,
         "label": null,
         "multi": true,
         "name": "dbname",
