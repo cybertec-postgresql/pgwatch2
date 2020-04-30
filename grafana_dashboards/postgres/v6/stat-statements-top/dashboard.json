@@ -472,150 +472,13 @@
     {
       "columns": [],
       "datasource": null,
-      "description": "total_time - blk_read_time -blk_write_time. Requires track_io_timing=on",
-      "fontSize": "100%",
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 21
-      },
-      "id": 9,
-      "links": [],
-      "options": {},
-      "pageSize": null,
-      "scroll": true,
-      "showHeader": true,
-      "sort": {
-        "col": 0,
-        "desc": true
-      },
-      "styles": [
-        {
-          "alias": "Time",
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "pattern": "Time",
-          "type": "hidden"
-        },
-        {
-          "alias": "CPU time",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "decimals": 1,
-          "pattern": "top",
-          "thresholds": [],
-          "type": "number",
-          "unit": "ms"
-        },
-        {
-          "alias": "Query ID",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "link": true,
-          "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
-          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
-          "pattern": "queryid",
-          "thresholds": [],
-          "type": "string",
-          "unit": "short"
-        },
-        {
-          "alias": "Query",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "link": false,
-          "linkTargetBlank": true,
-          "linkTooltip": "Use 'edit' mode to be able to copy the query text",
-          "linkUrl": "",
-          "pattern": "query",
-          "sanitize": true,
-          "thresholds": [],
-          "type": "string",
-          "unit": "short"
-        }
-      ],
-      "targets": [
-        {
-          "dsType": "influxdb",
-          "format": "table",
-          "group": [],
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "metricColumn": "none",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT top(\"spread\", \"queryid\", \"query\", $top) FROM (SELECT spread(\"blk_read_time\") + spread(\"blk_write_time\") AS spread FROM \"stat_statements\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) ) WHERE spread > 0",
-          "rawQuery": true,
-          "rawSql": "select\n  sum((tt - tt_lag) - (wt - wt_lag) - (rt - rt_lag))::int8 as top,\n  queryid,\n  (select users from stat_statements where $__timeFilter(time) and dbname = '$dbname' and tag_data->>'queryid' = queryid order by time desc limit 1) as \"Users\",  \n  case when length(query) > 200 then query::varchar(200) || '...' else query end as query\nfrom (\n  select\n    tag_data->>'queryid' as queryid, tag_data->>'query' as query, data->>'users' as users,\n    (data->>'total_time')::float8 as tt, lag((data->>'total_time')::float8) over w as tt_lag,    \n    (data->>'blk_read_time')::float8 as rt, lag((data->>'blk_read_time')::float8) over w as rt_lag,\n    (data->>'blk_write_time')::float8 as wt, lag((data->>'blk_write_time')::float8) over w as wt_lag,    \n    time\n  from stat_statements\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n    and case when '$hide_pgwatch_generated' = 'yes' then not tag_data->>'query' ~* E'\\\\(extract\\\\(\\\\$\\\\d+\\\\W*from\\\\W*now\\\\(\\\\)\\\\)\\\\W?\\\\*\\\\W*\\\\$\\\\d+\\\\).*::\\\\w+\\\\W+as\\\\W+epoch_ns\\\\W*,'\n        and not tag_data->>'query' ~* E'/\\\\*\\\\W*pgwatch2_generated\\\\W*\\\\*/'  else true end    \n  window w as (partition by tag_data->>'queryid' order by time)\n) x\nwhere tt > tt_lag\ngroup by 2, 3, 4\norder by 1 desc nulls last\nlimit $top\n\n",
-          "refId": "A",
-          "resultFormat": "table",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": [],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "title": "Top queries by CPU time",
-      "transform": "table",
-      "type": "table"
-    },
-    {
-      "columns": [],
-      "datasource": null,
       "description": "Does not include Shared Buffer activities. Same as 'By total runtime' if no direct IO was performed. Requires track_io_timing=on",
       "fontSize": "100%",
       "gridPos": {
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 21
       },
       "id": 8,
       "links": [],
@@ -752,7 +615,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 28
       },
       "id": 10,
       "links": [],
@@ -894,7 +757,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 35
       },
       "id": 4,
       "links": [],
