@@ -65,10 +65,10 @@ else
   su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-time/metric_store_part_time.sql" postgres
   su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-time/ensure_partition_metric_time.sql" postgres
 fi
-su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_load_average/9.0/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_load_average/9.1/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_statements/9.2/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_activity/9.2/metric.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_replication/9.0/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_replication/9.2/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_table_bloat_approx/9.5/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_table_bloat_approx_sql/9.0/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_wal_size/10/metric.sql" postgres
