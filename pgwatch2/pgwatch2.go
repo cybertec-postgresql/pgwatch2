@@ -3660,7 +3660,7 @@ func main() {
 			log.Fatal("Conflicting flags! --adhoc-conn-str and --user/--password cannot be both set")
 		}
 		if opts.AdHocUniqueName == "adhoc" {
-			log.Warning("In ad-hoc mode: using default unique name 'adhoc' for metrics storage. use --adhoc-unique-name to override.")
+			log.Warning("In ad-hoc mode: using default unique name 'adhoc' for metrics storage. use --adhoc-name to override.")
 		}
 		adHocMode = true
 	}
