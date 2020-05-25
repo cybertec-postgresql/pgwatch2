@@ -187,3 +187,26 @@
     wal: 60
     wal_size: 300
     wal_receiver: 120
+
+- name: aurora
+  description: AWS Aurora doesn't expose all Postgres functions and there's no WAL
+  metrics:
+    archiver: 60
+    backends: 60
+    bgwriter: 60
+    change_events: 300
+    db_stats_aurora: 60
+    db_size: 300
+    index_stats: 900
+    locks: 60
+    locks_mode: 60
+    replication: 120
+    replication_slots: 120
+    settings: 7200
+    sproc_stats: 180
+    stat_statements: 180
+    stat_statements_calls: 60
+    table_bloat_approx_summary_sql: 7200
+    table_io_stats: 600
+    table_stats: 300
+    wal_receiver: 120

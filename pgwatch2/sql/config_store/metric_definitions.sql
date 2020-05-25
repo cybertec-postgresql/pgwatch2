@@ -473,6 +473,41 @@ $sql$,
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'db_stats',
+10,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  numbackends,
+  xact_commit,
+  xact_rollback,
+  blks_read,
+  blks_hit,
+  tup_returned,
+  tup_fetched,
+  tup_inserted,
+  tup_updated,
+  tup_deleted,
+  conflicts,
+  temp_files,
+  temp_bytes,
+  deadlocks,
+  blk_read_time,
+  blk_write_time,
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
+  extract(epoch from (now() - pg_backup_start_time()))::int8 as backup_duration_s,
+  case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int,
+  system_identifier::text as tag_sys_id
+from
+  pg_stat_database, pg_control_system()
+where
+  datname = current_database();
+$sql$,
+'{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s", "backup_duration_s"]}'
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'db_stats',
 12,
 $sql$
 select
@@ -497,13 +532,81 @@ select
   extract(epoch from (now() - pg_backup_start_time()))::int8 as backup_duration_s,
   checksum_failures,
   extract(epoch from (now() - checksum_last_failure))::int8 as checksum_last_failure_s,
+  case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int,
+  system_identifier::text as tag_sys_id
+from
+  pg_stat_database, pg_control_system()
+where
+  datname = current_database();
+$sql$,
+'{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s", "backup_duration_s", "checksum_last_failure_s"]}'
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'db_stats_aurora',
+9.6,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  numbackends,
+  xact_commit,
+  xact_rollback,
+  blks_read,
+  blks_hit,
+  tup_returned,
+  tup_fetched,
+  tup_inserted,
+  tup_updated,
+  tup_deleted,
+  conflicts,
+  temp_files,
+  temp_bytes,
+  deadlocks,
+  blk_read_time,
+  blk_write_time,
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
   case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int
 from
   pg_stat_database
 where
   datname = current_database();
 $sql$,
-'{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s", "backup_duration_s", "checksum_last_failure_s"]}'
+'{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s"]}'
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'db_stats_aurora',
+10,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  numbackends,
+  xact_commit,
+  xact_rollback,
+  blks_read,
+  blks_hit,
+  tup_returned,
+  tup_fetched,
+  tup_inserted,
+  tup_updated,
+  tup_deleted,
+  conflicts,
+  temp_files,
+  temp_bytes,
+  deadlocks,
+  blk_read_time,
+  blk_write_time,
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
+  case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int,
+  system_identifier::text as tag_sys_id
+from
+  pg_stat_database, pg_control_system()
+where
+  datname = current_database();
+$sql$,
+'{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s"]}'
 );
 
 /* db_size */
@@ -4784,3 +4887,6 @@ from unnest(
 -- dynamic re-routing of metric names
 insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
     select 'stat_statements_no_query_text', '{"metric_storage_name": "stat_statements"}';
+
+insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
+    select 'db_stats_aurora', '{"metric_storage_name": "db_stats"}';
