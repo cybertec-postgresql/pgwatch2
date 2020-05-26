@@ -4567,6 +4567,32 @@ $sql$,
 true
 );
 
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
+values (
+'reco_disabled_triggers',
+9.0,
+$sql$
+/* "temporarily" disabled triggers might be forgotten about... */
+select
+    (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+    'disabled_triggers'::text as tag_reco_topic,
+    quote_ident(nspname)||'.'||quote_ident(relname) as tag_object_name,
+    'review usage of trigger and consider dropping it if not needed anymore'::text as recommendation,
+    ''::text as extra_info
+from
+    pg_trigger t
+    join
+    pg_class c on c.oid = t.tgrelid
+    join
+    pg_namespace n on n.oid = c.relnamespace
+where
+    tgenabled = 'D'
+;
+$sql$,
+'{"prometheus_all_gauge_columns": true}',
+true
+);
+
 
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
 values (
