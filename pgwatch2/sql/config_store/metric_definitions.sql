@@ -5363,18 +5363,24 @@ $sql$,
 /* Metric attributes */
 -- truncate pgwatch2.metric_attribute;
 
--- mark instance level metrics for metrics defined by pgwatch
+-- mark instance level metrics for metrics defined by pgwatch, enables stats caching / sharing for multi-DB instances
 insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
 select m, '{"is_instance_level": true}'
 from unnest(
    array['archiver', 'backup_age_pgbackrest', 'backup_age_walg', 'bgwriter', 'buffercache_by_db', 'buffercache_by_type',
   'cpu_load', 'psutil_cpu', 'psutil_disk', 'psutil_disk_io_total', 'psutil_mem', 'replication', 'replication_slots',
   'smart_health_per_disk', 'wal', 'wal_receiver', 'wal_size']
-) m;
+) m
+on conflict (ma_metric_name)
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"is_instance_level": true}';
 
 -- dynamic re-routing of metric names
 insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
-    select 'stat_statements_no_query_text', '{"metric_storage_name": "stat_statements"}';
+select 'stat_statements_no_query_text', '{"metric_storage_name": "stat_statements"}'
+on conflict (ma_metric_name)
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "stat_statements"}';
 
 insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
-    select 'db_stats_aurora', '{"metric_storage_name": "db_stats"}';
+select 'db_stats_aurora', '{"metric_storage_name": "db_stats"}'
+on conflict (ma_metric_name)
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "db_stats"}';
