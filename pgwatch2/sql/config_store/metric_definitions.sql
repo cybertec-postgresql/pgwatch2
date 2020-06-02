@@ -5372,15 +5372,15 @@ from unnest(
   'smart_health_per_disk', 'wal', 'wal_receiver', 'wal_size']
 ) m
 on conflict (ma_metric_name)
-do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"is_instance_level": true}';
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"is_instance_level": true}', ma_last_modified_on = now();
 
 -- dynamic re-routing of metric names
 insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
 select 'stat_statements_no_query_text', '{"metric_storage_name": "stat_statements"}'
 on conflict (ma_metric_name)
-do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "stat_statements"}';
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "stat_statements"}', ma_last_modified_on = now();
 
 insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
 select 'db_stats_aurora', '{"metric_storage_name": "db_stats"}'
 on conflict (ma_metric_name)
-do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "db_stats"}';
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "db_stats"}', ma_last_modified_on = now();
