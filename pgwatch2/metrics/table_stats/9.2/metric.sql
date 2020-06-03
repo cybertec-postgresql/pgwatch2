@@ -23,8 +23,8 @@ select
   vacuum_count,
   autovacuum_count,
   analyze_count,
-  autoanalyze_count
-  --age(relfrozenxid) as tx_freeze_age
+  autoanalyze_count,
+  age(relfrozenxid) as tx_freeze_age
 from
   pg_stat_user_tables ut
   join
