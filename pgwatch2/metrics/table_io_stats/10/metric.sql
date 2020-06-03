@@ -63,14 +63,14 @@ select * from (
         quote_ident(qr.root_relname) as tag_table_name,
         quote_ident(qr.root_schema) || '.' || quote_ident(qr.root_relname) as tag_table_full_name,
         1 as is_part_root,
-        sum(heap_blks_read),
-        sum(heap_blks_hit),
-        sum(idx_blks_read),
-        sum(idx_blks_hit),
-        sum(toast_blks_read),
-        sum(toast_blks_hit),
-        sum(tidx_blks_read),
-        sum(tidx_blks_hit)
+        sum(heap_blks_read)::int8,
+        sum(heap_blks_hit)::int8,
+        sum(idx_blks_read)::int8,
+        sum(idx_blks_hit)::int8,
+        sum(toast_blks_read)::int8,
+        sum(toast_blks_hit)::int8,
+        sum(tidx_blks_read)::int8,
+        sum(tidx_blks_hit)::int8
     from
         q_tstats ts
         join q_parts qp on qp.relid = ts.relid
