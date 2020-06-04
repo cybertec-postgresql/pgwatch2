@@ -865,7 +865,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 
 			rows_batched += 1
 
-			if PGSchemaType == "metric" || PGSchemaType == "metric-time" {
+			if PGSchemaType == "metric" || PGSchemaType == "metric-time" || PGSchemaType == "timescale" {
 				// set min/max timestamps to check/create partitions
 				bounds, ok := pg_part_bounds[msg.MetricName]
 				if !ok || (ok && epoch_time.Before(bounds.StartTime)) {
@@ -900,6 +900,8 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		err = EnsureMetricTime(pg_part_bounds, forceRecreatePGMetricPartitions)
 	} else if PGSchemaType == "metric-dbname-time" {
 		err = EnsureMetricDbnameTime(pg_part_bounds_dbname, forceRecreatePGMetricPartitions)
+	} else if PGSchemaType == "timescale" {
+		err = EnsureMetricTimescale(pg_part_bounds)
 	} else {
 		log.Fatal("should never happen...")
 	}
@@ -1137,7 +1139,7 @@ func CheckIfPGSchemaInitializedOrFail() string {
 		log.Fatal("no metric schema selected, no row in table 'storage_schema_type'. see the README from the 'pgwatch2/sql/metric_store' folder on choosing a schema")
 	}
 	pgSchemaType = ret[0]["schema_type"].(string)
-	if !(pgSchemaType == "metric" || pgSchemaType == "metric-time" || pgSchemaType == "metric-dbname-time" || pgSchemaType == "custom") {
+	if !(pgSchemaType == "metric" || pgSchemaType == "metric-time" || pgSchemaType == "metric-dbname-time" || pgSchemaType == "custom" || pgSchemaType == "timescale") {
 		log.Fatalf("Unknow Postgres schema type found from Metrics DB: %s", pgSchemaType)
 	}
 
@@ -1165,6 +1167,8 @@ func CheckIfPGSchemaInitializedOrFail() string {
 		partFuncSignature = "admin.ensure_partition_metric_time(text,timestamp with time zone,integer)"
 	} else if pgSchemaType == "metric-dbname-time" {
 		partFuncSignature = "admin.ensure_partition_metric_dbname_time(text,text,timestamp with time zone,integer)"
+	} else if pgSchemaType == "timescale" {
+		partFuncSignature = "admin.ensure_partition_timescale(text)"
 	}
 
 	if partFuncSignature != "" {
@@ -1298,11 +1302,31 @@ func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo, force bool) e
 	`
 	for metric, _ := range pg_part_bounds {
 
-		_, ok := partitionMapMetric[metric]
+		_, ok := partitionMapMetric[metric]	// sequential access currently so no lock needed
 		if !ok || force {
 			_, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric)
 			if err != nil {
 				log.Errorf("Failed to create partition on metric '%s': %v", metric, err)
+				return err
+			}
+			partitionMapMetric[metric] = ExistingPartitionInfo{}
+		}
+	}
+	return nil
+}
+
+func EnsureMetricTimescale(pg_part_bounds map[string]ExistingPartitionInfo) error {
+
+	sql_ensure := `
+	select * from admin.ensure_partition_timescale($1)
+	`
+	for metric, _ := range pg_part_bounds {
+
+		_, ok := partitionMapMetric[metric]
+		if !ok {
+			_, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric)
+			if err != nil {
+				log.Errorf("Failed to create a TimescaleDB table for metric '%s': %v", metric, err)
 				return err
 			}
 			partitionMapMetric[metric] = ExistingPartitionInfo{}
