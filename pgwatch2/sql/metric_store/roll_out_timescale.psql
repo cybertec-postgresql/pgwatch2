@@ -1,0 +1,10 @@
+begin;
+
+create extension if not exists timescaledb cascade;
+
+\i 00_schema_base.sql
+\i 01_old_metrics_cleanup_procedure.sql
+\i timescale/ensure_partition_timescale.sql
+\i timescale/metric_store_timescale.sql
+
+commit;

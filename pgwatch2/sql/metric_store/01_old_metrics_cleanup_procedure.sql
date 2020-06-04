@@ -77,7 +77,7 @@ DECLARE
 BEGIN
   SELECT schema_type INTO l_schema_type FROM admin.storage_schema_type;
   
-  IF l_schema_type IN ('metric', 'metric-time') THEN
+  IF l_schema_type IN ('metric', 'metric-time', 'timescale') THEN
     FOR r IN select * from admin.get_top_level_metric_tables()
     LOOP
       raise notice 'deleting data for %', r.table_name;
@@ -123,6 +123,7 @@ RETURNS int AS
 $SQL$
 DECLARE
   r record;
+  r2 record;
   i int := 0;
   l_schema_type text;
 BEGIN
@@ -165,6 +166,47 @@ BEGIN
       end if;
     END LOOP;
 
+  ELSIF l_schema_type = 'timescale' THEN
+
+        if dry_run then
+            FOR r in (select * from (
+                   select h.table_name                                  as                                                     metric,
+                             format('%I.%I', c.schema_name, c.table_name)  as                                                     chunk,
+                             pg_catalog.pg_get_constraintdef(co.oid, true) as                                                     limits,
+                             (regexp_match(
+                                     pg_catalog.pg_get_constraintdef(co.oid, true),
+                                     $$ < '(.*)'$$)
+                                 )[1]::timestamp < (current_date - '1day'::interval *
+                                                                   (case when h.table_name::text ~ 'realtime' then 0 else older_than_days end)) is_old
+                      from _timescaledb_catalog.hypertable h
+                               join _timescaledb_catalog.chunk c on c.hypertable_id = h.id
+                               join pg_catalog.pg_class cl on cl.relname = c.table_name
+                               join pg_catalog.pg_namespace n on n.nspname = c.schema_name
+                               join pg_catalog.pg_constraint co on co.conrelid = cl.oid
+                      where h.schema_name = 'public'
+            ) x where is_old)
+            LOOP
+                    raise notice 'would drop timescale old time sub-partition: %', r.chunk;
+            END LOOP;
+
+        else /* loop over all to level hypertbles */
+            FOR r IN (
+                select
+                  h.table_name as metric
+                from
+                  _timescaledb_catalog.hypertable h
+                where
+                  h.schema_name = 'public'
+            )
+            LOOP
+                raise notice 'dropping old timescale sub-partitions for hypertable: %', r.metric;
+                FOR r2 in (select drop_chunks(older_than_days * ' 1 day'::interval , r.metric))
+                LOOP
+                    i := i + 1;
+                END LOOP;
+            END LOOP;
+        end if;
+
   ELSE
     raise warning 'unsupported schema type: %', l_schema_type;
   END IF;
@@ -173,3 +215,5 @@ BEGIN
 END;
 $SQL$ LANGUAGE plpgsql;
 GRANT EXECUTE ON FUNCTION admin.drop_old_time_partitions(int,bool) TO pgwatch2;
+
+-- select admin.drop_old_time_partitions(5, false) as delete_count;

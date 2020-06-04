@@ -24,7 +24,7 @@ SET ROLE TO pgwatch2;
 create table admin.storage_schema_type (
   schema_type text not null,
   initialized_on timestamptz not null default now(),
-  check (schema_type in ('metric', 'metric-time', 'metric-dbname-time', 'custom'))
+  check (schema_type in ('metric', 'metric-time', 'metric-dbname-time', 'custom', 'timescale'))
 );
 
 comment on table admin.storage_schema_type is 'identifies storage schema for other pgwatch2 components';
@@ -69,7 +69,7 @@ BEGIN
           l_unlogged := 'UNLOGGED';
       END IF;
 
-      IF l_schema_type = 'metric' THEN
+      IF l_schema_type in ('metric', 'timescale') THEN
         EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES)$$, l_unlogged, metric, l_template_table);
       ELSIF l_schema_type = 'metric-time' THEN
         EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES) PARTITION BY RANGE (time)$$, l_unlogged, metric, l_template_table);
