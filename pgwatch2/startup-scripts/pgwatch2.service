@@ -1,5 +1,8 @@
 [Unit]
 Description=Pgwatch2 Gathering Daemon
+# if you're using the config DB approach and when on the same machine then it's a good idea to launch after Postgres
+#Wants=postgresql@12-main.service
+#After=postgresql@12-main.service
 
 [Service]
 User=pgwatch2
