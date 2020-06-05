@@ -39,7 +39,31 @@ create table admin.all_distinct_dbname_metrics (
   primary key (dbname, metric)
 );
 
+/* currently only used to store TimescaleDB chunk interval */
+create table admin.config
+(
+    key   text  not null primary key,
+    value text not null,
+    created_on timestamptz not null default now(),
+    last_modified_on timestamptz
+);
 
+-- to later change the value call the admin.change_timescale_chunk_interval(interval) function!
+-- as changing the row directly will only be effective for completely new tables (metrics).
+insert into admin.config select 'timescale_chunk_interval', '2 days';
+insert into admin.config select 'timescale_compress_interval', '1 day';
+
+create or replace function trg_config_modified() returns trigger
+as $$
+begin
+  new.last_modified_on = now();
+  return new;
+end;
+$$
+language plpgsql;
+
+create trigger config_modified before update on admin.config
+for each row execute function trg_config_modified();
 
 -- DROP FUNCTION IF EXISTS admin.ensure_dummy_metrics_table(text);
 -- select * from admin.ensure_dummy_metrics_table('wal');
@@ -76,7 +100,11 @@ BEGIN
       ELSIF l_schema_type = 'metric-dbname-time' THEN
         EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES) PARTITION BY LIST (dbname)$$, l_unlogged, metric, l_template_table);
       ELSIF l_schema_type = 'timescale' THEN
-        PERFORM admin.ensure_partition_timescale(metric);
+          IF metric ~ 'realtime' THEN
+              EXECUTE format($$CREATE TABLE public."%s" (LIKE %s INCLUDING INDEXES) PARTITION BY RANGE (time)$$, metric, l_template_table);
+          ELSE
+              PERFORM admin.ensure_partition_timescale(metric);
+          END IF;
       END IF;
 
       EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);

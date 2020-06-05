@@ -2,6 +2,7 @@
   NB! Make sure you're on PG v11+ and TimescaleDB v1.7+.
   A fresh separate DB, only for pgwatch2 metrics storage purposes, is assumed.
 */
+CREATE SCHEMA IF NOT EXISTS subpartitions AUTHORIZATION pgwatch2;
 
 CREATE EXTENSION IF NOT EXISTS btree_gin;
 

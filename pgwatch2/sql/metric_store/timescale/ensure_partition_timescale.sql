@@ -12,37 +12,37 @@ RETURNS void AS
 $SQL$
 DECLARE
     l_template_table text := 'admin.metrics_template';
-    l_unlogged text := '';
-    --l_compress_chunks_policy text := $$SELECT add_compress_chunks_policy('public.%s', INTERVAL '1 day');$$;
     l_compression_policy text := $$
       ALTER TABLE public.%I SET (
         timescaledb.compress,
         timescaledb.compress_segmentby = 'dbname'
       );
     $$;
+    l_chunk_time_interval interval;
+    l_compress_chunk_interval interval;
 BEGIN
-  
-  IF NOT EXISTS (SELECT *
-                   FROM _timescaledb_catalog.hypertable
-                  WHERE table_name = metric
-                    AND schema_name = 'public')
-  THEN
     --RAISE NOTICE 'creating partition % ...', metric;
-    IF metric ~ 'realtime' THEN
-        l_template_table := 'admin.metrics_template_realtime';
-        l_unlogged := 'UNLOGGED';
-    END IF;
-    EXECUTE format($$CREATE %s TABLE IF NOT EXISTS public.%I (LIKE %s INCLUDING INDEXES)$$, l_unlogged, metric, l_template_table);
-    EXECUTE format($$COMMENT ON TABLE public.%I IS 'pgwatch2-generated-metric-lvl'$$, metric);
-    PERFORM create_hypertable(format('public.%I', metric), 'time');
-    EXECUTE format(l_compression_policy, metric);
-    IF metric ~ 'realtime' THEN
-        PERFORM add_compress_chunks_policy(format('public.%I', metric), INTERVAL '1 day');
-    ELSE
-        PERFORM add_compress_chunks_policy(format('public.%I', metric), INTERVAL '1 hour');
-    END IF;
+    IF NOT EXISTS (SELECT *
+                       FROM _timescaledb_catalog.hypertable
+                      WHERE table_name = metric
+                        AND schema_name = 'public')
+      THEN
+        SELECT value::interval INTO l_chunk_time_interval FROM admin.config WHERE key = 'timescale_chunk_interval';
+        IF NOT FOUND THEN
+            l_chunk_time_interval := '2 days'; -- Timescale default is 7d
+        END IF;
 
-  END IF;
+        SELECT value::interval INTO l_compress_chunk_interval FROM admin.config WHERE key = 'timescale_compress_interval';
+        IF NOT FOUND THEN
+            l_compress_chunk_interval := '1 day';
+        END IF;
+
+        EXECUTE format($$CREATE TABLE IF NOT EXISTS public.%I (LIKE %s INCLUDING INDEXES)$$, metric, l_template_table);
+        EXECUTE format($$COMMENT ON TABLE public.%I IS 'pgwatch2-generated-metric-lvl'$$, metric);
+        PERFORM create_hypertable(format('public.%I', metric), 'time', chunk_time_interval => l_chunk_time_interval);
+        EXECUTE format(l_compression_policy, metric);
+        PERFORM add_compress_chunks_policy(format('public.%I', metric), l_compress_chunk_interval);
+    END IF;
 
 END;
 $SQL$ LANGUAGE plpgsql;

@@ -897,11 +897,11 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 	if PGSchemaType == "metric" {
 		err = EnsureMetric(pg_part_bounds, forceRecreatePGMetricPartitions)
 	} else if PGSchemaType == "metric-time" {
-		err = EnsureMetricTime(pg_part_bounds, forceRecreatePGMetricPartitions)
+		err = EnsureMetricTime(pg_part_bounds, forceRecreatePGMetricPartitions, false)
 	} else if PGSchemaType == "metric-dbname-time" {
 		err = EnsureMetricDbnameTime(pg_part_bounds_dbname, forceRecreatePGMetricPartitions)
 	} else if PGSchemaType == "timescale" {
-		err = EnsureMetricTimescale(pg_part_bounds)
+		err = EnsureMetricTimescale(pg_part_bounds, forceRecreatePGMetricPartitions)
 	} else {
 		log.Fatal("should never happen...")
 	}
@@ -1041,7 +1041,7 @@ func OldPostgresMetricsDeleter(metricAgeDaysThreshold int64, schemaType string) 
 				log.Infof("Deleted %d old metrics rows...", rows_deleted)
 				time.Sleep(time.Hour * 12)
 			}
-		} else if schemaType == "metric-time" || schemaType == "metric-dbname-time" {
+		} else if schemaType == "metric-time" || schemaType == "metric-dbname-time" || schemaType == "timescale" {
 			parts_dropped, err := DropOldTimePartitions(metricAgeDaysThreshold)
 
 			if err != nil {
@@ -1315,16 +1315,18 @@ func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo, force bool) e
 	return nil
 }
 
-func EnsureMetricTimescale(pg_part_bounds map[string]ExistingPartitionInfo) error {
-
+func EnsureMetricTimescale(pg_part_bounds map[string]ExistingPartitionInfo, force bool) error {
+	var err error
 	sql_ensure := `
 	select * from admin.ensure_partition_timescale($1)
 	`
 	for metric, _ := range pg_part_bounds {
-
+		if strings.HasSuffix(metric, "_realtime") {
+			continue
+		}
 		_, ok := partitionMapMetric[metric]
 		if !ok {
-			_, err := DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric)
+			_, err = DBExecRead(metricDb, METRICDB_IDENT, sql_ensure, metric)
 			if err != nil {
 				log.Errorf("Failed to create a TimescaleDB table for metric '%s': %v", metric, err)
 				return err
@@ -1332,17 +1334,24 @@ func EnsureMetricTimescale(pg_part_bounds map[string]ExistingPartitionInfo) erro
 			partitionMapMetric[metric] = ExistingPartitionInfo{}
 		}
 	}
+
+	err = EnsureMetricTime(pg_part_bounds, force, true)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo, force bool) error {
+func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo, force bool, realtime_only bool) error {
 	// TODO if less < 1d to part. end, precreate ?
 	sql_ensure := `
 	select * from admin.ensure_partition_metric_time($1, $2)
 	`
 
 	for metric, pb := range pg_part_bounds {
-
+		if realtime_only && !strings.HasSuffix(metric, "_realtime") {
+			continue
+		}
 		if pb.StartTime.IsZero() || pb.EndTime.IsZero() {
 			return errors.New(fmt.Sprintf("zero StartTime/EndTime in partitioning request: [%s:%v]", metric, pb))
 		}
