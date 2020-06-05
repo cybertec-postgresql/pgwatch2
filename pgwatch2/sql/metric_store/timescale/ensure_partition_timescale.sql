@@ -36,7 +36,11 @@ BEGIN
     EXECUTE format($$COMMENT ON TABLE public.%I IS 'pgwatch2-generated-metric-lvl'$$, metric);
     PERFORM create_hypertable(format('public.%I', metric), 'time');
     EXECUTE format(l_compression_policy, metric);
-    PERFORM add_compress_chunks_policy(format('public.%I', metric), INTERVAL '1 day');
+    IF metric ~ 'realtime' THEN
+        PERFORM add_compress_chunks_policy(format('public.%I', metric), INTERVAL '1 day');
+    ELSE
+        PERFORM add_compress_chunks_policy(format('public.%I', metric), INTERVAL '1 hour');
+    END IF;
 
   END IF;
 
