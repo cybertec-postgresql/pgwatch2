@@ -69,12 +69,14 @@ BEGIN
           l_unlogged := 'UNLOGGED';
       END IF;
 
-      IF l_schema_type in ('metric', 'timescale') THEN
+      IF l_schema_type = 'metric' THEN
         EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES)$$, l_unlogged, metric, l_template_table);
       ELSIF l_schema_type = 'metric-time' THEN
         EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES) PARTITION BY RANGE (time)$$, l_unlogged, metric, l_template_table);
       ELSIF l_schema_type = 'metric-dbname-time' THEN
         EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES) PARTITION BY LIST (dbname)$$, l_unlogged, metric, l_template_table);
+      ELSIF l_schema_type = 'timescale' THEN
+        PERFORM admin.ensure_partition_timescale(metric);
       END IF;
 
       EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);
