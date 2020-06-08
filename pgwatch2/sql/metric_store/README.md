@@ -23,6 +23,13 @@ NB! Currently minimum effective retention period with this model is 30 days. Thi
 
 For cases where the available presets are not satisfactory / applicable. All data inserted into "public.metrics" table and the user is responsible for re-routing with a trigger and possible partition management. In that case all table creations and data cleanup must be performed by the user.
 
+## timescale
+
+Assumes TimescaleDB (v1.7+) extension and "outsources" partition management for normal metrics to the extensions. Realtime
+metrics still use the "metric-time" schema as sadly Timescale doesn't support unlogged tables. Additionally one can also
+tune the chunking and historic data compression intervals - by default it's 2 days and 1 day. To change use the admin.timescale_change_chunk_interval() and admin.timescale_change_compress_interval()
+functions.
+
 # Data size considerations
 
 When you're planning to monitor lots of databases or with very low intervals, i.e. generating a lot of data, but not selecting

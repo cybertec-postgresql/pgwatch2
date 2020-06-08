@@ -88,8 +88,10 @@ For more background on the project motivations and design goals see the original
 * Min 1GB RAM required for Docker setup. Just the gatherer needs <50MB if metric strore is up, otherwise metrics are cached in RAM up to a limit of 10k data points.
 * 2 GBs of disk space should be enough for monitoring 1 DB for 1 month with InfluxDB. 1 month is also the default metrics
 retention policy for Influx running in Docker (configurable). Depending on the amount of schema objects - tables, indexes, stored
-procedures and especially on number of unique SQL-s, it could be also much more. With Postgres as metric store multiply it with ~5x.
-There's also a "test data generation" mode in the collector to exactly determine disk footprint - see PW2_TESTDATA_DAYS and
+procedures and especially on number of unique SQL-s, it could be also much more. With Postgres as metric store multiply it with ~5x,
+but if disk size reduction is wanted for PostgreSQL storage then the simplest way is to use the TimescaleDB extension - it has
+built-in compression and disk footprint is on the same level with InfluxDB, while retaining full SQL support.
+There's also a "test data generation" mode in the collector to exactly determine disk footprint for your use case - see PW2_TESTDATA_DAYS and
 PW2_TESTDATA_MULTIPLIER params for that (requires also "ad-hoc" mode params).
 * A low-spec (1 vCPU, 2 GB RAM) cloud machine can easily monitor 100 DBs in "exhaustive" settings (i.e. almost all metrics
 are monitored in 1-2min intervals) without breaking a sweat (<20% load). When a single node where the metrics collector daemon
@@ -143,6 +145,7 @@ If more complex scenarios/check conditions are required TICK stack and Kapacitor
   - [InfluxDB](https://www.influxdata.com/time-series-platform/influxdb/) Time Series Database for storing metrics.
   - [PostgreSQL](https://www.postgresql.org/) - world's most advanced Open Source RDBMS (based on JSONB, 9.4+ required).
   See "To use an existing Postgres DB for storing metrics" section below for setup details.
+    - NB! Also supported is the TimescaleDB time-series extension, enabling huge disk savings over standard Postgres.
   - [Graphite](https://graphiteapp.org/) (no custom_tags and request batching support)
   - JSON files (for testing / special use cases)
 * [Grafana](http://grafana.org/) for dashboarding (point-and-click, a set of predefined dashboards is provided)
