@@ -5,6 +5,7 @@ create extension if not exists timescaledb cascade;
 \i 00_schema_base.sql
 \i 01_old_metrics_cleanup_procedure.sql
 \i timescale/ensure_partition_timescale.sql
+\i timescale/change_compression_interval.sql
 \i timescale/metric_store_timescale.sql
 \i change_chunk_interval.sql
 \i metric-time/ensure_partition_metric_time.sql
