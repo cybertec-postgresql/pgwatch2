@@ -1,0 +1,9 @@
+---
+# override the SQL definition from $metric_name if below defined extensions and versions match
+# SQL config equivalent:
+# {"extension_version_based_overrides": [{"target_metric": "reco_add_index_ext_qualstats_2.0", "expected_extension_versions": [{"ext_name": "pg_qualstats", "ext_min_version": "2.0"}] }]}
+extension_version_based_overrides:
+  - target_metric: reco_add_index_ext_qualstats_2.0
+    expected_extension_versions:
+      - ext_min_version: 2.0
+        ext_name: pg_qualstats

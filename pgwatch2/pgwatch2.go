@@ -104,8 +104,10 @@ type MetricColumnAttrs struct {
 }
 
 type MetricAttrs struct {
-	IsInstanceLevel    		  bool `yaml:"is_instance_level"`
-	MetricStorageName  		  string `yaml:"metric_storage_name"`
+	IsInstanceLevel           bool                 `yaml:"is_instance_level"`
+	MetricStorageName         string               `yaml:"metric_storage_name"`
+	ExtensionVersionOverrides []ExtensionOverrides `yaml:"extension_version_based_overrides"`
+	IsPrivate                 bool                 `yaml:"is_private"`	// used only for extension overrides currently and ignored otherwise
 }
 
 type MetricVersionProperties struct {
@@ -164,11 +166,22 @@ type DBVersionMapEntry struct {
 	RealDbname       string
 	SystemIdentifier string
 	IsSuperuser      bool // if true and no helpers are installed, use superuser SQL version of metric if available
+	Extensions       map[string]decimal.Decimal
 }
 
 type ExistingPartitionInfo struct {
 	StartTime time.Time
 	EndTime   time.Time
+}
+
+type ExtensionOverrides struct {
+	TargetMetric              string          `yaml:"target_metric"`
+	ExpectedExtensionVersions []ExtensionInfo `yaml:"expected_extension_versions"`
+}
+
+type ExtensionInfo struct {
+	ExtName       string          `yaml:"ext_name"`
+	ExtMinVersion decimal.Decimal `yaml:"ext_min_version"`
 }
 
 const EPOCH_COLUMN_NAME string = "epoch_ns" // this column (epoch in nanoseconds) is expected in every metric query
@@ -220,6 +233,7 @@ var metric_def_map_lock = sync.RWMutex{}
 var host_metric_interval_map = make(map[string]float64) // [db1_metric] = 30
 var db_pg_version_map = make(map[string]DBVersionMapEntry)
 var db_pg_version_map_lock = sync.RWMutex{}
+var db_get_pg_version_map_lock = make(map[string]sync.RWMutex)	// synchronize initial PG version detection to 1 instance for each defined host
 var monitored_db_cache map[string]MonitoredDatabase
 var monitored_db_cache_lock sync.RWMutex
 var monitored_db_conn_cache map[string]*sqlx.DB = make(map[string]*sqlx.DB)
@@ -262,6 +276,7 @@ var instanceMetricCache = make(map[string]([]map[string]interface{}))     // [db
 var instanceMetricCacheLock = sync.RWMutex{}
 var instanceMetricCacheTimestamp = make(map[string]time.Time)     // [dbUnique+metric]last_fetch_time
 var instanceMetricCacheTimestampLock = sync.RWMutex{}
+var MinExtensionInfoAvailable, _ = decimal.NewFromString("9.1")
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER {
@@ -1763,6 +1778,7 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 
 func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapEntry, error) {
 	var ver DBVersionMapEntry
+	var verNew DBVersionMapEntry
 	var ok bool
 	sql := `
 		select /* pgwatch2_generated */ (regexp_matches(
@@ -1776,8 +1792,13 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				 join pg_catalog.pg_roles b on (m.roleid = b.oid)
         		 where m.member = r.oid and b.rolname = 'rds_superuser') as rolsuper
 			   from pg_roles r where rolname = session_user;`
+	sql_extensions := `select extname::text, (regexp_matches(extversion, $$\d+\.?\d+?$$))[1]::text as extversion from pg_extension order by 1;`
 
 	db_pg_version_map_lock.RLock()
+	get_ver_lock, ok := db_get_pg_version_map_lock[dbUnique]
+	if !ok {
+		log.Fatal("db_get_pg_version_map_lock uninitialized")
+	}
 	ver, ok = db_pg_version_map[dbUnique]
 	db_pg_version_map_lock.RUnlock()
 
@@ -1785,17 +1806,23 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 		//log.Debugf("using cached postgres version %s for %s", ver.Version.String(), dbUnique)
 		return ver, nil
 	} else {
-		log.Debug("determining DB version for", dbUnique)
+		get_ver_lock.Lock()	// limit to 1 concurrent version info fetch per DB
+		defer get_ver_lock.Unlock()
+		log.Debugf("[%s] determining DB version and recovery status...", dbUnique)
+
+		if verNew.Extensions == nil {
+			verNew.Extensions = make(map[string]decimal.Decimal)
+		}
 
 		if dbType == DBTYPE_BOUNCER {
 			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, "show version")
 			if err != nil {
-				return ver, err
+				return verNew, err
 			}
 			if len(data) == 0 {
 				// surprisingly pgbouncer 'show version' outputs in pre v1.12 is emitted as 'NOTICE' which cannot be accessed from Go lib/pg
-				ver.Version, _ = decimal.NewFromString("0")
-				ver.VersionStr = "0"
+				verNew.Version, _ = decimal.NewFromString("0")
+				verNew.VersionStr = "0"
 			} else {
 				rPBVer := regexp.MustCompile("\\d+\\.+\\d+")	// "PgBouncer 1.12.0"
 				matches := rPBVer.FindStringSubmatch(data[0]["version"].(string))
@@ -1803,8 +1830,8 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 					log.Errorf("Unexpected PgBouncer version input: %s", data[0]["version"].(string))
 					return ver, errors.New(fmt.Sprintf("Unexpected PgBouncer version input: %s", data[0]["version"].(string)))
 				}
-				ver.VersionStr = matches[0]
-				ver.Version, _ = decimal.NewFromString(matches[0])
+				verNew.VersionStr = matches[0]
+				verNew.Version, _ = decimal.NewFromString(matches[0])
 			}
 		} else {
 			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
@@ -1816,33 +1843,51 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 					return ver, nil
 				}
 			}
-			ver.Version, _ = decimal.NewFromString(data[0]["ver"].(string))
-			ver.VersionStr = data[0]["ver"].(string)
-			ver.IsInRecovery = data[0]["pg_is_in_recovery"].(bool)
-			ver.RealDbname = data[0]["current_database"].(string)
+			verNew.Version, _ = decimal.NewFromString(data[0]["ver"].(string))
+			verNew.VersionStr = data[0]["ver"].(string)
+			verNew.IsInRecovery = data[0]["pg_is_in_recovery"].(bool)
+			verNew.RealDbname = data[0]["current_database"].(string)
 
-			if ver.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) && addSystemIdentifier {
-				log.Debugf("determining system identifier version for %s (ver: %v)", dbUnique, ver.VersionStr)
+			if verNew.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) && addSystemIdentifier {
+				log.Debugf("[%s] determining system identifier version (pg ver: %v)", dbUnique, verNew.VersionStr)
 				data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_sysid)
 				if err == nil && len(data) > 0 {
-					ver.SystemIdentifier = data[0]["system_identifier"].(string)
+					verNew.SystemIdentifier = data[0]["system_identifier"].(string)
 				}
 			}
 
-			log.Debugf("determining if monitoring user is a superuser for %s", dbUnique)
+			log.Debugf("[%s] determining if monitoring user is a superuser...", dbUnique)
 			data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_su)
 			if err == nil {
-				ver.IsSuperuser = data[0]["rolsuper"].(bool)
+				verNew.IsSuperuser = data[0]["rolsuper"].(bool)
 			}
-			log.Debugf("superuser=%v", ver.IsSuperuser)
+			log.Debugf("[%s] superuser=%v", dbUnique, verNew.IsSuperuser)
+
+			if verNew.Version.GreaterThanOrEqual(MinExtensionInfoAvailable) {
+				//log.Debugf("[%s] determining installed extensions info...", dbUnique)
+				data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_extensions)
+				if err != nil {
+					log.Errorf("[%s] failed to determine installed extensions info: %v", dbUnique, err)
+				} else {
+					for _, dr := range data {
+						extver, err := decimal.NewFromString(dr["extversion"].(string))
+						if err != nil {
+							log.Errorf("[%s] failed to determine extension version info for extension %s: %v", dbUnique, dr["extname"], err)
+							continue
+						}
+						verNew.Extensions[dr["extname"].(string)] = extver
+					}
+					log.Debugf("[%s] installed extensions: %+v", dbUnique, verNew.Extensions)
+				}
+			}
 		}
 
-		ver.LastCheckedOn = time.Now()
+		verNew.LastCheckedOn = time.Now()
 		db_pg_version_map_lock.Lock()
-		db_pg_version_map[dbUnique] = ver
+		db_pg_version_map[dbUnique] = verNew
 		db_pg_version_map_lock.Unlock()
 	}
-	return ver, nil
+	return verNew, nil
 }
 
 // Need to define a sort interface as Go doesn't have support for Numeric/Decimal
@@ -1897,7 +1942,43 @@ func GetMetricVersionProperties(metric string, vme DBVersionMapEntry, metricDefM
 		return MetricVersionProperties{}, errors.New(fmt.Sprintf("no suitable SQL found for metric \"%s\", version \"%s\"", metric, vme.VersionStr))
 	}
 
-	return mdm[metric][best_ver], nil
+	ret, _ := mdm[metric][best_ver]
+
+	// check if SQL def. override defined for some specific extension version and replace the metric SQL-s if so
+	if ret.MetricAttrs.ExtensionVersionOverrides != nil && len(ret.MetricAttrs.ExtensionVersionOverrides) > 0 {
+		if vme.Extensions != nil && len(vme.Extensions) > 0 {
+			log.Debugf("[%s] extension version based override request found: %+v", metric, ret.MetricAttrs.ExtensionVersionOverrides)
+			for _, extOverride := range ret.MetricAttrs.ExtensionVersionOverrides {
+				var matching = true
+				for _, extVer := range extOverride.ExpectedExtensionVersions {	// "natural" sorting of metric definition assumed
+					installedExtVer, ok := vme.Extensions[extVer.ExtName]
+					if !ok || !installedExtVer.GreaterThanOrEqual(extVer.ExtMinVersion) {
+						matching = false
+					}
+				}
+				if matching {	// all defined extensions / versions (if many) need to match
+					_, ok := mdm[extOverride.TargetMetric]
+					if !ok  {
+						log.Warningf("extension based override metric not found for metric %s. substitute metric name: %s", metric, extOverride.TargetMetric)
+						continue
+					}
+					mvp, err := GetMetricVersionProperties(extOverride.TargetMetric, vme, mdm, )
+					if err != nil  {
+						log.Warningf("undefined extension based override for metric %s, substitute metric name: %s, version: %s not found", metric, extOverride.TargetMetric, best_ver)
+						continue
+					}
+					log.Debugf("overriding metric %s based on the extension_version_based_overrides metric attribute with %s:%s", metric, extOverride.TargetMetric, best_ver)
+					if mvp.Sql != "" {
+						ret.Sql = mvp.Sql
+					}
+					if mvp.SqlSU != "" {
+						ret.SqlSU = mvp.SqlSU
+					}
+				}
+			}
+		}
+	}
+	return ret, nil
 }
 
 func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
@@ -2219,7 +2300,7 @@ func GetAllRecoMetricsForVersion(vme DBVersionMapEntry) map[string]MetricVersion
 			mvp, err := GetMetricVersionProperties(m, vme, metric_def_map)
 			if err != nil {
 				log.Warningf("Could not get SQL definition for metric \"%s\", PG %s", m, vme.VersionStr)
-			} else {
+			} else if !mvp.MetricAttrs.IsPrivate {
 				mvp_map[m] = mvp
 			}
 		}
@@ -2233,7 +2314,7 @@ func CheckForRecommendationsAndStore(dbUnique string, vme DBVersionMapEntry) ([]
 	start_time_epoch_ns := time.Now().UnixNano()
 
 	reco_metrics := GetAllRecoMetricsForVersion(vme)
-	log.Infof("Processing %d recommendation metrics for \"%s\"", len(reco_metrics), dbUnique)
+	log.Debugf("Processing %d recommendation metrics for \"%s\"", len(reco_metrics), dbUnique)
 
 	for m, mvp := range reco_metrics {
 		data, err, duration := DBExecReadByDbUniqueName(dbUnique, m, useConnPooling, mvp.Sql)
@@ -2775,7 +2856,9 @@ func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decim
               left join
               pgwatch2.metric_attribute on (ma_metric_name = m_name)
 			where
-              m_is_active`
+              m_is_active
+		    order by
+		      1, 2`
 
 	log.Info("updating metrics definitons from ConfigDB...")
 	data, err := DBExecRead(configDb, CONFIGDB_IDENT, sql)
@@ -3125,7 +3208,7 @@ func ParseMetricAttrsFromString(jsonAttrs string) MetricAttrs {
 func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metrics_map := make(map[string]map[decimal.Decimal]MetricVersionProperties)
 	rIsDigitOrPunctuation := regexp.MustCompile("^[\\d\\.]+$")
-	metricNamePattern := "^[a-z0-9_]+$"
+	metricNamePattern := "^[a-z0-9_\\.]+$"
 	rMetricNameFilter := regexp.MustCompile(metricNamePattern)
 
 	log.Infof("Searching for metrics from path %s ...", folder)
@@ -4022,7 +4105,7 @@ func main() {
 			_, exists := db_conn_limiting_channel[db_unique]
 			db_conn_limiting_channel_lock.RUnlock()
 
-			if !exists { // initialize DB connection limiting structure
+			if !exists { // new host, initialize DB connection limiting structure
 				db_conn_limiting_channel_lock.Lock()
 				db_conn_limiting_channel[db_unique] = make(chan bool, MAX_PG_CONNECTIONS_PER_MONITORED_DB)
 				i := 0
@@ -4032,6 +4115,10 @@ func main() {
 					i++
 				}
 				db_conn_limiting_channel_lock.Unlock()
+
+				db_pg_version_map_lock.Lock()
+				db_get_pg_version_map_lock[db_unique] = sync.RWMutex{}
+				db_pg_version_map_lock.Unlock()
 			}
 
 			_, connectFailedSoFar := failedInitialConnectHosts[db_unique]

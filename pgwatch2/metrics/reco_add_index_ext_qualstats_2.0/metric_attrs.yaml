@@ -1,0 +1,4 @@
+---
+# not an "independent" regular metric, but only used for overriding SQL definitions of other metrics, "pointing" to the private ones
+# via the "extension_version_based_overrides.target_metric_name" attribute currently
+is_private: true

@@ -76,7 +76,7 @@ create table metric (
 
     unique (m_name, m_pg_version_from, m_standby_only),
     check (not (m_master_only and m_standby_only)),
-    check (m_name ~ '^[a-z0-9_]+$')
+    check (m_name ~ E'^[a-z0-9_\\.]+$')
 );
 
 create table metric_attribute (
@@ -84,7 +84,7 @@ create table metric_attribute (
     ma_last_modified_on     timestamptz not null default now(),
     ma_metric_attrs    jsonb not null,
 
-    check (ma_metric_name ~ '^[a-z0-9_]+$')
+    check (ma_metric_name ~ E'^[a-z0-9_\\.]+$')
 );
 
 

@@ -151,7 +151,7 @@
                 <form action="/metrics" method="post">
                     <td>
                         <input type="hidden" name="m_id" value="{{row['m_id']}}">
-                        <input type="text" size="18" name="m_name" value="{{row['m_name']|e}}" title="Metric name. Lowercase alphanumerics and underscores allowed." pattern="[a-z0-9_]+">
+                        <input type="text" size="18" name="m_name" value="{{row['m_name']|e}}" title="Metric name. Lowercase alphanumerics and underscores allowed." pattern="[a-z0-9_\.]+">
                     </td>
                     <td><input type="text" size="3" name="m_pg_version_from" value="{{row['m_pg_version_from']}}" title="Version from"></td>
                     <td><textarea name="m_sql" cols="35" title="SQL for metric">{{row['m_sql']}}</textarea></td>
@@ -171,7 +171,7 @@
             {% endfor %}
             <tr>
                 <form action="/metrics" method="post">
-                    <td><input type="text" size="18" name="m_name" value="" title="Metric name. Lowercase alphanumerics and underscores allowed." pattern="[a-z0-9_]+"></td>
+                    <td><input type="text" size="18" name="m_name" value="" title="Metric name. Lowercase alphanumerics and underscores allowed." pattern="[a-z0-9_\.]+"></td>
                     <td><input type="text" size="3" name="m_pg_version_from" value="9.0" title="Version from"></td>
                     <td><textarea name="m_sql" cols="35" title="SQL for metric">SELECT (extract(epoch from now()) * 1e9)::int8 as epoch_ns, ...</textarea></td>
                     <td><textarea name="m_sql_su" cols="35" title="Privileged (superuser or pg_monitor grant) SQL for metric"></textarea></td>
