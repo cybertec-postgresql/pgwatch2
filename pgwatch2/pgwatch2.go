@@ -82,6 +82,13 @@ type HostConfigAttrs struct {
 	KeyFile              string `yaml:"key_file"`
 	LogsGlobPath         string `yaml:"logs_glob_path"`    // default $data_directory / $log_directory / *.csvlog
     LogsMatchRegex       string `yaml:"logs_match_regex"`  // default is for CSVLOG format. needs to capture following named groups: log_time, user_name, database_name and error_severity
+    PerMetricDisabledTimes  []HostConfigPerMetricDisabledTimes `yaml:"per_metric_disabled_intervals"`
+}
+
+type HostConfigPerMetricDisabledTimes struct { // metric gathering override per host / metric / time
+	Metrics				[]string `yaml:"metrics"`
+	DisabledTimes       []string `yaml:"disabled_times"`
+	DisabledDays        string   `yaml:"disabled_days"`
 }
 
 type PatroniClusterMember struct {
@@ -108,6 +115,8 @@ type MetricAttrs struct {
 	MetricStorageName         string               `yaml:"metric_storage_name"`
 	ExtensionVersionOverrides []ExtensionOverrides `yaml:"extension_version_based_overrides"`
 	IsPrivate                 bool                 `yaml:"is_private"`	// used only for extension overrides currently and ignored otherwise
+	DisabledDays              string               `yaml:"disabled_days"`	// Cron style, 0 = Sunday. Ranges allowed: 0,2-4
+	DisableTimes              []string             `yaml:"disabled_times"`	// "11:00-13:00"
 }
 
 type MetricVersionProperties struct {
@@ -2690,8 +2699,10 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 	host_state := make(map[string]map[string]string)
 	var last_uptime_s int64 = -1 // used for "server restarted" event detection
 	var last_error_notification_time time.Time
+	var vme DBVersionMapEntry
 	failed_fetches := 0
 	metricNameForStorage := metricName
+	lastDBVersionFetchTime := time.Unix(0, 0)	// check DB ver. ev. 5 min
 
 	if opts.TestdataDays != 0 {
 		if metricName == SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS || metricName == SPECIAL_METRIC_CHANGE_EVENTS {
@@ -2728,94 +2739,104 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 	}
 
 	for {
-
-		t1 := time.Now()
-		metricStoreMessages, err := FetchMetrics(
-			MetricFetchMessage{DBUniqueName: dbUniqueName, DBUniqueNameOrig: dbUniqueNameOrig, MetricName: metricName, DBType: dbType, Interval: time.Second*time.Duration(interval)},
-			host_state,
-			store_ch,
-			"")
-		t2 := time.Now()
-
-		if t2.Sub(t1) > (time.Second * time.Duration(interval)) {
-			log.Warningf("Total fetching time of %vs bigger than %vs interval for [%s:%s]", t2.Sub(t1).Truncate(time.Millisecond*100).Seconds(), interval, dbUniqueName, metricName)
+		if lastDBVersionFetchTime.Add(time.Minute*time.Duration(5)).Before(time.Now()) {
+			vme, _ = DBGetPGVersion(dbUniqueName, dbType, false)	// in case of errors just ignore metric "disabled" time ranges
+			lastDBVersionFetchTime = time.Now()
 		}
 
-		if err != nil {
-			failed_fetches += 1
-			// complain only 1x per 10min per host/metric...
-			if last_error_notification_time.IsZero() || last_error_notification_time.Add(time.Second*time.Duration(600)).Before(time.Now()) {
-				log.Errorf("Failed to fetch metric data for [%s:%s]: %v", dbUniqueName, metricName, err)
-				if failed_fetches > 1 {
-					log.Errorf("Total failed fetches for [%s:%s]: %d", dbUniqueName, metricName, failed_fetches)
-				}
-				last_error_notification_time = time.Now()
-			}
-		} else if metricStoreMessages != nil && len(metricStoreMessages[0].Data) > 0 {
+		metricCurrentlyDisabled := IsMetricCurrentlyDisabledForHost(metricName, vme, dbUniqueName)
+		if metricCurrentlyDisabled && opts.TestdataDays == 0 {
+			log.Debugf("[%s][%s] Ignoring fetch as metric disabled for current time range", dbUniqueName, metricName)
+		} else {
 
-			// pick up "server restarted" events here to avoid doing extra selects from CheckForPGObjectChangesAndStore code
-			if metricName == "db_stats" {
-				postmaster_uptime_s, ok := (metricStoreMessages[0].Data)[0]["postmaster_uptime_s"]
-				if ok {
-					if last_uptime_s != -1 {
-						if postmaster_uptime_s.(int64) < last_uptime_s { // restart (or possibly also failover when host is routed) happened
-							message := "Server restart (or failover) of \"" + dbUniqueName + "\""
-							log.Warning(message)
-							detected_changes_summary := make([](map[string]interface{}), 0)
-							entry := map[string]interface{}{"details": message, "epoch_ns": (metricStoreMessages[0].Data)[0]["epoch_ns"]}
-							detected_changes_summary = append(detected_changes_summary, entry)
-							metricStoreMessages = append(metricStoreMessages,
-								MetricStoreMessage{DBUniqueName: dbUniqueName, DBType: dbType,
-									MetricName: "object_changes", Data: detected_changes_summary, CustomTags: metricStoreMessages[0].CustomTags})
-						}
-					}
-					last_uptime_s = postmaster_uptime_s.(int64)
-				}
+			t1 := time.Now()
+			metricStoreMessages, err := FetchMetrics(
+				MetricFetchMessage{DBUniqueName: dbUniqueName, DBUniqueNameOrig: dbUniqueNameOrig, MetricName: metricName, DBType: dbType, Interval: time.Second*time.Duration(interval)},
+				host_state,
+				store_ch,
+				"")
+			t2 := time.Now()
+
+			if t2.Sub(t1) > (time.Second * time.Duration(interval)) {
+				log.Warningf("Total fetching time of %vs bigger than %vs interval for [%s:%s]", t2.Sub(t1).Truncate(time.Millisecond*100).Seconds(), interval, dbUniqueName, metricName)
 			}
 
-			if opts.TestdataDays != 0 {
-				orig_msms := deepCopyMetricStoreMessages(metricStoreMessages)
-				log.Warningf("Generating %d days of data for [%s:%s]", opts.TestdataDays, dbUniqueName, metricName)
-				test_metrics_stored := 0
-				simulated_time := t1
-				end_time := t1.Add(time.Hour * time.Duration(opts.TestdataDays*24))
-
-				if opts.TestdataDays < 0 {
-					simulated_time, end_time = end_time, simulated_time
-				}
-
-				for simulated_time.Before(end_time) {
-					log.Debugf("Metric [%s], simulating time: %v", metricName, simulated_time)
-					for host_nr := 1; host_nr <= opts.TestdataMultiplier; host_nr++ {
-						fake_dbname := fmt.Sprintf("%s-%d", dbUniqueName, host_nr)
-						msgs_copy_tmp := deepCopyMetricStoreMessages(orig_msms)
-
-						for i := 0; i < len(msgs_copy_tmp[0].Data); i++ {
-							(msgs_copy_tmp[0].Data)[i][EPOCH_COLUMN_NAME] = (simulated_time.UnixNano() + int64(1000*i))
-						}
-						msgs_copy_tmp[0].DBUniqueName = fake_dbname
-						//log.Debugf("fake data for [%s:%s]: %v", metricName, fake_dbname, msgs_copy_tmp[0].Data)
-						StoreMetrics(msgs_copy_tmp, store_ch)
-						test_metrics_stored += len(msgs_copy_tmp[0].Data)
+			if err != nil {
+				failed_fetches += 1
+				// complain only 1x per 10min per host/metric...
+				if last_error_notification_time.IsZero() || last_error_notification_time.Add(time.Second*time.Duration(600)).Before(time.Now()) {
+					log.Errorf("Failed to fetch metric data for [%s:%s]: %v", dbUniqueName, metricName, err)
+					if failed_fetches > 1 {
+						log.Errorf("Total failed fetches for [%s:%s]: %d", dbUniqueName, metricName, failed_fetches)
 					}
-					time.Sleep(time.Duration(opts.TestdataMultiplier * 10000000)) // 10ms * multiplier (in nanosec).
-					// would generate more metrics than persister can write and eat up RAM
-					simulated_time = simulated_time.Add(time.Second * time.Duration(interval))
+					last_error_notification_time = time.Now()
 				}
-				log.Warningf("exiting MetricGathererLoop for [%s], %d total data points generated for %d hosts",
-					metricName, test_metrics_stored, opts.TestdataMultiplier)
+			} else if metricStoreMessages != nil && len(metricStoreMessages[0].Data) > 0 {
+
+				// pick up "server restarted" events here to avoid doing extra selects from CheckForPGObjectChangesAndStore code
+				if metricName == "db_stats" {
+					postmaster_uptime_s, ok := (metricStoreMessages[0].Data)[0]["postmaster_uptime_s"]
+					if ok {
+						if last_uptime_s != -1 {
+							if postmaster_uptime_s.(int64) < last_uptime_s { // restart (or possibly also failover when host is routed) happened
+								message := "Server restart (or failover) of \"" + dbUniqueName + "\""
+								log.Warning(message)
+								detected_changes_summary := make([](map[string]interface{}), 0)
+								entry := map[string]interface{}{"details": message, "epoch_ns": (metricStoreMessages[0].Data)[0]["epoch_ns"]}
+								detected_changes_summary = append(detected_changes_summary, entry)
+								metricStoreMessages = append(metricStoreMessages,
+									MetricStoreMessage{DBUniqueName: dbUniqueName, DBType: dbType,
+										MetricName: "object_changes", Data: detected_changes_summary, CustomTags: metricStoreMessages[0].CustomTags})
+							}
+						}
+						last_uptime_s = postmaster_uptime_s.(int64)
+					}
+				}
+
+				if opts.TestdataDays != 0 {
+					orig_msms := deepCopyMetricStoreMessages(metricStoreMessages)
+					log.Warningf("Generating %d days of data for [%s:%s]", opts.TestdataDays, dbUniqueName, metricName)
+					test_metrics_stored := 0
+					simulated_time := t1
+					end_time := t1.Add(time.Hour * time.Duration(opts.TestdataDays*24))
+
+					if opts.TestdataDays < 0 {
+						simulated_time, end_time = end_time, simulated_time
+					}
+
+					for simulated_time.Before(end_time) {
+						log.Debugf("Metric [%s], simulating time: %v", metricName, simulated_time)
+						for host_nr := 1; host_nr <= opts.TestdataMultiplier; host_nr++ {
+							fake_dbname := fmt.Sprintf("%s-%d", dbUniqueName, host_nr)
+							msgs_copy_tmp := deepCopyMetricStoreMessages(orig_msms)
+
+							for i := 0; i < len(msgs_copy_tmp[0].Data); i++ {
+								(msgs_copy_tmp[0].Data)[i][EPOCH_COLUMN_NAME] = (simulated_time.UnixNano() + int64(1000*i))
+							}
+							msgs_copy_tmp[0].DBUniqueName = fake_dbname
+							//log.Debugf("fake data for [%s:%s]: %v", metricName, fake_dbname, msgs_copy_tmp[0].Data)
+							StoreMetrics(msgs_copy_tmp, store_ch)
+							test_metrics_stored += len(msgs_copy_tmp[0].Data)
+						}
+						time.Sleep(time.Duration(opts.TestdataMultiplier * 10000000)) // 10ms * multiplier (in nanosec).
+						// would generate more metrics than persister can write and eat up RAM
+						simulated_time = simulated_time.Add(time.Second * time.Duration(interval))
+					}
+					log.Warningf("exiting MetricGathererLoop for [%s], %d total data points generated for %d hosts",
+						metricName, test_metrics_stored, opts.TestdataMultiplier)
+					testDataGenerationModeWG.Done()
+					return
+				} else {
+					StoreMetrics(metricStoreMessages, store_ch)
+				}
+			}
+
+			if opts.TestdataDays != 0 { // covers errors & no data
 				testDataGenerationModeWG.Done()
 				return
-			} else {
-				StoreMetrics(metricStoreMessages, store_ch)
 			}
-		}
 
-		if opts.TestdataDays != 0 { // covers errors & no data
-			testDataGenerationModeWG.Done()
-			return
 		}
-
 		select {
 		case msg := <-control_ch:
 			log.Debug("got control msg", dbUniqueName, metricName, msg)
@@ -2836,6 +2857,160 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 		}
 
 	}
+}
+
+func IsStringInSlice(target string, slice []string) bool {
+	for _, s := range slice {
+		if target == s {
+			return true
+		}
+	}
+	return false
+}
+
+func IsMetricCurrentlyDisabledForHost(metricName string, vme DBVersionMapEntry, dbUniqueName string) bool {
+	mvp, err := GetMetricVersionProperties(metricName, vme, nil)
+	if err != nil {
+		log.Warningf("[%s][%s] Ignoring any possible time based gathering restrictions, could not get metric details", dbUniqueName, metricName)
+		return false
+	}
+
+	md, err := GetMonitoredDatabaseByUniqueName(dbUniqueName)	// TODO caching?
+	if err != nil {
+		log.Warningf("[%s][%s] Ignoring any possible time based gathering restrictions, could not get DB details", dbUniqueName, metricName)
+		return false
+	}
+
+	if md.HostConfig.PerMetricDisabledTimes == nil  && mvp.MetricAttrs.DisabledDays == "" && len(mvp.MetricAttrs.DisableTimes) == 0 {
+		//log.Debugf("[%s][%s] No time based gathering restrictions defined", dbUniqueName, metricName)
+		return false
+	}
+
+	metricHasOverrides := false
+	if md.HostConfig.PerMetricDisabledTimes != nil {
+		for _, hcdt := range md.HostConfig.PerMetricDisabledTimes {
+			if IsStringInSlice(metricName, hcdt.Metrics) && (hcdt.DisabledDays != "" || len(hcdt.DisabledTimes) > 0) {
+				metricHasOverrides = true
+				break
+			}
+		}
+		if !metricHasOverrides && mvp.MetricAttrs.DisabledDays == "" && len(mvp.MetricAttrs.DisableTimes) == 0 {
+			//log.Debugf("[%s][%s] No time based gathering restrictions defined", dbUniqueName, metricName)
+			return false
+		}
+	}
+
+	return IsInDisabledTimeDayRange(time.Now(), mvp.MetricAttrs.DisabledDays, mvp.MetricAttrs.DisableTimes, md.HostConfig.PerMetricDisabledTimes, metricName, dbUniqueName)
+}
+
+// days: 0 = Sun, ranges allowed
+func IsInDaySpan(locTime time.Time, days, metric, dbUnique string) bool {
+	//log.Debug("IsInDaySpan", locTime, days, metric, dbUnique)
+	if days == "" {
+		return false
+	}
+	curDayInt := int(locTime.Weekday())
+	daysMap := DaysStringToIntMap(days)
+	//log.Debugf("curDayInt %v, daysMap %+v", curDayInt, daysMap)
+	_, ok := daysMap[curDayInt]
+	return ok
+}
+
+func DaysStringToIntMap(days string) map[int]bool {	// TODO validate with some regex when reading in configs, have dbname info then
+	ret := make(map[int]bool)
+	for _, s := range strings.Split(days, ",") {
+		if strings.Contains(s, "-") {
+			dayRange := strings.Split(s, "-")
+			if len(dayRange) != 2 {
+				log.Warningf("Ignoring invalid day range specification: %s", s)
+				continue
+			}
+			startDay, err := strconv.Atoi(dayRange[0])
+			endDay, err2 := strconv.Atoi(dayRange[1])
+			if err != nil || err2 != nil {
+				log.Warningf("Ignoring invalid day range specification: %s", s)
+				continue
+			}
+			for i := startDay; i <= endDay && i >= 0 && i <= 7; i++ {
+				ret[i] = true
+			}
+
+		} else {
+			day, err := strconv.Atoi(s)
+			if err != nil {
+				log.Warningf("Ignoring invalid day range specification: %s", days)
+				continue
+			}
+			ret[day] = true
+		}
+	}
+	if _, ok := ret[7]; ok {	// Cron allows eiter 0 or 7 for Sunday
+		ret[0] = true
+	}
+	return ret
+}
+
+func IsInTimeSpan(checkTime time.Time, timeRange, metric, dbUnique string) bool {
+	splits := strings.Split(timeRange, "-")
+	if len(splits) != 2 {
+		log.Warningf("[%s][%s] invalid time range: %s", dbUnique, metric, timeRange)
+		return false
+	}
+	layout := "15:04"	// TODO add time zone support
+	check, _ := time.Parse(layout, strconv.Itoa(checkTime.Hour())+":"+strconv.Itoa(checkTime.Minute()))
+    t1, err :=  time.Parse(layout, splits[0])
+    t2, err2 :=  time.Parse(layout, splits[1])
+    if err != nil || err2 != nil {
+		log.Warningf("[%s][%s] Ignoring invalid disabled time range: %s", dbUnique, metric, timeRange)
+		return false
+    }
+    if t1.After(t2) {
+		t2 = t2.AddDate(0, 0, 1)
+    }
+
+    return check.Before(t2) && check.After(t1)
+}
+
+func IsInDisabledTimeDayRange(localTime time.Time, metricAttrsDisabledDays string, metricAttrsDisabledTimes []string, hostConfigPerMetricDisabledTimes []HostConfigPerMetricDisabledTimes, metric, dbUnique string) bool {
+	hostConfigMetricMatch := false
+	if hostConfigPerMetricDisabledTimes != nil {	// host config takes precedence when both specified
+		for _, hcdi := range hostConfigPerMetricDisabledTimes {
+			dayMatchFound := false
+			timeMatchFound := false
+			if IsStringInSlice(metric, hcdi.Metrics) {
+				hostConfigMetricMatch = true
+				if !dayMatchFound && hcdi.DisabledDays != "" && IsInDaySpan(localTime, hcdi.DisabledDays, metric, dbUnique) {
+					dayMatchFound = true
+				}
+				for _, dt := range hcdi.DisabledTimes {
+					if IsInTimeSpan(localTime, dt, metric, dbUnique) {
+						timeMatchFound = true
+						break
+					}
+				}
+			}
+			if hostConfigMetricMatch && (timeMatchFound || len(hcdi.DisabledTimes) == 0) && (dayMatchFound || hcdi.DisabledDays == "") {
+				return true
+			}
+		}
+	}
+
+	if !hostConfigMetricMatch && (metricAttrsDisabledDays != "" || len(metricAttrsDisabledTimes) > 0) {
+		dayMatchFound := IsInDaySpan(localTime, metricAttrsDisabledDays, metric, dbUnique)
+		timeMatchFound := false
+		for _, timeRange := range metricAttrsDisabledTimes {
+			if IsInTimeSpan(localTime, timeRange, metric, dbUnique) {
+				timeMatchFound = true
+				//log.Debugf("[%s][%s] MetricAttrs ignored time match: %+v", dbUnique, metric, timeRange)
+				break
+			}
+		}
+		if (timeMatchFound || len(metricAttrsDisabledTimes) == 0) && (dayMatchFound || metricAttrsDisabledDays == "") {
+			return true
+		}
+	}
+
+	return false
 }
 
 func UpdateMetricDefinitionMap(newMetrics map[string]map[decimal.Decimal]MetricVersionProperties) {
