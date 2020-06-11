@@ -174,7 +174,10 @@ and basically doesn't have to be used at all. One can make use of the gathered m
 
 ### To use an existing InfluxDB installation
 
-Set the following env variables: PW2_IHOST, PW2_IPORT, PW2_IDATABASE, PW2_IUSER, PW2_IPASSWORD, PW2_ISSL (optional)
+Set the following env variables: PW2_IHOST, PW2_IPORT, PW2_IDATABASE, PW2_IUSER, PW2_IPASSWORD, PW2_ISSL (optional).
+
+NB! Note that if wanting to use SSL with self-signed certificates on InfluxDB side then some extra steps describe [here](https://github.com/cybertec-postgresql/pgwatch2/issues/162)
+are needed.
 
 ### To use an existing Graphite installation
 
