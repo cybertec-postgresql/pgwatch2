@@ -1995,7 +1995,7 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 	var first_run bool
 	var change_counts ChangeDetectionResults
 
-	log.Debug("checking for sproc changes...")
+	log.Debugf("[%s][%s] checking for sproc changes...", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS)
 	if _, ok := host_state["sproc_hashes"]; !ok {
 		first_run = true
 		host_state["sproc_hashes"] = make(map[string]string)
@@ -2065,10 +2065,11 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 			delete(host_state["sproc_hashes"], deleted_sproc)
 		}
 	}
+	log.Debugf("[%s][%s] detected %d sproc changes", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, len(detected_changes))
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
 		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "sproc_changes", Data: detected_changes, CustomTags: md.CustomTags}}
-	} else if opts.Datastore == DATASTORE_POSTGRES {
+	} else if opts.Datastore == DATASTORE_POSTGRES && first_run {
 		EnsureMetricDummy("sproc_changes")
 	}
 
@@ -2079,8 +2080,8 @@ func DetectTableChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 	detected_changes := make([](map[string]interface{}), 0)
 	var first_run bool
 	var change_counts ChangeDetectionResults
-
-	log.Debug("checking for table changes...")
+	
+	log.Debugf("[%s][%s] checking for table changes...", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS)
 	if _, ok := host_state["table_hashes"]; !ok {
 		first_run = true
 		host_state["table_hashes"] = make(map[string]string)
@@ -2150,10 +2151,11 @@ func DetectTableChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		}
 	}
 
+	log.Debugf("[%s][%s] detected %d table changes", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, len(detected_changes))
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
 		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "table_changes", Data: detected_changes, CustomTags: md.CustomTags}}
-	} else if opts.Datastore == DATASTORE_POSTGRES {
+	} else if opts.Datastore == DATASTORE_POSTGRES && first_run {
 		EnsureMetricDummy("table_changes")
 	}
 
@@ -2165,7 +2167,7 @@ func DetectIndexChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 	var first_run bool
 	var change_counts ChangeDetectionResults
 
-	log.Debug("checking for index changes...")
+	log.Debugf("[%s][%s] checking for index changes...", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS)
 	if _, ok := host_state["index_hashes"]; !ok {
 		first_run = true
 		host_state["index_hashes"] = make(map[string]string)
@@ -2233,11 +2235,88 @@ func DetectIndexChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 			delete(host_state["index_hashes"], deleted_index)
 		}
 	}
+	log.Debugf("[%s][%s] detected %d index changes", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, len(detected_changes))
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
 		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "index_changes", Data: detected_changes, CustomTags: md.CustomTags}}
-	} else if opts.Datastore == DATASTORE_POSTGRES {
+	} else if opts.Datastore == DATASTORE_POSTGRES && first_run {
 		EnsureMetricDummy("index_changes")
+	}
+
+	return change_counts
+}
+
+func DetectPrivilegeChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<- []MetricStoreMessage, host_state map[string]map[string]string) ChangeDetectionResults {
+	detected_changes := make([](map[string]interface{}), 0)
+	var first_run bool
+	var change_counts ChangeDetectionResults
+
+	// TODO also track superusers added / removed and group belongings
+
+	log.Debugf("[%s][%s] checking object privilege changes...", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS)
+	if _, ok := host_state["object_privileges"]; !ok {
+		first_run = true
+		host_state["object_privileges"] = make(map[string]string)
+	}
+
+	mvp, err := GetMetricVersionProperties("privilege_changes", vme, nil)
+	if err != nil || mvp.Sql == "" {
+		log.Warningf("[%s][%s] could not get SQL for 'privilege_changes'. cannot detect privilege changes", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS)
+		return change_counts
+	}
+
+	// returns rows of: object_type, tag_role, tag_object, privilege_type
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "privilege_changes", useConnPooling, mvp.Sql)
+	if err != nil {
+		log.Error("[%s][%s] failed to fetch object privileges info: %v", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, err)
+		return change_counts
+	}
+
+	current_state := make(map[string]bool)
+	for _, dr := range data {
+		obj_ident := fmt.Sprintf("%s#:#%s#:#%s#:#%s", dr["object_type"], dr["tag_role"], dr["tag_object"], dr["privilege_type"])
+		if first_run {
+			host_state["object_privileges"][obj_ident] = ""
+		} else {
+			_, ok := host_state["object_privileges"][obj_ident]
+			if !ok {
+				log.Infof("[%s][%s] detected new object privileges: role=%s, object_type=%s, object=%s, privilege_type=%s",
+					dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, dr["tag_role"], dr["object_type"], dr["tag_object"], dr["privilege_type"])
+				dr["event"] = "GRANT"
+				detected_changes = append(detected_changes, dr)
+				change_counts.Created += 1
+				host_state["object_privileges"][obj_ident] = ""
+			}
+			current_state[obj_ident] = true
+		}
+	}
+	// check revokes - exists in old state only
+	if !first_run && len(current_state) > 0 {
+		for obj_prev_run, _ := range host_state["object_privileges"] {
+			if _, ok := current_state[obj_prev_run]; !ok {
+				splits := strings.Split(obj_prev_run, "#:#")
+				log.Infof("[%s][%s] detected removed object privileges: role=%s, object_type=%s, object=%s, privilege_type=%s",
+					dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, splits[1], splits[0], splits[2], splits[3])
+				revoke_entry := make(map[string]interface{})
+				revoke_entry["object_type"] = splits[0]
+				revoke_entry["tag_role"] = splits[1]
+				revoke_entry["tag_object"] = splits[2]
+				revoke_entry["privilege_type"] = splits[3]
+				revoke_entry["event"] = "REVOKE"
+				detected_changes = append(detected_changes, revoke_entry)
+				change_counts.Dropped += 1
+				delete(host_state["object_privileges"], obj_prev_run)
+			}
+		}
+	}
+
+	if opts.Datastore == DATASTORE_POSTGRES && first_run {
+		EnsureMetricDummy("privilege_changes")
+	}
+	log.Debugf("[%s][%s] detected %d object privilege changes...", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, len(detected_changes))
+	if len(detected_changes) > 0 {
+		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "privilege_changes", Data: detected_changes, CustomTags: md.CustomTags}}
 	}
 
 	return change_counts
@@ -2248,7 +2327,7 @@ func DetectConfigurationChanges(dbUnique string, vme DBVersionMapEntry, storage_
 	var first_run bool
 	var change_counts ChangeDetectionResults
 
-	log.Debug("checking for pg_settings changes...")
+	log.Debugf("[%s][%s] checking for configuration changes...", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS)
 	if _, ok := host_state["configuration_hashes"]; !ok {
 		first_run = true
 		host_state["configuration_hashes"] = make(map[string]string)
@@ -2289,6 +2368,7 @@ func DetectConfigurationChanges(dbUnique string, vme DBVersionMapEntry, storage_
 		}
 	}
 
+	log.Debugf("[%s][%s] detected %d configuration changes", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, len(detected_changes))
 	if len(detected_changes) > 0 {
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
 		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, MetricName: "configuration_changes", Data: detected_changes, CustomTags: md.CustomTags}}
@@ -2365,6 +2445,12 @@ func CheckForPGObjectChangesAndStore(dbUnique string, vme DBVersionMapEntry, sto
 	table_counts := DetectTableChanges(dbUnique, vme, storage_ch, host_state)
 	index_counts := DetectIndexChanges(dbUnique, vme, storage_ch, host_state)
 	conf_counts := DetectConfigurationChanges(dbUnique, vme, storage_ch, host_state)
+	priv_change_counts := DetectPrivilegeChanges(dbUnique, vme, storage_ch, host_state)
+	first_run := len(host_state) == 0
+
+	if opts.Datastore == DATASTORE_POSTGRES && first_run{
+		EnsureMetricDummy("object_changes")
+	}
 
 	// need to send info on all object changes as one message as Grafana applies "last wins" for annotations with similar timestamp
 	message := ""
@@ -2380,6 +2466,10 @@ func CheckForPGObjectChangesAndStore(dbUnique string, vme DBVersionMapEntry, sto
 	if conf_counts.Altered > 0 || conf_counts.Created > 0 {
 		message += fmt.Sprintf(" configuration %d/%d/%d", conf_counts.Created, conf_counts.Altered, conf_counts.Dropped)
 	}
+	if priv_change_counts.Dropped > 0 || priv_change_counts.Created > 0 {
+		message += fmt.Sprintf(" privileges %d/%d/%d", priv_change_counts.Created, priv_change_counts.Altered, priv_change_counts.Dropped)
+	}
+
 	if message > "" {
 		message = "Detected changes for \"" + dbUnique + "\" [Created/Altered/Dropped]:" + message
 		log.Info(message)
@@ -2389,9 +2479,7 @@ func CheckForPGObjectChangesAndStore(dbUnique string, vme DBVersionMapEntry, sto
 		influx_entry["epoch_ns"] = time.Now().UnixNano()
 		detected_changes_summary = append(detected_changes_summary, influx_entry)
 		md, _ := GetMonitoredDatabaseByUniqueName(dbUnique)
-		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, DBType: DBTYPE_PG, MetricName: "object_changes", Data: detected_changes_summary, CustomTags: md.CustomTags}}
-	} else if opts.Datastore == DATASTORE_POSTGRES {
-		EnsureMetricDummy("object_changes")
+		storage_ch <- []MetricStoreMessage{MetricStoreMessage{DBUniqueName: dbUnique, DBType: md.DBType, MetricName: "object_changes", Data: detected_changes_summary, CustomTags: md.CustomTags}}
 	}
 }
 
@@ -2479,7 +2567,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 		sql = mvp.SqlSU
 		retryWithSuperuserSQL = false
 	}
-	if sql == "" && ! (msg.MetricName == "change_events" || msg.MetricName == RECO_METRIC_NAME) {
+	if sql == "" && ! (msg.MetricName == SPECIAL_METRIC_CHANGE_EVENTS || msg.MetricName == RECO_METRIC_NAME) {
 		// let's ignore dummy SQL-s
 		log.Debugf("[%s:%s] Ignoring fetch message - got an empty/dummy SQL string", msg.DBUniqueName, msg.MetricName)
 		return nil, nil
@@ -2490,7 +2578,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 		return nil, nil
 	}
 
-	if msg.MetricName == "change_events" && context != CONTEXT_PROMETHEUS_SCRAPE { // special handling, multiple queries + stateful
+	if msg.MetricName == SPECIAL_METRIC_CHANGE_EVENTS && context != CONTEXT_PROMETHEUS_SCRAPE { // special handling, multiple queries + stateful
 		CheckForPGObjectChangesAndStore(msg.DBUniqueName, vme, storage_ch, host_state) // TODO no host_state for Prometheus currently
 	} else if msg.MetricName == RECO_METRIC_NAME && context != CONTEXT_PROMETHEUS_SCRAPE {
 		data, err, duration = CheckForRecommendationsAndStore(msg.DBUniqueName, vme)
