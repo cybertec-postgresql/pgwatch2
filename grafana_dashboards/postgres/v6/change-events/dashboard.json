@@ -37,6 +37,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 1,
       "description": "If there are no vertical red stripes then no changes were detected for that time period",
       "fill": 1,
@@ -232,6 +233,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "filterNull": false,
       "fontSize": "100%",
       "gridPos": {
@@ -292,7 +294,7 @@
           "metricColumn": "none",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time::text,\n  data->>'event' as event,\n  tag_data->>'table' as table\nFROM\n  table_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY\n  time",
+          "rawSql": "SELECT\n  (date_trunc('minute', time))::text as time,\n  data->>'event' as event,\n  tag_data->>'table' as table\nFROM\n  table_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY\n  time",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -326,6 +328,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "filterNull": false,
       "fontSize": "100%",
       "gridPos": {
@@ -386,7 +389,7 @@
           "metricColumn": "none",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time::text,\n  data->>'event' as event,\n  tag_data->>'index' as index,\n  data->>'table' as table\nFROM\n  index_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY\n  time",
+          "rawSql": "SELECT\n  (date_trunc('minute', time))::text as time,\n  data->>'event' as event,\n  tag_data->>'index' as index,\n  data->>'table' as table\nFROM\n  index_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nORDER BY\n  time",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -420,6 +423,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "filterNull": false,
       "fontSize": "100%",
       "gridPos": {
@@ -513,6 +517,7 @@
     },
     {
       "columns": [],
+      "datasource": null,
       "description": "postgresql.conf settings changes",
       "filterNull": false,
       "fontSize": "100%",
@@ -607,12 +612,225 @@
     },
     {
       "columns": [],
+      "datasource": "pw2_mt",
+      "description": "Instance level",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "filterNull": false,
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      },
+      "id": 8,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        },
+        {
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "dsType": null,
+          "format": "table",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "policy": "default",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  (date_trunc('minute', time))::text as time,\n  tag_data->>'role' as role,\n  data->>'event' as event,  \n  data->>'privilege_type' as privilege_type\nFROM\n  privilege_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\n  AND (data->>'privilege_type' = 'LOGIN'\n    OR data->>'privilege_type' = 'SUPERUSER') \nORDER BY\n  time, tag_data->>'role', data->>'privilege_type'",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Login and superuser role changes",
+      "transform": "table",
+      "type": "table-old"
+    },
+    {
+      "columns": [],
+      "datasource": "pw2_mt",
+      "description": "Per database",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "filterNull": false,
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "id": 9,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        },
+        {
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "dsType": null,
+          "format": "table",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "policy": "default",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  (date_trunc('minute', time))::text as time,\n  tag_data->>'role' as role,\n  data->>'event' as event,  \n  data->>'privilege_type' as privilege_type,\n  tag_data->>'object' as object\nFROM\n  privilege_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\n  AND data->>'privilege_type' != 'LOGIN'\n  AND data->>'privilege_type' != 'SUPERUSER'\nORDER BY\n  time, tag_data->>'role', data->>'privilege_type', data->>'object'",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Privilege changes",
+      "transform": "table",
+      "type": "table-old"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "100%",
       "gridPos": {
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 22
       },
       "id": 7,
       "links": [],
@@ -691,14 +909,14 @@
           "value": null
         },
         "datasource": null,
-        "definition": "",
+        "definition": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics ORDER BY 1;",
         "hide": 0,
         "includeAll": false,
         "label": null,
         "multi": false,
         "name": "dbname",
         "options": [],
-        "query": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics WHERE metric = 'change_events' ORDER BY 1;",
+        "query": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics ORDER BY 1;",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
