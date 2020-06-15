@@ -4236,6 +4236,24 @@ WHERE d.datname = current_database()
   AND NOT r.rolsuper
   AND r.oid >= 16384
   AND has_database_privilege(r.oid, d.oid, p.perm)
+
+union all
+
+SELECT 'superusers' AS object_type,
+    rolname::text AS role_name,
+    rolname::text as tag_object,
+    'SUPERUSER' AS permission
+FROM pg_catalog.pg_roles
+WHERE rolsuper
+
+union all
+
+SELECT 'login_users' AS object_type,
+    rolname::text AS role_name,
+    rolname::text as tag_object,
+    'LOGIN' AS permission
+FROM pg_catalog.pg_roles
+WHERE rolcanlogin
 ;
 
 $sql$,
