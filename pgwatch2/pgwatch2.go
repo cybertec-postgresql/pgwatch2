@@ -286,6 +286,7 @@ var instanceMetricCacheLock = sync.RWMutex{}
 var instanceMetricCacheTimestamp = make(map[string]time.Time)     // [dbUnique+metric]last_fetch_time
 var instanceMetricCacheTimestampLock = sync.RWMutex{}
 var MinExtensionInfoAvailable, _ = decimal.NewFromString("9.1")
+var regexIsAlpha = regexp.MustCompile("^[a-zA-Z]+$")
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER {
@@ -3010,13 +3011,13 @@ func DaysStringToIntMap(days string) map[int]bool {	// TODO validate with some r
 		if strings.Contains(s, "-") {
 			dayRange := strings.Split(s, "-")
 			if len(dayRange) != 2 {
-				log.Warningf("Ignoring invalid day range specification: %s", s)
+				log.Warningf("Ignoring invalid day range specification: %s. Check config", s)
 				continue
 			}
 			startDay, err := strconv.Atoi(dayRange[0])
 			endDay, err2 := strconv.Atoi(dayRange[1])
 			if err != nil || err2 != nil {
-				log.Warningf("Ignoring invalid day range specification: %s", s)
+				log.Warningf("Ignoring invalid day range specification: %s. Check config", s)
 				continue
 			}
 			for i := startDay; i <= endDay && i >= 0 && i <= 7; i++ {
@@ -3026,7 +3027,7 @@ func DaysStringToIntMap(days string) map[int]bool {	// TODO validate with some r
 		} else {
 			day, err := strconv.Atoi(s)
 			if err != nil {
-				log.Warningf("Ignoring invalid day range specification: %s", days)
+				log.Warningf("Ignoring invalid day range specification: %s. Check config", days)
 				continue
 			}
 			ret[day] = true
@@ -3039,22 +3040,50 @@ func DaysStringToIntMap(days string) map[int]bool {	// TODO validate with some r
 }
 
 func IsInTimeSpan(checkTime time.Time, timeRange, metric, dbUnique string) bool {
-	splits := strings.Split(timeRange, "-")
-	if len(splits) != 2 {
-		log.Warningf("[%s][%s] invalid time range: %s", dbUnique, metric, timeRange)
+	layout := "15:04"
+	var t1, t2 time.Time
+	var err error
+
+	timeRange = strings.TrimSpace(timeRange)
+	if len(timeRange) < 11 {
+		log.Warningf("[%s][%s] invalid time range: %s. Check config", dbUnique, metric, timeRange)
 		return false
 	}
-	layout := "15:04"	// TODO add time zone support
-	check, _ := time.Parse(layout, strconv.Itoa(checkTime.Hour())+":"+strconv.Itoa(checkTime.Minute()))
-    t1, err :=  time.Parse(layout, splits[0])
-    t2, err2 :=  time.Parse(layout, splits[1])
-    if err != nil || err2 != nil {
-		log.Warningf("[%s][%s] Ignoring invalid disabled time range: %s", dbUnique, metric, timeRange)
+	s1 := timeRange[0:5]
+	s2 := timeRange[6:11]
+	tz := strings.TrimSpace(timeRange[11:])
+
+	if len(tz) > 1 {	// time zone specified
+		if regexIsAlpha.MatchString(tz) {
+			layout = "15:04 MST"
+		} else {
+			layout = "15:04 -0700"
+		}
+		t1, err =  time.Parse(layout, s1 + " " + tz)
+		if err == nil {
+			t2, err =  time.Parse(layout, s2 + " " + tz)
+		}
+	} else {	// no time zone
+		t1, err =  time.Parse(layout, s1)
+		if err == nil {
+			t2, err =  time.Parse(layout, s2)
+		}
+	}
+
+	if err != nil {
+		log.Warningf("[%s][%s] Ignoring invalid disabled time range: %s. Check config. Erorr: %v", dbUnique, metric, timeRange, err)
 		return false
-    }
-    if t1.After(t2) {
+	}
+
+	check, err := time.Parse("15:04 -0700", strconv.Itoa(checkTime.Hour())+":"+strconv.Itoa(checkTime.Minute()) + " " + t1.Format("-0700"))	// UTC by default
+	if err != nil {
+		log.Warningf("[%s][%s] Ignoring invalid disabled time range: %s. Check config. Error: %v", dbUnique, metric, timeRange, err)
+		return false
+	}
+
+	if t1.After(t2) {
 		t2 = t2.AddDate(0, 0, 1)
-    }
+	}
 
     return check.Before(t2) && check.After(t1)
 }
@@ -3078,6 +3107,7 @@ func IsInDisabledTimeDayRange(localTime time.Time, metricAttrsDisabledDays strin
 				}
 			}
 			if hostConfigMetricMatch && (timeMatchFound || len(hcdi.DisabledTimes) == 0) && (dayMatchFound || hcdi.DisabledDays == "") {
+				//log.Debugf("[%s][%s] Host config ignored time/day match, skipping fetch", dbUnique, metric)
 				return true
 			}
 		}
@@ -3089,11 +3119,11 @@ func IsInDisabledTimeDayRange(localTime time.Time, metricAttrsDisabledDays strin
 		for _, timeRange := range metricAttrsDisabledTimes {
 			if IsInTimeSpan(localTime, timeRange, metric, dbUnique) {
 				timeMatchFound = true
-				//log.Debugf("[%s][%s] MetricAttrs ignored time match: %+v", dbUnique, metric, timeRange)
 				break
 			}
 		}
 		if (timeMatchFound || len(metricAttrsDisabledTimes) == 0) && (dayMatchFound || metricAttrsDisabledDays == "") {
+			//log.Debugf("[%s][%s] MetricAttrs ignored time/day match, skipping fetch", dbUnique, metric)
 			return true
 		}
 	}
