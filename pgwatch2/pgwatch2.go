@@ -2299,6 +2299,11 @@ func DetectPrivilegeChanges(dbUnique string, vme DBVersionMapEntry, storage_ch c
 				log.Infof("[%s][%s] detected removed object privileges: role=%s, object_type=%s, object=%s, privilege_type=%s",
 					dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, splits[1], splits[0], splits[2], splits[3])
 				revoke_entry := make(map[string]interface{})
+				if epoch_ns, ok := data[0]["epoch_ns"]; ok {
+					revoke_entry["epoch_ns"] = epoch_ns
+				} else {
+					revoke_entry["epoch_ns"] = time.Now().UnixNano()
+				}
 				revoke_entry["object_type"] = splits[0]
 				revoke_entry["tag_role"] = splits[1]
 				revoke_entry["tag_object"] = splits[2]
