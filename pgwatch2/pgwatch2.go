@@ -3339,11 +3339,11 @@ retry:
 }
 
 func DoesFunctionExists(dbUnique, functionName string) bool {
-	log.Debug("Checking for function existance", dbUnique, functionName)
+	log.Debug("Checking for function existence", dbUnique, functionName)
 	sql := fmt.Sprintf("select /* pgwatch2_generated */ 1 from pg_proc join pg_namespace n on pronamespace = n.oid where proname = '%s' and n.nspname = 'public'", functionName)
 	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
 	if err != nil {
-		log.Error("Failed to check for function existance", dbUnique, functionName, err)
+		log.Error("Failed to check for function existence", dbUnique, functionName, err)
 		return false
 	}
 	if len(data) > 0 {
@@ -3552,7 +3552,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 					continue
 				}
 				if !rIsDigitOrPunctuation.MatchString(pgVer.Name()) {
-					log.Warningf("Invalid metric stucture - version folder names should consist of only numerics/dots, found: %s", pgVer.Name())
+					log.Warningf("Invalid metric structure - version folder names should consist of only numerics/dots, found: %s", pgVer.Name())
 					continue
 				}
 				d, err := decimal.NewFromString(pgVer.Name())
@@ -4245,7 +4245,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			log.Warningf("In JSON ouput mode. Gathered metrics will be written to \"%s\"...", opts.JsonStorageFile)
+			log.Warningf("In JSON output mode. Gathered metrics will be written to \"%s\"...", opts.JsonStorageFile)
 			go MetricsPersister(DATASTORE_JSON, persist_ch)
 		} else if opts.Datastore == DATASTORE_POSTGRES {
 			if len(opts.PGMetricStoreConnStr) == 0 {
@@ -4514,7 +4514,7 @@ func main() {
 				} else if !metric_def_ok {
 					epoch, ok := last_sql_fetch_error.Load(metric)
 					if !ok || ((time.Now().Unix() - epoch.(int64)) > 3600) { // complain only 1x per hour
-						log.Warningf("metric definiton \"%s\" not found for \"%s\"", metric, db_unique)
+						log.Warningf("metric definition \"%s\" not found for \"%s\"", metric, db_unique)
 						last_sql_fetch_error.Store(metric, time.Now().Unix())
 					}
 				} else {
