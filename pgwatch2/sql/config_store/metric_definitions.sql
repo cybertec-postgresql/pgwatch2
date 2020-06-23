@@ -4497,13 +4497,29 @@ $sql$,
 true
 );
 
-/* Stored procedure wrapper for pg_stat_activity - needed for non-superuser to view session state */
+/* pgbouncer_stats - assumes also that monitored DB has type 'pgbouncer' */
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
 values (
 'pgbouncer_stats',
 0,
 'show stats',
 'pgbouncer per db statistics',
+false
+);
+
+/* pgpool_stats - assumes also that monitored DB has type 'pgpool' */
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
+values (
+'pgpool_stats',
+3.0,
+$$
+/* SHOW POOL_NODES expected to be 1st "command" */
+SHOW POOL_NODES;
+/* special handling in code - when below SHOW POOL_PROCESSES line is defined pgpool_stats will have additional summary columns:
+ processes_total, processes_active */
+SHOW POOL_PROCESSES;
+$$,
+'pgpool node and process information',
 false
 );
 

@@ -221,6 +221,7 @@ const DCS_TYPE_CONSUL = "consul"
 const DBTYPE_PG = "postgres"
 const DBTYPE_PG_CONT = "postgres-continuous-discovery"
 const DBTYPE_BOUNCER = "pgbouncer"
+const DBTYPE_PGPOOL = "pgpool"
 const DBTYPE_PATRONI = "patroni"
 const DBTYPE_PATRONI_CONT = "patroni-continuous-discovery"
 const MONITORED_DBS_DATASTORE_SYNC_INTERVAL_SECONDS = 600			// write actively monitored DBs listing to metrics store after so many seconds
@@ -229,8 +230,11 @@ const RECO_PREFIX = "reco_"		// special handling for metrics with such prefix, d
 const RECO_METRIC_NAME = "recommendations"
 const SPECIAL_METRIC_CHANGE_EVENTS = "change_events"
 const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
+const SPECIAL_METRIC_PGBOUNCER_STATS = "pgbouncer_stats"
+const SPECIAL_METRIC_PGPOOL_STATS = "pgpool_stats"
 
-var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true}
+
+var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true, DBTYPE_PGPOOL: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT} // used for informational purposes
 var specialMetrics = map[string]bool{RECO_METRIC_NAME: true, SPECIAL_METRIC_CHANGE_EVENTS: true, SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS: true}
 var configDb *sqlx.DB
@@ -287,6 +291,7 @@ var instanceMetricCacheTimestamp = make(map[string]time.Time)     // [dbUnique+m
 var instanceMetricCacheTimestampLock = sync.RWMutex{}
 var MinExtensionInfoAvailable, _ = decimal.NewFromString("9.1")
 var regexIsAlpha = regexp.MustCompile("^[a-zA-Z]+$")
+var rBouncerAndPgpoolVerMatch = regexp.MustCompile("\\d+\\.+\\d+") // extract $major.minor from "4.1.2 (karasukiboshi)" or "PgBouncer 1.12.0"
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER {
@@ -767,7 +772,7 @@ retry:
 			}
 
 			if epoch_ns == 0 {
-				if !ts_warning_printed && msg.MetricName != "pgbouncer_stats" {
+				if !ts_warning_printed && msg.MetricName != SPECIAL_METRIC_PGBOUNCER_STATS {
 					log.Warning("No timestamp_ns found, (gatherer) server time will be used. measurement:", msg.MetricName)
 					ts_warning_printed = true
 				}
@@ -861,7 +866,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 			}
 
 			if epoch_ns == 0 {
-				if !ts_warning_printed && msg.MetricName != "pgbouncer_stats" {
+				if !ts_warning_printed && msg.MetricName != SPECIAL_METRIC_PGBOUNCER_STATS {
 					log.Warning("No timestamp_ns found, server time will be used. measurement:", msg.MetricName)
 					ts_warning_printed = true
 				}
@@ -1803,6 +1808,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
         		 where m.member = r.oid and b.rolname = 'rds_superuser') as rolsuper
 			   from pg_roles r where rolname = session_user;`
 	sql_extensions := `select extname::text, (regexp_matches(extversion, $$\d+\.?\d+?$$))[1]::text as extversion from pg_extension order by 1;`
+	pgpool_version := `SHOW POOL_VERSION`	// supported from pgpool2 v3.0
 
 	db_pg_version_map_lock.RLock()
 	get_ver_lock, ok := db_get_pg_version_map_lock[dbUnique]
@@ -1818,7 +1824,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 	} else {
 		get_ver_lock.Lock()	// limit to 1 concurrent version info fetch per DB
 		defer get_ver_lock.Unlock()
-		log.Debugf("[%s] determining DB version and recovery status...", dbUnique)
+		log.Debugf("[%s][%s] determining DB version and recovery status...", dbUnique, dbType)
 
 		if verNew.Extensions == nil {
 			verNew.Extensions = make(map[string]decimal.Decimal)
@@ -1834,11 +1840,27 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				verNew.Version, _ = decimal.NewFromString("0")
 				verNew.VersionStr = "0"
 			} else {
-				rPBVer := regexp.MustCompile("\\d+\\.+\\d+")	// "PgBouncer 1.12.0"
-				matches := rPBVer.FindStringSubmatch(data[0]["version"].(string))
+				matches := rBouncerAndPgpoolVerMatch.FindStringSubmatch(data[0]["version"].(string))
 				if len(matches) != 1 {
 					log.Errorf("Unexpected PgBouncer version input: %s", data[0]["version"].(string))
 					return ver, errors.New(fmt.Sprintf("Unexpected PgBouncer version input: %s", data[0]["version"].(string)))
+				}
+				verNew.VersionStr = matches[0]
+				verNew.Version, _ = decimal.NewFromString(matches[0])
+			}
+		} else if dbType == DBTYPE_PGPOOL {
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, pgpool_version)
+			if err != nil {
+				return verNew, err
+			}
+			if len(data) == 0 {
+				verNew.Version, _ = decimal.NewFromString("3.0")
+				verNew.VersionStr = "3.0"
+			} else {
+				matches := rBouncerAndPgpoolVerMatch.FindStringSubmatch(string(data[0]["pool_version"].([]byte)))
+				if len(matches) != 1 {
+					log.Errorf("Unexpected PgPool version input: %s", data[0]["pool_version"].([]byte))
+					return ver, errors.New(fmt.Sprintf("Unexpected PgPool version input: %s", data[0]["pool_version"].([]byte)))
 				}
 				verNew.VersionStr = matches[0]
 				verNew.Version, _ = decimal.NewFromString(matches[0])
@@ -2403,7 +2425,7 @@ func GetAllRecoMetricsForVersion(vme DBVersionMapEntry) map[string]MetricVersion
 	return mvp_map
 }
 
-func CheckForRecommendationsAndStore(dbUnique string, vme DBVersionMapEntry) ([]map[string]interface{}, error, time.Duration) {
+func GetRecommendations(dbUnique string, vme DBVersionMapEntry) ([]map[string]interface{}, error, time.Duration) {
 	ret_data := make([]map[string]interface{}, 0)
 	var total_duration time.Duration
 	start_time_epoch_ns := time.Now().UnixNano()
@@ -2522,6 +2544,84 @@ func FilterPgbouncerData(data []map[string]interface{}, database_to_keep string,
 	return filtered_data
 }
 
+// some extra work needed as pgpool SHOW commands don't specify the return data types for some reason
+func FetchMetricsPgpool(msg MetricFetchMessage, vme DBVersionMapEntry, mvp MetricVersionProperties) ([]map[string]interface{}, error, time.Duration) {
+	var ret_data = make([]map[string]interface{}, 0)
+	var duration time.Duration
+	epoch_ns := time.Now().UnixNano()
+
+	sql_lines := strings.Split(strings.ToUpper(mvp.Sql), "\n")
+
+	for _, sql := range sql_lines {
+		if strings.HasPrefix(sql, "SHOW POOL_NODES") {
+			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
+			duration = duration + dur
+			if err != nil {
+				log.Errorf("[%s][%s] Could not fetch PgPool statistics: %v", msg.DBUniqueName, msg.MetricName, err)
+				return data, err, duration
+			}
+
+			for _, row := range data {
+				ret_row := make(map[string]interface{})
+				ret_row[EPOCH_COLUMN_NAME] = epoch_ns
+				for k, v := range row {
+					vs := string(v.([]byte))
+					ret_row[k] = vs
+					// everything is returned as text, so try to convert all numerics into ints / floats
+					if k != "lb_weight" {
+						i, err := strconv.ParseInt(vs, 10, 64)
+						if err == nil {
+							ret_row[k] = i
+							continue
+						}
+					}
+					f, err := strconv.ParseFloat(vs, 64)
+					if err == nil {
+						ret_row[k] = f
+						continue
+					}
+				}
+				ret_data = append(ret_data, ret_row)
+			}
+		}
+		if strings.HasPrefix(sql, "SHOW POOL_PROCESSES") {
+			if len(ret_data) == 0 {
+				log.Warningf("[%s][%s] SHOW POOL_NODES needs to be placed before SHOW POOL_PROCESSES. ignoring SHOW POOL_PROCESSES", msg.DBUniqueName, msg.MetricName)
+				continue
+			}
+
+			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
+			duration = duration + dur
+			if err != nil {
+				log.Errorf("[%s][%s] Could not fetch PgPool statistics: %v", msg.DBUniqueName, msg.MetricName, err)
+				continue
+			}
+
+			// summarize processes_total / processes_active over all rows
+			processes_total := 0
+			processes_active := 0
+			for _, row := range data {
+					processes_total++
+					v, ok := row["database"]
+					if !ok {
+						log.Infof("[%s][%s] column 'database' not found from data returned by SHOW POOL_PROCESSES, check pool version / SQL definition", msg.DBUniqueName, msg.MetricName)
+						continue
+					}
+					if len(v.([]byte)) > 0 {
+						processes_active++
+					}
+			}
+			ret_row := ret_data[0]
+			ret_row[EPOCH_COLUMN_NAME] = epoch_ns
+			ret_row["processes_total"] = processes_total
+			ret_row["processes_active"] = processes_active
+		}
+	}
+
+	//log.Fatalf("%+v", ret_data)
+	return ret_data, nil, duration
+}
+
 func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]string, storage_ch chan<- []MetricStoreMessage, context string) ([]MetricStoreMessage, error) {
 	var vme DBVersionMapEntry
 	var db_pg_version decimal.Decimal
@@ -2587,7 +2687,9 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 	if msg.MetricName == SPECIAL_METRIC_CHANGE_EVENTS && context != CONTEXT_PROMETHEUS_SCRAPE { // special handling, multiple queries + stateful
 		CheckForPGObjectChangesAndStore(msg.DBUniqueName, vme, storage_ch, host_state) // TODO no host_state for Prometheus currently
 	} else if msg.MetricName == RECO_METRIC_NAME && context != CONTEXT_PROMETHEUS_SCRAPE {
-		data, err, duration = CheckForRecommendationsAndStore(msg.DBUniqueName, vme)
+		data, err, duration = GetRecommendations(msg.DBUniqueName, vme)
+	} else if msg.DBType == DBTYPE_PGPOOL{
+		data, err, duration = FetchMetricsPgpool(msg, vme, mvp)
 	} else {
 		data, err, duration = DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
 
@@ -2624,7 +2726,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 			}
 
 			log.Infof("[%s:%s] fetched %d rows in %.1f ms", msg.DBUniqueName, msg.MetricName, len(data), float64(duration.Nanoseconds())/1000000)
-			if msg.MetricName == "pgbouncer_stats" { // clean unwanted pgbouncer pool stats here as not possible in SQL
+			if msg.MetricName == SPECIAL_METRIC_PGBOUNCER_STATS { // clean unwanted pgbouncer pool stats here as not possible in SQL
 				data = FilterPgbouncerData(data, md.DBName, vme)
 			}
 
@@ -2637,7 +2739,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 
 send_to_storage_channel:
 
-	if addRealDbname || addSystemIdentifier {
+	if (addRealDbname || addSystemIdentifier) && msg.DBType == DBTYPE_PG {
 		db_pg_version_map_lock.RLock()
 		ver, _ := db_pg_version_map[msg.DBUniqueName]
 		db_pg_version_map_lock.RUnlock()
