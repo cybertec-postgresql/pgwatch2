@@ -8,6 +8,4 @@ alter table pgwatch2.metric_attribute
     drop constraint metric_attribute_ma_metric_name_check,
     add constraint metric_attribute_ma_metric_name_check check (ma_metric_name ~ E'^[a-z0-9_\\.]+$');
 
-insert into pgwatch2.schema_version (sv_tag) values ('1.8.0');
-
 commit;

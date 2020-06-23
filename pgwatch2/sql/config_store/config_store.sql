@@ -47,7 +47,7 @@ create table pgwatch2.monitored_db (
     UNIQUE (md_unique_name),
     CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':'),
     CHECK (md_sslmode in ('disable', 'require', 'verify-ca', 'verify-full')),
-    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery', 'patroni', 'patroni-continuous-discovery')),
+    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery', 'patroni', 'patroni-continuous-discovery', 'pgpool')),
     CHECK (md_group ~ E'\\w+'),
     CHECK (md_password_type in ('plain-text', 'aes-gcm-256'))
 );
