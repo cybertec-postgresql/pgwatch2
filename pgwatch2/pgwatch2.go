@@ -2566,7 +2566,16 @@ func FetchMetricsPgpool(msg MetricFetchMessage, vme DBVersionMapEntry, mvp Metri
 				ret_row[EPOCH_COLUMN_NAME] = epoch_ns
 				for k, v := range row {
 					vs := string(v.([]byte))
+					// need 1 tag so that Influx would not merge rows
+					if k == "node_id"  {
+						ret_row["tag_node_id"] = vs
+						continue
+					}
+
 					ret_row[k] = vs
+					if k == "status" {	// was changed from numeric to string at some pgpool version
+						continue
+					}
 					// everything is returned as text, so try to convert all numerics into ints / floats
 					if k != "lb_weight" {
 						i, err := strconv.ParseInt(vs, 10, 64)
@@ -2583,8 +2592,7 @@ func FetchMetricsPgpool(msg MetricFetchMessage, vme DBVersionMapEntry, mvp Metri
 				}
 				ret_data = append(ret_data, ret_row)
 			}
-		}
-		if strings.HasPrefix(sql, "SHOW POOL_PROCESSES") {
+		} else if strings.HasPrefix(sql, "SHOW POOL_PROCESSES") {
 			if len(ret_data) == 0 {
 				log.Warningf("[%s][%s] SHOW POOL_NODES needs to be placed before SHOW POOL_PROCESSES. ignoring SHOW POOL_PROCESSES", msg.DBUniqueName, msg.MetricName)
 				continue
@@ -2611,10 +2619,11 @@ func FetchMetricsPgpool(msg MetricFetchMessage, vme DBVersionMapEntry, mvp Metri
 						processes_active++
 					}
 			}
-			ret_row := ret_data[0]
-			ret_row[EPOCH_COLUMN_NAME] = epoch_ns
-			ret_row["processes_total"] = processes_total
-			ret_row["processes_active"] = processes_active
+
+			for _, ret_row := range ret_data {
+				ret_row["processes_total"] = processes_total
+				ret_row["processes_active"] = processes_active
+			}
 		}
 	}
 
