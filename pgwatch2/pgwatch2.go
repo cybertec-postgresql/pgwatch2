@@ -2573,7 +2573,18 @@ func FetchMetricsPgpool(msg MetricFetchMessage, vme DBVersionMapEntry, mvp Metri
 					}
 
 					ret_row[k] = vs
-					if k == "status" {	// was changed from numeric to string at some pgpool version
+					if k == "status" {	// was changed from numeric to string at some pgpool version so leave the string
+										// but also add "status_num" field
+						if vs == "up" {
+							ret_row["status_num"] = 1
+						} else if vs == "down" {
+							ret_row["status_num"] = 0
+						} else {
+							i, err := strconv.ParseInt(vs, 10, 64)
+							if err == nil {
+								ret_row["status_num"] = i
+							}
+						}
 						continue
 					}
 					// everything is returned as text, so try to convert all numerics into ints / floats
