@@ -105,7 +105,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Pgpool Status",
+      "title": "Pool node status",
       "transform": "table",
       "type": "table"
     },
