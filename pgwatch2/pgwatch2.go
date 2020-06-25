@@ -294,7 +294,7 @@ var regexIsAlpha = regexp.MustCompile("^[a-zA-Z]+$")
 var rBouncerAndPgpoolVerMatch = regexp.MustCompile("\\d+\\.+\\d+") // extract $major.minor from "4.1.2 (karasukiboshi)" or "PgBouncer 1.12.0"
 
 func IsPostgresDBType(dbType string) bool {
-	if dbType == DBTYPE_BOUNCER {
+	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
 		return false
 	}
 	return true
