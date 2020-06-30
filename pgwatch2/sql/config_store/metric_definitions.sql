@@ -5203,6 +5203,37 @@ true
 
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
 values (
+'reco_add_index_ext_qualstats_2.0',
+9.1,
+$sql$
+  /* assumes the pg_qualstats extension and superuser or select grant on pg_qualstats_index_advisor() function */
+SELECT
+  epoch_ns,
+  tag_reco_topic,
+  tag_object_name,
+  recommendation,
+  case when exists (select * from pg_inherits
+                    where inhrelid = regclass(tag_object_name)
+                    ) then 'NB! Partitioned table, create the index on parent' else extra_info
+  end as extra_info
+FROM (
+         SELECT (extract(epoch from now()) * 1e9)::int8    as epoch_ns,
+                'create_index'::text                       as tag_reco_topic,
+                (regexp_matches(v::text, E'ON (.*?) '))[1] as tag_object_name,
+                v::text                                    as recommendation,
+                ''                                         as extra_info
+         FROM json_array_elements(
+                      pg_qualstats_index_advisor() -> 'indexes') v
+     ) x
+ORDER BY tag_object_name
+LIMIT 25;
+$sql$,
+'{"prometheus_all_gauge_columns": true}',
+true
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
+values (
 'reco_default_public_schema',
 9.1,
 $sql$
@@ -5228,7 +5259,6 @@ values (
 'reco_drop_index',
 9.0,
 $sql$
-/* assumes the pg_qualstats extension */
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'drop_index'::text as tag_reco_topic,
@@ -5255,7 +5285,6 @@ values (
 'reco_drop_index',
 9.4,
 $sql$
-/* assumes the pg_qualstats extension */
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'drop_index'::text as tag_reco_topic,
@@ -5752,3 +5781,8 @@ insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
 select 'db_stats_aurora', '{"metric_storage_name": "db_stats"}'
 on conflict (ma_metric_name)
 do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "db_stats"}', ma_last_modified_on = now();
+
+insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
+select 'reco_add_index_ext_qualstats_2.0', '{"is_private": true, "extension_version_based_overrides": [{"target_metric": "reco_add_index_ext_qualstats_2.0", "expected_extension_versions": [{"ext_name": "pg_qualstats", "ext_min_version": "2.0"}] }]}'
+on conflict (ma_metric_name)
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"is_private": true, "extension_version_based_overrides": [{"target_metric": "reco_add_index_ext_qualstats_2.0", "expected_extension_versions": [{"ext_name": "pg_qualstats", "ext_min_version": "2.0"}] }]}', ma_last_modified_on = now();
