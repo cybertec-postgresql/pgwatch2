@@ -113,8 +113,9 @@
                     <td>
                         <select name="md_dbtype">
                             <option value="postgres" {% if row['md_dbtype'] == "postgres" %}selected{% endif %}>postgres</option>
-                            <option value="pgbouncer"{% if row['md_dbtype'] == "pgbouncer" %}selected{% endif %}>pgbouncer</option>
                             <option value="postgres-continuous-discovery"{% if row['md_dbtype'] == "postgres-continuous-discovery" %}selected{% endif %}>postgres-continuous-discovery</option>
+                            <option value="pgbouncer"{% if row['md_dbtype'] == "pgbouncer" %}selected{% endif %}>pgbouncer</option>
+                            <option value="pgpool"{% if row['md_dbtype'] == "pgpool" %}selected{% endif %}>pgpool</option>
                             <option value="patroni"{% if row['md_dbtype'] == "patroni" %}selected{% endif %}>patroni</option>
                             <option value="patroni-continuous-discovery"{% if row['md_dbtype'] == "patroni-continuous-discovery" %}selected{% endif %}>patroni-continuous-discovery</option>
                         </select>
@@ -175,8 +176,9 @@
                     <td>
                         <select name="md_dbtype" id="md_dbtype" title="'postgres': Single Postgres DB monitoring, 'pgbouncer': PgBouncer traffic stats for a single pool, 'postgres-continuous-discovery': Specified PG cluster will be polled for new DBs to be monitored periodically (with optional pattern matching), 'patroni': cluster members will be tracked via DCS. Specify DCS info under 'Host config'">
                             <option value="postgres">postgres</option>
-                            <option value="pgbouncer">pgbouncer</option>
                             <option value="postgres-continuous-discovery">postgres-continuous-discovery</option>
+                            <option value="pgbouncer">pgbouncer</option>
+                            <option value="pgpool">pgpool</option>
                             <option value="patroni">patroni</option>
                             <option value="patroni-continuous-discovery">patroni-continuous-discovery</option>
                         </select>
@@ -414,6 +416,10 @@
                 $("#md_port").val('');
                 $("#md_hostname").val('');
                 $("#md_host_config").val('{"dcs_type": "etcd", "dcs_endpoints": ["http://127.0.0.1:2379/"], "namespace": "/service/", "scope": "batman", "username": "", "password": "", "ca_file": "", "cert_file": "", "key_file": ""}');
+            } else if ($(this).val() == 'pgpool') {
+                $("#md_preset_config_name").val('pgpool');
+                $("#md_port").val('9999');
+                alert('NB! Preset Config set to "pgpool", port to 9999');
             }
         });
     });
