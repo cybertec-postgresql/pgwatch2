@@ -43,6 +43,11 @@
   metrics:
     pgbouncer_stats: 60
 
+- name: pgpool
+  description: pool global stats, 1 row per node ID
+  metrics:
+    pgpool_stats: 60
+
 - name: standard
   description: basic level + table, index, stat_statements stats
   metrics:

@@ -123,6 +123,10 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     '{
     "pgbouncer_stats": 60
     }'),
+    ('pgpool', 'pool global stats, 1 row per node ID',
+    '{
+    "pgpool_stats": 60
+    }'),
     ('exhaustive', 'all important metrics for a deeper performance understanding',
     '{
     "archiver": 60,
