@@ -5195,6 +5195,13 @@ $sql$,
 
 /* RECO */
 
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
+values (
+'recommendations',
+9.0,
+'/* dummy placeholder - special handling in code to collect other metrics named reco_* */'
+);
+
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
 values (
 'reco_add_index',

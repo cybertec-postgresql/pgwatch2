@@ -1008,7 +1008,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 					_, err = stmt.Exec(m.Time, m.DBName, string(jsonBytes), string(jsonBytesTags))
 				}
 				if err != nil {
-					log.Error("Formatting 1 metric to COPY format failed: ", jsonBytesTags)
+					log.Errorf("Formatting metric %s data to COPY format failed for %s: %v ", m.Metric, m.DBName, err)
 					atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 					goto stmt_close
 				}
@@ -1019,7 +1019,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 					_, err = stmt.Exec(m.Time, m.DBName, string(jsonBytes), nil)
 				}
 				if err != nil {
-					log.Error("Formatting 1 metric to COPY format failed: ", err)
+					log.Errorf("Formatting metric %s data to COPY format failed for %s: %v ", m.Metric, m.DBName, err)
 					atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 					goto stmt_close
 				}
@@ -3085,8 +3085,13 @@ func IsStringInSlice(target string, slice []string) bool {
 }
 
 func IsMetricCurrentlyDisabledForHost(metricName string, vme DBVersionMapEntry, dbUniqueName string) bool {
+	_, isSpecialMetric := specialMetrics[metricName]
+
 	mvp, err := GetMetricVersionProperties(metricName, vme, nil)
 	if err != nil {
+		if isSpecialMetric {
+			return false
+		}
 		log.Warningf("[%s][%s] Ignoring any possible time based gathering restrictions, could not get metric details", dbUniqueName, metricName)
 		return false
 	}
