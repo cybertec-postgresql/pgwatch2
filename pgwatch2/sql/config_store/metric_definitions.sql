@@ -5806,6 +5806,6 @@ on conflict (ma_metric_name)
 do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "db_stats"}', ma_last_modified_on = now();
 
 insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
-select 'reco_add_index_ext_qualstats_2.0', '{"is_private": true, "extension_version_based_overrides": [{"target_metric": "reco_add_index_ext_qualstats_2.0", "expected_extension_versions": [{"ext_name": "pg_qualstats", "ext_min_version": "2.0"}] }]}'
+select 'reco_add_index', '{"extension_version_based_overrides": [{"target_metric": "reco_add_index_ext_qualstats_2.0", "expected_extension_versions": [{"ext_name": "pg_qualstats", "ext_min_version": "2.0"}] }]}'
 on conflict (ma_metric_name)
-do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"is_private": true, "extension_version_based_overrides": [{"target_metric": "reco_add_index_ext_qualstats_2.0", "expected_extension_versions": [{"ext_name": "pg_qualstats", "ext_min_version": "2.0"}] }]}', ma_last_modified_on = now();
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"extension_version_based_overrides": [{"target_metric": "reco_add_index_ext_qualstats_2.0", "expected_extension_versions": [{"ext_name": "pg_qualstats", "ext_min_version": "2.0"}] }]}', ma_last_modified_on = now();
