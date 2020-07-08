@@ -431,9 +431,16 @@ if __name__ == '__main__':
             config['global']['server.ssl_certificate_chain'] = cmd_args.ssl_certificate_chain
 
     if cmd_args.aes_gcm_keyphrase_file:
-        cmd_args.aes_gcm_keyphrase = utils.fileContentsToString(cmd_args.aes_gcm_keyphrase_file)
-        if cmd_args.aes_gcm_keyphrase[-1] == '\n':
-            logging.warning("removing newline character from keyphrase input string...")
-            cmd_args.aes_gcm_keyphrase = cmd_args.aes_gcm_keyphrase[:-1]
+        if os.path.exists(cmd_args.aes_gcm_keyphrase_file):
+            cmd_args.aes_gcm_keyphrase = utils.fileContentsToString(cmd_args.aes_gcm_keyphrase_file)
+            if cmd_args.aes_gcm_keyphrase:
+                logging.info("loaded aes-gcm keyphrase from %s...", cmd_args.aes_gcm_keyphrase_file)
+                if cmd_args.aes_gcm_keyphrase[-1] == '\n':
+                    logging.warning("removing newline character from keyphrase input string...")
+                    cmd_args.aes_gcm_keyphrase = cmd_args.aes_gcm_keyphrase[:-1]
+            else:
+                logging.warning("specified aes-gcm keyphrase file empty. cannot use encrypted passwords")
+        else:
+            logging.warning("specified aes-gcm keyphrase file not found, cannot use encrypted passwords")
 
     cherrypy.quickstart(Root(), config=config)

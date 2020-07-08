@@ -69,6 +69,7 @@ COPY postgresql.conf /etc/postgresql/9.5/main/pgwatch_postgresql.conf
 COPY pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
 COPY docker-launcher.sh postgresql.conf pg_hba.conf /pgwatch2/
 
+ENV PW2_AES_GCM_KEYPHRASE_FILE /pgwatch2/persistent-config/default-password-encryption-key.txt
 
 # Admin UI for configuring servers to be monitored
 EXPOSE 8080

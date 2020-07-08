@@ -1938,8 +1938,8 @@ func GetMetricVersionProperties(metric string, vme DBVersionMapEntry, metricDefM
 		mdm = metricDefMap
 	} else {
 		metric_def_map_lock.RLock()
-		mdm = metric_def_map // global cache
-		defer metric_def_map_lock.RUnlock()
+		mdm = deepCopyMetricDefinitionMap(metric_def_map)	// copy of global cache
+		metric_def_map_lock.RUnlock()
 	}
 
 	_, ok := mdm[metric]
@@ -1994,7 +1994,7 @@ func GetMetricVersionProperties(metric string, vme DBVersionMapEntry, metricDefM
 						log.Warningf("extension based override metric not found for metric %s. substitute metric name: %s", metric, extOverride.TargetMetric)
 						continue
 					}
-					mvp, err := GetMetricVersionProperties(extOverride.TargetMetric, vme, mdm, )
+					mvp, err := GetMetricVersionProperties(extOverride.TargetMetric, vme, mdm)
 					if err != nil  {
 						log.Warningf("undefined extension based override for metric %s, substitute metric name: %s, version: %s not found", metric, extOverride.TargetMetric, best_ver)
 						continue
@@ -2905,6 +2905,18 @@ func deepCopyMetricData(data []map[string]interface{}) []map[string]interface{} 
 	}
 
 	return newData
+}
+
+func deepCopyMetricDefinitionMap(mdm map[string]map[decimal.Decimal]MetricVersionProperties) map[string]map[decimal.Decimal]MetricVersionProperties {
+	newMdm := make(map[string]map[decimal.Decimal]MetricVersionProperties)
+
+	for metric, verMap := range mdm {
+		newMdm[metric] = make(map[decimal.Decimal]MetricVersionProperties)
+		for ver, mvp := range verMap {
+			newMdm[metric][ver] = mvp
+		}
+	}
+	return newMdm
 }
 
 // ControlMessage notifies of shutdown + interval change
@@ -4161,15 +4173,20 @@ func main() {
 	}
 
 	if len(opts.AesGcmKeyphraseFile) > 0 {
-		keyBytes, err := ioutil.ReadFile(opts.AesGcmKeyphraseFile)
-		if err != nil {
-			log.Fatal("Failed to read aes_gcm_keyphrase_file:", err)
-		}
-		if keyBytes[len(keyBytes)-1] == 10 {
-			log.Warning("Removing newline character from keyphrase input string...")
-			opts.AesGcmKeyphrase = string(keyBytes[:len(keyBytes)-1]) // remove line feed
+		_, err := os.Stat(opts.AesGcmKeyphraseFile)
+		if os.IsNotExist(err) {
+			log.Warningf("Failed to read aes_gcm_keyphrase_file at %s, thus cannot monitor hosts with encrypted passwords", opts.AesGcmKeyphraseFile)
 		} else {
-			opts.AesGcmKeyphrase = string(keyBytes)
+			keyBytes, err := ioutil.ReadFile(opts.AesGcmKeyphraseFile)
+			if err != nil {
+				log.Fatalf("Failed to read aes_gcm_keyphrase_file at %s: %v", opts.AesGcmKeyphraseFile, err)
+			}
+			if keyBytes[len(keyBytes)-1] == 10 {
+				log.Warning("Removing newline character from keyphrase input string...")
+				opts.AesGcmKeyphrase = string(keyBytes[:len(keyBytes)-1]) // remove line feed
+			} else {
+				opts.AesGcmKeyphrase = string(keyBytes)
+			}
 		}
 	}
 

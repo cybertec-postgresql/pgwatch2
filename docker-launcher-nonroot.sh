@@ -14,6 +14,12 @@ if [ ! -f /pgwatch2/persistent-config/self-signed-ssl.key -o ! -f /pgwatch2/pers
     chmod 0600 /pgwatch2/persistent-config/self-signed-ssl.*
 fi
 
+# enable password encryption by default from v1.8.0
+if [ ! -f /pgwatch2/persistent-config/default-password-encryption-key.txt ]; then
+  echo -n "${RANDOM}${RANDOM}${RANDOM}${RANDOM}" > /pgwatch2/persistent-config/default-password-encryption-key.txt
+  chmod 0600 /pgwatch2/persistent-config/default-password-encryption-key.txt
+fi
+
 GRAFANASSL="${PW2_GRAFANASSL,,}"    # to lowercase
 if [ "$GRAFANASSL" == "1" ] || [ "${GRAFANASSL:0:1}" == "t" ]; then
     $(grep -q 'protocol = http$' /etc/grafana/grafana.ini)

@@ -63,6 +63,7 @@ COPY docker-launcher-postgres.sh postgresql.conf pg_hba.conf /pgwatch2/
 ENV PW2_DATASTORE postgres
 ENV PW2_PG_METRIC_STORE_CONN_STR postgresql://pgwatch2:pgwatch2admin@localhost:5432/pgwatch2_metrics
 ENV PW2_PG_SCHEMA_TYPE metric-time
+ENV PW2_AES_GCM_KEYPHRASE_FILE /pgwatch2/persistent-config/default-password-encryption-key.txt
 
 # Admin UI for configuring servers to be monitored
 EXPOSE 8080
