@@ -28,6 +28,8 @@ DECLARE
   l_unlogged text := '';
 BEGIN
 
+  PERFORM pg_advisory_xact_lock(regexp_replace( md5(metric) , E'\\D', '', 'g')::varchar(10)::int8);
+
   IF metric ~ 'realtime' THEN
       l_template_table := 'admin.metrics_template_realtime';
       l_unlogged := 'UNLOGGED';

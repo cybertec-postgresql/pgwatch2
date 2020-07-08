@@ -14,7 +14,9 @@ DECLARE
     l_template_table text := 'admin.metrics_template';
     l_unlogged text := '';
 BEGIN
-  
+
+  PERFORM pg_advisory_xact_lock(regexp_replace( md5(metric) , E'\\D', '', 'g')::varchar(10)::int8);
+
   IF NOT EXISTS (SELECT 1
                    FROM pg_tables
                   WHERE tablename = metric

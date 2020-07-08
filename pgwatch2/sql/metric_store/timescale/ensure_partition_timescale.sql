@@ -22,6 +22,9 @@ DECLARE
     l_compress_chunk_interval interval;
 BEGIN
     --RAISE NOTICE 'creating partition % ...', metric;
+
+    PERFORM pg_advisory_xact_lock(regexp_replace( md5(metric) , E'\\D', '', 'g')::varchar(10)::int8);
+
     IF NOT EXISTS (SELECT *
                        FROM _timescaledb_catalog.hypertable
                       WHERE table_name = metric
