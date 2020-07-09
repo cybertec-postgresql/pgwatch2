@@ -23,11 +23,12 @@ PGDATABASE=pgwatch2_metrics
 WEBUIPORT=$(shuf -i 10000-65000 -n 1)
 INFLUXPORT=$(shuf -i 10000-65000 -n 1)
 GRAFANAPORT=$(shuf -i 10000-65000 -n 1)
+LOCALHOST=127.0.0.1
 
 echo "starting smoke test of Postgres image $IMAGE ..."
 
 echo "launching docker container using ports GRAFANA=$GRAFANAPORT, PG=$PGPORT, WEBUI=$WEBUIPORT, INFLUX=$INFLUXPORT..."
-DOCKER_RUN=$(docker run -d --rm --cpus=2 -p $WEBUIPORT:8080 -p $GRAFANAPORT:3000 -p $PGPORT:5432 -p $INFLUXPORT:8086 --name "$CONTAINER_NAME" $IMAGE)
+DOCKER_RUN=$(docker run -d --rm --cpus=2 -p $LOCALHOST:$WEBUIPORT:8080 -p $LOCALHOST:$GRAFANAPORT:3000 -p $LOCALHOST:$PGPORT:5432 -p $LOCALHOST:$INFLUXPORT:8086 --name "$CONTAINER_NAME" $IMAGE)
 echo "OK. container $CONTAINER_NAME started"
 
 
@@ -36,12 +37,12 @@ sleep 30
 
 
 echo "checking Web UI response ..."
-curl -s localhost:$WEBUIPORT/dbs >/dev/null
+curl -s $LOCALHOST:$WEBUIPORT/dbs >/dev/null
 echo "OK"
 
 
 echo "adding new DB 'smoke1' to monitoring via POST to Web UI /dbs page..."
-http --verify=no -f POST :$WEBUIPORT/dbs md_unique_name=smoke1 md_dbtype=postgres md_hostname=/var/run/postgresql/ md_port=5432 md_dbname=pgwatch2 \
+http --verify=no -f POST $LOCALHOST:$WEBUIPORT/dbs md_unique_name=smoke1 md_dbtype=postgres md_hostname=/var/run/postgresql/ md_port=5432 md_dbname=pgwatch2 \
   md_user=pgwatch2 md_password=pgwatch2admin md_password_type=plain-text md_preset_config_name=basic md_is_enabled=true new=New >/dev/null
 echo "OK"
 
@@ -52,9 +53,9 @@ sleep 120
 
 echo "checking if metrics exists for added DB..."
 if [ $METRICDBTYPE == "pg" ]; then
-    ROWS=$(psql -p $PGPORT -qXAtc "select count(*) from db_stats where dbname = 'smoke1'")
+    ROWS=$(psql -h $LOCALHOST -p $PGPORT -qXAtc "select count(*) from db_stats where dbname = 'smoke1'")
 else
-  ROWS=$(curl -sG http://localhost:$INFLUXPORT/query?pretty=true --data-urlencode "db=pgwatch2" \
+  ROWS=$(curl -sG http://$LOCALHOST:$INFLUXPORT/query?pretty=true --data-urlencode "db=pgwatch2" \
   --data-urlencode "q=SELECT count(xlog_location_b) FROM wal WHERE dbname='smoke1'" \
   | jq .results[0].series[0].values[0][1])
 fi
