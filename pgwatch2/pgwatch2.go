@@ -2437,7 +2437,11 @@ func GetRecommendations(dbUnique string, vme DBVersionMapEntry) ([]map[string]in
 		data, err, duration := DBExecReadByDbUniqueName(dbUnique, m, useConnPooling, mvp.Sql)
 		total_duration += duration
 		if err != nil {
-			log.Errorf("[%s:%s] Could not execute recommendations SQL: %v", dbUnique, m, err)
+			if strings.Contains(err.Error(), "does not exist") {	// some more exotic extensions missing is expected, don't pollute the error log
+				log.Infof("[%s:%s] Could not execute recommendations SQL: %v", dbUnique, m, err)
+			} else {
+				log.Errorf("[%s:%s] Could not execute recommendations SQL: %v", dbUnique, m, err)
+			}
 			continue
 		}
 		for _, d := range data {
