@@ -20,4 +20,7 @@ where
   and null_frac > 0.5 /* 50% empty */
   and not pg_get_indexdef(i.indexrelid) like '% WHERE %'
   and c.reltuples >= 1e5 /* ignore smaller tables */
+  and not exists ( /* leave out sub-partitions */
+      select * from pg_inherits where inhrelid = c.oid
+    )
 ;
