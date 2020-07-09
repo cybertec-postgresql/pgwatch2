@@ -449,13 +449,74 @@
     {
       "columns": [],
       "datasource": null,
-      "description": "",
+      "description": "A lot of space / performance can be won on replacing columns that contain mostly NULL-s but are  fully indexed with partial indexes, leaving out NULL-s",
       "fontSize": "100%",
       "gridPos": {
         "h": 5,
         "w": 24,
         "x": 0,
         "y": 35
+      },
+      "id": 12,
+      "pageSize": null,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "date"
+        }
+      ],
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  dbname,\n  data->>'major_ver' AS pg_major_ver,\n  tag_data->>'object_name' AS object_name,\n  data->>'recommendation' AS recommendation,\n  data->>'extra_info' AS extra_info\nFROM\n  recommendations\nWHERE\n  time IN (SELECT max(time) FROM recommendations WHERE $__timeFilter(time) GROUP BY dbname)\n  AND dbname IN ($dbname)\n  AND tag_data->>'reco_topic' = 'partial_index_candidates'\nORDER BY\n  dbname, object_name",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Partial index suggestions",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 40
       },
       "id": 2,
       "options": {},
@@ -516,7 +577,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 45
       },
       "id": 11,
       "options": {},
@@ -577,7 +638,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 50
       },
       "id": 9,
       "mode": "html",

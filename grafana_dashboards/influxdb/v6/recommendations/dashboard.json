@@ -377,12 +377,84 @@
     {
       "columns": [],
       "datasource": null,
+      "description": "A lot of space / performance can be won on replacing columns that contain mostly NULL-s but are  fully indexed with partial indexes, leaving out NULL-s",
       "fontSize": "100%",
       "gridPos": {
         "h": 6,
         "w": 24,
         "x": 0,
         "y": 30
+      },
+      "id": 8,
+      "pageSize": null,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        }
+      ],
+      "targets": [
+        {
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT\n  last(\"recommendation\") as recommendation,\n  last(\"extra_info\") as extra_info\nFROM\n  \"recommendations\"\nWHERE\n  $timeFilter\n  AND dbname =~ /^$dbname$/\n  AND reco_topic = 'partial_index_candidates'\nGROUP BY time(365d), dbname, reco_topic, object_name fill(none)",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Partial index suggestions",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 36
       },
       "id": 2,
       "options": {},
