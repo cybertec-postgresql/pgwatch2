@@ -425,7 +425,8 @@ which are not meant to be used on their own.
 ## Metric definitions
 
 Metrics are named SQL queries that can return pretty much everything you find
-useful and which can have different query text versions for different target PostgreSQL versions. 
+useful and which can have different query text versions for different target PostgreSQL versions, also optionally taking
+into account primary / replica state and as of v1.8 also versions of installed extensions.
 Correct version of the metric definition will be chosen automatically by regularly connecting to the 
 target database and checking the Postgres version and if the monitoring user is a superuser or not. For superusers some
 metrics are re-defined (v1.6.2) so that no "helpers" are needed for Postgres-native Stats Collector infos. Using superuser
@@ -466,6 +467,11 @@ for some specific metrics:
    with different names but the data will be stored under one metric. Currently used (for out-of-the box metrics) only
    for the 'stat_statements_no_query_text' metric, to not to store actualy query texts from the "pg_stat_statements"
    extension for more security sensitive instances.
+* extension_version_based_overrides - enables to "switch out" the query text from some other metric based on some specific
+  extension version. See 'reco_add_index' for an example definition.
+* disabled_days - enabled to "pause" metric gathering on specified days. See metric_attrs.yaml for "wal" for an example.
+* disabled_times - enabled to "pause" metric gathering on specified time intervals. e.g. "09:00-17:00" for business hours.
+  NB! disabled_days / disabled_times can also be defined both on metric and host (host_attrs) level.
 
 # File based operation
 
