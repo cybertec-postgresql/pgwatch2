@@ -612,7 +612,7 @@
     },
     {
       "columns": [],
-      "datasource": "pw2_mt",
+      "datasource": null,
       "description": "Instance level",
       "fieldConfig": {
         "defaults": {
@@ -711,11 +711,11 @@
       ],
       "title": "Login and superuser role changes",
       "transform": "table",
-      "type": "table-old"
+      "type": "table"
     },
     {
       "columns": [],
-      "datasource": "pw2_mt",
+      "datasource": null,
       "description": "Per database",
       "fieldConfig": {
         "defaults": {
@@ -814,7 +814,7 @@
       ],
       "title": "Privilege changes",
       "transform": "table",
-      "type": "table-old"
+      "type": "table"
     },
     {
       "columns": [],
