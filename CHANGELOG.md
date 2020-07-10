@@ -10,6 +10,31 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.8.0 [2020-07-09]
+
+* New feature - native support for Pgpool status monitoring + a dash. Makes use of SHOW POOL_NODES and SHOW POOL_PROCESSES commands.
+* New feature - allow pausing of metrics collection on certain days/times (with optional time zone support).
+* New feature - add support for metric SQL overrides based on versions of installed extensions.
+* New feature + metric - privileges (GRANT) change tracking plus also Superuser and "login" role changes + a new panel on "Change events" dash.
+* Metrics storage - add support for the TimescaleDB time-series extension with built-in compression.
+* Metrics - support for upcoming PostgreSQL v13.
+* Metrics - new recommendations engine checks on disabled triggers and ineffective indexing of mostly null columns.
+* Metrics - suppress duplicate definition errors in refresh_metrics_from_github.sh "reload" helper.
+* Metrics - table_stats / table_io_stats include now also root partition summarized stats.
+* Metrics - add a small Python script test_all_metrics.py to validate all metric SQL definitions.
+* Metrics - Metrics: add support for monitoring AWS Aurora PG with 'aurora' template.
+* Metrics - add an 'rds' preset metrics config tuned for AWS RDS rds_superuser monitoring role usage.
+* New dashboard - 'Pgpool Stats' based on newly added Pgpool2 statistics.
+* Web UI - update jQuery 3.4.1 to 3.5.1 to plug a security threat.
+* Docker images - make deployments more secure by generating a random AES-GCM passphrase for protecting DB passwords if not set by user.
+* Docker component update - Influx 1.8.0, Grafana 6.7.4, Go 1.14.4.
+
+NB! When migrating existing "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
+applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2/sql/config_store/migrations/ if using
+ther pre-built packages) folder. Also it is highly recommended to refresh all the metric definitions as they're constantly improved.
+For that there's also a refresh_metrics_from_github.sh script provided. YAML based setups don't need any extra actions besides
+refreshing from Git or installing the new RPM / DEB / Tar packages.
+
 
 ## v1.7.2 [2020-04-30]
 
