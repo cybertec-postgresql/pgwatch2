@@ -2274,8 +2274,6 @@ func DetectPrivilegeChanges(dbUnique string, vme DBVersionMapEntry, storage_ch c
 	var first_run bool
 	var change_counts ChangeDetectionResults
 
-	// TODO also track superusers added / removed and group belongings
-
 	log.Debugf("[%s][%s] checking object privilege changes...", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS)
 	if _, ok := host_state["object_privileges"]; !ok {
 		first_run = true
@@ -3105,7 +3103,7 @@ func IsMetricCurrentlyDisabledForHost(metricName string, vme DBVersionMapEntry, 
 
 	mvp, err := GetMetricVersionProperties(metricName, vme, nil)
 	if err != nil {
-		if isSpecialMetric {
+		if isSpecialMetric || strings.Contains(err.Error(), "too old") {
 			return false
 		}
 		log.Warningf("[%s][%s] Ignoring any possible time based gathering restrictions, could not get metric details", dbUniqueName, metricName)
