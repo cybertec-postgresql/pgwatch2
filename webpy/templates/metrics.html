@@ -200,6 +200,19 @@
             <dd>Instance level metrics can be cached and shared between multiple DBs of a single instance to reduce query load on server. Default caching period is 30s,
                 use the --instance-level-cache-max-seconds (PW2_INSTANCE_LEVEL_CACHE_MAX_SECONDS env.) gatherer param to change or set to 0 to disable. Caching will only
                 be applied to 'continuous' DB types and only if metric interval is bigger than the --instance-level-cache-max-seconds value.</dd>
+            <dt>metric_storage_name</dt>
+            <dd>Enables dynamic "renaming" of metrics at storage level, i.e. declaring almost similar metrics
+                with different names but the data will be stored under one metric. Currently used (for out-of-the box metrics) only
+                for the 'stat_statements_no_query_text' metric, to not to store actual query texts from the "pg_stat_statements"
+                extension for more security sensitive instances.</dd>
+            <dt>extension_version_based_overrides</dt>
+            <dd>Enables to "switch out" the query text from some other metric based on some specific
+                extension version. See 'reco_add_index' for an example definition.</dd>
+            <dt>disabled_days</dt>
+            <dd>Enables to "pause" metric gathering on specified days. See metric_attrs.yaml for "wal" for an example.</dd>
+            <dt>disabled_times</dt>
+            <dd>Enables to "pause" metric gathering on specified time intervals. e.g. "09:00-17:00" for business hours.
+                NB! disabled_days / disabled_times can also be defined both on metric and host (host_attrs) level.</dd>
         </dl>
     </div>
     <div class="alert alert-secondary">
@@ -211,6 +224,11 @@
             <dd>Only relevant for Prometheus output to correctly set the (suggested, not validated) metric type. List of GAUGE  (value changing with every scrape) columns for the given metric. When not set all columns are considered to be of type COUNTER</dd>
             <dt>prometheus_ignored_columns (default: [])</dt>
             <dd>Only relevant for Prometheus output. For cases where we don't want some columns to be exposed</dd>
+            <dt>disabled_days</dt>
+            <dd>Enables to "pause" metric gathering on specified days. See metric_attrs.yaml for "wal" for an example.</dd>
+            <dt>disabled_times</dt>
+            <dd>Enables to "pause" metric gathering on specified time intervals. e.g. "09:00-17:00" for business hours.
+                NB! disabled_days / disabled_times can also be defined both on metric and host (host_attrs) level.</dd>
         </dl>
     </div>
 </div>
