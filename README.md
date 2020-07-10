@@ -465,12 +465,12 @@ for some specific metrics:
    reduce load on the monitored server.
  * metric_storage_name - enables dynamic "renaming" of metrics at storage level, i.e. declaring almost similar metrics
    with different names but the data will be stored under one metric. Currently used (for out-of-the box metrics) only
-   for the 'stat_statements_no_query_text' metric, to not to store actualy query texts from the "pg_stat_statements"
+   for the 'stat_statements_no_query_text' metric, to not to store actual query texts from the "pg_stat_statements"
    extension for more security sensitive instances.
 * extension_version_based_overrides - enables to "switch out" the query text from some other metric based on some specific
   extension version. See 'reco_add_index' for an example definition.
-* disabled_days - enabled to "pause" metric gathering on specified days. See metric_attrs.yaml for "wal" for an example.
-* disabled_times - enabled to "pause" metric gathering on specified time intervals. e.g. "09:00-17:00" for business hours.
+* disabled_days - enables to "pause" metric gathering on specified days. See metric_attrs.yaml for "wal" for an example.
+* disabled_times - enables to "pause" metric gathering on specified time intervals. e.g. "09:00-17:00" for business hours.
   NB! disabled_days / disabled_times can also be defined both on metric and host (host_attrs) level.
 
 # File based operation
