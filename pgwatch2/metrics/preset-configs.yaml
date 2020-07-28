@@ -240,3 +240,33 @@
     table_stats: 300
     wal: 60
     wal_receiver: 120
+
+- name: azure
+  description: similar to 'exhaustive' with stuff that's not accessible on Azure Database for PostgreSQL removed
+  metrics:
+    archiver: 60
+    backends: 60
+    bgwriter: 60
+    change_events: 300
+    cpu_load: 60
+    db_size: 300
+    db_stats: 60
+    index_stats: 900
+    kpi: 60
+    locks: 60
+    locks_mode: 60
+    logical_subscriptions: 60
+    recommendations: 43200
+    replication: 120
+    replication_slots: 120
+    server_log_event_counts: 60
+    settings: 7200
+    sproc_stats: 180
+    stat_ssl: 180
+    stat_statements: 180
+    stat_statements_calls: 60
+    table_bloat_approx_summary_sql: 7200
+    table_io_stats: 600
+    table_stats: 300
+    wal: 60
+    wal_receiver: 120
