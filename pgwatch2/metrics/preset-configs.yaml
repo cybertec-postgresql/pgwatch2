@@ -247,21 +247,21 @@
     kpi: 60
     wal: 60
     locks: 60
-    db_size: 30,
+    db_size: 30
     archiver: 60
     backends: 60
     bgwriter: 60
     db_stats: 60
-    settings: 720,
+    settings: 720
     stat_ssl: 60
     locks_mode: 60
-    index_stats: 90,
+    index_stats: 90
     replication: 60
-    sproc_stats: 18,
+    sproc_stats: 18
     wal_receiver: 60
-    change_events: 30,
-    table_io_stats: 60,
-    stat_statements: 18,
+    change_events: 30
+    table_io_stats: 60
+    stat_statements: 18
     replication_slots: 60
     logical_subscriptions: 60
     stat_statements_calls: 60
