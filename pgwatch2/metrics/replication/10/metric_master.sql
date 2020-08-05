@@ -1,7 +1,13 @@
 SELECT
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   application_name as tag_application_name,
+  *,
   concat(coalesce(client_addr::text, client_hostname), '_', client_port::text) as tag_client_info,
+  coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), sent_lsn)::int8, 0) as pending,
+  coalesce(pg_wal_lsn_diff(sent_lsn, write_lsn)::int8, 0) as write,
+  coalesce(pg_wal_lsn_diff(write_lsn, flush_lsn)::int8, 0) as flush,
+  coalesce(pg_wal_lsn_diff(flush_lsn, replay_lsn)::int8, 0) as replay,
+  coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)::int8, 0) as total_lag,
   coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), write_lsn)::int8, 0) as write_lag_b,
   coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), flush_lsn)::int8, 0) as flush_lag_b,
   coalesce(pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)::int8, 0) as replay_lag_b,
