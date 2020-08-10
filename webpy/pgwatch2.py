@@ -294,9 +294,13 @@ def insert_monitored_db(params, cmd_args=None):
             # get all active non-template DBs from the entered host
             active_dbs_on_host, err = datadb.executeOnRemoteHost(sql_active_dbs, host=params['md_hostname'], port=params['md_port'],
                                                                  dbname='template1', user=params['md_user'], password=password_plain,
-                                                                 sslmode=params['md_sslmode'])
+                                                                 sslmode=params['md_sslmode'], quiet=True)
             if err:
-                raise Exception("Could not read active DBs from specified host!")
+                active_dbs_on_host, err = datadb.executeOnRemoteHost(sql_active_dbs, host=params['md_hostname'], port=params['md_port'],
+                                                                     dbname='postgres', user=params['md_user'], password=password_plain,
+                                                                     sslmode=params['md_sslmode'], quiet=True)
+                if err:
+                    raise Exception("Could not read active DBs from specified host! Make sure 'template1' and/or 'postgres' DB-s are connectable. If not DB auto-discovery cannot be used")
             active_dbs_on_host = [x['datname'] for x in active_dbs_on_host]
 
             # "subtract" DBs that are already monitored
