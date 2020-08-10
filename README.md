@@ -2,13 +2,11 @@
 
 # pgwatch2
 
-Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution. Supports monitoring PG versions 9.0 to 12 out of the box.
+Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution. Supports monitoring PG versions 9.0 to 13 out of the box.
 
 # Demo
 
 [https://demo.pgwatch.com/](https://demo.pgwatch.com/)
-
-Note: has a self-signed certificate as configured out the box in Docker, so you need to click "Allow / Add exception / Trust" or similar
 
 # Installing
 
