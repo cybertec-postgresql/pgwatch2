@@ -4947,7 +4947,7 @@ $sql$,
 '{"prometheus_all_gauge_columns": true}',
 $sql$
 /* NB! If using not a real superuser but a role with "pg_monitor" grant then below execute grant is needed:
-  EXECUTE on FUNCTION pg_stat_file(text) to pgwatch2;
+  GRANT EXECUTE ON FUNCTION pg_stat_file(text) to pgwatch2;
 */
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
