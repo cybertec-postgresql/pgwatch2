@@ -1,7 +1,12 @@
+# This is an example of a systemD config file for pgwatch2.
+# You can copy it to "/etc/systemd/system/pgwatch2.service", adjust as necessary and then call
+# systemctl daemon-reload && systemctl start pgwatch2 && systemctl enable pgwatch2
+# to start and also enable auto-start after reboot.
+
 [Unit]
 Description=Pgwatch2 Gathering Daemon
-# if you're using the config DB approach and when on the same machine then it's a good idea to launch after Postgres
-#Wants=postgresql@12-main.service
+After=network-online.target
+# If you're using the config DB approach and when on the same machine then it's a good idea to launch after Postgres
 #After=postgresql@12-main.service
 
 [Service]
@@ -9,6 +14,7 @@ User=pgwatch2
 Type=notify
 ExecStart=/usr/bin/pgwatch2-daemon -c /etc/pgwatch2/config/instances.yaml -m /etc/pgwatch2/metrics/
 Restart=on-failure
+TimeoutStartSec=0
 
 [Install]
 WantedBy=multi-user.target
