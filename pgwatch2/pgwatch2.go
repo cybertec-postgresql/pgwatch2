@@ -3827,12 +3827,19 @@ func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatab
 
 // "resolving" reads all the DB names from the given host/port, additionally matching/not matching specified regex patterns
 func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase, error) {
+	var c *sqlx.DB
+	var err error
 	md := make([]MonitoredDatabase, 0)
 
-	c, err := GetPostgresDBConnection(ce.LibPQConnStr, ce.Host, ce.Port, "template1", ce.User, ce.Password,
+	c, err = GetPostgresDBConnection(ce.LibPQConnStr, ce.Host, ce.Port, "template1", ce.User, ce.Password,
 		ce.SslMode, ce.SslRootCAPath, ce.SslClientCertPath, ce.SslClientKeyPath)
 	if err != nil {
-		return md, err
+		// some cloud providers limit access to templat1 for some reason, so try with postgres
+		c, err = GetPostgresDBConnection(ce.LibPQConnStr, ce.Host, ce.Port, "postgres", ce.User, ce.Password,
+			ce.SslMode, ce.SslRootCAPath, ce.SslClientCertPath, ce.SslClientKeyPath)
+		if err != nil {
+			return md, err
+		}
 	}
 	defer c.Close()
 
@@ -4111,6 +4118,7 @@ type Options struct {
 	MetricsFolder           string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
 	BatchingDelayMs         int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
 	AdHocConnString         string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
+	AdHocDBType             string `long:"adhoc-dbtype" description:"Ad-hoc mode: postgres|postgres-continuous-discovery" default:"postgres" env:"PW2_ADHOC_DBTYPE"`
 	AdHocConfig             string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
 	AdHocCreateHelpers      string `long:"adhoc-create-helpers" description:"Ad-hoc mode: try to auto-create helpers. Needs superuser to succeed [Default: false]" default:"false" env:"PW2_ADHOC_CREATE_HELPERS"`
 	AdHocUniqueName         string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
@@ -4218,6 +4226,9 @@ func main() {
 		}
 		if len(opts.User) > 0 && len(opts.Password) > 0 {
 			log.Fatal("Conflicting flags! --adhoc-conn-str and --user/--password cannot be both set")
+		}
+		if !(opts.AdHocDBType == DBTYPE_PG || opts.AdHocDBType == DBTYPE_PG_CONT) {
+			log.Fatalf("--adhoc-dbtype can be of: [ %s (single DB) | %s (all non-template DB-s on an instance) ]. Default: %s", DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_PG)
 		}
 		if opts.AdHocUniqueName == "adhoc" {
 			log.Warning("In ad-hoc mode: using default unique name 'adhoc' for metrics storage. use --adhoc-name to override.")
@@ -4473,8 +4484,21 @@ func main() {
 						log.Fatalf("Could not parse --adhoc-config(%s): %v", opts.AdHocConfig, err)
 					}
 				}
-				monitored_dbs = []MonitoredDatabase{{DBUniqueName: opts.AdHocUniqueName, DBType: DBTYPE_PG,
-					Metrics: config}}
+				md := MonitoredDatabase{DBUniqueName: opts.AdHocUniqueName, DBType: opts.AdHocDBType, Metrics: config, LibPQConnStr: opts.AdHocConnString}
+				if opts.AdHocDBType == DBTYPE_PG {
+					monitored_dbs = []MonitoredDatabase{md}
+				} else {
+					resolved, err := ResolveDatabasesFromConfigEntry(md)
+					if err != nil {
+						if first_loop {
+							log.Fatalf("Failed to resolve DBs for ConnStr \"%s\": %s", opts.AdHocConnString, err)
+						} else {	// keep previously found list
+							log.Errorf("Failed to resolve DBs for ConnStr \"%s\": %s", opts.AdHocConnString, err)
+						}
+					} else {
+						monitored_dbs = resolved
+					}
+				}
 			} else {
 				mc, err := ReadMonitoringConfigFromFileOrFolder(opts.Config)
 				if err == nil {

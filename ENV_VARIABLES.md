@@ -45,6 +45,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_ADHOC_CONFIG** Ad-hoc mode. A preset config name or a custom JSON config. Default: exhaustive
 - **PW2_ADHOC_CREATE_HELPERS** Ad-hoc mode. Try to auto-create helpers. Needs superuser to succeed. Default: false
 - **PW2_ADHOC_NAME** Ad-hoc mode. Unique 'dbname' for Influx. Default: adhoc
+- **PW2_ADHOC_DBTYPE** Ad-hoc mode: postgres|postgres-continuous-discovery. Default: postgres
 - **PW2_INTERNAL_STATS_PORT** Port for inquiring monitoring status in JSON format. Default: 8081
 - **PW2_CONN_POOLING** Enable re-use of metrics fetching connections. "off" means reconnect every time. Default: off
 - **PW2_AES_GCM_KEYPHRASE** Keyphrase for encryption/decpyption of connect string passwords.
