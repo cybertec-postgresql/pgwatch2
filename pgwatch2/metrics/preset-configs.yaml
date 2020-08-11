@@ -244,26 +244,26 @@
 - name: azure
   description: similar to 'exhaustive' with stuff that's not accessible on Azure Database for PostgreSQL removed
   metrics:
-    kpi: 60
+    kpi: 120
     wal: 60
     locks: 60
-    db_size: 30
+    db_size: 300
     archiver: 60
     backends: 60
     bgwriter: 60
     db_stats: 60
-    settings: 720
+    settings: 7200
     stat_ssl: 60
     locks_mode: 60
-    index_stats: 90
+    index_stats: 900
     replication: 60
-    sproc_stats: 18
+    sproc_stats: 180
     wal_receiver: 60
-    change_events: 30
-    table_io_stats: 60
-    stat_statements: 18
+    change_events: 300
+    table_io_stats: 600
+    stat_statements: 180
     replication_slots: 60
     logical_subscriptions: 60
     stat_statements_calls: 60
     server_log_event_counts: 60
-    table_bloat_approx_summary_sql: 720
+    table_bloat_approx_summary_sql: 7200
