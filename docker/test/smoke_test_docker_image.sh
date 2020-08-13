@@ -26,6 +26,8 @@ GRAFANAPORT=$(shuf -i 10000-65000 -n 1)
 LOCALHOST=127.0.0.1
 
 echo "starting smoke test of Postgres image $IMAGE ..."
+echo "stopping and removing existing container named $CONTAINER_NAME if any"
+docker stop "$CONTAINER_NAME" &>/dev/null && docker rm "$CONTAINER_NAME" &>/dev/null
 
 echo "launching docker container using ports GRAFANA=$GRAFANAPORT, PG=$PGPORT, WEBUI=$WEBUIPORT, INFLUX=$INFLUXPORT..."
 DOCKER_RUN=$(docker run -d --rm --cpus=2 -p $LOCALHOST:$WEBUIPORT:8080 -p $LOCALHOST:$GRAFANAPORT:3000 -p $LOCALHOST:$PGPORT:5432 -p $LOCALHOST:$INFLUXPORT:8086 --name "$CONTAINER_NAME" $IMAGE)
@@ -71,4 +73,5 @@ echo "image $CONTAINER_NAME looks OK"
 
 echo "shutting down image..."
 docker stop "$CONTAINER_NAME"
+sleep 5
 echo "OK. Done"
