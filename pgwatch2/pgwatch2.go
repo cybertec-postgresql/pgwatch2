@@ -395,6 +395,7 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password, requir
 			}
 		} else {
 			log.Info("connect to configDb OK!")
+			break
 		}
 	}
 	configDb.SetMaxIdleConns(1)
@@ -439,6 +440,7 @@ func InitAndTestMetricStoreConnection(connStr string, failOnErr bool) error {
 			}
 		} else {
 			log.Info("connect to metricDb OK!")
+			break
 		}
 	}
 	metricDb.SetMaxIdleConns(1)
