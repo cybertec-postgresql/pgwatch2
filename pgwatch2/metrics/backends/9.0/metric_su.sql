@@ -13,6 +13,7 @@ select
     (select count(*) from sa_snapshot where current_query = '<IDLE>') as idle,
     (select count(*) from sa_snapshot where current_query = '<IDLE> in transaction') as idleintransaction,
     (select count(*) from sa_snapshot where waiting) as waiting,
+    (select extract(epoch from max(now() - query_start))::int from sa_snapshot where waiting) as longest_waiting_seconds,
     (select extract(epoch from (now() - backend_start))::int
      from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
     (select extract(epoch from (now() - xact_start))::int

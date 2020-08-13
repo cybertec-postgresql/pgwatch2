@@ -13,6 +13,7 @@ current_setting('max_connections')::int as max_connections,
   (select count(*) from sa_snapshot where state = 'idle' and backend_type = 'client backend') as idle,
   (select count(*) from sa_snapshot where state = 'idle in transaction' and backend_type = 'client backend') as idleintransaction,
   (select count(*) from sa_snapshot where wait_event_type in ('LWLock', 'Lock', 'BufferPin') and backend_type = 'client backend') as waiting,
+  (select extract(epoch from max(now() - query_start))::int from sa_snapshot where wait_event_type in ('LWLock', 'Lock', 'BufferPin') and backend_type = 'client backend') as longest_waiting_seconds,
   (select extract(epoch from (now() - backend_start))::int
     from sa_snapshot where backend_type = 'client backend' order by backend_start limit 1) as longest_session_seconds,
   (select extract(epoch from (now() - xact_start))::int
