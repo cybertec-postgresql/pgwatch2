@@ -1,0 +1,40 @@
+FROM ubuntu:20.04
+
+# WORKDIR /root
+
+RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy postgresql-client-12 wget unzip \
+  && useradd -m -s /bin/bash postgres
+
+USER postgres
+
+COPY pgwatch2/sql/ /pgwatch2/sql
+COPY docker/launch-wrapper-db-bootstrapper.sh /pgwatch2/launch-wrapper-db-bootstrapper.sh
+
+ENV PGHOST replaceme
+ENV PGPORT 5432
+ENV PGDATABASE postgres
+# PGUSER should be superuser
+ENV PGUSER postgres
+ENV PGPASSWORD ""
+ENV PGSSLMODE prefer
+ENV ON_ERROR_STOP 1
+
+# configdb | metricsdb. Required
+ENV BOOTSTRAP_TYPE ""
+# DB created if not existing. Required
+ENV BOOTSTRAP_DATABASE ""
+ENV BOOTSTRAP_ADD_TEST_MONITORING_ENTRY 1
+# chema owner role created if not existing
+ENV BOOTSTRAP_SCHEMA_OWNER pgwatch2
+# metric-time | metric-dbname-time | timescale
+ENV BOOTSTRAP_METRICSDB_SCHEMA_TYPE metric-time
+
+## Optional
+# TODO create a read-only user to help with Grafana integration
+ENV BOOTSTRAP_METRICSDB_ADD_READ_ONLY_GRAFANA_USER ""
+# TODO pull schema SQL-s directly from Github
+ENV BOOTSTRAP_TARGET_VERSION ""
+
+
+# ENTRYPOINT ["/pgwatch2/launch-wrapper-db-bootstrapper.sh"]
+CMD ["/pgwatch2/launch-wrapper-db-bootstrapper.sh"]
