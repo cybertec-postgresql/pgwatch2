@@ -64,7 +64,7 @@ psql -d $BOOTSTRAP_DATABASE -f /pgwatch2/sql/config_store/metric_definitions.sql
 if [ "$BOOTSTRAP_ADD_TEST_MONITORING_ENTRY" == "1" ] || [ "$BOOTSTRAP_ADD_TEST_MONITORING_ENTRY" == "true" ]; then
 SQL_INS=$(cat <<-EOF
 insert into pgwatch2.monitored_db (md_unique_name, md_preset_config_name, md_hostname, md_port, md_dbname, md_user, md_password)
-  select 'test', 'exhaustive', '$PGHOST', '$PGPORT', '$BOOTSTRAP_DATABASE', '$PGUSER', '$PGPASSWORD'
+  select 'test', 'unprivileged', '$PGHOST', '$PGPORT', '$BOOTSTRAP_DATABASE', '$PGUSER', '$PGPASSWORD'
   on conflict do nothing;
 EOF
 )
