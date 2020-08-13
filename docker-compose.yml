@@ -1,0 +1,51 @@
+# To demonstrate how to set up pgwatch2 in a loosely coupled way
+
+version: "3"
+services:
+  postgres:
+    image: postgres:12
+    ports:
+      - "15432:5432"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+  db-bootstrapper-configdb:
+    image: cybertec/pgwatch2-db-bootstrapper:latest
+    environment:
+      PGHOST: postgres
+      BOOTSTRAP_TYPE: configdb
+      BOOTSTRAP_DATABASE: pgwatch2
+      BOOTSTRAP_ADD_TEST_MONITORING_ENTRY: 1
+    depends_on:
+      - postgres
+  db-bootstrapper-metricsdb:
+    image: cybertec/pgwatch2-db-bootstrapper:latest
+    environment:
+      PGHOST: postgres
+      BOOTSTRAP_TYPE: metricsdb
+      BOOTSTRAP_DATABASE: pgwatch2_metrics
+      BOOTSTRAP_METRICSDB_SCHEMA_TYPE: metric-time
+    depends_on:
+      - postgres
+  webui:
+    image: cybertec/pgwatch2-webui:latest
+    environment:
+      PW2_PGHOST: postgres
+      PW2_DATASTORE: postgres
+      PW2_PG_METRIC_STORE_CONN_STR: postgresql://pgwatch2@postgres:5432/pgwatch2_metrics
+    ports:
+      - "18080:8080"
+    depends_on:
+      - db-bootstrapper-configdb
+      - db-bootstrapper-metricsdb
+  pgwatch2-daemon:
+    image: cybertec/pgwatch2-daemon:latest
+    environment:
+      PW2_PGHOST: postgres
+      PW2_VERBOSE: warn
+      PW2_DATASTORE: postgres
+      PW2_PG_METRIC_STORE_CONN_STR: postgresql://pgwatch2@postgres:5432/pgwatch2_metrics
+    ports:
+      - "18081:8081"
+    depends_on:
+      - db-bootstrapper-configdb
+      - db-bootstrapper-metricsdb
