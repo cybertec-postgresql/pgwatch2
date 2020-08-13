@@ -356,32 +356,46 @@ func StringToBoolOrFail(boolAsString, inputParamName string) bool {
 func InitAndTestConfigStoreConnection(host, port, dbname, user, password, requireSSL string, failOnErr bool) error {
 	var err error
 	SSLMode := "disable"
+	var retries = 3 // ~15s
 
 	if StringToBoolOrFail(requireSSL, "--pg-require-ssl") {
 		SSLMode = "require"
 	}
-	// configDb is used by the main thread only. no verify-ca/verify-full support currently
-	configDb, err = GetPostgresDBConnection("", host, port, dbname, user, password, SSLMode, "", "", "")
-	if err != nil {
-		if failOnErr {
-			log.Fatal("could not open configDb connection! exit.")
-		} else {
-			log.Error("could not open configDb connection!")
-			return err
-		}
-	}
 
-	err = configDb.Ping()
-
-	if err != nil {
-		if failOnErr {
-			log.Fatal("could not ping configDb! exit.", err)
-		} else {
-			log.Error("could not ping configDb!", err)
-			return err
+	for i := 0; i <= retries; i++ {
+		// configDb is used by the main thread only. no verify-ca/verify-full support currently
+		configDb, err = GetPostgresDBConnection("", host, port, dbname, user, password, SSLMode, "", "", "")
+		if err != nil {
+			if i < retries {
+				log.Errorf("could not open metricDb connection. retrying in 5s. %d retries left. err: %v", retries-i, err)
+				time.Sleep(time.Second * 5)
+				continue
+			}
+			if failOnErr {
+				log.Fatal("could not open configDb connection! exit.")
+			} else {
+				log.Error("could not open configDb connection!")
+				return err
+			}
 		}
-	} else {
-		log.Info("connect to configDb OK!")
+
+		err = configDb.Ping()
+
+		if err != nil {
+			if i < retries {
+				log.Errorf("could not ping configDb! retrying in 5s. %d retries left. err: %v", retries-i, err)
+				time.Sleep(time.Second * 5)
+				continue
+			}
+			if failOnErr {
+				log.Fatal("could not ping configDb! exit.", err)
+			} else {
+				log.Error("could not ping configDb!", err)
+				return err
+			}
+		} else {
+			log.Info("connect to configDb OK!")
+		}
 	}
 	configDb.SetMaxIdleConns(1)
 	configDb.SetMaxOpenConns(2)
@@ -391,27 +405,41 @@ func InitAndTestConfigStoreConnection(host, port, dbname, user, password, requir
 
 func InitAndTestMetricStoreConnection(connStr string, failOnErr bool) error {
 	var err error
+	var retries = 3	// ~15s
 
-	metricDb, err = GetPostgresDBConnection(connStr, "", "", "", "", "", "", "", "", "")
-	if err != nil {
-		if failOnErr {
-			log.Fatal("could not open metricDb connection! exit. err:", err)
-		} else {
-			log.Error("could not open metricDb connection:", err)
-			return err
+	for i := 0; i <= retries; i++ {
+
+		metricDb, err = GetPostgresDBConnection(connStr, "", "", "", "", "", "", "", "", "")
+		if err != nil {
+			if i < retries {
+				log.Errorf("could not open metricDb connection. retrying in 5s. %d retries left. err: %v", retries - i, err)
+				time.Sleep(time.Second * 5)
+				continue
+			}
+			if failOnErr {
+				log.Fatal("could not open metricDb connection! exit. err:", err)
+			} else {
+				log.Error("could not open metricDb connection:", err)
+				return err
+			}
 		}
-	}
 
-	err = metricDb.Ping()
+		err = metricDb.Ping()
 
-	if err != nil {
-		if failOnErr {
-			log.Fatal("could not ping metricDb! exit.", err)
+		if err != nil {
+			if i < retries {
+				log.Errorf("could not ping metricDb! retrying in 5s. %d retries left. err: %v", retries - i, err)
+				time.Sleep(time.Second * 5)
+				continue
+			}
+			if failOnErr {
+				log.Fatal("could not ping metricDb! exit.", err)
+			} else {
+				return err
+			}
 		} else {
-			return err
+			log.Info("connect to metricDb OK!")
 		}
-	} else {
-		log.Info("connect to metricDb OK!")
 	}
 	metricDb.SetMaxIdleConns(1)
 	metricDb.SetMaxOpenConns(2)
