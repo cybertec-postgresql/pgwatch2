@@ -46,17 +46,17 @@ Relevant Gatherer env. vars / flags: ``--adhoc-conn-str, --adhoc-config, --adhoc
 ::
 
     # launching in ad-hoc / test mode
-    docker run --rm -p 3000:3000 -p 8080:8080 -e PW2_ADHOC_CONN_STR="postgresql://user:pwd@mydb:5432/mydb1" \
-        -e PW2_ADHOC_CONFIG=unprivileged --name pw2 cybertec/pgwatch2
+    docker run --rm -p 3000:3000 -e PW2_ADHOC_CONN_STR="postgresql://user:pwd@mydb:5432/mydb1" \
+        -e PW2_ADHOC_CONFIG=unprivileged --name pw2 cybertec/pgwatch2-postgres
 
     # launching in ad-hoc / test mode, creating metrics helpers automatically (requires superuser)
-    docker run --rm -p 3000:3000 -p 8080:8080 -e PW2_ADHOC_CONN_STR="postgresql://user:pwd@mydb:5432/mydb1" \
-        -e PW2_ADHOC_CONFIG=exhaustive -e PW2_ADHOC_CREATE_HELPERS=true --name pw2 cybertec/pgwatch2
+    docker run --rm -p 3000:3000 -e PW2_ADHOC_CONN_STR="postgresql://user:pwd@mydb:5432/mydb1" \
+        -e PW2_ADHOC_CONFIG=exhaustive -e PW2_ADHOC_CREATE_HELPERS=true --name pw2 cybertec/pgwatch2-postgres
 
-NB! Using the ``PW2_ADHOC_CREATE_HELPERS`` flag assumes superuser privileges and will try to create all of the metrics
-fetching helpers automatically on the monitored DB)
-and does not clean up the helpers on exitings so for a permanent setting one could
-change the user to an unprivileged 'pgwatch2' user.
+NB! Using the ``PW2_ADHOC_CREATE_HELPERS`` flag will try to create all metrics fetching helpers automatically if not already
+existing - this assumes superuser privileges though, which is not recommended for long term setups for obvious reasons.
+In case a long term need rises it's recommended to change the monitoring role to an unprivileged *pgwatch2* user, which
+by default gets execute *GRANT*-s to all helper functions. More details on secure setups can be found in the :ref:`security chapter <security>`.
 
 Prometheus mode
 ---------------

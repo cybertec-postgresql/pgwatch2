@@ -50,3 +50,4 @@
   dbname_include_pattern: (bar|postgres)
   dbname_exclude_pattern:
   is_enabled: false
+  only_if_master: true # don't gather metrics from standby servers

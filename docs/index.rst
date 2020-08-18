@@ -13,6 +13,7 @@ Welcome to pgwatch2's documentation!
    README
    project_background
    features
+   advanced_features
    components
    installation_options
    docker_installation

@@ -24,6 +24,6 @@ into the docker container under /var/logs/supervisor/
 
 
 Docker Compose
-==============
+--------------
 
 ASasa

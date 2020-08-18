@@ -1,8 +1,13 @@
+.. _security:
+
 Security aspects
 ================
 
-Settings can be configured for most components, but by default the Docker image doesn't focus on security though but rather
-on being quickly usable for ad-hoc performance troubleshooting.
+Security can be tightened for most pgwatch2 components quite granularly, but the default values for the Docker image
+don't focus on security though but rather on being quickly usable for ad-hoc performance troubleshooting, which is where
+the roots of pgwatch2 lie.
+
+Some points on security:
 
 * No noticable impact for the monitored DB is expected with the default settings. For some metrics though can happen that
   the metric reading query (notably "stat_statements") takes some milliseconds, which might be more than an average application
