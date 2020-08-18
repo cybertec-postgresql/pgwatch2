@@ -14,16 +14,17 @@ Welcome to pgwatch2's documentation!
    project_background
    features
    components
-   docker_setup
-   custom_installs
+   installation_options
+   docker_installation
+   custom_installation
    configuring
    security
    metrics
    metric_helpers
-   grafana_dashboards
+   dashboarding_alerting
    sizing_recommendations
    upgrading
-   cloud_kubernetes
+   kubernetes
 
 
 Indices and tables
