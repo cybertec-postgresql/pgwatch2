@@ -28,6 +28,8 @@ user/password: admin/pgwatch2admin).
 NB! If you don't want to add the "test" database (the pgwatch2 configuration DB holding connection strings to monitored DBs
 and metric definitions) to the monitoring remove the PW2_TESTDB env variable.
 
+.. _typical_architecture:
+
 Typical architecture
 --------------------
 

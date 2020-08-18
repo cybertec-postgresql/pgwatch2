@@ -1,7 +1,8 @@
-Hardware sizing recommendations
+Sizing recommendations
 ===============================
 
-* Min 1GB RAM required for Docker setup. Just the gatherer needs <50MB if metric strore is up, otherwise metrics are cached in RAM up to a limit of 10k data points.
+* Min 1GB RAM required for the Docker setup. The gatherer alone needs typically less than 50 MB if the metrics store is online -
+  otherwise metrics are cached in RAM up to a limit of 10k data points (for all databases) and then it's dependent on the metrics configuration.
 
 * 2 GBs of disk space should be enough for monitoring 1 DB for 1 month with InfluxDB. 1 month is also the default metrics
   retention policy for Influx running in Docker (configurable). Depending on the amount of schema objects - tables, indexes, stored
@@ -23,3 +24,7 @@ Hardware sizing recommendations
 
 * When high metrics write latency is problematic (e.g. using a DBaaS across the atlantic) then increasing the default maximum
   batching delay of 250ms(--batching-delay-ms / PW2_BATCHING_MAX_DELAY_MS) usually gives good results.
+
+* Note that when monitoring a very large number of databases, it's possible to "shard" / distribute them between many
+  metric collection instances running on different hosts, via the ``--group | PW2_GROUP`` flag / env, given that some hosts
+  have been assigned a non-default group identifier which is just a text field exactly for this sharding purpose.
