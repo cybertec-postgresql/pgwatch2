@@ -62,6 +62,14 @@ know the query language:
 
   For testing / special use cases.
 
+The Web UI
+----------
+
+The second home-brewn component of the pgwatch2 solution is an optional and relatively simple Web UI for administering details
+of the monitoring configuration like which databases should be monitored, with which metrics and intervals. Besides that there
+are some basic overview tables to analyze the gathered data and also possibilities to delete unneeded metric data. NB! Note
+that the Web UI can only be used if storing the configuration in the database (Postgres).
+
 Metrics representation
 ----------------------
 
@@ -69,13 +77,6 @@ Standard pgwatch2 setup uses `Grafana <http://grafana.org/>`_ for analyzing the 
 way. For that a rich set of predefined dashboards for Postgres and InfluxDB data sources is provided, that should cover
 the needs of most users - advanced users would mostly always want to customize some aspects though, so it's not meant as
 a one-size-fits-all solution. Also as metrics are stored in a DB, they can be visualized or processed in any other way.
-
-* The Web UI for administering the monitoring configuration
-
-The second home-brewn component of the pgwatch2 solution is an optional and relatively simple Web UI for administering details
-like which databases should be monitored, with which metrics and intervals. Besides that there are some basic overview tables
-to analyze the gathered data and also possibilities to delete unneeded metric data. NB! Note that the Web UI can only be
-used if storing the configuration in the database (Postgres).
 
 Component diagram
 -----------------
