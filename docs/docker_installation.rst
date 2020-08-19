@@ -128,6 +128,16 @@ Interacting with the Docker container
   FYI - ``docker logs ...`` command is not really useful after the startup in pgwatch2 case.
 
 
+Ports used
+----------
+
+* 5432 - Postgres configuration or metrics storage DB (when using the cybertec/pgwatch2-postgres image)
+* 8080 - Management Web UI (monitored hosts, metrics, metrics configurations)
+* 8081 - Gatherer healthcheck / statistics on number of gathered metrics (JSON).
+* 3000 - Grafana dashboarding
+* 8086 - InfluxDB API (when using the InfluxDB version)
+* 8088 - InfluxDB Backup port (when using the InfluxDB version)
+
 Docker Compose
 --------------
 

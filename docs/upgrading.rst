@@ -1,4 +1,4 @@
-.. :upgrading_
+.. _upgrading:
 
 Updating to a newer Docker version
 ==================================
