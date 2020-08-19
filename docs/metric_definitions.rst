@@ -1,3 +1,8 @@
+.. _custom metrics:
+
+Defining custom metrics
+=======================
+
 # Adding metrics
 
 ## Note on built-in metrics

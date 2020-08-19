@@ -78,35 +78,60 @@ Docker installation is needed: `docker build .`.
 Build scripts used to prepare the public images can be found `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/build-all-images-latest.sh>`_.
 
 
-Usage basics (Docker)
----------------------
+Interacting with the Docker container
+-------------------------------------
 
-* by default the "pgwatch2" configuration database running inside Docker is being monitored so that you can immediately see
-  some graphs, but you should add new databases by opening the "admin interface" at 127.0.0.1:8080/dbs or logging into the
-  Postgres config DB and inserting into "pgwatch2.monitored_db" table (db - pgwatch2 , default user/pw - pgwatch2/pgwatch2admin).
-  Note that it can take up to 2min before you see any metrics for newly inserted databases.
+* If to launch with the *PW2_TESTDB=1* env. parameter then the pgwatch2 configuration database running inside Docker
+  is added to the monitoring, so that you should immediately see some metrics at least on the *Health-check* dashboard.
 
-* one can create new Grafana dashboards (and change settings, create users, alerts, ...) after logging in as "admin" (admin/pgwatch2admin)
+* To add new databases / instances to monitoring open the administration Web interface on port 8080 (or some other port,
+  if re-mapped at launch) and go to the */dbs* page. Note that the Web UI is an optional component, and one can managed
+  monitoring entries directly in the Postgres Config DB via INSERT-s / UPDATE-s into "pgwatch2.monitored_db" table. Default
+  use user/password are again *pgwatch2* / *pgwatch2admin*, database name - pgwatch2.
+  In both cases note that it can take up to 2min (default main loop time, changeable via *PW2_SERVERS_REFRESH_LOOP_SECONDS*)
+  before you see any metrics for newly inserted databases.
 
-* metrics (and their intervals) that are to be gathered can be customized for every database by using a preset config
-like "minimal", "basic" or "exhaustive" (monitored_db.preset_config table) or a custom JSON config.
+* One can edit existing or create new Grafana dashboards, change Grafana global settings, create users, alerts, etc after
+  logging in as *admin* / *pgwatch2admin* (by default, changeable at launch time).
 
-* to add a new metrics  yourself (simple SQL queries returing point-in-time values) head to http://127.0.0.1:8080/metrics.
-The queries should always include a "epoch_ns" column and "tag_" prefix can be used for columns that should be tags
-(thus indexed) in InfluxDB.
+* Metrics and their intervals that are to be gathered can be customized for every database separately via a custom JSON
+  config field or more conveniently by using *Preset Configs*, like "minimal", "basic" or "exhaustive" (monitored_db.preset_config
+  table), where the name should already hint at the amount of metrics gathered. For privileged users the "exhaustive"
+  preset is a good starting point, and "unprivileged" for simple developer accounts.
 
-* a list of available metrics together with some instructions is also visible from the "Documentation" dashboard
+* To add a new metrics yourself (which are simple SQL queries returning any values and a timestamp) head to http://127.0.0.1:8080/metrics.
+  The queries should always include a "epoch_ns" column and "tag\_" prefix can be used for columns that should be quickly
+  searchable / groupable, and thus will be indexed with the InfluxDB and PostgreSQL metric stores. At the bottom of the
+  "metrics" page for more explanations or the chapter on metrics :ref:`here <custom_metrics>`.
 
-* some predefine metrics (cpu_load, stat_statements) require installing helper functions (look into "pgwatch2/metrics/00_helpers" folder) on monitored DBs2
+* For a dashboarding quickstart a list of available metrics together with some instructions is also visible from the "Documentation" dashboard.
 
-* for effective graphing you want to familiarize yourself with basic InfluxQL and the non_negative_derivative() function
-which is very handy as Postgres statistics are mostly evergrowing counters. Documentation [here](https://docs.influxdata.com/influxdb/latest/query_language/functions/#non-negative-derivative).
+* Some built-in metrics like "cpu_load" and others, that gather privileged or OS statistics, require installing *helper functions*
+  (looking like `that <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/metrics/00_helpers/get_load_average/9.1/metric.sql>`_,
+  so it might be normal to see some blank panels or fetching errors in the logs. On how to prepare databases for monitored
+  see the :ref:`Monitoring preparations <monitoring_preparations>` chapter.
 
-* for troubleshooting, logs for the components are visible under http://127.0.0.1:8080/logs/[pgwatch2|postgres|webui|influxdb|grafana] or by logging
-into the docker container under /var/logs/supervisor/
+* For effective graphing you want to familiarize yourself with the query language of the database systems that was selected
+  for metrics storage. Some tips to get going:
+
+  * For InfluxQL -  the non_negative_derivative() function is very handy as Postgres statistics are mostly evergrowing counters
+    and one needs to calculate so called *deltas* to show change. Documentation `here <https://docs.influxdata.com/influxdb/latest/query_language/functions/#non-negative-derivative>`_.
+
+  * For PostgreSQL / TimescaleDB - some knowledge of `Window functions <https://www.postgresql.org/docs/current/tutorial-window.html>`_
+    is a must if looking at longer periods of data as the statistics could have been reset in the mean time in the database
+    or the server might have crashed, so that simple *min(), max(), etc* aggregates would lie.
+
+* For troubleshooting, logs for the components running inside Docker are by default (if not disabled) visible under:
+  http://127.0.0.1:8080/logs/[pgwatch2|postgres|webui|influxdb|grafana]. It's of course also possible to log into the container
+  and look at log files directly - they're situated under */var/logs/supervisor/*.
+
+  FYI - ``docker logs ...`` command is not really useful after the startup in pgwatch2 case.
 
 
 Docker Compose
 --------------
 
-ASasa
+As mentioned in the :ref:`Components <components>` chapter, remember though that the pre-built Docker images are just one
+example how your monitoring setup around the pgwatch2 metrics collector could be organized. For another example how various
+components (as Docker images here) can work together, see a *Docker Compose* example with loosely coupled components
+`here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/docker-compose.yml>`_.

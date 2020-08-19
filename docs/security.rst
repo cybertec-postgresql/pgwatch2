@@ -32,3 +32,10 @@ Some points on security:
 * Encrypting/decrypting passwords stored in the config DB or in YAML config files possible from v1.5.0. An encryption
   passphrase/file needs to be specified then via PW2_AES_GCM_KEYPHRASE / PW2_AES_GCM_KEYPHRASE_FILE. By default passwords
   are stored in plaintext.
+
+
+
+Launching a secured Docker container
+------------------------------------
+
+TODO
