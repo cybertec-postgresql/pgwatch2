@@ -3,9 +3,28 @@
 Installing without Docker
 =========================
 
-Config store
-------------
+As described in the :ref:`Components <components>` chapter, there a couple of ways how to setup up pgwatch2. Two most
+common ways though are the central *Config DB* based "pull" approach and the *YAML file** based "push" approach.
 
+Config DB based setup
+---------------------
+
+**Overview of installation steps:**
+
+#. Install Postgres (or use any v9.4+ existing instance) and bootstrap the Config DB.
+#. Configure the metrics storage DB - most commonly either PostgreSQL or InfluxDB.
+#. Install pgwatch2 - either from pre-built packages or by compiling the Go code.
+#. Optional step - install the administrative Web UI + Python & library dependencies.
+#. Prepare the "to-be-monitored" databases for monitoring by creating a dedicated login role name as a minimum.
+   Although any unprivileged user will do it's better though to also assign the *pg_monitor* system role.
+   See :ref:`here <preparing_databases>` for more.
+#. Add some databases to the monitoring configuration via the Web UI or directly in the Config DB.
+#. Start the pgwatch2 metrics collection agent and monitor the logs for any problems.
+#. Install and configure Grafana and import the pgwatch2 sample dashboards to start analyzing the metrics.
+#. Make sure that there are auto-start SystemD services for all components in place and optionally set up also backups.
+
+
+**Detailed steps:**
 
 Below are sample steps to do a custom install from scratch using Postgres for the pgwatch2 configuration DB, metrics DB and
 Grafana config DB. NB! pgwatch2 config can also be stored YAML and Grafana can use embedded Sqlite DB so technically only
@@ -22,10 +41,10 @@ All examples assuming Ubuntu.
      * For Debian / Ubuntu based systems: https://wiki.postgresql.org/wiki/Apt
      * For CentOS / RedHat based systems: https://yum.postgresql.org/
 
-    ```
-    sudo apt install postgresql
-    ```
-    Default port: 5432
+    ::
+
+      sudo apt install postgresql
+
 
     1.a. Alternative flow for InfluxDB metrics storage (ignore for Postgres):
     ```

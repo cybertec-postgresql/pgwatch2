@@ -1,4 +1,4 @@
-.. :preparing_databases_for_monitoring:
+.. _preparing_databases:
 
 Preparing databases for monitoring
 ==================================

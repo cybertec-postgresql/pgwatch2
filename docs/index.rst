@@ -18,12 +18,13 @@ Welcome to pgwatch2's documentation!
    installation_options
    docker_installation
    custom_installation
-   configuring
    security
-   metrics
-   metric_helpers
+   preparing_databases
+   metric_definitions
+   web_ui
    dashboarding_alerting
    sizing_recommendations
+   long_term_installations
    upgrading
    kubernetes
 
