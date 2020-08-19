@@ -7,8 +7,8 @@ of almost all metrics for Postgres versions 9.0 to 13 out of the box and can be 
 At the core of the solution is the metrics gathering daemon written in Go, with many options to configure the details and
 aggressiveness of monitoring, types of metrics storage and the display the metrics.
 
-Quick start
------------
+Quick start with Docker
+-----------------------
 
 For the fastest setup experience Docker images are provided via Docker Hub (if new to Docker start `here <https://docs.docker.com/get-started/>`_).
 For custom setups see the :ref:`Custom installations <custom_installations>` paragraph below or turn to the pre-built DEB / RPM / Tar
@@ -21,12 +21,15 @@ Launching the latest pgwatch2 Docker image with built-in InfluxDB metrics storag
     # run the latest Docker image, exposing Grafana on port 3000 and the administrative web UI on 8080
     docker run -d -p 3000:3000 -p 8080:8080 -e PW2_TESTDB=true --name pw2 cybertec/pgwatch2
 
-After some minutes you could for exampple open the `"DB overview" <http://127.0.0.1:3000/dashboard/db/db-overview>`_ dashboard and start
+After some minutes you could for example open the `"DB overview" <http://127.0.0.1:3000/dashboard/db/db-overview>`_ dashboard and start
 looking at metrics in Grafana. For defining your own dashboards or making changes you need to log in as admin (default
 user/password: admin/pgwatch2admin).
 
 NB! If you don't want to add the "test" database (the pgwatch2 configuration DB holding connection strings to monitored DBs
-and metric definitions) to the monitoring remove the PW2_TESTDB env variable.
+and metric definitions) to monitoring, remove the PW2_TESTDB env variable.
+
+Also note that for long term production usage with Docker it's highly recommended to use separate *volumes* for each
+pgwatch2 component - see :ref:`here <docker_example_launch>` for a better launch example.
 
 .. _typical_architecture:
 
