@@ -1,4 +1,11 @@
-# Steps to configure your database for monitoring
+.. :preparing_databases_for_monitoring:
+
+Preparing databases for monitoring
+==================================
+
+Especially for remote, unprivileged monitoring users the operator / DBA is recommended to take some steps on the "to be monitored"
+database to get maximum value out of pgwatch2. Without any custom configuration you lose though only about 10% of built-in metrics,
+so nothing tragical also.
 
 * As a base requirement you'll need a login user (non-superuser suggested) for connecting to your server and fetching metrics queries.
 NB! Though theoretically you can use any username you like, but if not using "pgwatch2" you need to adjust the "helper" creation
