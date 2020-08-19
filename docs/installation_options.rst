@@ -13,6 +13,8 @@ small schema to be rolled out on any Postgres database accessible to the metrics
 connect strings, metric definition SQL-s and preset configurations and some other more minor attributes. For rollout details
 see the :ref:`custom installation <custom_installation>` chapter.
 
+The default Docker images use this approach.
+
 
 File based operation
 --------------------
@@ -64,7 +66,7 @@ Prometheus mode
 In v1.6.0 was added support for Prometheus - being one of the most popular modern metrics gathering / alerting solutions.
 When the ``--datastore / PW2_DATASTORE`` parameter is set to *prometheus* then the pgwatch2 metrics collector doesn't do any normal interval-based fetching but
 listens on port *9187* (changeable) for scrape requests configured and performed on Prometheus side. Returned metrics belong
-to "pgwatch2" namespace (a prefix basically) and is changeable via the ``--prometheus-namespace`` flag.
+to the "pgwatch2" namespace (a prefix basically) which is changeable via the ``--prometheus-namespace`` flag if needed.
 
 Also important to note - in this mode the pgwatch2 agent should not be run centrally but on all individual DB hosts. While
 technically possible though to run centrally, it would counter the core idea of Prometheus and would make scrapes also longer

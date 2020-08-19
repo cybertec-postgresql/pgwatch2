@@ -73,7 +73,7 @@ PgBouncer support
 
 Pgwatch2 also supports collecting internal statistics from the PgBouncer connection pooler, via the built-in special
 "pgbouncer" database and ``SHOW STATS`` command. To enable it choose the according *DB Type*, provide connection
-info to the pooler port and make sure the **pgbouncer** metric / preset config is selected for the host.
+info to the pooler port and make sure the **pgbouncer_stats** metric / preset config is selected for the host.
 
 There's also a built-in Grafana dashboard for PgBouncer data, looking like that:
 
@@ -86,9 +86,27 @@ There's also a built-in Grafana dashboard for PgBouncer data, looking like that:
 Pgpool-II support
 -----------------
 
-asasas
+Quite similar to PgBouncer, also Pgpool offers some statistics on pool performance and status, which might be of interest
+especially if using the load balancing features. To enable it choose the according *DB Type*, provide connection
+info to the pooler port and make sure the **pgpool_stats** metric / preset config is selected for the host.
+
+The built-in Grafana dashboard for Pgpool data looks something like that:
+
+.. image:: https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgpool_status.png
+   :alt: Grafana dash for PgPool stats
+   :target: https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgpool_status.png
+
 
 AWS / Azure support
 -------------------
 
-asdas
+Due to popularity of various managed PostgreSQL offerings there's also support for some managed options in sense of
+*Preset Configs*, that take into account the fact that on such platforms you get a limited user that doesn't have access
+to all metrics or some features have just been plain removed. Thus to reduce server log errors and save time on experimenting
+there are following presets available:
+
+* **aws** - for standard AWS RDS managed PostgreSQL databases
+
+* **aurora** - for AWS Aurora managed PostgreSQL service
+
+* **azure** - for Azure Database for PostgreSQL managed databases
