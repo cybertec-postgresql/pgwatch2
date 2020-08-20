@@ -33,7 +33,8 @@ Some points on security:
   passphrase/file needs to be specified then via PW2_AES_GCM_KEYPHRASE / PW2_AES_GCM_KEYPHRASE_FILE. By default passwords
   are stored in plaintext.
 
-
+* Note that although the metrics collector has some *password* flags, it's mostly better to use the standard LibPQ *.pgpass*
+  file to store passwords.
 
 Launching a secured Docker container
 ------------------------------------
