@@ -24,9 +24,11 @@ Welcome to pgwatch2's documentation!
    web_ui
    dashboarding_alerting
    sizing_recommendations
+   technical_details
    long_term_installations
    upgrading
    kubernetes
+   test
 
 
 Indices and tables

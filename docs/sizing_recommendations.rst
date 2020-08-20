@@ -1,5 +1,7 @@
+.. _sizing_recommendations:
+
 Sizing recommendations
-===============================
+======================
 
 * Min 1GB RAM required for the Docker setup. The gatherer alone needs typically less than 50 MB if the metrics store is online -
   otherwise metrics are cached in RAM up to a limit of 10k data points (for all databases) and then it's dependent on the metrics configuration.
