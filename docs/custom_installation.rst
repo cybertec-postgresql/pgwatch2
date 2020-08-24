@@ -295,7 +295,26 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
 YAML based setup
 ----------------
 
-TODO
+From v1.4 one can also deploy the pgwatch2 gatherer daemons more easily in a de-centralized way, by specifying monitoring configuration via YAML files. In that case there is no need for a central Postgres "config DB".
+
+**YAML installation steps**
+
+#. Install pgwatch2 - either from pre-built packages or by compiling the Go code.
+#. Specify hosts you want to monitor and with which metrics / aggressivness in a YAML file or files,
+   following the example config located at */etc/pgwatch2/config/instances.yaml* or online
+   `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/config/instances.yaml>`_.
+#. Bootstrap the metrics storage DB (not needed it using Prometheus mode).
+#. Prepare the "to-be-monitored" databases for monitoring by creating a dedicated login role name as a minimum.
+#. Run the pgatch2 gatherer specifying the YAML config file or folder and also the folder where metric definitions are
+   located. Default location: */etc/pgwatch2/metrics*.
+#. Install and configure Grafana and import the pgwatch2 sample dashboards to start analyzing the metrics.
+#. Make sure that there are auto-start SystemD services for all components in place and optionally set up also backups.
+
+Relevant gatherer parameters / env. vars: ``--config / PW2_CONFIG`` and ``--metrics-folder / PW2_METRICS_FOLDER``.
+
+For details on individual steps like installing pgwatch2 see the above paragraph.
+
+NB! The Web UI component cannot be used in file based mode.
 
 Using InfluxDB for metrics storage
 ----------------------------------
