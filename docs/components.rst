@@ -111,7 +111,7 @@ and basically doesn't have to be used at all. One can make use of the gathered m
 
 Set the following env variables: PW2_IHOST, PW2_IPORT, PW2_IDATABASE, PW2_IUSER, PW2_IPASSWORD, PW2_ISSL (optional).
 
-NB! Note that if wanting to use SSL with self-signed certificates on InfluxDB side then some extra steps describe [here](https://github.com/cybertec-postgresql/pgwatch2/issues/162)
+NB! Note that if wanting to use SSL with self-signed certificates on InfluxDB side then some extra steps describe `here <https://github.com/cybertec-postgresql/pgwatch2/issues/162>`_
 are needed.
 
 * To use an existing Graphite installation
@@ -121,7 +121,7 @@ Following parameters needs to be set then: PW2_DATASTORE=graphite, PW2_GRAPHITEH
 
 * To use an existing Postgres DB for storing metrics
 
-  1. Roll out the metrics storage schema according to instructions from [here](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/metric_store/README.md)
+  1. Roll out the metrics storage schema according to instructions from `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/metric_store/README.md>`_.
   2. Following parameters need to be set for the gatherer:
 
     * ``--datastore=postgres`` or ``PW2_DATASTORE=postgres``
@@ -131,6 +131,10 @@ Following parameters needs to be set then: PW2_DATASTORE=graphite, PW2_GRAPHITEH
   3. If using the Web UI also set the first two parameters (--datastore and --pg-metric-store-conn-str) if wanting to
      for example clean up data via the UI.
 
-NB! The schema rollout script activates "asynchronous commiting" feature for the metrics storing user role by default!
-If this is not wanted (no metrics can be lost in case of a crash), then re-enstate normal (synchronous) commits with:
-`ALTER ROLE pgwatch2 IN DATABASE $MY_METRICS_DB SET synchronous_commit TO on` and restart the collector.
+NB! When using Postgres metrics storage, the schema rollout script activates "asynchronous commiting" feature for the
+*pgwatch2* role in the metrics storage DB by default! If this is not wanted (no metrics can be lost in case of a crash),
+then re-enstate normal (synchronous) commiting with below query and restart the pgwatch2 agent:
+
+  ::
+
+    ALTER ROLE pgwatch2 IN DATABASE $MY_METRICS_DB SET synchronous_commit TO on;

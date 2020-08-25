@@ -35,14 +35,14 @@ Defining metrics
 
 For defining metrics definitions you should adhere to a couple of basic concepts though:
 
-* Every metric query should have an “epoch_ns” (nanoseconds since epoch column to record the metrics reading time.
+* Every metric query should have an "epoch_ns" (nanoseconds since epoch column to record the metrics reading time.
   If the column is not there, things will still work but server timestamp of the metrics gathering daemon will be used,
   some a small loss (assuming intra-datacenter monitoring with little lag) of precision occurs.
 
 * Queries can only return text, integer, boolean or floating point (a.k.a. double precision) Postgres data types. Note
   that columns with NULL values are not stored at all in the data layer as it's a bit bothersome to work with NULLs!
 
-* Columns can be optionally “tagged” by prefixing them with “tag\_”. By doing this, the column data
+* Columns can be optionally "tagged" by prefixing them with "tag\_". By doing this, the column data
   will be indexed by the InfluxDB / Postgres giving following advantages:
 
   * Sophisticated auto-discovery support for indexed keys/values, when building charts with Grafana.
@@ -51,7 +51,7 @@ For defining metrics definitions you should adhere to a couple of basic concepts
 
   * Less disk space used for repeating values in InfluxDB. Thus when you’re for example returning some longish
     and repetitive status strings (possible with Singlestat or Table panels) that you’ll be looking
-    up by some ID column, it might still make sense to prefix the column with “tag\_” to reduce disks space.
+    up by some ID column, it might still make sense to prefix the column with "tag\_" to reduce disks space.
 
 * Fixed per host "custom tags" are also supported - these can contain any key-value data important to user and are
   added to all captured data rows
@@ -134,8 +134,8 @@ Column attributes
 
 Besides the *\_tag* column prefix modifier, it's also possible to modify the output of certain columns via a few attributes. It's only
 relevant for Prometheus output though currently, to set the correct data types in the output description, which is generally
-considered a nice-to-have thing anyways. For YAML based setups this means adding a “column_attrs.yaml” file in the metric’s
-top folder and for Config DB based setup an according “column_attrs” JSON column should be filled via the Web UI.
+considered a nice-to-have thing anyways. For YAML based setups this means adding a "column_attrs.yaml" file in the metric’s
+top folder and for Config DB based setup an according "column_attrs" JSON column should be filled via the Web UI.
 
 Supported column attributes:
 

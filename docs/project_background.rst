@@ -3,7 +3,7 @@ Project background
 
 The pgwatch2 project got started back in 2016 and released in 2017 initially for internal monitoring needs at Cybertec as
 all the Open Source PostgreSQL monitoring tools at the time had various limitations like being too slow and invasive to set up
-and providing a fixed set of visuals and metrics.
+or providing a fixed set of visuals and metrics.
 
 For more background on the project motivations and design goals see the original series of blogposts announcing the project
 and the following feature updates released approximately twice per year.

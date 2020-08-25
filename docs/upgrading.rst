@@ -24,14 +24,14 @@ will include "missing columns" or "wrong datatype" then. SQL "patches" might be 
 but for dashboard changes there will be none - users need to import them from JSON directly!
 
 Basically there are two options – first, go into the Docker container (e.g. docker exec -it pw2 /bin/bash)
-and just update the component yourself – i.e. download the latest Grafana .deb package and install it with “dpkg -i …”.
+and just update the component yourself – i.e. download the latest Grafana .deb package and install it with "dpkg -i …".
 This is actually the simplest way. The other way would be to fetch the latest pgwatch2 image, which already has the
-latest version of components, using “docker pull” and then restore the data (InfluxDB + Postgres) from a backup of old
+latest version of components, using "docker pull" and then restore the data (InfluxDB + Postgres) from a backup of old
 setup. For restoring one needs to go inside the Docker container again but by following the steps described in
 take_backup.sh it shouldn't be a real problem.
 
 A tip: to make the restore process easier it would already make sense to mount the host folder with the backups in it on the
-new container with “-v ~/pgwatch2_backups:/pgwatch2_backups:rw,z” when starting the Docker image. Otherwise one needs to set
+new container with "-v ~/pgwatch2_backups:/pgwatch2_backups:rw,z" when starting the Docker image. Otherwise one needs to set
 up SSH or use something like S3 for example. Also note that ports 5432 and 8088 need to be exposed to take backups
 outside of Docker.
 

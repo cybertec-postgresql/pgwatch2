@@ -22,7 +22,7 @@ List of main features
 
 * PgBouncer, Pgpool2, AWS RDS and Patroni support with automatic cluster discovery
 
-* Internal health-check API (port) to monitor metrics gathering status / progress remotely
+* Internal health-check API (port 8081 by default) to monitor metrics gathering status / progress remotely
 
 * Built-in security with SSL connections and passwords encryption support for all components
 
