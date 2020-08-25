@@ -12,11 +12,6 @@ the roots of pgwatch2 lie.
 
 Some points on security:
 
-* No noticable impact for the monitored DB is expected with the default settings. For some metrics though can happen that
-  the metric reading query (notably "stat_statements") takes some milliseconds, which might be more than an average application
-  query. At any time only 2 metric fetching queries are running in parallel on the monitored DBs, with 5s per default
-  "statement timeout", except for the "bloat" metrics where it is 15min.
-
 * Starting from v1.3.0 there's a non-root Docker version available (suitable for OpenShift)
 
 * The administrative Web UI doesn't have by default any security. Configurable via env. variables.
