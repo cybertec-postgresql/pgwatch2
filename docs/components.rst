@@ -111,7 +111,7 @@ and basically doesn't have to be used at all. One can make use of the gathered m
 
 Set the following env variables: PW2_IHOST, PW2_IPORT, PW2_IDATABASE, PW2_IUSER, PW2_IPASSWORD, PW2_ISSL (optional).
 
-NB! Note that if wanting to use SSL with self-signed certificates on InfluxDB side then some extra steps describe `here <https://github.com/cybertec-postgresql/pgwatch2/issues/162>`_
+NB! Note that if wanting to use SSL with self-signed certificates on InfluxDB side then some extra steps describe `here <https://github.com/cybertec-postgresql/pgwatch2/issues/162>`__
 are needed.
 
 * To use an existing Graphite installation
@@ -121,7 +121,7 @@ Following parameters needs to be set then: PW2_DATASTORE=graphite, PW2_GRAPHITEH
 
 * To use an existing Postgres DB for storing metrics
 
-  1. Roll out the metrics storage schema according to instructions from `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/metric_store/README.md>`_.
+  1. Roll out the metrics storage schema according to instructions from `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/metric_store/README.md>`__.
   2. Following parameters need to be set for the gatherer:
 
     * ``--datastore=postgres`` or ``PW2_DATASTORE=postgres``

@@ -11,7 +11,7 @@ Quick start with Docker
 -----------------------
 
 For the fastest setup experience Docker images are provided via Docker Hub (if new to Docker start `here <https://docs.docker.com/get-started/>`_).
-For custom setups see the :ref:`Custom installations <custom_installations>` paragraph below or turn to the pre-built DEB / RPM / Tar
+For custom setups see the :ref:`Custom installations <custom_installation>` paragraph below or turn to the pre-built DEB / RPM / Tar
 packages on the Github Releases `page <https://github.com/cybertec-postgresql/pgwatch2/releases>`_.
 
 Launching the latest pgwatch2 Docker image with built-in InfluxDB metrics storage DB:
