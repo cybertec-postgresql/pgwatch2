@@ -1,6 +1,9 @@
 Dashboarding and alerting
 =========================
 
+Grafana intro
+-------------
+
 To display the gathered and stored metrics the pgwatch2 project has decided to rely heavily on the popular Grafana dashboarding
 solution. This means only though that it's installed in the default Docker images and there's a set of predefined dashboards
 available to cover most of the metrics gathered via the *Preset Configs*.
@@ -20,13 +23,13 @@ dashboards *en masse* per script, without losing any custom user changes.
 
 **Links:**
 
-* `Built-in dashboards for PostgreSQL (TimescaleDB) storage <https://github.com/cybertec-postgresql/pgwatch2/tree/master/grafana_dashboards/postgres/>`_
+`Built-in dashboards for PostgreSQL (TimescaleDB) storage <https://github.com/cybertec-postgresql/pgwatch2/tree/master/grafana_dashboards/postgres/>`_
 
-* `Built-in dashboards for InfluxDB storage <https://github.com/cybertec-postgresql/pgwatch2/tree/master/grafana_dashboards/influxdb/>`_
+`Built-in dashboards for InfluxDB storage <https://github.com/cybertec-postgresql/pgwatch2/tree/master/grafana_dashboards/influxdb/>`_
 
-* `Screenshots <https://github.com/cybertec-postgresql/pgwatch2/tree/master/screenshots>`_
+`Screenshots of pgwatch2 default dashboards <https://github.com/cybertec-postgresql/pgwatch2/tree/master/screenshots>`_
 
-* `The online Demo site <https://demo.pgwatch.com/>`_
+`The online Demo site <https://demo.pgwatch.com/>`_
 
 Alerting
 --------

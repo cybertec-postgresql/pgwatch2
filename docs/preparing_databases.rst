@@ -141,7 +141,14 @@ Note though that PL/Python is usually disabled by DB-as-a-service providers like
     # yum install postgresqlXY-plpython3
 
     psql -c "CREATE EXTENSION plpython3u"
-    psql -f /etc/pgwatch2/metrics/00_helpers/get_load_average/9.1/metrics.sql mydb
+    psql -f /etc/pgwatch2/metrics/00_helpers/get_load_average/9.1/metric.sql mydb
+
+    # psutil helpers are only needed when full set of common OS metrics is wanted
+    apt install python3-psutil
+    psql -f /etc/pgwatch2/metrics/00_helpers/get_psutil_cpu/9.1/metric.sql mydb
+    psql -f /etc/pgwatch2/metrics/00_helpers/get_psutil_mem/9.1/metric.sql mydb
+    psql -f /etc/pgwatch2/metrics/00_helpers/get_psutil_disk/9.1/metric.sql mydb
+    psql -f /etc/pgwatch2/metrics/00_helpers/get_psutil_disk_io_total/9.1/metric.sql mydb
 
 Note that we're assuming here that we're on a modern Linux system with Python 3 as default. For older systems Python 3
 might not be an option though, so you need to change *plpython3u* to *plpythonu* and also do the same replace inside the

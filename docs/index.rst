@@ -28,7 +28,6 @@ Welcome to pgwatch2's documentation!
    long_term_installations
    upgrading
    kubernetes
-   test
 
 
 Indices and tables
