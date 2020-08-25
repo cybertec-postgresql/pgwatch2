@@ -221,6 +221,8 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
    NB! When you're compiling your own gatherer then the executable file will be named just *pgwatch2* instead of *pgwatch2-daemon*
    to avoid mixups.
 
+.. _custom_install_grafana:
+
 #. **Install Grafana**
 
    #. Create a Postgres database to hold Grafana internal config, like dashboards etc
