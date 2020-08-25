@@ -30,3 +30,5 @@ List of main features
 
 * Capabilities to go beyond PostgreSQL metrics gathering with built-in log parsing for error detection and OS level metrics
   collection via PL/Python "helper" stored procedures.
+
+* A *Ping mode* to test connectivity to all databases under monitoring
