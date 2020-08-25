@@ -1,4 +1,4 @@
-.. _custom metrics:
+.. _custom_metrics:
 
 Defining custom metrics
 =======================

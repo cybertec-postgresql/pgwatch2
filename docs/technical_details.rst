@@ -16,18 +16,4 @@ Here some technical details that might be interesting for those who are planning
   * Optional authentication for the Web UI and Grafana (by default freely accessible)
 
 * Backup script (take_backup.sh) provided for taking snapshots of the whole Docker setup. To make it easier (run outside the container)
-one should to expose ports 5432 (Postgres) and 8088 (InfluxDB backup protocol) at least for the loopback address.
-
-Ports used:
-
-* 5432 - Postgres configuration (or metrics storage) DB
-
-* 8080 - Management Web UI (monitored hosts, metrics, metrics configurations)
-
-* 8081 - Gatherer healthcheck / statistics on number of gathered metrics (JSON).
-
-* 3000 - Grafana dashboarding
-
-* 8086 - InfluxDB API (when using the InfluxDB version)
-
-* 8088 - InfluxDB Backup port (when using the InfluxDB version)
+  one should to expose ports 5432 (Postgres) and 8088 (InfluxDB backup protocol) at least for the loopback address.

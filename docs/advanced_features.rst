@@ -41,12 +41,12 @@ Log parsing
 As of v1.7.0 the metrics collector daemon, when running on a DB server (controlled best over a YAML config), has capabilities
 to parse the database server logs. Out-of-the-box it will though only work when logs are written in **CVSLOG** format. For other
 formats user needs to specify a regex that parses out named groups of following fields: *database_name*, *error_severity*.
-See `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/logparse.go#L27>`_ for an example regex.
+See `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/logparse.go#L27>`__ for an example regex.
 
 NB! Note that only the event counts are stored, by severity, for the monitored DB and for the whole instance - no error
 texts or username infos! The metric name to enable log parsing is "server_log_event_counts". Also note that for auto-detection
 of log destination / setting to work the monitoring user needs superuser / pg_monitor rights - if this is not possible
-then log settings need to be specified manually under "Host config" as seen for example `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/config/instances.yaml>`_.
+then log settings need to be specified manually under "Host config" as seen for example `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/config/instances.yaml>`__.
 
 **Sample configuration if not using CSVLOG logging:**
 

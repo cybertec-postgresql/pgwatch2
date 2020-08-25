@@ -18,7 +18,7 @@ Adding new DBs to monitoring and removing those shut down can become a problem i
 it's done per hand (talking about on-premise, non-orchestrated deployments). To combat that the most typical approach would
 be to write some script / Crons that parse the company's internal inventory database, files or endpoints and translate changes
 to according CRUD operations on the *pgwatch2.monitored_db* table directly. One could also use the Web UI page (pseudo) *API*
-for that purpose, if using the Web UI anyways. See `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/docker/test/smoke_test_docker_image.sh#L44>`_
+for that purpose, if using the Web UI anyways. See `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/docker/test/smoke_test_docker_image.sh#L44>`__
 for an example, but direct access is of course more flexible. If pgwatch2 config is kept in YAML files, it should be relatively
 easy to automate it's maintenance in the same way as one file can represent a single entry.
 
@@ -26,9 +26,10 @@ Metrics maintenance
 -------------------
 
 Some metrics (SQL) are regularly corrected as suggestions / improvements come in and new ones are also added mostly due
-to new metrics being added in latest PG versions. So 1-2x per year would make sense to delete (backups!) the initial ones and import
-new ones from the definition [file](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/config_store/metric_definitions.sql)
-or update them "metrics" [folder](https://github.com/cybertec-postgresql/pgwatch2/tree/master/pgwatch2/metrics) when using the YAML setup.
+to new metrics being added in latest PG versions. So 1-2x per year would make sense to refresh them by deleting old ones
+(after pullin a backup of course!) and importing new ones from the definition `file <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/config_store/metric_definitions.sql>`_
+file or updating the "metrics" folder at */etc/pgwatch2/metrics* when using the file based setup. The latter will happen
+automatically when installing a new version of the RPM / DEB packages.
 
 NB! If you add your own custom metrics make sure not to delete them!
 
@@ -36,7 +37,7 @@ Dashboard maintenance
 ---------------------
 
 Couple of times a year also main dashboards get updates, so same as with metrics - makes sense to refresh them occasionally.
-The delete / import scripts are [here](https://github.com/cybertec-postgresql/pgwatch2/tree/master/grafana_dashboards).
+The delete / import scripts are `here <https://github.com/cybertec-postgresql/pgwatch2/tree/master/grafana_dashboards>`__.
 
 NB! As the scripts by default first delete all pgwatch2 created dashboards, you should take care when you've changed them -
 which is a typical thing to do actully. So a good idea is to rename the dashboards you've changed to something else.

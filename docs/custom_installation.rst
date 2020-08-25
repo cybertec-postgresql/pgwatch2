@@ -74,7 +74,7 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
     * Configure a SystemD auto-start service (optional)
 
       Sample startup scripts can be found at */etc/pgwatch2/startup-scripts/pgwatch2.service* or online
-      `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/startup-scripts/pgwatch2.service>`_.
+      `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/startup-scripts/pgwatch2.service>`__.
       Note that they are OS agnostic and always need some light adjustment of paths, etc - so always test them out.
 
 #. **Boostrap the config DB**
@@ -113,7 +113,7 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
 
       This is a place to pause and first think how many databases will be monitored, i.e. how much data generated, and based
       on that one should choose an according metrics storage schema. There are a couple of different options available that
-      are described `here <https://github.com/cybertec-postgresql/pgwatch2/tree/master/pgwatch2/sql/metric_store>`_ in detail,
+      are described `here <https://github.com/cybertec-postgresql/pgwatch2/tree/master/pgwatch2/sql/metric_store>`__ in detail,
       but the gist of it is that you don't want too complex partitioning schemes if you don't have zounds of data and don't
       need the fastest queries. For a smaller amount of monitored DBs (a couple dozen to a hundred) the default "metric-time"
       is a good choice. For hundreds of databases, aggressive intervals, or long term storage using the TimescaleDB extension
@@ -169,7 +169,7 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
    #. Configure a SystemD auto-start service (optional)
 
       Sample startup scripts can be found at */etc/pgwatch2/webpy/startup-scripts/pgwatch2-webui.service* or online
-      `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/webpy/startup-scripts/pgwatch2-webui.service>`_.
+      `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/webpy/startup-scripts/pgwatch2-webui.service>`__.
       Note that they are OS agnostic and always need some light adjustment of paths, etc - so always test them out.
 
 
@@ -302,7 +302,7 @@ From v1.4 one can also deploy the pgwatch2 gatherer daemons more easily in a de-
 #. Install pgwatch2 - either from pre-built packages or by compiling the Go code.
 #. Specify hosts you want to monitor and with which metrics / aggressivness in a YAML file or files,
    following the example config located at */etc/pgwatch2/config/instances.yaml* or online
-   `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/config/instances.yaml>`_.
+   `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/config/instances.yaml>`__.
 #. Bootstrap the metrics storage DB (not needed it using Prometheus mode).
 #. Prepare the "to-be-monitored" databases for monitoring by creating a dedicated login role name as a minimum.
 #. Run the pgatch2 gatherer specifying the YAML config file or folder and also the folder where metric definitions are
@@ -349,13 +349,13 @@ chapter for indicative numbers.
   Also changing the *wal-fsync-delay* parameter usually makes sense to get better performance, as metric data is usually
   something where we can in the worst case lose the latest half a second of data without problems.
 
-  See `here <https://docs.influxdata.com/influxdb/latest/administration/config/>`_ for more information on configuring InfluxDB.
+  See `here <https://docs.influxdata.com/influxdb/latest/administration/config/>`__ for more information on configuring InfluxDB.
 
 
 #. Create a non-root user, a metrics database and a retention policy (optional)
 
   If security is topic one should create a separate non-root login user (e.g. "pgwatch2") to be used by the metrics gathering
-  daemon to store metrics. See `here <https://docs.influxdata.com/influxdb/latest/administration/authentication_and_authorization/>`_
+  daemon to store metrics. See `here <https://docs.influxdata.com/influxdb/latest/administration/authentication_and_authorization/>`__
   for details on creating new users.
 
   If going that road one also needs to create manually a database and a retention policy to go with it as by default old

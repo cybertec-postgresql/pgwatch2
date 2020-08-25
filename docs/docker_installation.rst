@@ -45,7 +45,7 @@ to expose all internal ports to at least *localhost* for possible troubleshootin
 tools conveniently for InfluxDB or Postgres.
 
 Note that for maximum flexibility, security and update simplicity it's best to do a custom setup though - see the next
-:ref:`chapter <custom_installation` for that.
+:ref:`chapter <custom_installation>` for that.
 
 So in short, for plain Docker setups would be best to do something like:
 
@@ -75,7 +75,7 @@ Building custom Docker images
 For custom tweaks, more security,specific component versions, etc one could easily build the images themselves, just a
 Docker installation is needed: `docker build .`.
 
-Build scripts used to prepare the public images can be found `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/build-all-images-latest.sh>`_.
+Build scripts used to prepare the public images can be found `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/build-all-images-latest.sh>`__.
 
 
 Interacting with the Docker container
@@ -109,13 +109,13 @@ Interacting with the Docker container
 * Some built-in metrics like "cpu_load" and others, that gather privileged or OS statistics, require installing *helper functions*
   (looking like `that <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/metrics/00_helpers/get_load_average/9.1/metric.sql>`_,
   so it might be normal to see some blank panels or fetching errors in the logs. On how to prepare databases for monitored
-  see the :ref:`Monitoring preparations <monitoring_preparations>` chapter.
+  see the :ref:`Monitoring preparations <preparing_databases>` chapter.
 
 * For effective graphing you want to familiarize yourself with the query language of the database systems that was selected
   for metrics storage. Some tips to get going:
 
   * For InfluxQL -  the non_negative_derivative() function is very handy as Postgres statistics are mostly evergrowing counters
-    and one needs to calculate so called *deltas* to show change. Documentation `here <https://docs.influxdata.com/influxdb/latest/query_language/functions/#non-negative-derivative>`_.
+    and one needs to calculate so called *deltas* to show change. Documentation `here <https://docs.influxdata.com/influxdb/latest/query_language/functions/#non-negative-derivative>`__.
 
   * For PostgreSQL / TimescaleDB - some knowledge of `Window functions <https://www.postgresql.org/docs/current/tutorial-window.html>`_
     is a must if looking at longer periods of data as the statistics could have been reset in the mean time in the database
@@ -144,4 +144,4 @@ Docker Compose
 As mentioned in the :ref:`Components <components>` chapter, remember though that the pre-built Docker images are just one
 example how your monitoring setup around the pgwatch2 metrics collector could be organized. For another example how various
 components (as Docker images here) can work together, see a *Docker Compose* example with loosely coupled components
-`here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/docker-compose.yml>`_.
+`here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/docker-compose.yml>`__.
