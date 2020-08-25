@@ -59,6 +59,8 @@ setting should be enabled.
 
      psql -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements"
 
+.. _helper_functions:
+
 Rolling out helper functions
 ----------------------------
 

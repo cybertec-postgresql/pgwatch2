@@ -1,6 +1,6 @@
 ---
 is_instance_level: true
 #disabled_days: "1-5"
-#disabled_times: # NB! in timezone of pgwatch2 server
+#disabled_times: # NB! in timezone of pgwatch2 server if not TZ specified after the time range
 # - "09:00-21:00"
 # - "22:00-05:00"
