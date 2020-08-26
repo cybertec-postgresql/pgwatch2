@@ -99,6 +99,8 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
         psql -f /etc/pgwatch2/sql/config_store/config_store.sql pgwatch2
         psql -f /etc/pgwatch2/sql/config_store/metric_definitions.sql pgwatch2
 
+.. _metrics_db_bootstrap:
+
 #. **Bootstrap the metrics storage DB**
 
    #. Create a DB for metrics and a user to "own" the metrics schema
@@ -305,6 +307,7 @@ From v1.4 one can also deploy the pgwatch2 gatherer daemons more easily in a de-
 #. Specify hosts you want to monitor and with which metrics / aggressivness in a YAML file or files,
    following the example config located at */etc/pgwatch2/config/instances.yaml* or online
    `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/config/instances.yaml>`__.
+   Note that you can also use env. variables inside the YAML templates!
 #. Bootstrap the metrics storage DB (not needed it using Prometheus mode).
 #. Prepare the "to-be-monitored" databases for monitoring by creating a dedicated login role name as a minimum.
 #. Run the pgatch2 gatherer specifying the YAML config file or folder and also the folder where metric definitions are

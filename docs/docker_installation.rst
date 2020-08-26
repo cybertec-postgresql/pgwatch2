@@ -22,15 +22,15 @@ The simplest real-life pgwatch2 setup should look something like that:
 
      docker pull cybertec/pgwatch2:X.Y.Z
 
-#. Run the latest Docker image, exposing minimally the Grafana port served on port 3000 internally. In a relatively secure
+#. Run the Docker image, exposing minimally the Grafana port served on port 3000 internally. In a relatively secure
    environment you'd usually also include the administrative web UI served on port 8080:
 
    ::
 
      docker run -d --restart=unless-stopped -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:X.Y.Z
 
-   Note that we're using a Docker image with built-in InfluxDB metrics storage DB here and setting the container to be automatically
-   restarted in case of a reboot / crash, which is highly recommended if not using some container management framework to
+   Note that we're using a Docker image with the built-in InfluxDB metrics storage DB here and setting the container to be automatically
+   restarted in case of a reboot / crash - which is highly recommended if not using some container management framework to
    run pgwatch2.
 
 .. _docker_example_launch:
@@ -41,8 +41,8 @@ More future proof setup steps
 Although the above simple setup example will do for more temporal setups / troubleshooting sessions, for permanent setups
 it's highly recommended to create separate volumes for all software components in the container, so that it would be easier
 to :ref:`update <upgrading>` to newer pgwatch2 Docker images and pull file system based backups and also it might be a good idea
-to expose all internal ports to at least *localhost* for possible troubleshooting and making possible to use native backup
-tools conveniently for InfluxDB or Postgres.
+to expose all internal ports at least on *localhost* for possible troubleshooting and making possible to use native backup
+tools more conveniently for InfluxDB or Postgres.
 
 Note that for maximum flexibility, security and update simplicity it's best to do a custom setup though - see the next
 :ref:`chapter <custom_installation>` for that.
@@ -64,7 +64,7 @@ So in short, for plain Docker setups would be best to do something like:
 Note that in non-trusted environments it's a good idea to specify more sensitive ports together with some explicit network
 interfaces for additional security - by default Docker listens on all network devices!
 
-Also note that one can configure a lot of aspects of the software components running inside the container, so for a complete
+Also note that one can configure many aspects of the software components running inside the container via ENV - for a complete
 list of all supported Docker environment variables see the `ENV_VARIABLES.md <https://github.com/cybertec-postgresql/pgwatch2/blob/master/ENV_VARIABLES.md>`_
 file.
 

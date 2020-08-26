@@ -180,6 +180,7 @@ with no means to install any wrappers as superuser it's also possible to benefit
 the "unprivileged" preset metrics profile and the according "DB overview Unprivileged / Developer" `dashboard <https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/overview_developer.png>`_
 is a good starting point as it only assumes existence of `pg_stat_statements` which is available at all cloud providers.
 
+.. _db_types:
 
 Different *DB types* explained
 ------------------------------
