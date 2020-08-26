@@ -4,7 +4,7 @@ Custom installation
 ===================
 
 As described in the :ref:`Components <components>` chapter, there a couple of ways how to set up up pgwatch2. Two most
-common ways though are the central *Config DB* based "pull" approach and the *YAML file** based "push" approach, plus
+common ways though are the central *Config DB* based "pull" approach and the *YAML file* based "push" approach, plus
 Grafana to visualize the gathered metrics.
 
 Config DB based setup
@@ -28,12 +28,12 @@ Config DB based setup
 Below are sample steps to do a custom install from scratch using Postgres for the pgwatch2 configuration DB, metrics DB and
 Grafana config DB.
 
-All examples here assume Ubuntu as OS - but it's basically the same for RedHat family of operations systems also.
+All examples here assume Ubuntu as OS - but it's basically the same for RedHat family of operations systems also, minus package installation syntax differences.
 
 #. **Install Postgres**
 
    Follow the standard Postgres install procedure basically. Use the latest major version available, but minimally
-   v11+ is recommended for the metrics DB due to partitioning speedup improvements and also older versions were missing some
+   v11+ is recommended for the metrics DB due to recent partitioning speedup improvements and also older versions were missing some
    default JSONB casts so that a few built-in Grafana dashboards need adjusting otherwise.
 
    To get the latest Postgres versions, official Postgres PGDG repos are to be preferred over default disto repos. Follow
@@ -95,7 +95,7 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
       ::
 
         # FYI - one could get the below schema files also directly from Github
-        # if re-using some existing remote Postgres instance
+        # if re-using some existing remote Postgres instance where pgwatch2 was not installed
         psql -f /etc/pgwatch2/sql/config_store/config_store.sql pgwatch2
         psql -f /etc/pgwatch2/sql/config_store/metric_definitions.sql pgwatch2
 
@@ -103,7 +103,7 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
 
 #. **Bootstrap the metrics storage DB**
 
-   #. Create a DB for metrics and a user to "own" the metrics schema
+   #. Create a dedicated database for storing metrics and a user to "own" the metrics schema
 
       Here again default scripts expect a role named "pgwatch2" but can be anything if to adjust the scripts.
 
@@ -118,15 +118,15 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
       are described `here <https://github.com/cybertec-postgresql/pgwatch2/tree/master/pgwatch2/sql/metric_store>`__ in detail,
       but the gist of it is that you don't want too complex partitioning schemes if you don't have zounds of data and don't
       need the fastest queries. For a smaller amount of monitored DBs (a couple dozen to a hundred) the default "metric-time"
-      is a good choice. For hundreds of databases, aggressive intervals, or long term storage using the TimescaleDB extension
+      is a good choice. For hundreds of databases, aggressive intervals, or long term storage usage of the TimescaleDB extension
       is recommended.
-
-      **NB! Default retention for Postgres storage is 2 weeks!** To change, use the ``--pg-retention-days`` gatherer parameter.
 
       ::
 
         cd /etc/pgwatch2/sql/metric_store
         psql -f roll_out_metric_time.sql pgwatch2_metrics
+
+      **NB! Default retention for Postgres storage is 2 weeks!** To change, use the ``--pg-retention-days / PW2_RETENTION_DAYS`` gatherer parameter.
 
 #. **Prepare the "to-be-monitored" databases for metrics collection**
 
@@ -135,16 +135,16 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
    environments it can make the initial preparation (automatic *helper* rollouts) a bit easier still, given superuser privileges
    are later stripped.
 
-   NB! To get most out of your metrics some *SECURITY DEFINER* wrappers functions called "helpers" are needed on the DB-s under monitoring.
-   See the detailed chapter on the "preparation" topic :ref:`here <preparing_databases>` for more details.
+   NB! To get most out of your metrics some *SECURITY DEFINER* wrappers functions called "helpers" are recommended on the DB-s under monitoring.
+   See the detailed chapter on the "preparation" topic :ref:`here <helper_functions>` for more details.
 
 #. **Install Python 3 and start the Web UI (optional)**
 
-   NB! The Web UI is not strictly required but makes life a lot easier. Technically it would be fine also to manage connection
+   NB! The Web UI is not strictly required but makes life a lot easier for *Config DB* based setups. Technically it would be fine also to manage connection
    strings of the monitored DB-s directly in the "pgwatch2.monitored_db" table and add/adjust metrics in the "pgwatch2.metric" table,
-   and "preset configs" in the "pgwatch2.preset_config" table.
+   and *Preset Configs* in the "pgwatch2.preset_config" table.
 
-   #. Install Python 3 and requirments
+   #. Install Python 3 and Web UI requirements
 
       ::
 
@@ -187,7 +187,7 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
 
       ::
 
-        # Config DB default connections params expect a trusted localhost setup
+        # default connections params expect a trusted localhost Config DB setup
         # so mostly the 2nd line is not needed actually
         pgwatch2-daemon \
           --host=localhost --user=pgwatch2 --dbname=pgwatch2 \
@@ -198,7 +198,7 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
         sudo systemctl start pgwatch2
         sudo systemctl status pgwatch2
 
-      After initial verification that all works it's usually good idea to set verbosity back to default and remove the
+      After initial verification that all works it's usually good idea to set verbosity back to default by removing the
       *verbose* flag.
 
    #. Alternative start command when using InfluxDB storage:
@@ -218,7 +218,7 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
       If you see metrics trickling into the "pgwatch2_metrics" database (metric names are mapped to table names and tables
       are auto-created), then congratulations - the deployment is working! When using some more aggressive *preset metrics config*
       then there are usually still some errors though, due to the fact that some more extensions or privileges are missing
-      on the monitored database side.
+      on the monitored database side. See the according chapter :ref:`here <preparing_databases>`.
 
    NB! When you're compiling your own gatherer then the executable file will be named just *pgwatch2* instead of *pgwatch2-daemon*
    to avoid mixups.
@@ -231,7 +231,7 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
 
       Theoretically it's not absolutely required to use Postgres for storing Grafana internal settings / dashboards, but
       doing so has 2 advantages - you can easily roll out all pgwatch2 built-in dashboards and one can also do remote backups
-      easily.
+      of the Grafana configuration easily.
 
       ::
 
@@ -274,27 +274,27 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
 
    #. Set up the pgwatch2 metrics database as the default datasource
 
-      Use the Grafana UI (Admin -> Data sources) or adjust and execute the "pgwatch2/bootstrap/grafana_datasource.sql"
+      We need to tell Grafana where our metrics data is located. Add a datasource via the Grafana UI (Admin -> Data sources)
+      or adjust and execute the "pgwatch2/bootstrap/grafana_datasource.sql" script on the *pgwatch2_grafana* DB.
 
    #. Add pgwatch2 predefined dashboards to Grafana
 
-      This could be done by importing the JSON-s from the "grafana_dashboards" folder manually (Import Dashboard from the Grafana
-      top menu) or via the Docker bootstrap script (pgwatch2/bootstrap/set_up_grafana_dashboards.sh). Script needs some adjustment
-      for connect data and file paths though and also the "grafana_datasource.sql" part should be commented out if already
-      executed in the previous step.
+      This could be done by importing the pgwatch2 dashboard definition JSON-s manually, one by one, from the "grafana_dashboards" folder
+      ("Import Dashboard" from the Grafana top menu) or via as small helper script located at */etc/pgwatch2/grafana-dashboards/import_all.sh*.
+      The script needs some adjustment for metrics storage type, connect data and file paths.
 
    #. Optionally install also Grafana plugins
 
-      Currently only one pre-configured dashboard (Biggest relations treemap) use an extra plugin. If needed install via:
+      Currently one pre-configured dashboard (Biggest relations treemap) use an extra plugin - if planning to that dash, then run the following:
 
       ::
 
         grafana-cli plugins install savantly-heatmap-panel
 
-   #. Start discoverin the preset dashbaords
+   #. Start discovering the preset dashbaords
 
-      If the previous step of launching pgwatch2 daemon succeeded and it was more than some minutes ago one should already
-      see some graphs on dashboards like "DB overview" or "DB overview Unprivileged / Developer mode".
+      If the previous step of launching pgwatch2 daemon succeeded and it was more than some minutes ago, one should already
+      see some graphs on dashboards like "DB overview" or "DB overview Unprivileged / Developer mode" for example.
 
 YAML based setup
 ----------------
@@ -309,10 +309,10 @@ From v1.4 one can also deploy the pgwatch2 gatherer daemons more easily in a de-
    `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/config/instances.yaml>`__.
    Note that you can also use env. variables inside the YAML templates!
 #. Bootstrap the metrics storage DB (not needed it using Prometheus mode).
-#. Prepare the "to-be-monitored" databases for monitoring by creating a dedicated login role name as a minimum.
-#. Run the pgatch2 gatherer specifying the YAML config file or folder and also the folder where metric definitions are
+#. Prepare the "to-be-monitored" databases for monitoring by creating a dedicated login role name as a :ref:`minimum <preparing_databases>`.
+#. Run the pgatch2 gatherer specifying the YAML config file (or folder), and also the folder where metric definitions are
    located. Default location: */etc/pgwatch2/metrics*.
-#. Install and configure Grafana and import the pgwatch2 sample dashboards to start analyzing the metrics.
+#. Install and configure Grafana and import the pgwatch2 sample dashboards to start analyzing the metrics. See above for instructions.
 #. Make sure that there are auto-start SystemD services for all components in place and optionally set up also backups.
 
 Relevant gatherer parameters / env. vars: ``--config / PW2_CONFIG`` and ``--metrics-folder / PW2_METRICS_FOLDER``.
@@ -336,7 +336,7 @@ chapter for indicative numbers.
      Follow the instructions from https://docs.influxdata.com/influxdb/latest/introduction/install/ or just download and
      install the latest package:
 
-   #. Or directly from downloaded packages
+   #. Or directly from the packages:
 
       ::
 
@@ -347,33 +347,32 @@ chapter for indicative numbers.
 
 #. Review / adjust the config and start the server
 
-  Take a look at the default config located at */etc/influxdb/influxdb.conf* and edit per use case / hardware needs. Most
-  importantly one should enable authentication if not running InfluxDB on the same host as the collector or to set the server
-  to listen only on localhost (the *bind-address* parameter).
+   Take a look at the default config located at */etc/influxdb/influxdb.conf* and edit per use case / hardware needs. Most
+   importantly one should enable authentication if not running InfluxDB on the same host as the collector or to set the server
+   to listen only on localhost (the *bind-address* parameter).
 
-  Also changing the *wal-fsync-delay* parameter usually makes sense to get better performance, as metric data is usually
-  something where we can in the worst case lose the latest half a second of data without problems.
+   Also changing the *wal-fsync-delay* parameter usually makes sense to get better performance, as metric data is usually
+   something where we can in the worst case lose the latest half a second of data without problems.
 
-  See `here <https://docs.influxdata.com/influxdb/latest/administration/config/>`__ for more information on configuring InfluxDB.
-
+   See `here <https://docs.influxdata.com/influxdb/latest/administration/config/>`__ for more information on configuring InfluxDB.
 
 #. Create a non-root user, a metrics database and a retention policy (optional)
 
-  If security is topic one should create a separate non-root login user (e.g. "pgwatch2") to be used by the metrics gathering
-  daemon to store metrics. See `here <https://docs.influxdata.com/influxdb/latest/administration/authentication_and_authorization/>`__
-  for details on creating new users.
+   If security is topic one should create a separate non-root login user (e.g. "pgwatch2") to be used by the metrics gathering
+   daemon to store metrics. See `here <https://docs.influxdata.com/influxdb/latest/administration/authentication_and_authorization/>`__
+   for details on creating new users.
 
-  If going that road one also needs to create manually a database and a retention policy to go with it as by default old
-  metrics data is not purged. These tasks by the way are also tried by the pgwatch2 daemon automatically, but will fail
-  if not an admin user.
+   If going that road one also needs to create manually a database and a retention policy to go with it as by default old
+   metrics data is not purged. These tasks by the way are also tried by the pgwatch2 daemon automatically, but will fail
+   if not an admin user.
 
-  Sample commands:
+   Sample commands:
 
-  ::
+   ::
 
-    CREATE DATABASE pgwatch2 WITH DURATION 30d REPLICATION 1 SHARD DURATION 1d NAME pgwatch2_def_ret
-    CREATE USER pgwatch2 WITH PASSWORD 'qwerty'
-    GRANT READ ON pgwatch2 TO pgwatch2
-    GRANT WRITE ON pgwatch2 TO pgwatch2
+     CREATE DATABASE pgwatch2 WITH DURATION 30d REPLICATION 1 SHARD DURATION 1d NAME pgwatch2_def_ret
+     CREATE USER pgwatch2 WITH PASSWORD 'qwerty'
+     GRANT READ ON pgwatch2 TO pgwatch2
+     GRANT WRITE ON pgwatch2 TO pgwatch2
 
-Default port for the InfluxDB client API: 8086
+Default port for the InfluxDB client API: **8086**

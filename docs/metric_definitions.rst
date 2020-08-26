@@ -53,6 +53,9 @@ For defining metrics definitions you should adhere to a couple of basic concepts
     and repetitive status strings (possible with Singlestat or Table panels) that you’ll be looking
     up by some ID column, it might still make sense to prefix the column with "tag\_" to reduce disks space.
 
+  * If using InfluxDB storage, there needs to be at least one tag column, identifying all rows uniquely, is more than
+    on row can be returned by the query.
+
 * Fixed per host "custom tags" are also supported - these can contain any key-value data important to user and are
   added to all captured data rows
 
