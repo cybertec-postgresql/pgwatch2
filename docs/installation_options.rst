@@ -26,6 +26,7 @@ you could easily programmatically manage things via *Ansible* for example and yo
 
 Relevant Gatherer env. vars / flags: ``--config, --metrics-folder`` or ``PW2_CONFIG / PW2_METRICS_FOLDER``.
 
+.. _adhoc_mode:
 
 Ad-hoc mode
 -----------

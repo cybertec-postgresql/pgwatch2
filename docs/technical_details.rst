@@ -1,11 +1,16 @@
-Technical details of the metrics collector
-==========================================
+Technical details
+=================
 
-Here some technical details that might be interesting for those who are planning to use pgwatch2 for critical monitoring tasks.
+Here are some technical details that might be interesting for those who are planning to use pgwatch2 for critical monitoring tasks
+or customize it in some way.
 
 * Dynamic management of monitored databases, metrics and their intervals - no need to restart/redeploy
 
-* Safety features
+  Config DB or YAML / SQL files are scanned every 2 minutes (by default, changeable via \-\-servers-refresh-loop-seconds)
+  and changes are applied dynamically. As common connectivity errors also also handled, there should be no need to restart
+  the gatherer "for fun". Please always report issues which require restarting.
+
+* There are some safety features built-in so that monitoring would not obstruct actual operation of databases
 
   * Up to 2 concurrent queries per monitored database (thus more per cluster) are allowed
 
@@ -15,5 +20,9 @@ Here some technical details that might be interesting for those who are planning
 
   * Optional authentication for the Web UI and Grafana (by default freely accessible)
 
-* Backup script (take_backup.sh) provided for taking snapshots of the whole Docker setup. To make it easier (run outside the container)
-  one should to expose ports 5432 (Postgres) and 8088 (InfluxDB backup protocol) at least for the loopback address.
+* Instance-level metrics caching
+
+  To further reduce load on multi-DB instances, pgwatch2 can cache the output of metrics that are marked to gather only
+  instance-level data. One such metric is for example "wal", and the *metric attribute* is "is_instance_level".
+  Caching will by activated only for *continuous* :ref:`DB types <db_types>`, and to a default limit of up to 30 seconds (changeable via the
+  \-\-instance-level-cache-max-seconds param).
