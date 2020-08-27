@@ -1,39 +1,58 @@
 .. _custom_metrics:
 
-Defining custom metrics
-=======================
+Metric definitions
+==================
+
+Metrics are named SQL queries that return a timestamp and pretty much anything else you find
+useful. Most metrics have many different query text versions for different target PostgreSQL versions, also optionally taking
+into account primary / replica state and as of v1.8 also versions of installed extensions.
+
+.. code-block:: sql
+
+  -- a sample metric
+  SELECT
+    (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+    extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
+    case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int;
+
+Correct version of the metric definition will be chosen automatically by regularly connecting to the
+target database and checking the Postgres version, recovery state, and if the monitoring user is a superuser or not. For superusers some
+metrics have alternate SQL definitions (as of v1.6.2) so that no "helpers" are needed for Postgres-native Stats Collector infos.
+Using superuser accounts for remote monitoring is of course not really recommended.
 
 There's a good set of pre-defined metrics & metric configs provided by the pgwatch2 project to cover all typical needs,
-but when monitoring hundreds of hosts you'd typically want to develop custom *preset configs* and maybe adjust the intervals
-to reduce the data amounts.
+but when monitoring hundreds of hosts you'd typically want to develop some custom *Preset Configs* or at least adjust the
+metric fetching intervals according to your monitoring goals.
 
-General things to note about the built-in metrics:
+Some things to note about the built-in metrics:
 
-* Only a half of them are included in the *Preset configs* and ready for direct usage. The others needs some extra
-  extensions or privileges, OS level tool installations etc.
+* Only a half of them are included in the *Preset configs* and are ready for direct usage. The rest need some extra
+  extensions or privileges, OS level tool installations etc. To see what's possible just browse the
+  `sample metrics <https://github.com/cybertec-postgresql/pgwatch2/tree/master/pgwatch2/metrics>`__.
 
 * Some builtin metrics are marked to be only executed when server is a primary or conversely, a standby. The flags can be
   inspected / set on the Web UI Metrics tab or in YAML mode by suffixing the metric definition with "standby" or "master".
 
-* The "change_events" built-in metric used for detecting DDL & config changes uses internally some other "\*\_hashes" metrics
-  which are not meant to be used on their own. Such metrics are marked also accordingly via the Web UI and they should not
-  be removed.
+* There are a couple of special preset metrics that have some non-standard behaviour attached to them:
 
-Metric definitions
-------------------
+  *change_events*
+    The "change_events" built-in metric, tracking DDL & config changes, uses internally some other "\*\_hashes" metrics
+    which are not meant to be used on their own. Such metrics are described also accordingly on the Web UI /metrics page
+    and they should not be removed.
+  *recommendations*
+    When enabled (i.e. interval > 0), this metric will find all other metrics starting with "reco\_*" and execute those
+    queries. The purpose of the metric is to spot some performance, security and other "best practices" violations. Users
+    can add new "reco\_*" queries freely.
+  *server_log_event_counts*
+    This enables Postgres server log "tailing" for errors. Can't be used for "pull" setups though unless the DB logs are
+    somehow mounted / copied over, as real file access is needed. See the :ref:`Log parsing <log_parsing>` chapter for
+    details.
 
-Metrics are named SQL queries that can return pretty much everything you find
-useful and which can have different query text versions for different target PostgreSQL versions, also optionally taking
-into account primary / replica state and as of v1.8 also versions of installed extensions.
-Correct version of the metric definition will be chosen automatically by regularly connecting to the
-target database and checking the Postgres version and if the monitoring user is a superuser or not. For superusers some
-metrics are re-defined (v1.6.2) so that no "helpers" are needed for Postgres-native Stats Collector infos. Using superuser
-accounts for monitoring is of course not really recommended.
 
-Defining metrics
-----------------
+Defining custom metrics
+-----------------------
 
-For defining metrics definitions you should adhere to a couple of basic concepts though:
+For defining metrics definitions you should adhere to a couple of basic concepts:
 
 * Every metric query should have an "epoch_ns" (nanoseconds since epoch column to record the metrics reading time.
   If the column is not there, things will still work but server timestamp of the metrics gathering daemon will be used,
@@ -41,6 +60,10 @@ For defining metrics definitions you should adhere to a couple of basic concepts
 
 * Queries can only return text, integer, boolean or floating point (a.k.a. double precision) Postgres data types. Note
   that columns with NULL values are not stored at all in the data layer as it's a bit bothersome to work with NULLs!
+
+* Column names should be descriptive enough so that they're self-explanatory, but not over long as it costs also storage
+
+* Metric queries should execute fast - at least below the selected *Statement timeout* (default 5s)
 
 * Columns can be optionally "tagged" by prefixing them with "tag\_". By doing this, the column data
   will be indexed by the InfluxDB / Postgres giving following advantages:
@@ -56,8 +79,8 @@ For defining metrics definitions you should adhere to a couple of basic concepts
   * If using InfluxDB storage, there needs to be at least one tag column, identifying all rows uniquely, is more than
     on row can be returned by the query.
 
-* Fixed per host "custom tags" are also supported - these can contain any key-value data important to user and are
-  added to all captured data rows
+* All fetched metric rows can also be "prettyfied" with any custom static key-value data, per host. To enable use the "Custom tags"
+  Web UI field for the monitored DB entry or "custom_tags" YAML field. Note that this works per host and applies to all metrics.
 
 * For Prometheus the numerical columns are by default mapped to a Value Type of "Counter" (as most Statistics
   Collector columns are cumulative), but when this is not the case and the column is a "Gauge" then according column

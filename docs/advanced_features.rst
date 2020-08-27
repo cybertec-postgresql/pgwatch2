@@ -35,6 +35,8 @@ Also if you don't use the standby nodes actively for queries then it might make 
 metrics and to disable the monitoring of such nodes with the "Master mode only?" checkbox (when using the Web UI) or
 with *only_if_master=true* if using a YAML based setup.
 
+.. _log_parsing:
+
 Log parsing
 -----------
 

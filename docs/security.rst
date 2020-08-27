@@ -20,18 +20,23 @@ Some points on security:
 
 * InfluxDB has no authentication in Docker setup, so one should just not expose the ports when having concerns.
 
-* Dashboards based on the "stat_statements" metric (Stat Statement Overview / Top) expose actual queries. They are
-  mostly stripped of details though, but if no risks can be taken the dashboards (or at least according panels) should be
-  deleted. Or as an alternative "stat_statements_no_query_text" or "pg_stat_statements_calls" metrics can be used, which
-  don't store query texts.
+* Dashboards based on the "stat_statements" metric (Stat Statement Overview / Top) expose actual queries.
+
+  They should be "mostly" stripped of details though and replaced by placeholders by Postgres, but if no risks can be taken
+  such dashboards (or at least according panels) should be deleted. Or as an alternative the "stat_statements_no_query_text"
+  and "pg_stat_statements_calls" metrics could be used, which don't store query texts in the first place.
 
 * Safe certificate connections to Postgres are supported as of v1.5.0
 
-* Encrypting/decrypting passwords stored in the config DB or in YAML config files possible from v1.5.0. An encryption
-  passphrase/file needs to be specified then via PW2_AES_GCM_KEYPHRASE / PW2_AES_GCM_KEYPHRASE_FILE. By default passwords
-  are stored in plaintext.
+* Encryption / decryption of connection string passwords stored in the config DB or in YAML config files
 
-* Note that although the metrics collector has some *password* flags, it's mostly better to use the standard LibPQ *.pgpass*
+  By default passwords are stored in plaintext but as of v1.5 it's possible to use an encryption passphrase, or a file
+  with the passphrase in it,  via *--aes-gcm-keyphrase / --aes-gcm-keyphrase-file* or *PW2_AES_GCM_KEYPHRASE / PW2_AES_GCM_KEYPHRASE_FILE* parameters.
+  If using the Web UI to store connection info, the same encryption key needs to be specified for both the Web UI and the
+  gatherer. If using YAML configs then encrypted passwords can be generated using the *--aes-gcm-password-to-encrypt* flag
+  for embedding in YAML.
+
+  Note that although pgwatch2 can handle password security, in many cases it's better to still use the standard LibPQ *.pgpass*
   file to store passwords.
 
 Launching a more secure Docker container
