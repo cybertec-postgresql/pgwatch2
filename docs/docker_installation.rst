@@ -68,6 +68,33 @@ Also note that one can configure many aspects of the software components running
 list of all supported Docker environment variables see the `ENV_VARIABLES.md <https://github.com/cybertec-postgresql/pgwatch2/blob/master/ENV_VARIABLES.md>`_
 file.
 
+Available Docker images
+-----------------------
+
+Following images are regularly pushed to `Docked Hub <https://hub.docker.com/u/cybertec>`_:
+
+*cybertec/pgwatch2*
+  The original pgwatch2 "batteries-included" image with InfluxDB metrics storage. Just insert connect infos to your
+  database via the admin Web UI (or directly into the Config DB) and then turn to the pre-defined Grafana dashboards
+  to analyze DB health and performance.
+
+*cybertec/pgwatch2-postgres*
+  Exactly the same as previous, but metrics are also stored in PostgreSQL - thus needs more disk space. But in return you
+  get more "out of the box" dashboards, as the power of standard SQL gives more complex visualization options.
+
+*cybertec/pgwatch2-nonroot*
+  Same components as for the original *cybertec/pgwatch2* image, but no "root" user is used internally, so it can also be
+  launched in security restricted environments like OpenShift. Limits ad-hoc troubleshooting and "in container" customizations
+  or updates though, but this is the standard for orchestrated cloud environments - you need to fix the image and re-deploy.
+
+*cybertec/pgwatch2-daemon*
+  A light-weight image containing only the metrics collection daemon / agent, that can be integrated into the monitoring
+  setup over configuration specified either via ENV, mounted YAML files or a PostgreSQL Config DB. See the :ref:`Component
+  reuse <component_reuse>` chapter for wiring details.
+
+*cybertec/pgwatch2-db-bootstrapper*
+  Sole purpose of the image is to bootstrap the pgwatch2 *Config DB* or *Metrics DB* schema. Useful for custom cloud oriented
+  setups where the above "all components included" images are not a good fit.
 
 Building custom Docker images
 -----------------------------

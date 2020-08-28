@@ -95,6 +95,8 @@ Component diagram of a typical setup:
    :alt: pgwatch2 typical deployment architecture diagram
    :target: https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgwatch2_architecture.png
 
+.. _component_reuse:
+
 Component reuse
 ---------------
 
