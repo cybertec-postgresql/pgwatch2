@@ -33,8 +33,8 @@ pgwatch2 component - see :ref:`here <docker_example_launch>` for a better launch
 
 .. _typical_architecture:
 
-Typical architecture
---------------------
+Typical "pull" architecture
+---------------------------
 
 To get an idea how pgwatch2 is typically deployed a diagram of the standard Docker image fetching metrics from a set of
 Postgres databases configured via a configuration DB:
@@ -42,3 +42,13 @@ Postgres databases configured via a configuration DB:
 .. image:: https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgwatch2_architecture.png
    :alt: pgwatch2 typical deployment architecture diagram
    :target: https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgwatch2_architecture.png
+
+Typical "push" architecture
+---------------------------
+
+A better fit for very dynamic (Cloud) environments might be a more de-centralized "push" approach or just exposing the metrics
+over a port for remote scraping. In that case the only component required would be the pgwatch2 metrics collection daemon.
+
+.. image:: https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgwatch2_architecture_push.png
+   :alt: pgwatch2 "push" deployment architecture diagram
+   :target: https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgwatch2_architecture_push.png
