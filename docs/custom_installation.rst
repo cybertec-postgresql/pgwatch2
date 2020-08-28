@@ -296,6 +296,8 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
       If the previous step of launching pgwatch2 daemon succeeded and it was more than some minutes ago, one should already
       see some graphs on dashboards like "DB overview" or "DB overview Unprivileged / Developer mode" for example.
 
+.. _yaml_setup:
+
 YAML based setup
 ----------------
 

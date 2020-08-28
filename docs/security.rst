@@ -28,6 +28,9 @@ Some points on security:
 
 * Safe certificate connections to Postgres are supported as of v1.5.0
 
+  According *sslmode* (verify-ca, verify-full) and cert file paths need to be specified then on Web UI "/dbs" page or in
+  the YAML config.
+
 * Encryption / decryption of connection string passwords stored in the config DB or in YAML config files
 
   By default passwords are stored in plaintext but as of v1.5 it's possible to use an encryption passphrase, or a file
