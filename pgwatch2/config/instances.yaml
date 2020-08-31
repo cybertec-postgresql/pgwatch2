@@ -8,9 +8,11 @@
   sslmode: disable
 #  libpq_conn_str: postgresql://user@localhost:5432/postgres  # overrides single connect params. no pwd encryption possible
   stmt_timeout: 5
-  is_superuser: false
+  is_superuser: false # setting to true will try to auto-create all metric fetching "helpers"
   preset_metrics: minimal
   custom_metrics:    # if both preset and custom are specified, custom wins
+  preset_metrics_standby: # optional metrics configuration for standby / replica state, v1.8.1+
+  custom_metrics_standby:
   dbname_include_pattern:
   dbname_exclude_pattern:
   is_enabled: true
