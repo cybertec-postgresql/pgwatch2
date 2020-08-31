@@ -13,8 +13,8 @@ SELECT
   coalesce(idx_tup_fetch, 0) as idx_tup_fetch,
   coalesce(pg_relation_size(indexrelid), 0) as index_size_b,
   quote_ident(schemaname)||'.'||quote_ident(sui.indexrelname) as index_full_name_val,
-  md5(regexp_replace(replace(pg_get_indexdef(sui.indexrelid),indexrelname,'X'), '^CREATE UNIQUE','CREATE')) as tag_index_def_hash,
-  regexp_replace(replace(pg_get_indexdef(sui.indexrelid),indexrelname,'X'), '^CREATE UNIQUE','CREATE') as index_def,
+  md5(regexp_replace(regexp_replace(pg_get_indexdef(sui.indexrelid),indexrelname,'X'), '^CREATE UNIQUE','CREATE')) as tag_index_def_hash,
+  regexp_replace(regexp_replace(pg_get_indexdef(sui.indexrelid),indexrelname,'X'), '^CREATE UNIQUE','CREATE') as index_def,
   case when not i.indisvalid then 1 else 0 end as is_invalid_int,
   case when i.indisprimary then 1 else 0 end as is_pk_int
 FROM
