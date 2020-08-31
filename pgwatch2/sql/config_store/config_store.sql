@@ -101,7 +101,7 @@ create table schema_version (
     sv_created_on timestamptz not null default now()
 );
 
-insert into pgwatch2.schema_version (sv_tag) values ('1.8.0');
+insert into pgwatch2.schema_version (sv_tag) values ('1.8.1'); -- 1.8.1 not yet released
 
 
 insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
