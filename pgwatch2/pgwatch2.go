@@ -58,11 +58,13 @@ type MonitoredDatabase struct {
 	SslClientCertPath    string             `yaml:"sslcert"`
 	SslClientKeyPath     string             `yaml:"sslkey"`
 	Metrics              map[string]float64 `yaml:"custom_metrics"`
+	MetricsStandby       map[string]float64 `yaml:"custom_metrics_standby"`
 	StmtTimeout          int64              `yaml:"stmt_timeout"`
 	DBType               string
 	DBNameIncludePattern string            `yaml:"dbname_include_pattern"`
 	DBNameExcludePattern string            `yaml:"dbname_exclude_pattern"`
 	PresetMetrics        string            `yaml:"preset_metrics"`
+	PresetMetricsStandby string            `yaml:"preset_metrics_standby"`
 	IsSuperuser          bool              `yaml:"is_superuser"`
 	IsEnabled            bool              `yaml:"is_enabled"`
 	CustomTags           map[string]string `yaml:"custom_tags"` // ignored on graphite
@@ -594,7 +596,24 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 }
 
 func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
-	sql := `
+	sql_latest := `
+		select /* pgwatch2_generated */
+		  md_unique_name, md_group, md_dbtype, md_hostname, md_port, md_dbname, md_user, coalesce(md_password, '') as md_password,
+		  coalesce(p.pc_config, md_config)::text as md_config, coalesce(s.pc_config, md_config_standby)::text as md_config_standby,
+		  md_statement_timeout_seconds, md_sslmode, md_is_superuser,
+		  coalesce(md_include_pattern, '') as md_include_pattern, coalesce(md_exclude_pattern, '') as md_exclude_pattern,
+		  coalesce(md_custom_tags::text, '{}') as md_custom_tags, md_root_ca_path, md_client_cert_path, md_client_key_path,
+		  md_password_type, coalesce(md_host_config, '{}')::text as md_host_config, md_only_if_master
+		from
+		  pgwatch2.monitored_db
+	          left join
+		  pgwatch2.preset_config p on p.pc_name = md_preset_config_name /* primary preset if any */
+	          left join
+		  pgwatch2.preset_config s on s.pc_name = md_preset_config_name_standby /* standby preset if any */
+		where
+		  md_is_enabled
+	`
+	sql_prev := `
 		select /* pgwatch2_generated */
 		  md_unique_name, md_group, md_dbtype, md_hostname, md_port, md_dbname, md_user, coalesce(md_password, '') as md_password,
 		  coalesce(pc_config, md_config)::text as md_config, md_statement_timeout_seconds, md_sslmode, md_is_superuser,
@@ -608,9 +627,16 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 		where
 		  md_is_enabled
 	`
-	data, err := DBExecRead(configDb, CONFIGDB_IDENT, sql)
+	data, err := DBExecRead(configDb, CONFIGDB_IDENT, sql_latest)
 	if err != nil {
-		log.Error(err)
+		err1 := err
+		log.Debugf("Failed to query the monitored DB-s config with latest SQL: %v ", err1)
+		data, err = DBExecRead(configDb, CONFIGDB_IDENT, sql_prev)
+		if err == nil {
+			log.Warning("Fetching monitored DB-s config succeeded with SQL from previous schema version - gatherer update required!")
+		} else {
+			log.Errorf("Failed to query the monitored DB-s config: %v", err1)	// show the original error
+		}
 	}
 	return data, err
 }
@@ -650,6 +676,13 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			log.Warningf("Cannot parse metrics JSON config for \"%s\": %v", row["md_unique_name"].(string), err)
 			continue
 		}
+		metricConfigStandby := make(map[string]float64)
+		if configStandby, ok := row["md_config_standby"]; ok {
+			metricConfigStandby, err = jsonTextToMap(configStandby.(string))
+			if err != nil {
+				log.Warningf("Cannot parse standby metrics JSON config for \"%s\". Ignoring standby config: %v", row["md_unique_name"].(string), err)
+			}
+		}
 		customTags, err := jsonTextToStringMap(row["md_custom_tags"].(string))
 		if err != nil {
 			log.Warningf("Cannot parse custom tags JSON for \"%s\". Ignoring custom tags. Error: %v", row["md_unique_name"].(string), err)
@@ -677,6 +710,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 			SslClientKeyPath:     row["md_client_key_path"].(string),
 			StmtTimeout:          row["md_statement_timeout_seconds"].(int64),
 			Metrics:              metricConfig,
+			MetricsStandby:       metricConfigStandby,
 			DBType:               row["md_dbtype"].(string),
 			DBNameIncludePattern: row["md_include_pattern"].(string),
 			DBNameExcludePattern: row["md_exclude_pattern"].(string),
@@ -3039,7 +3073,7 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 					if ok {
 						if last_uptime_s != -1 {
 							if postmaster_uptime_s.(int64) < last_uptime_s { // restart (or possibly also failover when host is routed) happened
-								message := "Server restart (or failover) of \"" + dbUniqueName + "\""
+								message := "Detected server restart (or failover) of \"" + dbUniqueName + "\""
 								log.Warning(message)
 								detected_changes_summary := make([](map[string]interface{}), 0)
 								entry := map[string]interface{}{"details": message, "epoch_ns": (metricStoreMessages[0].Data)[0]["epoch_ns"]}
@@ -3903,7 +3937,9 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 			SslClientKeyPath:  ce.SslClientKeyPath,
 			StmtTimeout:       ce.StmtTimeout,
 			Metrics:           ce.Metrics,
+			MetricsStandby:    ce.MetricsStandby,
 			PresetMetrics:     ce.PresetMetrics,
+			PresetMetricsStandby: ce.PresetMetricsStandby,
 			IsSuperuser:       ce.IsSuperuser,
 			CustomTags:        ce.CustomTags,
 			HostConfig:        ce.HostConfig,
@@ -4476,6 +4512,8 @@ func main() {
 	var last_metrics_refresh_time int64
 	var err error
 	var metrics map[string]map[decimal.Decimal]MetricVersionProperties
+	var hostLastKnownStatusInRecovery = make(map[string]bool) // isInRecovery
+	var metric_config map[string]float64	// set to host.Metrics or host.MetricsStandby (in case optional config defined and in recovery state
 
 	for { //main loop
 		hostsToShutDownDueToRoleChange := make(map[string]bool) // hosts went from master to standby and have "only if master" set
@@ -4592,7 +4630,6 @@ func main() {
 		for _, host := range monitored_dbs {
 			log.Debugf("processing database: %s, metric config: %v, custom tags: %v, host config: %#v", host.DBUniqueName, host.Metrics, host.CustomTags, host.HostConfig)
 
-			metric_config := host.Metrics
 			db_unique := host.DBUniqueName
 			db_unique_orig := host.DBUniqueNameOrig
 			db_type := host.DBType
@@ -4651,6 +4688,11 @@ func main() {
 						log.Infof("[%s] not added to monitoring due to 'master only' property", db_unique)
 						continue
 					}
+					metric_config = host.Metrics
+					hostLastKnownStatusInRecovery[db_unique] = ver.IsInRecovery
+					if ver.IsInRecovery && len(host.MetricsStandby) > 0 {
+						metric_config = host.MetricsStandby
+					}
 				}
 
 				if !opts.Ping && (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && IsPostgresDBType(db_type) && !ver.IsInRecovery {
@@ -4670,10 +4712,21 @@ func main() {
 			if IsPostgresDBType(host.DBType) {
 				ver, err := DBGetPGVersion(db_unique, host.DBType,false)
 				if err == nil { // ok to ignore error, re-tried on next loop
+					lastKnownStatusInRecovery, _ := hostLastKnownStatusInRecovery[db_unique]
 					if ver.IsInRecovery && host.OnlyIfMaster {
 						log.Infof("[%s] to be removed from monitoring due to 'master only' property and status change", db_unique)
 						hostsToShutDownDueToRoleChange[db_unique] = true
 						continue
+					} else if lastKnownStatusInRecovery != ver.IsInRecovery {
+						if ver.IsInRecovery && len(host.MetricsStandby) > 0 {
+							log.Warningf("Switching metrics collection for \"%s\" to standby config...", db_unique)
+							metric_config = host.MetricsStandby
+							hostLastKnownStatusInRecovery[db_unique] = true
+						} else {
+							log.Warningf("Switching metrics collection for \"%s\" to primary config...", db_unique)
+							metric_config = host.Metrics
+							hostLastKnownStatusInRecovery[db_unique] = false
+						}
 					}
 				}
 			}
@@ -4783,7 +4836,7 @@ func main() {
 			if !ok { // maybe some single metric was disabled
 				for _, host := range monitored_dbs {
 					if host.DBUniqueName == db {
-						metricConfig := host.Metrics
+						metricConfig := metric_config
 
 						for metric_key := range metricConfig {
 							if metric_key == metric && metricConfig[metric_key] > 0 {
@@ -4796,7 +4849,7 @@ func main() {
 			log.Infof("shutting down gatherer for [%s:%s] ...", db, metric)
 			control_channels[db_metric] <- ControlMessage{Action: GATHERER_STATUS_STOP}
 			delete(control_channels, db_metric)
-			log.Infof("control channel for [%s:%s] deleted", db, metric)
+			log.Debugf("control channel for [%s:%s] deleted", db, metric)
 			gatherers_shut_down++
 		}
 		if gatherers_shut_down > 0 {
