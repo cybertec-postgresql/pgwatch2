@@ -41,8 +41,8 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_CONFIG** File mode. File or folder of YAML (.yaml/.yml) files containing info on which DBs to monitor and where to store metrics
 - **PW2_METRICS_FOLDER** File mode. Folder of metrics definitions
 - **PW2_BATCHING_MAX_DELAY_MS** Max milliseconds to wait for a batched metrics flush. Default: 250
-- **PW2_ADHOC_CONN_STR** Ad-hoc mode. Monitor a single Postgres DB specified by a standard Libpq connection string
-- **PW2_ADHOC_CONFIG** Ad-hoc mode. A preset config name or a custom JSON config. Default: exhaustive
+- **PW2_ADHOC_CONN_STR** Ad-hoc mode. Monitor a single Postgres DB / instance specified by a standard Libpq connection string
+- **PW2_ADHOC_CONFIG** Ad-hoc mode. A preset config name or a custom JSON config
 - **PW2_ADHOC_CREATE_HELPERS** Ad-hoc mode. Try to auto-create helpers. Needs superuser to succeed. Default: false
 - **PW2_ADHOC_NAME** Ad-hoc mode. Unique 'dbname' for Influx. Default: adhoc
 - **PW2_ADHOC_DBTYPE** Ad-hoc mode: postgres|postgres-continuous-discovery. Default: postgres

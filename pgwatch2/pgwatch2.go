@@ -4149,7 +4149,7 @@ type Options struct {
 	BatchingDelayMs         int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
 	AdHocConnString         string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
 	AdHocDBType             string `long:"adhoc-dbtype" description:"Ad-hoc mode: postgres|postgres-continuous-discovery" default:"postgres" env:"PW2_ADHOC_DBTYPE"`
-	AdHocConfig             string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config. [Default: exhaustive]" default:"exhaustive" env:"PW2_ADHOC_CONFIG"`
+	AdHocConfig             string `long:"adhoc-config" description:"Ad-hoc mode: a preset config name or a custom JSON config" env:"PW2_ADHOC_CONFIG"`
 	AdHocCreateHelpers      string `long:"adhoc-create-helpers" description:"Ad-hoc mode: try to auto-create helpers. Needs superuser to succeed [Default: false]" default:"false" env:"PW2_ADHOC_CREATE_HELPERS"`
 	AdHocUniqueName         string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
 	InternalStatsPort       int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
@@ -4239,7 +4239,10 @@ func main() {
 	}
 
 	// ad-hoc mode
-	if len(opts.AdHocConnString) > 0 {
+	if len(opts.AdHocConnString) > 0 || len(opts.AdHocConfig) > 0 {
+		if len(opts.AdHocConnString) == 0 || len(opts.AdHocConfig) == 0 {
+			log.Fatal("--adhoc-conn-str and --adhoc-config params both need to be specified for Ad-hoc mode to work")
+		}
 		if len(opts.Config) > 0 {
 			log.Fatal("Conflicting flags! --adhoc-conn-str and --config cannot be both set")
 		}
@@ -4255,10 +4258,6 @@ func main() {
 			if err != nil {
 				log.Fatal("--adhoc-conn-str requires also --metrics-folder param")
 			}
-		}
-
-		if len(opts.AdHocConfig) == 0 {
-			log.Fatal("--adhoc-conn-str requires also --adhoc-config param")
 		}
 		if len(opts.User) > 0 && len(opts.Password) > 0 {
 			log.Fatal("Conflicting flags! --adhoc-conn-str and --user/--password cannot be both set")
