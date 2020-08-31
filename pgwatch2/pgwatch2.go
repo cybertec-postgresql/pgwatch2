@@ -3602,7 +3602,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 func ReadPresetMetricsConfigFromFolder(folder string, failOnError bool) (map[string]map[string]float64, error) {
 	pmm := make(map[string]map[string]float64)
 
-	log.Infof("Reading preset metric config from path %s ...", folder)
+	log.Infof("Reading preset metric config from path %s ...", path.Join(folder, PRESET_CONFIG_YAML_FILE))
 	preset_metrics, err := ioutil.ReadFile(path.Join(folder, PRESET_CONFIG_YAML_FILE))
 	if err != nil {
 		log.Errorf("Failed to read preset metric config definition at: %s", folder)
@@ -4145,7 +4145,7 @@ type Options struct {
 	JsonStorageFile      string `long:"json-storage-file" description:"Path to file where metrics will be stored when --datastore=json, one metric set per line" env:"PW2_JSON_STORAGE_FILE"`
 	// Params for running based on local config files, enabled distributed "push model" based metrics gathering. Metrics are sent directly to Influx/Graphite.
 	Config                  string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
-	MetricsFolder           string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
+	MetricsFolder           string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER" default:"/etc/pgwatch2/metrics"`
 	BatchingDelayMs         int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
 	AdHocConnString         string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
 	AdHocDBType             string `long:"adhoc-dbtype" description:"Ad-hoc mode: postgres|postgres-continuous-discovery" default:"postgres" env:"PW2_ADHOC_DBTYPE"`
@@ -4244,13 +4244,19 @@ func main() {
 			log.Fatal("Conflicting flags! --adhoc-conn-str and --config cannot be both set")
 		}
 		if len(opts.MetricsFolder) == 0 {
+			opts.MetricsFolder = "/etc/pgwatch2/metrics"
+			log.Warningf("--metrics-folder path not specified, using %s", opts.MetricsFolder)
+		}
+		_, err := ioutil.ReadDir(opts.MetricsFolder)
+		if err != nil {
 			// try Docker image default file based metrics path
-			_, err := ioutil.ReadDir("/pgwatch2/metrics")
+			opts.MetricsFolder = "/pgwatch2/metrics"
+			_, err = ioutil.ReadDir(opts.MetricsFolder)
 			if err != nil {
 				log.Fatal("--adhoc-conn-str requires also --metrics-folder param")
 			}
-			opts.MetricsFolder = "/pgwatch2/metrics"
 		}
+
 		if len(opts.AdHocConfig) == 0 {
 			log.Fatal("--adhoc-conn-str requires also --adhoc-config param")
 		}
@@ -4291,18 +4297,16 @@ func main() {
 	}
 
 	// running in config file based mode?
-	if len(opts.Config) > 0 || len(opts.MetricsFolder) > 0 {
-		if len(opts.Config) > 0 && len(opts.MetricsFolder) == 0 {
-			log.Fatal("--metrics-folder required. 'File based' operation requires presence of both --config and --metrics-folder")
-		}
-		if len(opts.MetricsFolder) > 0 && len(opts.Config) == 0 && !adHocMode {
-			log.Fatal("--config required. 'File based' operation requires presence of both --config and --metrics-folder")
+	if len(opts.Config) > 0 {
+		if len(opts.MetricsFolder) == 0 {
+			opts.MetricsFolder = "/etc/pgwatch2/metrics"	// prebuilt packages default location
+			log.Warningf("--metrics-folder path not specified, using %s", opts.MetricsFolder)
 		}
 
 		// verify that metric/config paths are readable
 		_, err := ioutil.ReadDir(opts.MetricsFolder)
 		if err != nil {
-			log.Fatalf("Could not read path %s: %s", opts.MetricsFolder, err)
+			log.Fatalf("Could not read --metrics-folder path %s: %s", opts.MetricsFolder, err)
 		}
 
 		if !adHocMode {
