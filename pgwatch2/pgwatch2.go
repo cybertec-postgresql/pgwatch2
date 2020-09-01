@@ -332,9 +332,6 @@ func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password
 		db, err = sqlx.Open("postgres", conn_str)
 	}
 
-	if err != nil {
-		log.Error("could not open Postgres connection", err)
-	}
 	return db, err
 }
 
@@ -3895,15 +3892,24 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 	var err error
 	md := make([]MonitoredDatabase, 0)
 
-	c, err = GetPostgresDBConnection(ce.LibPQConnStr, ce.Host, ce.Port, "template1", ce.User, ce.Password,
-		ce.SslMode, ce.SslRootCAPath, ce.SslClientCertPath, ce.SslClientKeyPath)
-	if err != nil {
-		// some cloud providers limit access to templat1 for some reason, so try with postgres
-		c, err = GetPostgresDBConnection(ce.LibPQConnStr, ce.Host, ce.Port, "postgres", ce.User, ce.Password,
+	// some cloud providers limit access to template1 for some reason, so try with postgres and defaultdb (Aiven)
+	templateDBsToTry := []string{"template1", "postgres", "defaultdb"}
+
+	for _, templateDB := range templateDBsToTry {
+		c, err = GetPostgresDBConnection(ce.LibPQConnStr, ce.Host, ce.Port, templateDB, ce.User, ce.Password,
 			ce.SslMode, ce.SslRootCAPath, ce.SslClientCertPath, ce.SslClientKeyPath)
 		if err != nil {
 			return md, err
 		}
+		err = c.Ping()
+		if err == nil {
+			break
+		} else {
+			c.Close()
+		}
+	}
+	if err != nil {
+		return md, errors.New(fmt.Sprintf("Failed to connect to any of the template DBs: %v", templateDBsToTry))
 	}
 	defer c.Close()
 
