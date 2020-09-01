@@ -44,7 +44,7 @@ create table pgwatch2.monitored_db (
     md_password_type text not null default 'plain-text',
     md_host_config jsonb,
     md_only_if_master bool not null default false,
-    md_preset_config_name_standby text references pgwatch2.preset_config(pc_name) default 'basic',
+    md_preset_config_name_standby text references pgwatch2.preset_config(pc_name),
     md_config_standby jsonb,
 
     UNIQUE (md_unique_name),
@@ -62,9 +62,8 @@ alter table pgwatch2.monitored_db add constraint preset_or_custom_config check
     ((not (md_preset_config_name is null and md_config is null))
     and not (md_preset_config_name is not null and md_config is not null)),
 
-    add constraint preset_or_custom_config_standby check
-    ((not (md_preset_config_name_standby is null and md_config_standby is null))
-    and not (md_preset_config_name_standby is not null and md_config_standby is not null));
+    add constraint preset_or_custom_config_standby check (
+    not (md_preset_config_name_standby is not null and md_config_standby is not null));
 
 
 create table metric (
