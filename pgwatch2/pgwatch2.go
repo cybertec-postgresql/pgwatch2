@@ -596,7 +596,7 @@ func GetAllActiveHostsFromConfigDB() ([](map[string]interface{}), error) {
 	sql_latest := `
 		select /* pgwatch2_generated */
 		  md_unique_name, md_group, md_dbtype, md_hostname, md_port, md_dbname, md_user, coalesce(md_password, '') as md_password,
-		  coalesce(p.pc_config, md_config)::text as md_config, coalesce(s.pc_config, md_config_standby)::text as md_config_standby,
+		  coalesce(p.pc_config, md_config)::text as md_config, coalesce(s.pc_config, md_config_standby, '{}'::jsonb)::text as md_config_standby,
 		  md_statement_timeout_seconds, md_sslmode, md_is_superuser,
 		  coalesce(md_include_pattern, '') as md_include_pattern, coalesce(md_exclude_pattern, '') as md_exclude_pattern,
 		  coalesce(md_custom_tags::text, '{}') as md_custom_tags, md_root_ca_path, md_client_cert_path, md_client_key_path,
