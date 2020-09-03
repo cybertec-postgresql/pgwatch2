@@ -19,78 +19,22 @@
   "links": [],
   "panels": [
     {
-      "alert": {
-        "conditions": [
-          {
-            "evaluator": {
-              "params": [
-                1
-              ],
-              "type": "lt"
-            },
-            "operator": {
-              "type": "and"
-            },
-            "query": {
-              "params": [
-                "A",
-                "5m",
-                "now"
-              ]
-            },
-            "reducer": {
-              "params": [],
-              "type": "avg"
-            },
-            "type": "query"
-          },
-          {
-            "evaluator": {
-              "params": [
-                1
-              ],
-              "type": "gt"
-            },
-            "operator": {
-              "type": "and"
-            },
-            "query": {
-              "params": [
-                "A",
-                "5m",
-                "now"
-              ]
-            },
-            "reducer": {
-              "params": [],
-              "type": "avg"
-            },
-            "type": "query"
-          }
-        ],
-        "executionErrorState": "alerting",
-        "for": "3m",
-        "frequency": "1m",
-        "handler": 1,
-        "message": "\"1 active master per cluster\" failure",
-        "name": "1 active master per cluster",
-        "noDataState": "alerting",
-        "notifications": []
-      },
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
       "decimals": 0,
-      "description": "1 master - no less, no more. PG 10+ (pg_control_system().system_identifier)",
+      "description": "1 primary - no less, no more. PG 10+ (pg_control_system().system_identifier)",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 24,
         "x": 0,
         "y": 0
       },
+      "hiddenSeries": false,
       "id": 2,
       "legend": {
         "avg": false,
@@ -105,7 +49,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -136,7 +82,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (select string_agg(distinct dbname, ',') from wal where data->>'sys_id' = sys_id and $__timeFilter(time)) as cluster_members,\n  sum(is_primary) as primary_count\nFROM (\nSELECT\n  $__timeGroup(time, '1m'),\n  data->>'sys_id' as sys_id,\n  max(case when data->>'in_recovery_int' = '0' then 1 else 0 end) as is_primary\nFROM\n  wal\nWHERE\n  $__timeFilter(time)\n  AND data ? 'sys_id'\nGROUP BY 1, 2\n) x\nGROUP BY time, sys_id\nORDER BY 1\n",
+          "rawSql": "SELECT\n  time,\n  (select string_agg(distinct dbname, ',') from wal where tag_data->>'sys_id' = sys_id and $__timeFilter(time)) as cluster_members,\n  sum(is_primary) as primary_count\nFROM (\nSELECT\n  $__timeGroup(time, '1m'),\n  tag_data->>'sys_id' as sys_id,\n  max(case when data->>'in_recovery_int' = '0' then 1 else 0 end) as is_primary\nFROM\n  wal\nWHERE\n  $__timeFilter(time)\n  AND tag_data ? 'sys_id'\nGROUP BY 1, 2\n) x\nGROUP BY time, sys_id\nORDER BY 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -164,19 +110,11 @@
           ]
         }
       ],
-      "thresholds": [
-        {
-          "colorMode": "critical",
-          "fill": true,
-          "line": true,
-          "op": "lt",
-          "value": 1
-        }
-      ],
+      "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "1 active master per cluster",
+      "title": "1 active primary per cluster",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -215,41 +153,6 @@
       }
     },
     {
-      "alert": {
-        "conditions": [
-          {
-            "evaluator": {
-              "params": [
-                10
-              ],
-              "type": "lt"
-            },
-            "operator": {
-              "type": "and"
-            },
-            "query": {
-              "params": [
-                "A",
-                "5m",
-                "now"
-              ]
-            },
-            "reducer": {
-              "params": [],
-              "type": "avg"
-            },
-            "type": "query"
-          }
-        ],
-        "executionErrorState": "alerting",
-        "for": "5m",
-        "frequency": "1m",
-        "handler": 1,
-        "message": "Available connections alert",
-        "name": "Available connections alert",
-        "noDataState": "alerting",
-        "notifications": []
-      },
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -258,12 +161,14 @@
       "decimals": 0,
       "description": "max_connections - used",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 24,
         "x": 0,
         "y": 5
       },
+      "hiddenSeries": false,
       "id": 3,
       "interval": "5m",
       "legend": {
@@ -279,7 +184,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -338,16 +245,7 @@
           ]
         }
       ],
-      "thresholds": [
-        {
-          "colorMode": "critical",
-          "fill": true,
-          "line": true,
-          "op": "lt",
-          "value": 10,
-          "yaxis": "left"
-        }
-      ],
+      "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
@@ -390,41 +288,6 @@
       }
     },
     {
-      "alert": {
-        "conditions": [
-          {
-            "evaluator": {
-              "params": [
-                90
-              ],
-              "type": "gt"
-            },
-            "operator": {
-              "type": "and"
-            },
-            "query": {
-              "params": [
-                "A",
-                "5m",
-                "now"
-              ]
-            },
-            "reducer": {
-              "params": [],
-              "type": "avg"
-            },
-            "type": "query"
-          }
-        ],
-        "executionErrorState": "alerting",
-        "for": "5m",
-        "frequency": "2m",
-        "handler": 1,
-        "message": "Disk usage > 90 % alert",
-        "name": "Disk usage > 90 % alert",
-        "noDataState": "no_data",
-        "notifications": []
-      },
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -433,12 +296,14 @@
       "decimals": 1,
       "description": "Assumes psutil* helpers are installed",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 24,
         "x": 0,
         "y": 10
       },
+      "hiddenSeries": false,
       "id": 4,
       "interval": "5m",
       "legend": {
@@ -454,7 +319,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -485,7 +352,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT * FROM (\nSELECT\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg((data->'percent')::float8) as percent_used\nFROM\n  psutil_disk\nWHERE\n  $__timeFilter(time)\n  AND tag_data->>'dir_or_tablespace' in ('data_directory', 'pg_wal')\nGROUP BY 1, 2\n) x\n-- WHERE percent_used > 75 /* uncomment to not show \"healthy\" */\nORDER BY 1, 2",
+          "rawSql": "SELECT * FROM (\nSELECT\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg((data->'percent')::float8) as percent_used\nFROM\n  psutil_disk\nWHERE\n  $__timeFilter(time)\n  AND tag_data->>'dir_or_tablespace' in ('data_directory', 'pg_wal', 'log_directory')\nGROUP BY 1, 2\n) x\n-- WHERE percent_used > 75 /* uncomment to not show \"healthy\" */\nORDER BY 1, 2",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -513,15 +380,7 @@
           ]
         }
       ],
-      "thresholds": [
-        {
-          "colorMode": "critical",
-          "fill": true,
-          "line": true,
-          "op": "gt",
-          "value": 90
-        }
-      ],
+      "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
@@ -564,42 +423,6 @@
       }
     },
     {
-      "alert": {
-        "conditions": [
-          {
-            "evaluator": {
-              "params": [
-                1,
-                999
-              ],
-              "type": "within_range"
-            },
-            "operator": {
-              "type": "and"
-            },
-            "query": {
-              "params": [
-                "A",
-                "5m",
-                "now"
-              ]
-            },
-            "reducer": {
-              "params": [],
-              "type": "max"
-            },
-            "type": "query"
-          }
-        ],
-        "executionErrorState": "alerting",
-        "for": "5m",
-        "frequency": "2m",
-        "handler": 1,
-        "message": "Inactive replication slots alert",
-        "name": "Inactive replication slots alert",
-        "noDataState": "no_data",
-        "notifications": []
-      },
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -608,12 +431,14 @@
       "decimals": 1,
       "description": "WAL-s will be reserved until disk runs out...",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 24,
         "x": 0,
         "y": 15
       },
+      "hiddenSeries": false,
       "id": 5,
       "interval": "5m",
       "legend": {
@@ -629,7 +454,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -688,24 +515,7 @@
           ]
         }
       ],
-      "thresholds": [
-        {
-          "colorMode": "critical",
-          "fill": true,
-          "line": true,
-          "op": "gt",
-          "value": 1,
-          "yaxis": "left"
-        },
-        {
-          "colorMode": "critical",
-          "fill": true,
-          "line": true,
-          "op": "lt",
-          "value": 999,
-          "yaxis": "left"
-        }
-      ],
+      "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
@@ -746,9 +556,144 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": 1,
+      "description": "Could be both lock or IO",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "hiddenSeries": false,
+      "id": 6,
+      "interval": "5m",
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  dbname,\n  max((data->'waiting')::int) as waiting\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\nGROUP BY\n  1, 2\n",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Waiting sessions > 10",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
-  "schemaVersion": 18,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -786,5 +731,8 @@
   "timezone": "",
   "title": "Alert Template",
   "uid": null,
+  "variables": {
+    "list": []
+  },
   "version": 1
 }
