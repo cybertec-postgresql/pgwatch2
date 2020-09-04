@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	consul_api "github.com/hashicorp/consul/api"
-	"github.com/samuel/go-zookeeper/zk"
-	"go.etcd.io/etcd/client"
-	"go.etcd.io/etcd/pkg/transport"
 	"os"
 	"path"
 	"regexp"
 	"time"
+
+	consul_api "github.com/hashicorp/consul/api"
+	"github.com/samuel/go-zookeeper/zk"
+	"go.etcd.io/etcd/client"
+	"go.etcd.io/etcd/pkg/transport"
 )
 
 var lastFoundClusterMembers = make(map[string][]PatroniClusterMember) // needed for cases where DCS is temporarily down
@@ -22,7 +23,7 @@ func ParseHostAndPortFromJdbcConnStr(connStr string) (string, string, error) {
 	matches := r.FindStringSubmatch(connStr)
 	if len(matches) != 3 {
 		log.Errorf("Unexpected regex result groups:", matches)
-		return "", "", errors.New(fmt.Sprintf("unexpected regex result groups: %v", matches))
+		return "", "", fmt.Errorf("unexpected regex result groups: %v", matches)
 	}
 	return matches[1], matches[2], nil
 }

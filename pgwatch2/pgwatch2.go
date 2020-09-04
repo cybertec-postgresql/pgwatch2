@@ -1441,7 +1441,7 @@ func EnsureMetricTime(pg_part_bounds map[string]ExistingPartitionInfo, force boo
 			continue
 		}
 		if pb.StartTime.IsZero() || pb.EndTime.IsZero() {
-			return errors.New(fmt.Sprintf("zero StartTime/EndTime in partitioning request: [%s:%v]", metric, pb))
+			return fmt.Errorf("zero StartTime/EndTime in partitioning request: [%s:%v]", metric, pb)
 		}
 
 		partInfo, ok := partitionMapMetric[metric]
@@ -1486,7 +1486,7 @@ func EnsureMetricDbnameTime(metric_dbname_part_bounds map[string]map[string]Exis
 		for dbname, pb := range dbnameTimestampMap {
 
 			if pb.StartTime.IsZero() || pb.EndTime.IsZero() {
-				return errors.New(fmt.Sprintf("zero StartTime/EndTime in partitioning request: [%s:%v]", metric, pb))
+				return fmt.Errorf("zero StartTime/EndTime in partitioning request: [%s:%v]", metric, pb)
 			}
 
 			partInfo, ok := partitionMapMetricDbname[metric][dbname]
