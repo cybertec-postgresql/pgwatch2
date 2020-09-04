@@ -3863,9 +3863,7 @@ func ReadMonitoringConfigFromFileOrFolder(fileOrFolder string) ([]MonitoredDatab
 				log.Debug("Found YAML config file:", info.Name())
 				mdbs, err := ConfigFileToMonitoredDatabases(path)
 				if err == nil {
-					for _, md := range mdbs {
-						hostList = append(hostList, md)
-					}
+					hostList = append(hostList, mdbs...)
 				}
 			}
 			return nil
