@@ -352,7 +352,7 @@ func severityToEnglish(serverLang, errorSeverity string) string {
 	if serverLang == "en" {
 		return errorSeverity
 	}
-	severityMap, _ := PG_SEVERITIES_LOCALE[serverLang]
+	severityMap := PG_SEVERITIES_LOCALE[serverLang]
 	severityEn, ok := severityMap[errorSeverity]
 	if !ok {
 		log.Warningf("Failed to map severity '%s' to english from language '%s'", errorSeverity, serverLang)

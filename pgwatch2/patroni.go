@@ -148,8 +148,8 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 			log.Errorf("Could not parse ETCD node data for node \"%s\": %s", node, err)
 			continue
 		}
-		role, _ := nodeData["role"]
-		connUrl, _ := nodeData["conn_url"]
+		role := nodeData["role"]
+		connUrl := nodeData["conn_url"]
 		name := path.Base(node.Key)
 
 		ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})
