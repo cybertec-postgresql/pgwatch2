@@ -3294,26 +3294,24 @@ func IsInTimeSpan(checkTime time.Time, timeRange, metric, dbUnique string) bool 
 
 func IsInDisabledTimeDayRange(localTime time.Time, metricAttrsDisabledDays string, metricAttrsDisabledTimes []string, hostConfigPerMetricDisabledTimes []HostConfigPerMetricDisabledTimes, metric, dbUnique string) bool {
 	hostConfigMetricMatch := false
-	if hostConfigPerMetricDisabledTimes != nil { // host config takes precedence when both specified
-		for _, hcdi := range hostConfigPerMetricDisabledTimes {
-			dayMatchFound := false
-			timeMatchFound := false
-			if IsStringInSlice(metric, hcdi.Metrics) {
-				hostConfigMetricMatch = true
-				if !dayMatchFound && hcdi.DisabledDays != "" && IsInDaySpan(localTime, hcdi.DisabledDays, metric, dbUnique) {
-					dayMatchFound = true
-				}
-				for _, dt := range hcdi.DisabledTimes {
-					if IsInTimeSpan(localTime, dt, metric, dbUnique) {
-						timeMatchFound = true
-						break
-					}
+	for _, hcdi := range hostConfigPerMetricDisabledTimes { // host config takes precedence when both specified
+		dayMatchFound := false
+		timeMatchFound := false
+		if IsStringInSlice(metric, hcdi.Metrics) {
+			hostConfigMetricMatch = true
+			if !dayMatchFound && hcdi.DisabledDays != "" && IsInDaySpan(localTime, hcdi.DisabledDays, metric, dbUnique) {
+				dayMatchFound = true
+			}
+			for _, dt := range hcdi.DisabledTimes {
+				if IsInTimeSpan(localTime, dt, metric, dbUnique) {
+					timeMatchFound = true
+					break
 				}
 			}
-			if hostConfigMetricMatch && (timeMatchFound || len(hcdi.DisabledTimes) == 0) && (dayMatchFound || hcdi.DisabledDays == "") {
-				//log.Debugf("[%s][%s] Host config ignored time/day match, skipping fetch", dbUnique, metric)
-				return true
-			}
+		}
+		if hostConfigMetricMatch && (timeMatchFound || len(hcdi.DisabledTimes) == 0) && (dayMatchFound || hcdi.DisabledDays == "") {
+			//log.Debugf("[%s][%s] Host config ignored time/day match, skipping fetch", dbUnique, metric)
+			return true
 		}
 	}
 

@@ -54,20 +54,18 @@ func ConsulGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember
 		log.Error("Could not read Patroni members from Consul:", err)
 		return ret, err
 	}
-	if members != nil {
-		for _, member := range members {
-			name := path.Base(member.Key)
-			log.Debugf("Found a cluster member from Consul: %+v", name)
-			nodeData, err := jsonTextToStringMap(string(member.Value))
-			if err != nil {
-				log.Errorf("Could not parse Consul node data for node \"%s\": %s", name, err)
-				continue
-			}
-			role, _ := nodeData["role"]
-			connUrl, _ := nodeData["conn_url"]
-
-			ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})
+	for _, member := range members {
+		name := path.Base(member.Key)
+		log.Debugf("Found a cluster member from Consul: %+v", name)
+		nodeData, err := jsonTextToStringMap(string(member.Value))
+		if err != nil {
+			log.Errorf("Could not parse Consul node data for node \"%s\": %s", name, err)
+			continue
 		}
+		role := nodeData["role"]
+		connUrl := nodeData["conn_url"]
+
+		ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})
 	}
 
 	return ret, nil
