@@ -247,7 +247,7 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 				}
 				log.Debug("[%s] Skipped %d already processed lines from %s", dbUniqueName, linesRead, latest)
 			} else if firstRun { // seek to end
-				latestHandle.Seek(0, 2)
+				_ = latestHandle.Seek(0, 2)
 				firstRun = false
 			}
 		}

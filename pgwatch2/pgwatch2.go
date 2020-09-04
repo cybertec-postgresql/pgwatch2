@@ -3103,7 +3103,7 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 							}
 							msgs_copy_tmp[0].DBUniqueName = fake_dbname
 							//log.Debugf("fake data for [%s:%s]: %v", metricName, fake_dbname, msgs_copy_tmp[0].Data)
-							StoreMetrics(msgs_copy_tmp, store_ch)
+							_, _ = StoreMetrics(msgs_copy_tmp, store_ch)
 							test_metrics_stored += len(msgs_copy_tmp[0].Data)
 						}
 						time.Sleep(time.Duration(opts.TestdataMultiplier * 10000000)) // 10ms * multiplier (in nanosec).
@@ -3115,7 +3115,7 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 					testDataGenerationModeWG.Done()
 					return
 				} else {
-					StoreMetrics(metricStoreMessages, store_ch)
+					_, _ = StoreMetrics(metricStoreMessages, store_ch)
 				}
 			}
 
@@ -4044,7 +4044,7 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	if metricPointsPerMinute == -1 { // calculate avg. on the fly if 1st summarization hasn't happened yet
 		metricPointsPerMinute = int64((totalMetrics * 60) / gathererUptimeSeconds)
 	}
-	io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix()-secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, gathererUptimeSeconds))
+	_, _ = io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix()-secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, gathererUptimeSeconds))
 }
 
 func StartStatsServer(port int64) {
@@ -4092,7 +4092,7 @@ func FilterMonitoredDatabasesByGroup(monitoredDBs []MonitoredDatabase, group str
 func encrypt(passphrase, plaintext string) string { // called when --password-to-encrypt set
 	key, salt := deriveKey(passphrase, nil)
 	iv := make([]byte, 12)
-	rand.Read(iv)
+	_, _ = rand.Read(iv)
 	b, _ := aes.NewCipher(key)
 	aesgcm, _ := cipher.NewGCM(b)
 	data := aesgcm.Seal(nil, iv, []byte(plaintext), nil)
@@ -4102,7 +4102,7 @@ func encrypt(passphrase, plaintext string) string { // called when --password-to
 func deriveKey(passphrase string, salt []byte) ([]byte, []byte) {
 	if salt == nil {
 		salt = make([]byte, 8)
-		rand.Read(salt)
+		_, _ = rand.Read(salt)
 	}
 	return pbkdf2.Key([]byte(passphrase), salt, 1000, 32, sha256.New), salt
 }
@@ -4376,7 +4376,7 @@ func main() {
 			return
 		}
 
-		InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password, opts.PgRequireSSL, true)
+		_ = InitAndTestConfigStoreConnection(opts.Host, opts.Port, opts.Dbname, opts.User, opts.Password, opts.PgRequireSSL, true)
 	}
 
 	// validate that input is boolean is set
@@ -4480,7 +4480,7 @@ func main() {
 				log.Fatal("--datastore=postgres requires --pg-metric-store-conn-str to be set")
 			}
 
-			InitAndTestMetricStoreConnection(opts.PGMetricStoreConnStr, true)
+			_ = InitAndTestMetricStoreConnection(opts.PGMetricStoreConnStr, true)
 
 			PGSchemaType = CheckIfPGSchemaInitializedOrFail()
 
@@ -4506,7 +4506,7 @@ func main() {
 			log.Fatal("Unknown datastore. Check the --datastore param")
 		}
 
-		daemon.SdNotify(false, "READY=1") // Notify systemd, does nothing outside of systemd
+		_, _ = daemon.SdNotify(false, "READY=1") // Notify systemd, does nothing outside of systemd
 	}
 
 	first_loop := true
@@ -4699,7 +4699,7 @@ func main() {
 
 				if !opts.Ping && (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && IsPostgresDBType(db_type) && !ver.IsInRecovery {
 					log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
-					TryCreateMetricsFetchingHelpers(db_unique)
+					_ = TryCreateMetricsFetchingHelpers(db_unique)
 				}
 
 				if opts.Datastore != DATASTORE_PROMETHEUS && !opts.Ping {
