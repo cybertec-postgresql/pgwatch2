@@ -290,7 +290,7 @@ var instanceMetricCacheTimestamp = make(map[string]time.Time) // [dbUnique+metri
 var instanceMetricCacheTimestampLock = sync.RWMutex{}
 var MinExtensionInfoAvailable, _ = decimal.NewFromString("9.1")
 var regexIsAlpha = regexp.MustCompile("^[a-zA-Z]+$")
-var rBouncerAndPgpoolVerMatch = regexp.MustCompile("\\d+\\.+\\d+") // extract $major.minor from "4.1.2 (karasukiboshi)" or "PgBouncer 1.12.0"
+var rBouncerAndPgpoolVerMatch = regexp.MustCompile(`\d+\.+\d+`) // extract $major.minor from "4.1.2 (karasukiboshi)" or "PgBouncer 1.12.0"
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
@@ -3704,8 +3704,8 @@ func ParseMetricAttrsFromString(jsonAttrs string) MetricAttrs {
 // expected is following structure: metric_name/pg_ver/metric(_master|standby).sql
 func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metrics_map := make(map[string]map[decimal.Decimal]MetricVersionProperties)
-	rIsDigitOrPunctuation := regexp.MustCompile("^[\\d\\.]+$")
-	metricNamePattern := "^[a-z0-9_\\.]+$"
+	rIsDigitOrPunctuation := regexp.MustCompile(`^[\d\.]+$`)
+	metricNamePattern := `^[a-z0-9_\.]+$`
 	rMetricNameFilter := regexp.MustCompile(metricNamePattern)
 
 	log.Infof("Searching for metrics from path %s ...", folder)
