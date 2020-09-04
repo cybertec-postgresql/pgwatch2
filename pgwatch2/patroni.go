@@ -190,8 +190,8 @@ func ZookeeperGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMem
 			log.Errorf("Could not parse Zookeeper node data for node \"%s\": %s", member, err)
 			continue
 		}
-		role, _ := nodeData["role"]
-		connUrl, _ := nodeData["conn_url"]
+		role := nodeData["role"]
+		connUrl := nodeData["conn_url"]
 		name := path.Base(member)
 
 		ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})

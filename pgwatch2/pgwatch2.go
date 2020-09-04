@@ -1327,7 +1327,7 @@ func UniqueDbnamesListingMaintainer(daemonMode bool) {
 				}
 
 				// delete all that are not known and add all that are not there
-				for k, _ := range found_dbnames_map {
+				for k := range found_dbnames_map {
 					found_dbnames_arr = append(found_dbnames_arr, k)
 				}
 				if len(found_dbnames_arr) == 0 { // delete all entries for given metric
@@ -1388,7 +1388,7 @@ func EnsureMetric(pg_part_bounds map[string]ExistingPartitionInfo, force bool) e
 	sql_ensure := `
 	select * from admin.ensure_partition_metric($1)
 	`
-	for metric, _ := range pg_part_bounds {
+	for metric := range pg_part_bounds {
 
 		_, ok := partitionMapMetric[metric] // sequential access currently so no lock needed
 		if !ok || force {
@@ -1408,7 +1408,7 @@ func EnsureMetricTimescale(pg_part_bounds map[string]ExistingPartitionInfo, forc
 	sql_ensure := `
 	select * from admin.ensure_partition_timescale($1)
 	`
-	for metric, _ := range pg_part_bounds {
+	for metric := range pg_part_bounds {
 		if strings.HasSuffix(metric, "_realtime") {
 			continue
 		}
@@ -1528,7 +1528,7 @@ func InitGraphiteConnection(host string, port int) {
 }
 
 func SendToGraphite(dbname, measurement string, data [](map[string]interface{})) error {
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		log.Warning("No data passed to SendToGraphite call")
 		return nil
 	}
@@ -1616,7 +1616,7 @@ func GetMonitoredDatabaseByUniqueName(name string) (MonitoredDatabase, error) {
 }
 
 func UpdateMonitoredDBCache(data []MonitoredDatabase) {
-	if data != nil && len(data) > 0 {
+	if len(data) > 0 {
 		monitored_db_cache_new := make(map[string]MonitoredDatabase)
 
 		for _, row := range data {
@@ -2032,7 +2032,7 @@ func GetMetricVersionProperties(metric string, vme DBVersionMapEntry, metricDefM
 		return MetricVersionProperties{}, fmt.Errorf("no suitable SQL found for metric \"%s\", version \"%s\"", metric, vme.VersionStr)
 	}
 
-	ret, _ := mdm[metric][best_ver]
+	ret := mdm[metric][best_ver]
 
 	// check if SQL def. override defined for some specific extension version and replace the metric SQL-s if so
 	if ret.MetricAttrs.ExtensionVersionOverrides != nil && len(ret.MetricAttrs.ExtensionVersionOverrides) > 0 {
@@ -2123,7 +2123,7 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		for _, dr := range data {
 			current_oid_map[dr["tag_sproc"].(string)+":"+dr["tag_oid"].(string)] = true
 		}
-		for sproc_ident, _ := range host_state["sproc_hashes"] {
+		for sproc_ident := range host_state["sproc_hashes"] {
 			_, ok := current_oid_map[sproc_ident]
 			if !ok {
 				splits := strings.Split(sproc_ident, ":")
@@ -2210,7 +2210,7 @@ func DetectTableChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		for _, dr := range data {
 			current_table_map[dr["tag_table"].(string)] = true
 		}
-		for table, _ := range host_state["table_hashes"] {
+		for table := range host_state["table_hashes"] {
 			_, ok := current_table_map[table]
 			if !ok {
 				log.Info("detected drop of table:", table)
@@ -2295,7 +2295,7 @@ func DetectIndexChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		for _, dr := range data {
 			current_index_map[dr["tag_index"].(string)] = true
 		}
-		for index_name, _ := range host_state["index_hashes"] {
+		for index_name := range host_state["index_hashes"] {
 			_, ok := current_index_map[index_name]
 			if !ok {
 				log.Info("detected drop of index_name:", index_name)
@@ -2371,7 +2371,7 @@ func DetectPrivilegeChanges(dbUnique string, vme DBVersionMapEntry, storage_ch c
 	}
 	// check revokes - exists in old state only
 	if !first_run && len(current_state) > 0 {
-		for obj_prev_run, _ := range host_state["object_privileges"] {
+		for obj_prev_run := range host_state["object_privileges"] {
 			if _, ok := current_state[obj_prev_run]; !ok {
 				splits := strings.Split(obj_prev_run, "#:#")
 				log.Infof("[%s][%s] detected removed object privileges: role=%s, object_type=%s, object=%s, privilege_type=%s",
@@ -2740,7 +2740,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	isCacheable = IsCacheableMetric(msg, mvp)
 	if isCacheable && opts.InstanceLevelCacheMaxSeconds > 0 && msg.Interval.Seconds() > float64(opts.InstanceLevelCacheMaxSeconds) {
 		cachedData = GetFromInstanceCacheIfNotOlderThanSeconds(msg, opts.InstanceLevelCacheMaxSeconds)
-		if cachedData != nil && len(cachedData) > 0 {
+		if len(cachedData) > 0 {
 			fromCache = true
 			goto send_to_storage_channel
 		}
@@ -2767,9 +2767,9 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 	if msg.MetricName == SPECIAL_METRIC_CHANGE_EVENTS && context != CONTEXT_PROMETHEUS_SCRAPE { // special handling, multiple queries + stateful
 		CheckForPGObjectChangesAndStore(msg.DBUniqueName, vme, storage_ch, host_state) // TODO no host_state for Prometheus currently
 	} else if msg.MetricName == RECO_METRIC_NAME && context != CONTEXT_PROMETHEUS_SCRAPE {
-		data, err, duration = GetRecommendations(msg.DBUniqueName, vme)
+		data, _, duration = GetRecommendations(msg.DBUniqueName, vme)
 	} else if msg.DBType == DBTYPE_PGPOOL {
-		data, err, duration = FetchMetricsPgpool(msg, vme, mvp)
+		data, _, duration = FetchMetricsPgpool(msg, vme, mvp)
 	} else {
 		data, err, duration = DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
 
@@ -2777,7 +2777,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 			// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
 			if strings.Contains(err.Error(), "recovery is in progress") {
 				db_pg_version_map_lock.RLock()
-				ver, _ := db_pg_version_map[msg.DBUniqueName]
+				ver := db_pg_version_map[msg.DBUniqueName]
 				db_pg_version_map_lock.RUnlock()
 				if ver.IsInRecovery {
 					log.Debugf("[%s:%s] failed to fetch metrics: %s", msg.DBUniqueName, msg.MetricName, err)
@@ -2821,7 +2821,7 @@ send_to_storage_channel:
 
 	if (addRealDbname || addSystemIdentifier) && msg.DBType == DBTYPE_PG {
 		db_pg_version_map_lock.RLock()
-		ver, _ := db_pg_version_map[msg.DBUniqueName]
+		ver := db_pg_version_map[msg.DBUniqueName]
 		db_pg_version_map_lock.RUnlock()
 		data = AddDbnameSysinfoIfNotExistsToQueryResultData(msg, data, ver)
 	}
@@ -2876,7 +2876,7 @@ func GetFromInstanceCacheIfNotOlderThanSeconds(msg MetricFetchMessage, maxAgeSec
 }
 
 func PutToInstanceCache(msg MetricFetchMessage, data []map[string]interface{}) {
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return
 	}
 	dataCopy := deepCopyMetricData(data)
@@ -3454,7 +3454,7 @@ func InitAndTestInfluxConnection(HostId, InfluxHost, InfluxPort, InfluxDbname, I
 	var pgwatchDbExists bool = false
 	skipSSLCertVerify, _ := strconv.ParseBool(SkipSSLCertVerify)
 
-	if b, _ := strconv.ParseBool(InfluxSSL); b == true {
+	if b, _ := strconv.ParseBool(InfluxSSL); b {
 		connect_string = fmt.Sprintf("https://%s:%s", InfluxHost, InfluxPort)
 	} else {
 		connect_string = fmt.Sprintf("http://%s:%s", InfluxHost, InfluxPort)
@@ -3566,7 +3566,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 		}
 		log.Debug("%d helper definitions found from \"%s\"...", len(helpers), path.Join(opts.MetricsFolder, FILE_BASED_METRIC_HELPERS_DIR))
 
-		for helperName, _ := range helpers {
+		for helperName := range helpers {
 			if strings.Contains(helperName, "windows") {
 				log.Infof("Skipping %s rollout. Windows helpers need to be rolled out manually", helperName)
 				continue
@@ -3902,7 +3902,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 		}
 	}
 	if err != nil {
-		return md, errors.New(fmt.Sprintf("Failed to connect to any of the template DBs: %v", templateDBsToTry))
+		return md, fmt.Errorf("Failed to connect to any of the template DBs: %v", templateDBsToTry)
 	}
 	defer c.Close()
 
@@ -3952,7 +3952,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 // Resolves regexes if exact DBs were not specified exact
 func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []MonitoredDatabase {
 	md := make([]MonitoredDatabase, 0)
-	if mc == nil || len(mc) == 0 {
+	if len(mc) == 0 {
 		return md
 	}
 	for _, e := range mc {
@@ -4705,7 +4705,7 @@ func main() {
 			if IsPostgresDBType(host.DBType) {
 				ver, err := DBGetPGVersion(db_unique, host.DBType, false)
 				if err == nil { // ok to ignore error, re-tried on next loop
-					lastKnownStatusInRecovery, _ := hostLastKnownStatusInRecovery[db_unique]
+					lastKnownStatusInRecovery := hostLastKnownStatusInRecovery[db_unique]
 					if ver.IsInRecovery && host.OnlyIfMaster {
 						log.Infof("[%s] to be removed from monitoring due to 'master only' property and status change", db_unique)
 						hostsToShutDownDueToRoleChange[db_unique] = true
