@@ -1334,7 +1334,7 @@ func UniqueDbnamesListingMaintainer(daemonMode bool) {
 				}
 				if len(found_dbnames_arr) == 0 { // delete all entries for given metric
 					log.Debugf("Deleting Postgres all_distinct_dbname_metrics listing table entries for metric '%s':", metric_name)
-					ret, err = DBExecRead(metricDb, METRICDB_IDENT, sql_delete_all, metric_name)
+					_, err = DBExecRead(metricDb, METRICDB_IDENT, sql_delete_all, metric_name)
 					if err != nil {
 						log.Errorf("Could not delete Postgres all_distinct_dbname_metrics listing table entries for metric '%s': %s", metric_name, err)
 					}
@@ -3519,7 +3519,7 @@ retry:
 			log.Warningf("InfluxDB retention policy change detected, changing from %s to %s ...", currentRetentionAsString, targetRetentionAsString)
 			isql := fmt.Sprintf("ALTER RETENTION POLICY %s ON %s DURATION %dd REPLICATION 1 SHARD DURATION 1d", opts.InfluxRetentionName, InfluxDbname, RetentionPeriod)
 			log.Warningf("Executing: %s", isql)
-			res, err = queryDB(c, isql)
+			_, err = queryDB(c, isql)
 			if err != nil {
 				log.Errorf("Could not change InfluxDB retention policy - manul review / correction recommended: %v", err)
 			}
@@ -3528,7 +3528,7 @@ retry:
 	} else if !pgwatchDbExists {
 		log.Warningf("Database '%s' not found! Creating with %d days retention and retention policy name \"%s\"...", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
 		isql := fmt.Sprintf("CREATE DATABASE %s WITH DURATION %dd REPLICATION 1 SHARD DURATION 1d NAME %s", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
-		res, err = queryDB(c, isql)
+		_, err = queryDB(c, isql)
 		if err != nil {
 			log.Fatal(err)
 		} else {
