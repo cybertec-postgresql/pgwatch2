@@ -4061,16 +4061,11 @@ func StatsSummarizer() {
 	var currentMetricsCounterValue uint64
 	ticker := time.NewTicker(time.Minute * 5)
 	var lastSummarization time.Time = gathererStartTime
-
-	for {
-		select {
-		case <-ticker.C:
-			currentMetricsCounterValue = atomic.LoadUint64(&totalMetricsFetchedCounter)
-			now := time.Now()
-			atomic.StoreInt64(&metricPointsPerMinuteLast5MinAvg, int64(math.Round(float64(currentMetricsCounterValue-prevMetricsCounterValue)*60/now.Sub(lastSummarization).Seconds())))
-			prevMetricsCounterValue = currentMetricsCounterValue
-			lastSummarization = now
-		}
+	for now := range ticker.C {
+		currentMetricsCounterValue = atomic.LoadUint64(&totalMetricsFetchedCounter)
+		atomic.StoreInt64(&metricPointsPerMinuteLast5MinAvg, int64(math.Round(float64(currentMetricsCounterValue-prevMetricsCounterValue)*60/now.Sub(lastSummarization).Seconds())))
+		prevMetricsCounterValue = currentMetricsCounterValue
+		lastSummarization = now
 	}
 }
 
