@@ -1901,7 +1901,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				matches := rBouncerAndPgpoolVerMatch.FindStringSubmatch(data[0]["version"].(string))
 				if len(matches) != 1 {
 					log.Errorf("Unexpected PgBouncer version input: %s", data[0]["version"].(string))
-					return ver, errors.New(fmt.Sprintf("Unexpected PgBouncer version input: %s", data[0]["version"].(string)))
+					return ver, fmt.Errorf("Unexpected PgBouncer version input: %s", data[0]["version"].(string))
 				}
 				verNew.VersionStr = matches[0]
 				verNew.Version, _ = decimal.NewFromString(matches[0])
@@ -1918,7 +1918,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				matches := rBouncerAndPgpoolVerMatch.FindStringSubmatch(string(data[0]["pool_version"].([]byte)))
 				if len(matches) != 1 {
 					log.Errorf("Unexpected PgPool version input: %s", data[0]["pool_version"].([]byte))
-					return ver, errors.New(fmt.Sprintf("Unexpected PgPool version input: %s", data[0]["pool_version"].([]byte)))
+					return ver, fmt.Errorf("Unexpected PgPool version input: %s", data[0]["pool_version"].([]byte))
 				}
 				verNew.VersionStr = matches[0]
 				verNew.Version, _ = decimal.NewFromString(matches[0])
@@ -2027,9 +2027,9 @@ func GetMetricVersionProperties(metric string, vme DBVersionMapEntry, metricDefM
 
 	if !found {
 		if vme.Version.LessThan(min_ver) { // metric not yet available for given PG ver
-			return MetricVersionProperties{}, errors.New(fmt.Sprintf("no suitable SQL found for metric \"%s\", server version \"%s\" too old. min defined SQL ver: %s", metric, vme.VersionStr, min_ver.String()))
+			return MetricVersionProperties{}, fmt.Errorf("no suitable SQL found for metric \"%s\", server version \"%s\" too old. min defined SQL ver: %s", metric, vme.VersionStr, min_ver.String())
 		}
-		return MetricVersionProperties{}, errors.New(fmt.Sprintf("no suitable SQL found for metric \"%s\", version \"%s\"", metric, vme.VersionStr))
+		return MetricVersionProperties{}, fmt.Errorf("no suitable SQL found for metric \"%s\", version \"%s\"", metric, vme.VersionStr)
 	}
 
 	ret, _ := mdm[metric][best_ver]
@@ -4214,7 +4214,7 @@ func main() {
 			fmt.Println("Git version not set! Use the 'build_gatherer.sh' script to build the binary or specify 'commit' and 'date' via -ldflags...")
 			os.Exit(1)
 		}
-		fmt.Println(fmt.Sprintf("%s (%s)", commit, date))
+		fmt.Printf("%s (%s)\n", commit, date)
 		os.Exit(0)
 	}
 
