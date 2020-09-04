@@ -408,7 +408,7 @@ func tryDetermineLogMessagesLanguage(mdb MonitoredDatabase) string {
 
 func RegexMatchesToMap(csvlogRegex *regexp.Regexp, matches []string) map[string]string {
 	result := make(map[string]string)
-	if matches == nil || len(matches) == 0 || csvlogRegex == nil {
+	if len(matches) == 0 || csvlogRegex == nil {
 		return result
 	}
 	for i, name := range csvlogRegex.SubexpNames() {

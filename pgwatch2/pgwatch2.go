@@ -759,7 +759,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 }
 
 func SendToInflux(connect_str, conn_id string, storeMessages []MetricStoreMessage) error {
-	if storeMessages == nil || len(storeMessages) == 0 {
+	if len(storeMessages) == 0 {
 		return nil
 	}
 	ts_warning_printed := false
@@ -872,7 +872,7 @@ retry:
 }
 
 func SendToPostgres(storeMessages []MetricStoreMessage) error {
-	if storeMessages == nil || len(storeMessages) == 0 {
+	if len(storeMessages) == 0 {
 		return nil
 	}
 	ts_warning_printed := false
