@@ -853,7 +853,7 @@ retry:
 	}
 	t1 := time.Now()
 	err = c.Write(bp)
-	t_diff := time.Now().Sub(t1)
+	t_diff := time.Since(t1)
 	if err == nil {
 		if len(storeMessages) == 1 {
 			log.Infof("wrote %d/%d rows to InfluxDB %s for [%s:%s] in %.1f ms", rows_batched, total_rows,
@@ -1100,7 +1100,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 		}
 	}
 
-	t_diff := time.Now().Sub(t1)
+	t_diff := time.Since(t1)
 	if err == nil {
 		if len(storeMessages) == 1 {
 			log.Infof("wrote %d/%d rows to Postgres for [%s:%s] in %.1f ms", rows_batched, total_rows,
@@ -1591,7 +1591,7 @@ func SendToGraphite(dbname, measurement string, data [](map[string]interface{}))
 	log.Debug("Sending", len(metrics), "metric points to Graphite...")
 	t1 := time.Now()
 	err := graphiteConnection.SendMetrics(metrics)
-	t_diff := time.Now().Sub(t1)
+	t_diff := time.Since(t1)
 	if err != nil {
 		atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 		log.Error("could not send metric to Graphite:", err)
