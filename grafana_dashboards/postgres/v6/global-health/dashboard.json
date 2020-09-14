@@ -177,7 +177,7 @@
           ],
           "metricColumn": "dbname",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 AS \"time\",\n  count(distinct dbname)\nFROM\n  wal\nWHERE\n  $__timeFilter(\"time\")\n  AND (data->'in_recovery_int')::int = 0",
+          "rawSql": "SELECT\n  0 AS \"time\",\n  count(distinct dbname)\nFROM\n  wal\nWHERE\n  $__timeFilter(\"time\")\n  AND (data->'in_recovery_int')::int = 1",
           "refId": "A",
           "select": [
             [
