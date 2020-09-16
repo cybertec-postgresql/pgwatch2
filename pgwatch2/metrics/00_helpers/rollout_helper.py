@@ -16,7 +16,7 @@ from pathlib import Path
 args = None
 
 
-def executeOnRemoteHost(sql, host, port, dbname, user, password='', sslmode='prefer', sslrootcert='', sslcert='', sslkey='', params=None, statement_timeout=None, quiet=False):
+def executeOnRemoteHost(sql, host, port, dbname, user, password='', sslmode='prefer', sslrootcert='', sslcert='', sslkey='', params=None, statement_timeout=None, quiet=False, target_schema=''):
     result = []
     conn = None
     try:
@@ -29,6 +29,9 @@ def executeOnRemoteHost(sql, host, port, dbname, user, password='', sslmode='pre
         if statement_timeout:
             cur.execute("SET statement_timeout TO '{}'".format(
                 statement_timeout))
+        if target_schema:
+            cur.execute("SET search_path TO {}".format(
+                target_schema))
         cur.execute(sql, params)
         if cur.statusmessage.startswith('SELECT') or cur.description:
             result = cur.fetchall()
@@ -137,7 +140,7 @@ def do_roll_out(md, pgver):
         if args.python2:
             sql = sql.replace('plpython3u', 'plpythonu')
 
-        all_dbs, err = executeOnRemoteHost(sql, md['md_hostname'], md['md_port'], md['md_dbname'], args.user, args.password, quiet=True)
+        all_dbs, err = executeOnRemoteHost(sql, md['md_hostname'], md['md_port'], md['md_dbname'], args.user, args.password, quiet=True, target_schema=args.target_schema)
         if err:
             logging.debug('failed to roll out %s: %s', hp['helper'], err)
         else:
@@ -236,6 +239,7 @@ def main():
     argp.add_argument('-U', '--user', dest='user', help='Superuser username for helper function creation')
     argp.add_argument('--password', dest='password', default='', help='Superuser password for helper function creation. The .pgpass file can also be used instead')
     argp.add_argument('--monitoring-user', dest='monitoring_user', default='pgwatch2', help='The user getting execute privileges to created helpers (relevant for single or instance mode)')
+    argp.add_argument('--target-schema', dest='target_schema', default='', help='If specified, used to set the search_path')
 
     argp.add_argument('-c', '--confirm', dest='confirm', action='store_true', default=False, help='perform the actual rollout')
     argp.add_argument('-m', '--mode', dest='mode', default='', help='[configdb-all|yaml-all|single-db|single-instance]')
