@@ -24,7 +24,7 @@ var PG_SEVERITIES_LOCALE = map[string]map[string]string{
 	"zh": {"调试": "DEBUG", "日志": "LOG", "信息": "INFO", "注意": "NOTICE", "警告": "WARNING", "错误": "ERROR", "致命错误": "FATAL", "比致命错误还过分的错误": "PANIC"},
 }
 
-const CSVLOG_DEFAULT_REGEX  = `^^(?P<log_time>.*?),"?(?P<user_name>.*?)"?,"?(?P<database_name>.*?)"?,(?P<process_id>\d+),"?(?P<connection_from>.*?)"?,(?P<session_id>.*?),(?P<session_line_num>\d+),"?(?P<command_tag>.*?)"?,(?P<session_start_time>.*?),(?P<virtual_transaction_id>.*?),(?P<transaction_id>.*?),(?P<error_severity>\w+),`
+const CSVLOG_DEFAULT_REGEX = `^^(?P<log_time>.*?),"?(?P<user_name>.*?)"?,"?(?P<database_name>.*?)"?,(?P<process_id>\d+),"?(?P<connection_from>.*?)"?,(?P<session_id>.*?),(?P<session_line_num>\d+),"?(?P<command_tag>.*?)"?,(?P<session_start_time>.*?),(?P<virtual_transaction_id>.*?),(?P<transaction_id>.*?),(?P<error_severity>\w+),`
 const CSVLOG_DEFAULT_GLOB_SUFFIX = "*.csv"
 
 func getFileWithLatestTimestamp(files []string) (string, time.Time) {
@@ -93,29 +93,28 @@ func eventCountsToMetricStoreMessages(eventCounts, eventCountsTotal map[string]i
 		}
 		parsedCount, ok = eventCountsTotal[s]
 		if ok {
-			allSeverityCounts[strings.ToLower(s) + "_total"] = parsedCount
+			allSeverityCounts[strings.ToLower(s)+"_total"] = parsedCount
 		} else {
-			allSeverityCounts[strings.ToLower(s) + "_total"] = 0
+			allSeverityCounts[strings.ToLower(s)+"_total"] = 0
 		}
 	}
 	allSeverityCounts["epoch_ns"] = time.Now().UnixNano()
 	var data []map[string]interface{}
 	data = append(data, allSeverityCounts)
 	return []MetricStoreMessage{{DBUniqueName: mdb.DBUniqueName, DBType: mdb.DBType,
-			MetricName: SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS, Data: data, CustomTags: mdb.CustomTags}}
+		MetricName: SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS, Data: data, CustomTags: mdb.CustomTags}}
 }
-
 
 func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64, control_ch <-chan ControlMessage, store_ch chan<- []MetricStoreMessage) {
 
 	var latest, previous, realDbname, serverMessagesLang string
 	var latestHandle *os.File
 	var reader *bufio.Reader
-	var linesRead = 0							// to skip over already parsed lines on Postgres server restart for example
-    var logsMatchRegex, logsMatchRegexPrev, logsGlobPath string
-	var lastSendTime time.Time               // to storage channel
-	var lastConfigRefreshTime time.Time      // MonitoredDatabase info
-	var eventCounts = make(map[string]int64) // for the specific DB. [WARNING: 34, ERROR: 10, ...], zeroed on storage send
+	var linesRead = 0 // to skip over already parsed lines on Postgres server restart for example
+	var logsMatchRegex, logsMatchRegexPrev, logsGlobPath string
+	var lastSendTime time.Time                    // to storage channel
+	var lastConfigRefreshTime time.Time           // MonitoredDatabase info
+	var eventCounts = make(map[string]int64)      // for the specific DB. [WARNING: 34, ERROR: 10, ...], zeroed on storage send
 	var eventCountsTotal = make(map[string]int64) // for the whole instance
 	var mdb MonitoredDatabase
 	var hostConfig HostConfigAttrs
@@ -125,7 +124,7 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 	var firstRun = true
 	var csvlogRegex *regexp.Regexp
 
-	for {	// re-try loop. re-start in case of FS errors or just to refresh host config
+	for { // re-try loop. re-start in case of FS errors or just to refresh host config
 		select {
 		case msg := <-control_ch:
 			log.Debug("got control msg", dbUniqueName, metricName, msg)
@@ -143,7 +142,7 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 			}
 		}
 
-		if lastConfigRefreshTime.IsZero() ||  lastConfigRefreshTime.Add(time.Second*time.Duration(opts.ServersRefreshLoopSeconds)).Before(time.Now()) {
+		if lastConfigRefreshTime.IsZero() || lastConfigRefreshTime.Add(time.Second*time.Duration(opts.ServersRefreshLoopSeconds)).Before(time.Now()) {
 			mdb, err = GetMonitoredDatabaseByUniqueName(dbUniqueName)
 			if err != nil {
 				log.Errorf("[%s] Failed to refresh monitored DBs info: %s", dbUniqueName, err)
@@ -155,7 +154,7 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 		}
 
 		db_pg_version_map_lock.RLock()
-		realDbname = db_pg_version_map[dbUniqueName].RealDbname	// to manage 2 sets of event counts - monitored DB + global
+		realDbname = db_pg_version_map[dbUniqueName].RealDbname // to manage 2 sets of event counts - monitored DB + global
 		db_pg_version_map_lock.RUnlock()
 
 		if hostConfig.LogsMatchRegex != "" {
@@ -183,7 +182,7 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 			continue
 		}
 
-		if logsMatchRegexPrev != logsMatchRegex {	// avoid regex recompile if no changes
+		if logsMatchRegexPrev != logsMatchRegex { // avoid regex recompile if no changes
 			csvlogRegex, err = regexp.Compile(logsMatchRegex)
 			if err != nil {
 				log.Errorf("[%s] Invalid regex: %s", dbUniqueName, logsMatchRegex)
@@ -216,7 +215,7 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 					continue
 				}
 
-			} else if len(globMatches) == 1  {
+			} else if len(globMatches) == 1 {
 				latest = globMatches[0]
 			}
 			log.Infof("[%s] Starting to parse logfile: %s ", dbUniqueName, latest)
@@ -230,7 +229,7 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 				continue
 			}
 			reader = bufio.NewReader(latestHandle)
-			if previous == latest && linesRead > 0 {	// handle postmaster restarts
+			if previous == latest && linesRead > 0 { // handle postmaster restarts
 				i := 1
 				for i <= linesRead {
 					_, err = reader.ReadString('\n')
@@ -247,8 +246,8 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 					i++
 				}
 				log.Debug("[%s] Skipped %d already processed lines from %s", dbUniqueName, linesRead, latest)
-			} else if firstRun {	// seek to end
-				latestHandle.Seek(0, 2)
+			} else if firstRun { // seek to end
+				_, _ = latestHandle.Seek(0, 2)
 				firstRun = false
 			}
 		}
@@ -256,9 +255,9 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 		var eofSleepMillis = 0
 		readLoopStart := time.Now()
 
-		for  {
+		for {
 			if readLoopStart.Add(time.Second * time.Duration(opts.ServersRefreshLoopSeconds)).Before(time.Now()) {
-				break	// refresh config
+				break // refresh config
 			}
 			line, err := reader.ReadString('\n')
 			if err != nil && err != io.EOF {
@@ -274,8 +273,8 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 
 			if err == io.EOF {
 				//log.Debugf("[%s] EOF reached for logfile %s", dbUniqueName, latest)
-				if eofSleepMillis < 5000 && float64(eofSleepMillis) < interval * 1000 {
-					eofSleepMillis += 100	// progressively sleep more if nothing going on but not more that 5s or metric interval
+				if eofSleepMillis < 5000 && float64(eofSleepMillis) < interval*1000 {
+					eofSleepMillis += 100 // progressively sleep more if nothing going on but not more that 5s or metric interval
 				}
 				time.Sleep(time.Millisecond * time.Duration(eofSleepMillis))
 
@@ -334,7 +333,7 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 			}
 
 		send_to_storage_if_needed:
-			if lastSendTime.IsZero() || lastSendTime.Before(time.Now().Add(-1 * time.Second * time.Duration(interval))) {
+			if lastSendTime.IsZero() || lastSendTime.Before(time.Now().Add(-1*time.Second*time.Duration(interval))) {
 				log.Debugf("[%s] Sending log event counts for last interval to storage channel. Local eventcounts: %+v, global eventcounts: %+v", dbUniqueName, eventCounts, eventCountsTotal)
 				metricStoreMessages := eventCountsToMetricStoreMessages(eventCounts, eventCountsTotal, mdb)
 				store_ch <- metricStoreMessages
@@ -343,8 +342,8 @@ func logparseLoop(dbUniqueName, metricName string, config_map map[string]float64
 				lastSendTime = time.Now()
 			}
 
-		}	// file read loop
-	}	// config loop
+		} // file read loop
+	} // config loop
 
 }
 
@@ -353,7 +352,7 @@ func severityToEnglish(serverLang, errorSeverity string) string {
 	if serverLang == "en" {
 		return errorSeverity
 	}
-	severityMap, _ := PG_SEVERITIES_LOCALE[serverLang]
+	severityMap := PG_SEVERITIES_LOCALE[serverLang]
 	severityEn, ok := severityMap[errorSeverity]
 	if !ok {
 		log.Warningf("Failed to map severity '%s' to english from language '%s'", errorSeverity, serverLang)
@@ -409,7 +408,7 @@ func tryDetermineLogMessagesLanguage(mdb MonitoredDatabase) string {
 
 func RegexMatchesToMap(csvlogRegex *regexp.Regexp, matches []string) map[string]string {
 	result := make(map[string]string)
-	if matches == nil || len(matches) == 0 || csvlogRegex == nil {
+	if len(matches) == 0 || csvlogRegex == nil {
 		return result
 	}
 	for i, name := range csvlogRegex.SubexpNames() {

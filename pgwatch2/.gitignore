@@ -1,0 +1,22 @@
+# Binaries for programs and plugins
+pg_timetable
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Visual Studio Code internal folder
+.vscode
+
+# Packages ouput folder
+dist
+
+# delve debugger file
+debug

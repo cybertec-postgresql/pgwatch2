@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	consul_api "github.com/hashicorp/consul/api"
-	"github.com/samuel/go-zookeeper/zk"
-	"go.etcd.io/etcd/client"
-	"go.etcd.io/etcd/pkg/transport"
 	"os"
 	"path"
 	"regexp"
 	"time"
+
+	consul_api "github.com/hashicorp/consul/api"
+	"github.com/samuel/go-zookeeper/zk"
+	"go.etcd.io/etcd/client"
+	"go.etcd.io/etcd/pkg/transport"
 )
 
 var lastFoundClusterMembers = make(map[string][]PatroniClusterMember) // needed for cases where DCS is temporarily down
@@ -22,7 +23,7 @@ func ParseHostAndPortFromJdbcConnStr(connStr string) (string, string, error) {
 	matches := r.FindStringSubmatch(connStr)
 	if len(matches) != 3 {
 		log.Errorf("Unexpected regex result groups:", matches)
-		return "", "", errors.New(fmt.Sprintf("unexpected regex result groups: %v", matches))
+		return "", "", fmt.Errorf("unexpected regex result groups: %v", matches)
 	}
 	return matches[1], matches[2], nil
 }
@@ -53,20 +54,18 @@ func ConsulGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember
 		log.Error("Could not read Patroni members from Consul:", err)
 		return ret, err
 	}
-	if members != nil {
-		for _, member := range members {
-			name := path.Base(member.Key)
-			log.Debugf("Found a cluster member from Consul: %+v", name)
-			nodeData, err := jsonTextToStringMap(string(member.Value))
-			if err != nil {
-				log.Errorf("Could not parse Consul node data for node \"%s\": %s", name, err)
-				continue
-			}
-			role, _ := nodeData["role"]
-			connUrl, _ := nodeData["conn_url"]
-
-			ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})
+	for _, member := range members {
+		name := path.Base(member.Key)
+		log.Debugf("Found a cluster member from Consul: %+v", name)
+		nodeData, err := jsonTextToStringMap(string(member.Value))
+		if err != nil {
+			log.Errorf("Could not parse Consul node data for node \"%s\": %s", name, err)
+			continue
 		}
+		role := nodeData["role"]
+		connUrl := nodeData["conn_url"]
+
+		ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})
 	}
 
 	return ret, nil
@@ -149,8 +148,8 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 			log.Errorf("Could not parse ETCD node data for node \"%s\": %s", node, err)
 			continue
 		}
-		role, _ := nodeData["role"]
-		connUrl, _ := nodeData["conn_url"]
+		role := nodeData["role"]
+		connUrl := nodeData["conn_url"]
 		name := path.Base(node.Key)
 
 		ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})
@@ -191,8 +190,8 @@ func ZookeeperGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMem
 			log.Errorf("Could not parse Zookeeper node data for node \"%s\": %s", member, err)
 			continue
 		}
-		role, _ := nodeData["role"]
-		connUrl, _ := nodeData["conn_url"]
+		role := nodeData["role"]
+		connUrl := nodeData["conn_url"]
 		name := path.Base(member)
 
 		ret = append(ret, PatroniClusterMember{Scope: database.HostConfig.Scope, ConnUrl: connUrl, Role: role, Name: name})
@@ -252,7 +251,7 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 		}
 		if ce.DBName != "" {
 			md = append(md, MonitoredDatabase{
-				DBUniqueName: dbUnique,
+				DBUniqueName:      dbUnique,
 				DBUniqueNameOrig:  ce.DBUniqueName,
 				DBName:            ce.DBName,
 				Host:              host,
@@ -296,8 +295,8 @@ func ResolveDatabasesFromPatroni(ce MonitoredDatabase) ([]MonitoredDatabase, err
 			}
 
 			for _, d := range data {
-				md = append(md,MonitoredDatabase{
-					DBUniqueName: dbUnique + "_" + d["datname_escaped"].(string),
+				md = append(md, MonitoredDatabase{
+					DBUniqueName:      dbUnique + "_" + d["datname_escaped"].(string),
 					DBUniqueNameOrig:  dbUnique,
 					DBName:            d["datname"].(string),
 					Host:              host,
