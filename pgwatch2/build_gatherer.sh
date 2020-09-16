@@ -5,7 +5,8 @@ if [ -z "$go_on_path" ] ; then
     export PATH=$PATH:/usr/local/go/bin
 fi
 
-./get_dependencies.sh
+# not needed since switching to "Go modules"
+#./get_dependencies.sh
 
 echo "running 'go build pgwatch2.go prom.go patroni.go logparse.go' ..."
 

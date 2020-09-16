@@ -3431,8 +3431,8 @@ func mapToJson(metricsMap map[string]interface{}) ([]byte, error) {
 	return json.Marshal(metricsMap)
 }
 
-// queryDB convenience function to query the database
-func queryDB(clnt client.Client, cmd string) (res []client.Result, err error) {
+// queryInfluxDB convenience function to query the database
+func queryInfluxDB(clnt client.Client, cmd string) (res []client.Result, err error) {
 	q := client.Query{
 		Command:  cmd,
 		Database: opts.InfluxDbname,
@@ -3453,6 +3453,7 @@ func InitAndTestInfluxConnection(HostId, InfluxHost, InfluxPort, InfluxDbname, I
 	var connect_string string
 	var pgwatchDbExists bool = false
 	skipSSLCertVerify, _ := strconv.ParseBool(SkipSSLCertVerify)
+	retries := 3
 
 	if b, _ := strconv.ParseBool(InfluxSSL); b {
 		connect_string = fmt.Sprintf("https://%s:%s", InfluxHost, InfluxPort)
@@ -3472,9 +3473,9 @@ func InitAndTestInfluxConnection(HostId, InfluxHost, InfluxPort, InfluxDbname, I
 		log.Fatal("Getting Influx client failed", err)
 	}
 
-	res, err := queryDB(c, "SHOW DATABASES")
-	retries := 3
 retry:
+	res, err := queryInfluxDB(c, "SHOW DATABASES")
+
 	if err != nil {
 		if retries > 0 {
 			log.Error("SHOW DATABASES failed, retrying in 5s (max 3x)...", err)
@@ -3497,7 +3498,7 @@ retry:
 	if pgwatchDbExists && RetentionPeriod > 0 {
 		var currentRetentionAsString string
 		// get current retention period
-		res, err := queryDB(c, fmt.Sprintf("SHOW RETENTION POLICIES ON %s", InfluxDbname))
+		res, err := queryInfluxDB(c, fmt.Sprintf("SHOW RETENTION POLICIES ON %s", InfluxDbname))
 		if err != nil {
 			log.Errorf("Could not check Influx retention policies: %v", err)
 			return connect_string, err
@@ -3515,7 +3516,7 @@ retry:
 			log.Warningf("InfluxDB retention policy change detected, changing from %s to %s ...", currentRetentionAsString, targetRetentionAsString)
 			isql := fmt.Sprintf("ALTER RETENTION POLICY %s ON %s DURATION %dd REPLICATION 1 SHARD DURATION 1d", opts.InfluxRetentionName, InfluxDbname, RetentionPeriod)
 			log.Warningf("Executing: %s", isql)
-			_, err = queryDB(c, isql)
+			_, err = queryInfluxDB(c, isql)
 			if err != nil {
 				log.Errorf("Could not change InfluxDB retention policy - manul review / correction recommended: %v", err)
 			}
@@ -3524,7 +3525,7 @@ retry:
 	} else if !pgwatchDbExists {
 		log.Warningf("Database '%s' not found! Creating with %d days retention and retention policy name \"%s\"...", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
 		isql := fmt.Sprintf("CREATE DATABASE %s WITH DURATION %dd REPLICATION 1 SHARD DURATION 1d NAME %s", InfluxDbname, RetentionPeriod, opts.InfluxRetentionName)
-		_, err = queryDB(c, isql)
+		_, err = queryInfluxDB(c, isql)
 		if err != nil {
 			log.Fatal(err)
 		} else {
