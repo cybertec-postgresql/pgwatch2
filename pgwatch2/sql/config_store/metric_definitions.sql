@@ -3277,6 +3277,23 @@ $$ LANGUAGE sql SECURITY DEFINER;
 GRANT EXECUTE ON FUNCTION get_table_bloat_approx() TO pgwatch2;
 COMMENT ON FUNCTION get_table_bloat_approx() is 'created for pgwatch2';
 
+DO $_$
+    DECLARE
+        l_actual_schema text;
+    BEGIN
+        SELECT n.nspname INTO l_actual_schema FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE proname = 'get_table_bloat_approx';
+        IF FOUND THEN
+            IF has_schema_privilege('public', l_actual_schema, 'CREATE') THEN
+                RAISE EXCEPTION $$get_table_bloat_approx() helper should not be created in an unsecured schema where all users can create objects -
+                  'REVOKE CREATE ON SCHEMA % FROM public' to tighten security or comment out the DO block to disable the check$$, l_actual_schema;
+            END IF;
+
+            RAISE NOTICE '%', format($$ALTER FUNCTION get_table_bloat_approx() SET search_path TO %s$$, l_actual_schema);
+            EXECUTE format($$ALTER FUNCTION get_table_bloat_approx() SET search_path TO %s$$, l_actual_schema);
+        END IF;
+    END
+$_$;
+
 COMMIT;
 $sql$,
 'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
@@ -3290,6 +3307,8 @@ values (
 $sql$
 -- small modifications to SQL from https://github.com/ioguix/pgsql-bloat-estimation
 -- NB! monitoring user needs SELECT grant on all tables or a SECURITY DEFINER wrapper around that SQL
+
+BEGIN;
 
 CREATE OR REPLACE FUNCTION get_table_bloat_approx_sql(
       OUT full_table_name text,
@@ -3417,6 +3436,24 @@ $$;
 GRANT EXECUTE ON FUNCTION get_table_bloat_approx_sql() TO pgwatch2;
 COMMENT ON FUNCTION get_table_bloat_approx_sql() is 'created for pgwatch2';
 
+DO $_$
+    DECLARE
+        l_actual_schema text;
+    BEGIN
+        SELECT n.nspname INTO l_actual_schema FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE proname = 'get_table_bloat_approx_sql';
+        IF FOUND THEN
+            IF has_schema_privilege('public', l_actual_schema, 'CREATE') THEN
+                RAISE EXCEPTION $$get_table_bloat_approx_sql() helper should not be created in an unsecured schema where all users can create objects -
+                  'REVOKE CREATE ON SCHEMA % FROM public' to tighten security or comment out the DO block to disable the check$$, l_actual_schema;
+            END IF;
+
+            RAISE NOTICE '%', format($$ALTER FUNCTION get_table_bloat_approx_sql() SET search_path TO %s$$, l_actual_schema);
+            EXECUTE format($$ALTER FUNCTION get_table_bloat_approx_sql() SET search_path TO %s$$, l_actual_schema);
+        END IF;
+    END
+$_$;
+
+COMMIT;
 $sql$,
 true
 );
@@ -3428,6 +3465,8 @@ values (
 $sql$
 -- small modifications to SQL from https://github.com/ioguix/pgsql-bloat-estimation
 -- NB! monitoring user needs SELECT grant on all tables or a SECURITY DEFINER wrapper around that SQL
+
+BEGIN;
 
 CREATE OR REPLACE FUNCTION get_table_bloat_approx_sql(
       OUT full_table_name text,
@@ -3555,6 +3594,24 @@ $$;
 GRANT EXECUTE ON FUNCTION get_table_bloat_approx_sql() TO pgwatch2;
 COMMENT ON FUNCTION get_table_bloat_approx_sql() is 'created for pgwatch2';
 
+DO $_$
+    DECLARE
+        l_actual_schema text;
+    BEGIN
+        SELECT n.nspname INTO l_actual_schema FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE proname = 'get_table_bloat_approx_sql';
+        IF FOUND THEN
+            IF has_schema_privilege('public', l_actual_schema, 'CREATE') THEN
+                RAISE EXCEPTION $$get_table_bloat_approx_sql() helper should not be created in an unsecured schema where all users can create objects -
+                  'REVOKE CREATE ON SCHEMA % FROM public' to tighten security or comment out the DO block to disable the check$$, l_actual_schema;
+            END IF;
+
+            RAISE NOTICE '%', format($$ALTER FUNCTION get_table_bloat_approx_sql() SET search_path TO %s$$, l_actual_schema);
+            EXECUTE format($$ALTER FUNCTION get_table_bloat_approx_sql() SET search_path TO %s$$, l_actual_schema);
+        END IF;
+    END
+$_$;
+
+COMMIT;
 $sql$,
 true
 );
@@ -4366,6 +4423,23 @@ GRANT EXECUTE ON FUNCTION get_load_average_copy() TO pgwatch2;
 
 COMMENT ON FUNCTION get_load_average_copy() is 'created for pgwatch2';
 
+DO $_$
+    DECLARE
+        l_actual_schema text;
+    BEGIN
+        SELECT n.nspname INTO l_actual_schema FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE proname = 'get_load_average_copy';
+        IF FOUND THEN
+            IF has_schema_privilege('public', l_actual_schema, 'CREATE') THEN
+                RAISE EXCEPTION $$get_load_average_copy() helper should not be created in an unsecured schema where all users can create objects -
+                  'REVOKE CREATE ON SCHEMA % FROM public' to tighten security or comment out the DO block to disable the check$$, l_actual_schema;
+            END IF;
+
+            RAISE NOTICE '%', format($$ALTER FUNCTION get_load_average_copy() SET search_path TO %s$$, l_actual_schema);
+            EXECUTE format($$ALTER FUNCTION get_load_average_copy() SET search_path TO %s$$, l_actual_schema);
+        END IF;
+    END
+$_$;
+
 COMMIT;
 $sql$,
 'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
@@ -4449,6 +4523,8 @@ values (
 'get_stat_statements',
 9.2,
 $sql$
+BEGIN;
+
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
 CREATE OR REPLACE FUNCTION get_stat_statements() RETURNS TABLE (
@@ -4474,6 +4550,24 @@ $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 GRANT EXECUTE ON FUNCTION get_stat_statements() TO pgwatch2;
 COMMENT ON FUNCTION get_stat_statements() IS 'created for pgwatch2';
 
+DO $_$
+    DECLARE
+        l_actual_schema text;
+    BEGIN
+        SELECT n.nspname INTO l_actual_schema FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE proname = 'get_stat_statements';
+        IF FOUND THEN
+            IF has_schema_privilege('public', l_actual_schema, 'CREATE') THEN
+                RAISE EXCEPTION $$get_stat_statements() helpers should not be created in an unsecured schema where all users can create objects -
+                  'REVOKE CREATE ON SCHEMA % FROM public' to tighten security or comment out the DO block to disable the check$$, l_actual_schema;
+            END IF;
+
+            RAISE NOTICE '%', format($$ALTER FUNCTION get_stat_statements() SET search_path TO %s$$, l_actual_schema);
+            EXECUTE format($$ALTER FUNCTION get_stat_statements() SET search_path TO %s$$, l_actual_schema);
+        END IF;
+    END
+$_$;
+
+COMMIT;
 $sql$,
 'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
 true
@@ -4486,6 +4580,8 @@ values (
 'get_stat_statements',
 9.4,
 $sql$
+BEGIN;
+
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
 CREATE OR REPLACE FUNCTION get_stat_statements() RETURNS SETOF pg_stat_statements AS
@@ -4502,6 +4598,24 @@ $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 GRANT EXECUTE ON FUNCTION get_stat_statements() TO pgwatch2;
 COMMENT ON FUNCTION get_stat_statements() IS 'created for pgwatch2';
 
+DO $SQL$
+    DECLARE
+        l_actual_schema text;
+    BEGIN
+        SELECT n.nspname INTO l_actual_schema FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE proname = 'get_stat_statements';
+        IF FOUND THEN
+            IF has_schema_privilege('public', l_actual_schema, 'CREATE') THEN
+                RAISE EXCEPTION $$get_stat_statements() helper should not be created in an unsecured schema where all users can create objects -
+                  'REVOKE CREATE ON SCHEMA % FROM public' to tighten security or comment out the DO block to disable the check$$, l_actual_schema;
+            END IF;
+
+            RAISE NOTICE '%', format($$ALTER FUNCTION get_stat_statements() SET search_path TO %s$$, l_actual_schema);
+            EXECUTE format($$ALTER FUNCTION get_stat_statements() SET search_path TO %s$$, l_actual_schema);
+        END IF;
+    END
+$SQL$;
+
+COMMIT;
 $sql$,
 'for internal usage - when connecting user is marked as superuser then the daemon will automatically try to create the needed helpers on the monitored db',
 true

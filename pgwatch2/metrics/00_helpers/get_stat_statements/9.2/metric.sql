@@ -11,6 +11,7 @@ alter role x with password y)!
 Usage not recommended for servers less than 9.2 (http://wiki.postgresql.org/wiki/What%27s_new_in_PostgreSQL_9.2#pg_stat_statements).
 From v10 the "pg_monitor" system GRANT can be used for the same purpose so the wrapper is not actually needed then.
 */
+BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
@@ -36,3 +37,22 @@ $$ LANGUAGE sql VOLATILE SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION get_stat_statements() TO pgwatch2;
 COMMENT ON FUNCTION get_stat_statements() IS 'created for pgwatch2';
+
+DO $SQL$
+    DECLARE
+        l_actual_schema text;
+    BEGIN
+        SELECT n.nspname INTO l_actual_schema FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE proname = 'get_stat_statements';
+        IF FOUND THEN
+            IF has_schema_privilege('public', l_actual_schema, 'CREATE') THEN
+                RAISE EXCEPTION $$get_stat_statements() helper should not be created in an unsecured schema where all users can create objects -
+                  'REVOKE CREATE ON SCHEMA % FROM public' to tighten security or comment out the DO block to disable the check$$, l_actual_schema;
+            END IF;
+
+            RAISE NOTICE '%', format($$ALTER FUNCTION get_stat_statements() SET search_path TO %s$$, l_actual_schema);
+            EXECUTE format($$ALTER FUNCTION get_stat_statements() SET search_path TO %s$$, l_actual_schema);
+        END IF;
+    END
+$SQL$;
+
+COMMIT;

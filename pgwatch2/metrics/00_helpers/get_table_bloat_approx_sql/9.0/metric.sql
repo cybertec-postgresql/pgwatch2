@@ -1,6 +1,8 @@
 -- small modifications to SQL from https://github.com/ioguix/pgsql-bloat-estimation
 -- NB! monitoring user needs SELECT grant on all tables or a SECURITY DEFINER wrapper around that SQL
 
+BEGIN;
+
 CREATE OR REPLACE FUNCTION get_table_bloat_approx_sql(
       OUT full_table_name text,
       OUT approx_bloat_percent double precision,
@@ -126,3 +128,22 @@ $$;
 
 GRANT EXECUTE ON FUNCTION get_table_bloat_approx_sql() TO pgwatch2;
 COMMENT ON FUNCTION get_table_bloat_approx_sql() is 'created for pgwatch2';
+
+DO $SQL$
+    DECLARE
+        l_actual_schema text;
+    BEGIN
+        SELECT n.nspname INTO l_actual_schema FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE proname = 'get_table_bloat_approx_sql';
+        IF FOUND THEN
+            IF has_schema_privilege('public', l_actual_schema, 'CREATE') THEN
+                RAISE EXCEPTION $$get_table_bloat_approx_sql() helper should not be created in an unsecured schema where all users can create objects -
+                  'REVOKE CREATE ON SCHEMA % FROM public' to tighten security or comment out the DO block to disable the check$$, l_actual_schema;
+            END IF;
+
+            RAISE NOTICE '%', format($$ALTER FUNCTION get_table_bloat_approx_sql() SET search_path TO %s$$, l_actual_schema);
+            EXECUTE format($$ALTER FUNCTION get_table_bloat_approx_sql() SET search_path TO %s$$, l_actual_schema);
+        END IF;
+    END
+$SQL$;
+
+COMMIT;
