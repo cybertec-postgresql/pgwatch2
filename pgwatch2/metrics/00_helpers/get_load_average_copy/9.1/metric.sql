@@ -27,21 +27,28 @@ GRANT EXECUTE ON FUNCTION get_load_average_copy() TO pgwatch2;
 
 COMMENT ON FUNCTION get_load_average_copy() is 'created for pgwatch2';
 
+-- below routine fixes function search_path to only include "more secure" schemas with no "public" CREATE privileges
 DO $SQL$
     DECLARE
-        l_actual_schema text;
+        l_secure_schemas_from_search_path text;
     BEGIN
-        SELECT n.nspname INTO l_actual_schema FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE proname = 'get_load_average_copy';
-        IF FOUND THEN
-            IF has_schema_privilege('public', l_actual_schema, 'CREATE') THEN
-                RAISE EXCEPTION $$get_load_average_copy() helper should not be created in an unsecured schema where all users can create objects -
-                  'REVOKE CREATE ON SCHEMA % FROM public' to tighten security or comment out the DO block to disable the check$$, l_actual_schema;
-            END IF;
+        SELECT string_agg(safe_sp, ', ' ORDER BY rank) INTO l_secure_schemas_from_search_path FROM (
+           SELECT quote_ident(nspname) AS safe_sp, rank
+           FROM unnest(regexp_split_to_array(current_setting('search_path'), ',')) WITH ORDINALITY AS csp(schema_name, rank)
+                    JOIN pg_namespace n
+                         ON quote_ident(n.nspname) = CASE WHEN schema_name = '"$user"' THEN quote_ident(user) ELSE trim(schema_name) END
+           WHERE NOT has_schema_privilege('public', n.oid, 'CREATE')
+        ) x;
 
-            RAISE NOTICE '%', format($$ALTER FUNCTION get_load_average_copy() SET search_path TO %s$$, l_actual_schema);
-            EXECUTE format($$ALTER FUNCTION get_load_average_copy() SET search_path TO %s$$, l_actual_schema);
+        IF coalesce(l_secure_schemas_from_search_path, '') = '' THEN
+            RAISE NOTICE 'search_path = %', current_setting('search_path');
+            RAISE EXCEPTION $$get_load_average_copy() SECURITY DEFINER helper will not be created as all schemas on search_path are unsecured where all users can create objects -
+              execute 'REVOKE CREATE ON SCHEMA $my_schema FROM public' to tighten security or comment out the DO block to disable the check$$;
+        ELSE
+            RAISE NOTICE '%', format($$ALTER FUNCTION get_load_average_copy() SET search_path TO %s$$, l_secure_schemas_from_search_path);
+            EXECUTE format($$ALTER FUNCTION get_load_average_copy() SET search_path TO %s$$, l_secure_schemas_from_search_path);
         END IF;
-    END
+    END;
 $SQL$;
 
 COMMIT;
