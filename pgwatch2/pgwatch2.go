@@ -1579,7 +1579,7 @@ func SendToGraphite(dbname, measurement string, data [](map[string]interface{}))
 				case float64:
 					metric.Value = fmt.Sprintf("%f", v)
 				default:
-					log.Warning("Invalid type for column:", k, "value:", v, "type:", t)
+					log.Warningf("Invalid type for column: %v value: %v type: %T", k, v, t)
 					continue
 				}
 				metric.Timestamp = epoch_s
