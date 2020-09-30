@@ -156,9 +156,9 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select \"dbname\",   \"table_full_name\", top(\"total_relation_size_b\", $top ) as \"total_relation_size\", \"data_size\"  from (SELECT last(\"total_relation_size_b\") as \"total_relation_size_b\", last(\"table_size_b\") as \"data_size\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(3650d), dbname, table_full_name  fill(none))",
+          "query": null,
           "rawQuery": true,
-          "rawSql": "select\n  x.*,\n  (data->'seconds_since_last_vacuum')::int8 as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nfrom (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0)) as data_size\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY 1, 2\nORDER BY 3 DESC NULLS LAST\nLIMIT $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true\n/*idea: show only primaries? */",
+          "rawSql": "select\n  x.*,\n  (data->'seconds_since_last_vacuum')::int8 as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nfrom (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8) as data_size\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY 1, 2\nORDER BY 3 DESC NULLS LAST\nLIMIT $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true\n/*idea: show only primaries? */",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -327,9 +327,9 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select \"dbname\",   \"table_full_name\", top(\"table_size\", $top ) as \"data_size\",  \"total_relation_size\"  from (SELECT last(\"total_relation_size_b\") as \"total_relation_size\", last(\"table_size_b\") as \"table_size\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY  dbname, table_full_name  fill(none))",
+          "query": null,
           "rawQuery": true,
-          "rawSql": "SELECT\n  x.*,\n  (data->'seconds_since_last_vacuum')::int8 as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0)) as data_size\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY 1, 2\nORDER BY 4 DESC NULLS LAST\nLIMIT $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true\n",
+          "rawSql": "SELECT\n  x.*,\n  (data->'seconds_since_last_vacuum')::int8 as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'total_relation_size_b')::int8) as total_relation_size,\n  max((data->'table_size_b')::int8) as data_size\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY 1, 2\nORDER BY 4 DESC NULLS LAST\nLIMIT $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true\n",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -670,9 +670,9 @@
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select \"dbname\", top(\"seq_scan\", $top) as \"seq_scan\",  \"table_full_name\", table_size from (select mean(\"seq_scan\") as \"seq_scan\", last(\"table_size\") as \"table_size\" from (SELECT non_negative_derivative(last(\"seq_scan\"), 1h) as \"seq_scan\", last(\"table_size_b\") as \"table_size\" FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter AND \"table_size_b\" > 10000000 GROUP BY time($__interval), dbname, table_full_name fill(none)) GROUP BY dbname, table_full_name fill(none))\n",
+          "query": null,
           "rawQuery": true,
-          "rawSql": "SELECT\n  x.*,\n  (data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0) as table_size,\n  (data->'seconds_since_last_vacuum')::int8 as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'seq_scan')::int8) - min((data->'seq_scan')::int8) as seq_scan\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\n  AND (data->'total_relation_size_b')::int8 > 10000000\nGROUP BY\n  1, 2\nHAVING\n  max((data->'seq_scan')::int8) > min((data->'seq_scan')::int8)\nORDER BY\n  3 DESC\nLIMIT\n  $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true",
+          "rawSql": "SELECT\n  x.*,\n  (data->'table_size_b')::int8 as table_size,\n  (data->'seconds_since_last_vacuum')::int8 as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  max((data->'seq_scan')::int8) - min((data->'seq_scan')::int8) as seq_scan\nFROM\n  table_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\n  AND (data->'table_size_b')::int8 > 100000000\nGROUP BY\n  1, 2\nHAVING\n  max((data->'seq_scan')::int8) > min((data->'seq_scan')::int8)\nORDER BY\n  3 DESC\nLIMIT\n  $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -700,7 +700,7 @@
           ]
         }
       ],
-      "title": "Most \"seq. scans\"  (tables > 10MB )",
+      "title": "Most \"seq. scans\"  (tables > 100MB )",
       "transform": "table",
       "type": "table"
     },
@@ -1377,7 +1377,7 @@
           "policy": "default",
           "query": "select dbname, table_full_name, top(ins, $top) as \"del\" from (select mean(ins) as \"ins\"  from (SELECT non_negative_derivative(last(\"n_tup_del\"), 1h) as \"ins\"  FROM \"table_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h), dbname, table_full_name fill(0)) GROUP BY dbname, table_full_name)",
           "rawQuery": true,
-          "rawSql": "SELECT\n  x.*,\n  (data->'table_size_b')::int8 + coalesce((data->'toast_size_b')::int8, 0) as data_size,\n  (data->'seq_scan')::int8 - (select (data->'seq_scan')::int8 from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time limit 1) as seq_scan,\n  (data->'seconds_since_last_vacuum')::int8  as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  8192 * (coalesce(max((data->'heap_blks_read')::int8) - min((data->'heap_blks_read')::int8), 0) + coalesce(max((data->'toast_blks_read')::int8) - min((data->'toast_blks_read')::int8), 0) + coalesce(max((data->'tidx_blks_read')::int8) - min((data->'tidx_blks_read')::int8), 0)) as blks_read\nFROM\n  table_io_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'heap_blks_read')::int8) > min((data->'heap_blks_read')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true\n",
+          "rawSql": "SELECT\n  x.*,\n  (data->'table_size_b')::int8 as data_size,\n  (data->'seq_scan')::int8 - (select (data->'seq_scan')::int8 from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time limit 1) as seq_scan,\n  (data->'seconds_since_last_vacuum')::int8  as last_vacuum,\n  (data->'seconds_since_last_analyze')::int8 as last_analyze\nFROM (\nSELECT\n  dbname,\n  tag_data->>'table_full_name' as table_full_name,\n  8192 * (coalesce(max((data->'heap_blks_read')::int8) - min((data->'heap_blks_read')::int8), 0) + coalesce(max((data->'toast_blks_read')::int8) - min((data->'toast_blks_read')::int8), 0) + coalesce(max((data->'tidx_blks_read')::int8) - min((data->'tidx_blks_read')::int8), 0)) as blks_read\nFROM\n  table_io_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname in ($dbname)\nGROUP BY\n  1, 2\nHAVING\n  max((data->'heap_blks_read')::int8) > min((data->'heap_blks_read')::int8)\nORDER BY\n  3 DESC NULLS LAST\nLIMIT\n  $top\n) x\njoin lateral (select data from table_stats where dbname = x.dbname and tag_data->>'table_full_name' = x.table_full_name and $__timeFilter(time) order by time desc limit 1) y on true\n",
           "refId": "A",
           "resultFormat": "table",
           "select": [
@@ -1505,7 +1505,7 @@
     ]
   },
   "time": {
-    "from": "now-12h",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {
