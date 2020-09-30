@@ -4627,6 +4627,7 @@ func main() {
 			db_unique := host.DBUniqueName
 			db_unique_orig := host.DBUniqueNameOrig
 			db_type := host.DBType
+			metric_config = host.Metrics
 
 			if host.PasswordType == "aes-gcm-256" && len(opts.AesGcmKeyphrase) == 0 && len(opts.AesGcmKeyphraseFile) == 0 {
 				// Warn if any encrypted hosts found but no keyphrase given
@@ -4658,6 +4659,7 @@ func main() {
 			if !exists || connectFailedSoFar {
 				var err error
 				var ver DBVersionMapEntry
+				metric_config = make(map[string]float64)
 
 				if connectFailedSoFar {
 					log.Infof("retrying to connect to uninitialized DB \"%s\"...", db_unique)
