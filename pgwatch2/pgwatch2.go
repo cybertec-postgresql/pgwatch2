@@ -3845,6 +3845,9 @@ func ConfigFileToMonitoredDatabases(configFilePath string) ([]MonitoredDatabase,
 			if v.Group == "" {
 				v.Group = "default"
 			}
+			if v.StmtTimeout == 0 {
+				v.StmtTimeout = 5
+			}
 			hostList = append(hostList, v)
 		}
 	}
