@@ -119,6 +119,7 @@ type MetricAttrs struct {
 	IsPrivate                 bool                 `yaml:"is_private"`     // used only for extension overrides currently and ignored otherwise
 	DisabledDays              string               `yaml:"disabled_days"`  // Cron style, 0 = Sunday. Ranges allowed: 0,2-4
 	DisableTimes              []string             `yaml:"disabled_times"` // "11:00-13:00"
+	StatementTimeoutSeconds   int64                `yaml:"statement_timeout_seconds"`	// overrides per monitored DB settings
 }
 
 type MetricVersionProperties struct {
@@ -142,6 +143,7 @@ type MetricFetchMessage struct {
 	DBType           string
 	Interval         time.Duration
 	CreatedOn        time.Time
+	StmtTimeoutOverride int64
 }
 
 type MetricStoreMessage struct {
@@ -490,7 +492,7 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 	return ret, err
 }
 
-func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql string, args ...interface{}) ([](map[string]interface{}), error, time.Duration) {
+func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTimeoutOverride int64, sql string, args ...interface{}) ([](map[string]interface{}), error, time.Duration) {
 	var conn *sqlx.DB
 	var libPQConnStr string
 	var exists bool
@@ -572,9 +574,10 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, sql st
 
 	if !adHocMode && IsPostgresDBType(md.DBType) {
 		stmtTimeout := md.StmtTimeout
-		if stmtTimeout == 0 {
-			_, err = DBExecRead(conn, dbUnique, "SET statement_timeout TO 0")
-		} else {
+		if stmtTimeoutOverride > 0 {
+			stmtTimeout = stmtTimeoutOverride
+		}
+		if stmtTimeout > 0 {	// 0 = don't change, use DB level settings
 			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", stmtTimeout))
 		}
 		if err != nil {
@@ -1889,7 +1892,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 		}
 
 		if dbType == DBTYPE_BOUNCER {
-			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, "show version")
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, 0, "show version")
 			if err != nil {
 				return verNew, err
 			}
@@ -1907,7 +1910,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				verNew.Version, _ = decimal.NewFromString(matches[0])
 			}
 		} else if dbType == DBTYPE_PGPOOL {
-			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, pgpool_version)
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, 0, pgpool_version)
 			if err != nil {
 				return verNew, err
 			}
@@ -1924,7 +1927,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				verNew.Version, _ = decimal.NewFromString(matches[0])
 			}
 		} else {
-			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql)
 			if err != nil {
 				if noCache {
 					return ver, err
@@ -1940,14 +1943,14 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 
 			if verNew.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) && addSystemIdentifier {
 				log.Debugf("[%s] determining system identifier version (pg ver: %v)", dbUnique, verNew.VersionStr)
-				data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_sysid)
+				data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql_sysid)
 				if err == nil && len(data) > 0 {
 					verNew.SystemIdentifier = data[0]["system_identifier"].(string)
 				}
 			}
 
 			log.Debugf("[%s] determining if monitoring user is a superuser...", dbUnique)
-			data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_su)
+			data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql_su)
 			if err == nil {
 				verNew.IsSuperuser = data[0]["rolsuper"].(bool)
 			}
@@ -1955,7 +1958,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 
 			if verNew.Version.GreaterThanOrEqual(MinExtensionInfoAvailable) {
 				//log.Debugf("[%s] determining installed extensions info...", dbUnique)
-				data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql_extensions)
+				data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql_extensions)
 				if err != nil {
 					log.Errorf("[%s] failed to determine installed extensions info: %v", dbUnique, err)
 				} else {
@@ -2088,7 +2091,7 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "sproc_hashes", useConnPooling, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "sproc_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Error("could not read sproc_hashes from monitored host: ", dbUnique, ", err:", err)
 		return change_counts
@@ -2174,7 +2177,7 @@ func DetectTableChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "table_hashes", useConnPooling, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "table_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Error("could not read table_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -2260,7 +2263,7 @@ func DetectIndexChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "index_hashes", useConnPooling, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "index_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Error("could not read index_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -2345,7 +2348,7 @@ func DetectPrivilegeChanges(dbUnique string, vme DBVersionMapEntry, storage_ch c
 	}
 
 	// returns rows of: object_type, tag_role, tag_object, privilege_type
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "privilege_changes", useConnPooling, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "privilege_changes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Errorf("[%s][%s] failed to fetch object privileges info: %v", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, err)
 		return change_counts
@@ -2423,7 +2426,7 @@ func DetectConfigurationChanges(dbUnique string, vme DBVersionMapEntry, storage_
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "configuration_hashes", useConnPooling, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "configuration_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Error("could not read configuration_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -2490,7 +2493,7 @@ func GetRecommendations(dbUnique string, vme DBVersionMapEntry) ([]map[string]in
 	log.Debugf("Processing %d recommendation metrics for \"%s\"", len(reco_metrics), dbUnique)
 
 	for m, mvp := range reco_metrics {
-		data, err, duration := DBExecReadByDbUniqueName(dbUnique, m, useConnPooling, mvp.Sql)
+		data, err, duration := DBExecReadByDbUniqueName(dbUnique, m, useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 		total_duration += duration
 		if err != nil {
 			if strings.Contains(err.Error(), "does not exist") { // some more exotic extensions missing is expected, don't pollute the error log
@@ -2614,7 +2617,7 @@ func FetchMetricsPgpool(msg MetricFetchMessage, vme DBVersionMapEntry, mvp Metri
 
 	for _, sql := range sql_lines {
 		if strings.HasPrefix(sql, "SHOW POOL_NODES") {
-			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
+			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, 0, sql)
 			duration = duration + dur
 			if err != nil {
 				log.Errorf("[%s][%s] Could not fetch PgPool statistics: %v", msg.DBUniqueName, msg.MetricName, err)
@@ -2669,7 +2672,7 @@ func FetchMetricsPgpool(msg MetricFetchMessage, vme DBVersionMapEntry, mvp Metri
 				continue
 			}
 
-			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
+			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, 0, sql)
 			duration = duration + dur
 			if err != nil {
 				log.Errorf("[%s][%s] Could not fetch PgPool statistics: %v", msg.DBUniqueName, msg.MetricName, err)
@@ -2771,7 +2774,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 	} else if msg.DBType == DBTYPE_PGPOOL {
 		data, _, duration = FetchMetricsPgpool(msg, vme, mvp)
 	} else {
-		data, err, duration = DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, sql)
+		data, err, duration = DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, msg.StmtTimeoutOverride, sql)
 
 		if err != nil {
 			// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
@@ -2991,6 +2994,7 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 	failed_fetches := 0
 	metricNameForStorage := metricName
 	lastDBVersionFetchTime := time.Unix(0, 0) // check DB ver. ev. 5 min
+	var stmtTimeoutOverride int64
 
 	if opts.TestdataDays != 0 {
 		if metricName == SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS || metricName == SPECIAL_METRIC_CHANGE_EVENTS {
@@ -3030,6 +3034,13 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 		if lastDBVersionFetchTime.Add(time.Minute * time.Duration(5)).Before(time.Now()) {
 			vme, _ = DBGetPGVersion(dbUniqueName, dbType, false) // in case of errors just ignore metric "disabled" time ranges
 			lastDBVersionFetchTime = time.Now()
+
+			mvp, err := GetMetricVersionProperties(metricName, vme, nil)
+			if err == nil && mvp.MetricAttrs.StatementTimeoutSeconds > 0 {
+				stmtTimeoutOverride = mvp.MetricAttrs.StatementTimeoutSeconds
+			} else {
+				stmtTimeoutOverride = 0
+			}
 		}
 
 		metricCurrentlyDisabled := IsMetricCurrentlyDisabledForHost(metricName, vme, dbUniqueName)
@@ -3039,7 +3050,7 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 
 			t1 := time.Now()
 			metricStoreMessages, err := FetchMetrics(
-				MetricFetchMessage{DBUniqueName: dbUniqueName, DBUniqueNameOrig: dbUniqueNameOrig, MetricName: metricName, DBType: dbType, Interval: time.Second * time.Duration(interval)},
+				MetricFetchMessage{DBUniqueName: dbUniqueName, DBUniqueNameOrig: dbUniqueNameOrig, MetricName: metricName, DBType: dbType, Interval: time.Second * time.Duration(interval), StmtTimeoutOverride: stmtTimeoutOverride},
 				host_state,
 				store_ch,
 				"")
@@ -3539,7 +3550,7 @@ retry:
 func DoesFunctionExists(dbUnique, functionName string) bool {
 	log.Debug("Checking for function existence", dbUnique, functionName)
 	sql := fmt.Sprintf("select /* pgwatch2_generated */ 1 from pg_proc join pg_namespace n on pronamespace = n.oid where proname = '%s' and n.nspname = 'public'", functionName)
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql)
 	if err != nil {
 		log.Error("Failed to check for function existence", dbUnique, functionName, err)
 		return false
@@ -3580,7 +3591,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 					log.Warning("Could not find query text for", dbUnique, helperName)
 					continue
 				}
-				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, mvp.Sql)
+				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, mvp.Sql)
 				if err != nil {
 					log.Warning("Failed to create a metric fetching helper for", dbUnique, helperName)
 					log.Warning(err)
@@ -3612,7 +3623,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 					log.Warning("Could not find query text for", dbUnique, metric)
 					continue
 				}
-				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", true, mvp.Sql)
+				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", true, 0, mvp.Sql)
 				if err != nil {
 					log.Warning("Failed to create a metric fetching helper for", dbUnique, metric)
 					log.Warning(err)

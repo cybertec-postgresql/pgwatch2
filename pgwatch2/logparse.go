@@ -371,7 +371,7 @@ func tryDetermineLogFolder(mdb MonitoredDatabase) string {
 	sql := `select current_setting('data_directory') as dd, current_setting('log_directory') as ld`
 
 	log.Infof("[%s] Trying to determine server logs folder via SQL as host_config.logs_glob_path not specified...", mdb.DBUniqueName)
-	data, err, _ := DBExecReadByDbUniqueName(mdb.DBUniqueName, "", false, sql)
+	data, err, _ := DBExecReadByDbUniqueName(mdb.DBUniqueName, "", false, 0, sql)
 	if err != nil {
 		log.Errorf("[%s] Failed to query data_directory and log_directory settings...are you superuser or have pg_monitor grant?", mdb.DBUniqueName)
 		return ""
@@ -389,7 +389,7 @@ func tryDetermineLogMessagesLanguage(mdb MonitoredDatabase) string {
 	sql := `select current_setting('lc_messages')::varchar(2) as lc_messages;`
 
 	log.Debugf("[%s] Trying to determine server log messages language...", mdb.DBUniqueName)
-	data, err, _ := DBExecReadByDbUniqueName(mdb.DBUniqueName, "", false, sql)
+	data, err, _ := DBExecReadByDbUniqueName(mdb.DBUniqueName, "", false, 0, sql)
 	if err != nil {
 		log.Errorf("[%s] Failed to lc_messages settings: %s", mdb.DBUniqueName, err)
 		return ""
