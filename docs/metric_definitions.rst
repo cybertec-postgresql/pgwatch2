@@ -136,6 +136,9 @@ Currently supported attributes:
   Enables caching, i.e. sharing of metric data between various databases of a single instance to
   reduce load on the monitored server.
 
+*statement_timeout_seconds*
+  Enables to override the default 'per monitored DB' statement timeouts on metric level.
+
 *metric_storage_name*
   Enables dynamic "renaming" of metrics at storage level, i.e. declaring almost similar metrics
   with different names but the data will be stored under one metric. Currently used (for out-of-the box metrics) only
