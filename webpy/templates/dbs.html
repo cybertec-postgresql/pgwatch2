@@ -334,7 +334,7 @@
         });
 
         $("#delete_all").click(function(event){
-            return confirm('Are you sure you want to delete all gathered metrics data for non-active DB-s?')
+            return confirm('Are you sure you want to delete all gathered metrics data for non-active DB-s defined in the Config DB? Note that any metrics from YAML based definitions (if used) will be also deleted')
         });
 
         $("#delete_single").click(function(event){
