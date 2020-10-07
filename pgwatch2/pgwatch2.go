@@ -1868,7 +1868,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				 join pg_catalog.pg_roles b on (m.roleid = b.oid)
         		 where m.member = r.oid and b.rolname = 'rds_superuser') as rolsuper
 			   from pg_roles r where rolname = session_user;`
-	sql_extensions := `select extname::text, (regexp_matches(extversion, $$\d+\.?\d+?$$))[1]::text as extversion from pg_extension order by 1;`
+	sql_extensions := `select /* pgwatch2_generated */ extname::text, (regexp_matches(extversion, $$\d+\.?\d+?$$))[1]::text as extversion from pg_extension order by 1;`
 	pgpool_version := `SHOW POOL_VERSION` // supported from pgpool2 v3.0
 
 	db_pg_version_map_lock.RLock()
