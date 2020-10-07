@@ -24,7 +24,8 @@ select
   autovacuum_count,
   analyze_count,
   autoanalyze_count,
-  age(relfrozenxid) as tx_freeze_age
+  age(relfrozenxid) as tx_freeze_age,
+  relpersistence
 from
   pg_stat_user_tables ut
   join

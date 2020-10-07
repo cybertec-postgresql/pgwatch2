@@ -23,7 +23,8 @@ select
     vacuum_count,
     autovacuum_count,
     analyze_count,
-    autoanalyze_count
+    autoanalyze_count,
+    relpersistence
 from
     pg_stat_user_tables ut
         join

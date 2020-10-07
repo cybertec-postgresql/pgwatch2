@@ -46,7 +46,8 @@ with recursive
                autovacuum_count,
                analyze_count,
                autoanalyze_count,
-               age(relfrozenxid) as tx_freeze_age
+               age(relfrozenxid) as tx_freeze_age,
+               relpersistence
         from pg_stat_user_tables ut
                  join
              pg_class c on c.oid = ut.relid
@@ -83,7 +84,8 @@ select
     autovacuum_count,
     analyze_count,
     autoanalyze_count,
-    tx_freeze_age
+    tx_freeze_age,
+    relpersistence
 from q_tstats
 
 union all
@@ -117,7 +119,8 @@ select * from (
         sum(autovacuum_count)::int8 autovacuum_count,
         sum(analyze_count)::int8 analyze_count,
         sum(autoanalyze_count)::int8 autoanalyze_count,
-        max(tx_freeze_age)::int8 tx_freeze_age
+        max(tx_freeze_age)::int8 tx_freeze_age,
+        max(relpersistence) relpersistence
       from
            q_tstats ts
            join q_parts qp on qp.relid = ts.relid
