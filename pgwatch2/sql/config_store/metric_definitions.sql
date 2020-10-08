@@ -29,7 +29,8 @@ select
   (select extract(epoch from (now() - xact_start))::int
    from get_stat_activity() where current_query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
-    from sa_snapshot where current_query != '<IDLE>') as longest_query_seconds;
+    from sa_snapshot where current_query != '<IDLE>') as longest_query_seconds,
+  (select count(*) from get_stat_activity() where current_query like 'autovacuum:%') as av_workers;
 $sql$,
 '{"prometheus_all_gauge_columns": true}',
 $sql$
@@ -56,7 +57,8 @@ select
     (select extract(epoch from (now() - xact_start))::int
      from pg_stat_activity where current_query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
     (select extract(epoch from max(now() - query_start))::int
-     from sa_snapshot where current_query != '<IDLE>') as longest_query_seconds;
+     from sa_snapshot where current_query != '<IDLE>') as longest_query_seconds,
+    (select count(*) from pg_stat_activity where datname = current_database() and current_query like 'autovacuum:%') as av_workers;
 $sql$
 );
 
@@ -85,7 +87,8 @@ select
   (select extract(epoch from (now() - xact_start))::int
    from get_stat_activity() where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
-    from sa_snapshot where state = 'active') as longest_query_seconds;
+    from sa_snapshot where state = 'active') as longest_query_seconds,
+  (select count(*) from get_stat_activity() where query like 'autovacuum:%') as av_workers;
 $sql$,
 '{"prometheus_all_gauge_columns": true}',
 $sql$
@@ -112,7 +115,8 @@ select
   (select extract(epoch from (now() - xact_start))::int
    from pg_stat_activity where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
-    from sa_snapshot where state = 'active') as longest_query_seconds;
+    from sa_snapshot where state = 'active') as longest_query_seconds,
+  (select count(*) from pg_stat_activity where datname = current_database() and query like 'autovacuum:%') as av_workers;
 $sql$
 );
 
@@ -142,7 +146,8 @@ select
    from get_stat_activity() where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active') as longest_query_seconds,
-  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx,
+  (select count(*) from get_stat_activity() where query like 'autovacuum:%') as av_workers;
 $sql$,
 '{"prometheus_all_gauge_columns": true}',
 $sql$
@@ -170,7 +175,8 @@ select
    from pg_stat_activity where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active') as longest_query_seconds,
-  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx,
+  (select count(*) from pg_stat_activity where datname = current_database() and query like 'autovacuum:%') as av_workers;
 $sql$
 );
 
@@ -200,7 +206,8 @@ select
    from get_stat_activity() where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active') as longest_query_seconds,
-  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx,
+  (select count(*) from get_stat_activity() where query like 'autovacuum:%') as av_workers
 $sql$,
 '{"prometheus_all_gauge_columns": true}',
 $sql$
@@ -228,7 +235,8 @@ select
    from pg_stat_activity where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active') as longest_query_seconds,
-  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx,
+  (select count(*) from pg_stat_activity where datname = current_database() and query like 'autovacuum:%') as av_workers
 $sql$
 );
 
@@ -259,7 +267,8 @@ select
     from get_stat_activity() where backend_type = 'autovacuum worker' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active' and backend_type = 'client backend') as longest_query_seconds,
-  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx,
+  (select count(*) from sa_snapshot where state = 'active' and backend_type = 'autovacuum worker') as av_workers
 $sql$,
 '{"prometheus_all_gauge_columns": true}',
 $sql$
@@ -287,7 +296,8 @@ select
     from pg_stat_activity where backend_type = 'autovacuum worker' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active' and backend_type = 'client backend') as longest_query_seconds,
-  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx;
+  (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx,
+  (select count(*) from sa_snapshot where state = 'active' and backend_type = 'autovacuum worker') as av_workers;
 $sql$
 );
 
