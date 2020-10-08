@@ -23,5 +23,5 @@ current_setting('max_connections')::int as max_connections,
   (select extract(epoch from max(now() - query_start))::int
     from sa_snapshot where state = 'active' and backend_type = 'client backend') as longest_query_seconds,
   (select max(age(backend_xmin))::int8 from sa_snapshot) as max_xmin_age_tx,
-  (select count(*) from sa_snapshot where state = 'active' and backend_type = 'autovacuum worker') + 2 as av_workers
+  (select count(*) from sa_snapshot where state = 'active' and backend_type = 'autovacuum worker') as av_workers
 ;
