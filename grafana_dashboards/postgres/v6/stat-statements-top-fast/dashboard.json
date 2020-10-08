@@ -1038,6 +1038,198 @@
       "type": "table"
     },
     {
+      "columns": [],
+      "datasource": null,
+      "description": "Based on pg_stat_statements.temp_blks_written",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "id": 17,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "alias": "Temp blocks written",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 1,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "decbytes"
+        },
+        {
+          "alias": "Query ID",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
+          "pattern": "queryid",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "Query",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": false,
+          "linkTargetBlank": true,
+          "linkTooltip": "Use 'edit' mode to be able to copy the query text",
+          "linkUrl": "",
+          "pattern": "query",
+          "sanitize": true,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "Per call",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "/runtime/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "Temp blocks read",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        }
+      ],
+      "targets": [
+        {
+          "dsType": "influxdb",
+          "format": "table",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT top(\"spread\", \"queryid\", \"query\", $top) FROM (SELECT spread(\"blk_read_time\") + spread(\"blk_write_time\") AS spread FROM \"stat_statements\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) ) WHERE spread > 0",
+          "rawQuery": true,
+          "rawSql": "select\n  temp_blks_written * 8192 /*assuming default 8k block size*/ as top,\n  (temp_blks_read * 8192) / calls as \"Temp blocks read\",\n  total_time as \"Total runtime\",\n  calls as \"Calls\",\n  total_time / calls as \"Avg. runtime\",\n  queryid,\n  (select data->>'users' from stat_statements where $__timeFilter(time) and dbname = '$dbname' and tag_data->>'queryid' = queryid order by time desc limit 1) as \"Users\",  \n  case when length(query) > 200 then query::varchar(200) || '...' else query end as query\nfrom (\n  select\n    tag_data->>'queryid' as queryid,\n    tag_data->>'query' as query,\n    max((data->>'temp_blks_read')::int8) - min((data->>'temp_blks_read')::int8) as temp_blks_read,\n    max((data->>'temp_blks_written')::int8) - min((data->>'temp_blks_written')::int8) as temp_blks_written,\n    max((data->>'calls')::int8) - min((data->>'calls')::int8) as calls,\n    max((data->>'total_time')::float) - min((data->>'total_time')::float) as total_time\n  from stat_statements\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n    and case when '$hide_pgwatch_generated' = 'yes' then not tag_data->>'query' ~* E'\\\\(extract\\\\(\\\\$\\\\d+\\\\W*from\\\\W*now\\\\(\\\\)\\\\)\\\\W?\\\\*\\\\W*\\\\$\\\\d+\\\\).*::\\\\w+\\\\W+as\\\\W+epoch_ns\\\\W*,'\n        and not tag_data->>'query' ~* E'/\\\\*\\\\W*pgwatch2_generated\\\\W*\\\\*/'  else true end\n  group by\n    1, 2\n) x\nwhere temp_blks_written > 0\norder by 1 desc nulls last\nlimit  $top",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Top by temp blocks (assuming 8K blocks)",
+      "transform": "table",
+      "type": "table"
+    },
+    {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2019/05/Cybertec_Logo_wei%C3%9F-transparent_300x80px-01.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
       "datasource": null,
       "editable": true,
@@ -1046,7 +1238,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 42
+        "y": 49
       },
       "id": 4,
       "links": [],
