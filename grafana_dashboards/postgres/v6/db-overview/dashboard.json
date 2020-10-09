@@ -63,7 +63,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -198,7 +197,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -328,7 +326,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -459,7 +456,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -590,7 +586,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": " ms",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -722,7 +717,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -856,7 +850,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -997,7 +990,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": " ",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -1102,6 +1094,7 @@
       "editable": true,
       "error": false,
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 6,
@@ -1109,6 +1102,7 @@
         "x": 0,
         "y": 2
       },
+      "hiddenSeries": false,
       "id": 7,
       "interval": "5m",
       "legend": {
@@ -1125,7 +1119,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1266,6 +1262,7 @@
       "editable": true,
       "error": false,
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 6,
@@ -1273,6 +1270,7 @@
         "x": 12,
         "y": 2
       },
+      "hiddenSeries": false,
       "id": 8,
       "interval": "5m",
       "legend": {
@@ -1289,7 +1287,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1400,6 +1400,8 @@
         "#Backends": "#F9E2D2",
         "Deadlocks": "dark-red",
         "Deadlocks (1h rate)": "#BF1B00",
+        "QPS": "dark-green",
+        "TPS": "dark-orange",
         "Temp bytes (1h rate)": "#6ed0e0"
       },
       "bars": false,
@@ -1410,6 +1412,7 @@
       "editable": true,
       "error": false,
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 6,
@@ -1417,8 +1420,9 @@
         "x": 0,
         "y": 8
       },
+      "hiddenSeries": false,
       "id": 9,
-      "interval": "10m",
+      "interval": "",
       "legend": {
         "avg": true,
         "current": false,
@@ -1432,17 +1436,14 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "/Temp bytes/",
-          "yaxis": 2
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -1472,7 +1473,7 @@
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg(nb) as \"# Sessions\",\n  avg( ((dl-dl_lag)*3600) / (etime - lag_etime)) as \"Deadlocks\"\nfrom (\n        select \n          (data->>'numbackends')::int8 as nb,\n          (data->>'deadlocks')::int8 as dl, lag((data->>'deadlocks')::int8) over w as dl_lag,\n          (extract(epoch from time))::int8 as etime,\n          (lag(extract(epoch from time)) over w)::int8 as lag_etime,\n          time\n        from db_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        window w as (order by time)\n) x\nwhere dl >= dl_lag and etime > lag_etime\ngroup by 1\norder by 1\n",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg((c - c_lag + r - r_lag) / extract(epoch from time - time_lag)) as \"TPS\"\nfrom (\n        select \n          (data->>'xact_commit')::int8 as c, lag((data->>'xact_commit')::int8) over w as c_lag,\n          (data->>'xact_rollback')::int8 as r, lag((data->>'xact_rollback')::int8) over w as r_lag,\n          time, lag(time) over w as time_lag\n        from db_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere time > time_lag and c >= c_lag\ngroup by 1\norder by 1",
           "refId": "B",
           "resultFormat": "time_series",
           "select": [
@@ -1498,13 +1499,39 @@
               "type": "macro"
             }
           ]
+        },
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg((c - c_lag) / extract(epoch from time - time_lag)) as \"QPS\"\nfrom (\n        select \n          (data->>'calls')::int8 as c, lag((data->>'calls')::int8) over w as c_lag,\n          time, lag(time) over w as time_lag\n        from stat_statements_calls\n        where dbname = '$dbname' and $__timeFilter(time)\n        window w as (order by time)        \n) x\nwhere time > time_lag and c >= c_lag\ngroup by 1\norder by 1\n",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Sessions (DB) + Deadlocks ($agg_interval avg.)",
+      "title": "TPS / QPS ($agg_interval avg.)",
       "tooltip": {
         "msResolution": false,
         "shared": true,
@@ -1521,7 +1548,7 @@
       },
       "yaxes": [
         {
-          "decimals": 1,
+          "decimals": null,
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1556,6 +1583,7 @@
       "editable": true,
       "error": false,
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 6,
@@ -1564,6 +1592,7 @@
         "y": 8
       },
       "height": "",
+      "hiddenSeries": false,
       "id": 10,
       "interval": "2m",
       "legend": {
@@ -1580,7 +1609,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1741,17 +1772,20 @@
       "decimals": 1,
       "description": "Based on get_stat_activity() helper",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 6,
         "w": 12,
         "x": 0,
         "y": 14
       },
+      "hiddenSeries": false,
       "id": 11,
       "interval": "5m",
       "legend": {
         "avg": true,
         "current": false,
+        "hideEmpty": true,
         "max": false,
         "min": false,
         "show": true,
@@ -1762,7 +1796,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1797,7 +1833,7 @@
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg((data->>'idle')::int8) as idle,\n  avg((data->>'idleintransaction')::int8) as \"idle in transaction\",\n  avg((data->>'waiting')::int8) as waiting,\n  avg((data->>'active')::int8) as active  \nfrom backends\n  where dbname = '$dbname' and $__timeFilter(time)\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg((data->>'idle')::int8) as idle,\n  avg((data->>'idleintransaction')::int8) as \"idle in transaction\",\n  avg((data->>'waiting')::int8) as waiting,\n  avg((data->>'active')::int8) as active,\n  avg((data->>'av_workers')::int8) as av_workers\nfrom backends\n  where dbname = '$dbname' and $__timeFilter(time)\ngroup by 1\norder by 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1883,12 +1919,14 @@
       "decimals": 1,
       "description": "Requires according \"metric fetching helpers\" on the monitored server. Not including pgwatch2 generated metrics fetching queries.",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 6,
         "w": 12,
         "x": 12,
         "y": 14
       },
+      "hiddenSeries": false,
       "id": 12,
       "interval": "10m",
       "legend": {
@@ -1904,7 +1942,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -2114,7 +2154,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n  time,\n  sum(seq_scan) as seq_scan,\n  sum(idx_scan) as idx_scan\nfrom (\n  select\n    $__timeGroup(time, $agg_interval),\n    table_full_name,\n    avg((((scan - scan_lag) * (extract(epoch from '$agg_interval'::interval))) / extract(epoch from time - time_lag))) as seq_scan,\n    avg((((idx_scan - idx_scan_lag) * (extract(epoch from '$agg_interval'::interval))) / extract(epoch from time - time_lag))) as idx_scan\n  from (\n          select \n            (data->>'seq_scan')::int8 as scan, lag((data->>'seq_scan')::int8) over w as scan_lag,\n            (data->>'idx_scan')::int8 as idx_scan, lag((data->>'idx_scan')::int8) over w as idx_scan_lag,\n            time, lag(time) over w as time_lag,\n            tag_data->>'table_full_name' as table_full_name\n          from table_stats\n          where dbname = '$dbname' and $__timeFilter(time)\n          and (data->>'table_size_b')::int8  > 10000000\n          window w as (partition by tag_data->>'table_full_name' order by time)        \n    ) x\n    where scan >= scan_lag and idx_scan >= idx_scan_lag and time > time_lag\n    group by 1, 2\n) y\ngroup by 1\norder by 1\n",
+          "rawSql": "select\n  time,\n  sum(seq_scan) as seq_scan,\n  sum(idx_scan) as idx_scan\nfrom (\n  select\n    $__timeGroup(time, $agg_interval),\n    table_full_name,\n    avg((((scan - scan_lag) * (extract(epoch from '$agg_interval'::interval))) / extract(epoch from time - time_lag))) as seq_scan,\n    avg((((idx_scan - idx_scan_lag) * (extract(epoch from '$agg_interval'::interval))) / extract(epoch from time - time_lag))) as idx_scan\n  from (\n          select \n            (data->>'seq_scan')::int8 as scan, lag((data->>'seq_scan')::int8) over w as scan_lag,\n            (data->>'idx_scan')::int8 as idx_scan, lag((data->>'idx_scan')::int8) over w as idx_scan_lag,\n            time, lag(time) over w as time_lag,\n            tag_data->>'table_full_name' as table_full_name\n          from table_stats\n          where dbname = '$dbname' and $__timeFilter(time)\n          and (data->>'table_size_b')::int8  > 10000000\n          window w as (partition by tag_data->>'table_full_name' order by time)        \n    ) x\n    where scan >= scan_lag and time > time_lag\n    group by 1, 2\n) y\ngroup by 1\norder by 1\n",
           "refId": "A",
           "select": [
             [
@@ -2307,14 +2347,13 @@
       "id": 14,
       "links": [],
       "mode": "html",
-      "options": {},
       "title": "",
       "transparent": true,
       "type": "text"
     }
   ],
   "refresh": false,
-  "schemaVersion": 18,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -2329,6 +2368,7 @@
         "definition": "",
         "hide": 0,
         "includeAll": false,
+        "index": -1,
         "label": null,
         "multi": false,
         "name": "dbname",
@@ -2349,7 +2389,8 @@
         "auto_count": 30,
         "auto_min": "10s",
         "current": {
-          "selected": true,
+          "selected": false,
+          "tags": [],
           "text": "5m",
           "value": "5m"
         },
