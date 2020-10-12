@@ -4867,9 +4867,10 @@ CREATE OR REPLACE FUNCTION get_psutil_disk_io_total(
  LANGUAGE plpython3u
  SECURITY DEFINER
 AS $FUNCTION$
-from psutil import disk_io_counters
-dc = disk_io_counters(perdisk=False)
-return dc.read_count, dc.write_count, dc.read_bytes, dc.write_bytes
+if dc:
+    return dc.read_count, dc.write_count, dc.read_bytes, dc.write_bytes
+else:
+    return None, None, None, None
 $FUNCTION$;
 
 GRANT EXECUTE ON FUNCTION get_psutil_disk_io_total() TO pgwatch2;
