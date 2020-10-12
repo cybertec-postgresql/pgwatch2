@@ -156,7 +156,9 @@
   "refresh": "5s",
   "schemaVersion": 21,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "pgwatch2"
+  ],
   "templating": {
     "list": [
       {

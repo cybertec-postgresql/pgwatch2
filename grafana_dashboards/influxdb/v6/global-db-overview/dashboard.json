@@ -2068,7 +2068,9 @@
   ],
   "schemaVersion": 16,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "pgwatch2"
+  ],
   "templating": {
     "list": [
       {
