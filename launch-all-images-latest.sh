@@ -6,14 +6,14 @@ for x in pw2 pw2pg pw2nr ; do
   docker rm $x &>/dev/null
 done
 
-echo "docker run -d --name pw2 -p 9432:5432 -p 9000:3000 -p 9080:8080  -p 9086:8086 -e PW2_TESTDB=1 cybertec/pgwatch2:latest"
-docker run -d --name pw2 -p 9432:5432 -p 9000:3000 -p 9080:8080  -p 9086:8086 -e PW2_TESTDB=1 cybertec/pgwatch2:latest
+echo "docker run -d --rm --name pw2 -p 9432:5432 -p 9000:3000 -p 9080:8080  -p 9086:8086 -e PW2_TESTDB=1 cybertec/pgwatch2:latest"
+docker run -d --rm --name pw2 -p 9432:5432 -p 9000:3000 -p 9080:8080  -p 9086:8086 -e PW2_TESTDB=1 cybertec/pgwatch2:latest
 sleep 10
-echo "run -d --name pw2pg -p 9433:5432 -p 9001:3000 -p 9081:8080 -e PW2_TESTDB=1 cybertec/pgwatch2-postgres:latest"
-docker run -d --name pw2pg -p 9433:5432 -p 9001:3000 -p 9081:8080 -e PW2_TESTDB=1 cybertec/pgwatch2-postgres:latest
+echo "run -d --rm --name pw2pg -p 9433:5432 -p 9001:3000 -p 9081:8080 -e PW2_TESTDB=1 cybertec/pgwatch2-postgres:latest"
+docker run -d --rm --name pw2pg -p 9433:5432 -p 9001:3000 -p 9081:8080 -e PW2_TESTDB=1 cybertec/pgwatch2-postgres:latest
 sleep 10
-echo "run -d --name pw2nr -p 9434:5432 -p 9002:3000 -p 9082:8080 -p 9087:8086 -e PW2_TESTDB=1 cybertec/pgwatch2-nonroot:latest"
-docker run -d --name pw2nr -p 9434:5432 -p 9002:3000 -p 9082:8080 -p 9087:8086 -e PW2_TESTDB=1 cybertec/pgwatch2-nonroot:latest
+echo "run -d --rm --name pw2nr -p 9434:5432 -p 9002:3000 -p 9082:8080 -p 9087:8086 -e PW2_TESTDB=1 cybertec/pgwatch2-nonroot:latest"
+docker run -d --rm --name pw2nr -p 9434:5432 -p 9002:3000 -p 9082:8080 -p 9087:8086 -e PW2_TESTDB=1 cybertec/pgwatch2-nonroot:latest
 
 sleep 30
 
