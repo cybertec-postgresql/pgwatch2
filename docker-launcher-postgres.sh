@@ -57,9 +57,10 @@ pg_ctlcluster 11 main start -- --wait
 
 su -c "psql -d postgres -f /pgwatch2/bootstrap/change_pw.sql" postgres
 su -c "psql -d postgres -f /pgwatch2/bootstrap/grant_monitor_to_pgwatch2.sql" postgres
-su -c "psql -d postgres -f /pgwatch2/bootstrap/create_db_pgwatch.sql postgres" postgres
-su -c "psql -d postgres -f /pgwatch2/bootstrap/create_db_grafana.sql postgres" postgres
-su -c "psql -d postgres -f /pgwatch2/bootstrap/create_db_metric_store.sql postgres" postgres
+su -c "psql -d postgres -f /pgwatch2/bootstrap/create_db_pgwatch.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/bootstrap/revoke_public_create.sql" postgres
+su -c "psql -d postgres -f /pgwatch2/bootstrap/create_db_grafana.sql" postgres
+su -c "psql -d postgres -f /pgwatch2/bootstrap/create_db_metric_store.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/config_store/config_store.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/sql/config_store/metric_definitions.sql" postgres
 su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/00_schema_base.sql" postgres
