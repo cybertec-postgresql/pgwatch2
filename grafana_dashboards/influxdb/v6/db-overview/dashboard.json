@@ -138,7 +138,7 @@
         },
         {
           "op": "=",
-          "text": "MASTER",
+          "text": "PRIMARY",
           "value": "0"
         }
       ],
@@ -998,6 +998,7 @@
       "editable": true,
       "error": false,
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 6,
@@ -1005,6 +1006,7 @@
         "x": 0,
         "y": 3
       },
+      "hiddenSeries": false,
       "id": 7,
       "interval": "5m",
       "legend": {
@@ -1021,7 +1023,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1211,6 +1215,7 @@
       "editable": true,
       "error": false,
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 6,
@@ -1218,6 +1223,7 @@
         "x": 12,
         "y": 3
       },
+      "hiddenSeries": false,
       "id": 8,
       "interval": "5m",
       "legend": {
@@ -1234,7 +1240,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1373,15 +1381,20 @@
         "# Sessions": "#cca300",
         "#Backends": "#F9E2D2",
         "Deadlocks": "dark-red",
-        "Deadlocks (1h rate)": "#BF1B00"
+        "Deadlocks (1h rate)": "#BF1B00",
+        "QPS": "light-blue",
+        "TPS": "dark-green"
       },
       "bars": false,
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "decimals": 1,
+      "description": "Transactions per Second / Queries per Second",
       "editable": true,
       "error": false,
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 6,
@@ -1389,6 +1402,7 @@
         "x": 0,
         "y": 9
       },
+      "hiddenSeries": false,
       "id": 9,
       "interval": "5m",
       "legend": {
@@ -1404,7 +1418,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1420,7 +1436,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "# Sessions",
+          "alias": "TPS",
           "dsType": "influxdb",
           "groupBy": [
             {
@@ -1439,7 +1455,7 @@
           "measurement": "db_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"numbackends\") FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time($agg_interval) fill(none)",
+          "query": "SELECT non_negative_derivative(last(\"xact_commit\"), 1s) + non_negative_derivative(last(\"xact_rollback\"), 1s) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($agg_interval) fill(none)",
           "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
@@ -1460,7 +1476,7 @@
           "tags": []
         },
         {
-          "alias": "Deadlocks",
+          "alias": "QPS",
           "dsType": "influxdb",
           "groupBy": [
             {
@@ -1479,7 +1495,7 @@
           "measurement": "db_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT non_negative_derivative(mean(\"deadlocks\")) FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($agg_interval) fill(none)",
+          "query": "SELECT non_negative_derivative(last(\"calls\"), 1s) FROM \"stat_statements_calls\" WHERE $timeFilter AND \"dbname\" =~ /^$dbname$/ GROUP BY time($agg_interval) fill(none)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -1504,7 +1520,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Sessions + Deadlocks ($agg_interval avg.)",
+      "title": "TPS / QPS",
       "tooltip": {
         "msResolution": false,
         "shared": true,
@@ -1555,6 +1571,7 @@
       "editable": true,
       "error": false,
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 6,
@@ -1563,6 +1580,7 @@
         "y": 9
       },
       "height": "",
+      "hiddenSeries": false,
       "id": 10,
       "interval": "",
       "legend": {
@@ -1579,7 +1597,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1748,17 +1768,20 @@
       "decimals": 1,
       "description": "Assumes get_stat_activity() helper for unprivileged monitoring roles",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 6,
         "w": 12,
         "x": 0,
         "y": 15
       },
+      "hiddenSeries": false,
       "id": 11,
       "interval": "",
       "legend": {
         "avg": true,
         "current": false,
+        "hideEmpty": true,
         "max": false,
         "min": false,
         "show": true,
@@ -1769,7 +1792,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1956,6 +1981,50 @@
               "value": "/^$dbname$/"
             }
           ]
+        },
+        {
+          "alias": "av_workers",
+          "dsType": "influxdb",
+          "groupBy": [
+            {
+              "params": [
+                "$agg_interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "none"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "backends",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "E",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "av_workers"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ]
         }
       ],
       "thresholds": [],
@@ -2010,12 +2079,14 @@
       "decimals": 2,
       "description": "Requires according \"metric fetching helpers\" on the monitored server",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 6,
         "w": 12,
         "x": 12,
         "y": 15
       },
+      "hiddenSeries": false,
       "id": 12,
       "interval": "",
       "legend": {
@@ -2031,7 +2102,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -2456,7 +2529,7 @@
       "type": "text"
     }
   ],
-  "schemaVersion": 18,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [
     "pgwatch2"
@@ -2473,6 +2546,7 @@
         "definition": "",
         "hide": 0,
         "includeAll": false,
+        "index": -1,
         "label": null,
         "multi": false,
         "name": "dbname",
