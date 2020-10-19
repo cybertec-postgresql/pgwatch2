@@ -26,7 +26,7 @@
       "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
       "fontSize": "100%",
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 24,
         "x": 0,
         "y": 0
@@ -42,15 +42,17 @@
       },
       "styles": [
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "total_runtime",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -65,8 +67,9 @@
           "unit": "ms"
         },
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -85,8 +88,26 @@
           "unit": "short"
         },
         {
-          "$hashKey":  null,
           "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "oid",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "$hashKey": null,
+          "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -102,7 +123,7 @@
       ],
       "targets": [
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "groupBy": [
             {
               "params": [
@@ -151,10 +172,10 @@
       "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
       "fontSize": "100%",
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 7
       },
       "id": 5,
       "links": [],
@@ -167,15 +188,17 @@
       },
       "styles": [
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "total_runtime",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -190,8 +213,9 @@
           "unit": "ms"
         },
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -210,8 +234,26 @@
           "unit": "short"
         },
         {
-          "$hashKey":  null,
           "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "oid",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "$hashKey": null,
+          "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -227,7 +269,7 @@
       ],
       "targets": [
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "groupBy": [
             {
               "params": [
@@ -276,10 +318,10 @@
       "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
       "fontSize": "100%",
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 14
       },
       "id": 4,
       "links": [],
@@ -292,15 +334,17 @@
       },
       "styles": [
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "calls",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -315,8 +359,9 @@
           "unit": "short"
         },
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -335,8 +380,26 @@
           "unit": "short"
         },
         {
-          "$hashKey":  null,
           "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "oid",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "$hashKey": null,
+          "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -352,7 +415,7 @@
       ],
       "targets": [
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "groupBy": [
             {
               "params": [
@@ -401,10 +464,10 @@
       "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
       "fontSize": "100%",
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 21
       },
       "id": 3,
       "links": [],
@@ -417,15 +480,17 @@
       },
       "styles": [
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "avg_runtime",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -440,8 +505,9 @@
           "unit": "ms"
         },
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -460,8 +526,26 @@
           "unit": "short"
         },
         {
-          "$hashKey":  null,
           "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "oid",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "$hashKey": null,
+          "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -477,7 +561,7 @@
       ],
       "targets": [
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "groupBy": [
             {
               "params": [
@@ -526,10 +610,10 @@
       "description": "As per  \"sproc_stats\" measurement. Needs track_functions parameter set to 'pl' on monitored DBs.",
       "fontSize": "100%",
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 28
       },
       "id": 6,
       "links": [],
@@ -542,15 +626,17 @@
       },
       "styles": [
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "Time",
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "hidden"
         },
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "avg_runtime",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -565,8 +651,9 @@
           "unit": "ms"
         },
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -585,13 +672,32 @@
           "unit": "short"
         },
         {
-          "$hashKey":  null,
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
             "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)",{
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "oid",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "$hashKey": null,
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)",
+            {
               "annotations": {
                 "list": [
                   {
@@ -1410,7 +1516,7 @@
       ],
       "targets": [
         {
-          "$hashKey":  null,
+          "$hashKey": null,
           "groupBy": [
             {
               "params": [
@@ -1452,9 +1558,26 @@
       "title": "By Avg. Self Runtime",
       "transform": "table",
       "type": "table"
+    },
+    {
+      "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2019/05/Cybertec_Logo_wei%C3%9F-transparent_300x80px-01.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "datasource": null,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 35
+      },
+      "id": 8,
+      "mode": "html",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "",
+      "transparent": true,
+      "type": "text"
     }
   ],
-  "schemaVersion": 16,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [
     "pgwatch2"
@@ -1469,8 +1592,10 @@
           "value": null
         },
         "datasource": null,
+        "definition": "",
         "hide": 0,
         "includeAll": false,
+        "index": -1,
         "label": null,
         "multi": false,
         "name": "dbname",
@@ -1478,6 +1603,7 @@
         "query": "show tag values with key = \"dbname\"",
         "refresh": 1,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -1499,61 +1625,62 @@
         "name": "top",
         "options": [
           {
-            "$hashKey":  null,
+            "$hashKey": null,
             "selected": false,
             "text": "1",
             "value": "1"
           },
           {
-            "hashKey":  null,
+            "hashKey": null,
             "selected": false,
             "text": "3",
             "value": "3"
           },
           {
-            "$hashKey":  null,
+            "$hashKey": null,
             "selected": true,
             "text": "5",
             "value": "5"
           },
           {
-            "$hashKey":  null,
+            "$hashKey": null,
             "selected": false,
             "text": "10",
             "value": "10"
           },
           {
-            "$hashKey":  null,
+            "$hashKey": null,
             "selected": false,
             "text": "15",
             "value": "15"
           },
           {
-            "$hashKey":  null,
+            "$hashKey": null,
             "selected": false,
             "text": "20",
             "value": "20"
           },
           {
-            "$hashKey":  null,
+            "$hashKey": null,
             "selected": false,
             "text": "30",
             "value": "30"
           },
           {
-            "$hashKey":  null,
+            "$hashKey": null,
             "selected": false,
             "text": "40",
             "value": "40"
           },
           {
-            "$hashKey":  null,
+            "$hashKey": null,
             "selected": false,
             "text": "50",
             "value": "50"
           }
         ],
         "query": "1,3,5,10,15,20,30,40,50",
+        "skipUrlSync": false,
         "type": "custom"
       }
     ]
