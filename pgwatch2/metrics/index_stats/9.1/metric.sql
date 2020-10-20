@@ -17,7 +17,7 @@ SELECT
   regexp_replace(regexp_replace(pg_get_indexdef(sui.indexrelid),indexrelname,'X'), '^CREATE UNIQUE','CREATE') as index_def,
   case when not i.indisvalid then 1 else 0 end as is_invalid_int,
   case when i.indisprimary then 1 else 0 end as is_pk_int,
-  case when i.indisunique then 1 else 0 end as is_uq_or_exc
+  case when i.indisunique or indisexclusion then 1 else 0 end as is_uq_or_exc
 FROM
   pg_stat_user_indexes sui
   JOIN
