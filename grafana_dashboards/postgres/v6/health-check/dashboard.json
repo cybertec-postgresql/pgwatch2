@@ -1001,7 +1001,7 @@
         {
           "targetBlank": true,
           "title": "Open 'DB overview :: share'd buffers ' panel",
-          "url": "/d/2c8964a22/db-overview?$__all_variables"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
