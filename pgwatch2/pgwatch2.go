@@ -2537,9 +2537,8 @@ func CheckForPGObjectChangesAndStore(dbUnique string, vme DBVersionMapEntry, sto
 	index_counts := DetectIndexChanges(dbUnique, vme, storage_ch, host_state)
 	conf_counts := DetectConfigurationChanges(dbUnique, vme, storage_ch, host_state)
 	priv_change_counts := DetectPrivilegeChanges(dbUnique, vme, storage_ch, host_state)
-	first_run := len(host_state) == 0
 
-	if opts.Datastore == DATASTORE_POSTGRES && first_run {
+	if opts.Datastore == DATASTORE_POSTGRES {
 		EnsureMetricDummy("object_changes")
 	}
 
