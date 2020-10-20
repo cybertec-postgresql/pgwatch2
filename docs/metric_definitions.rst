@@ -32,6 +32,8 @@ Some things to note about the built-in metrics:
 
 * Some builtin metrics are marked to be only executed when server is a primary or conversely, a standby. The flags can be
   inspected / set on the Web UI Metrics tab or in YAML mode by suffixing the metric definition with "standby" or "master".
+  Note that starting from v1.8.1 it's also possible to specify completely alternative monitoring configurations, i.e.
+  metric-interval pairs, for the "standby" (recovery) state - by default the same set of metrics are used for both states.
 
 * There are a couple of special preset metrics that have some non-standard behaviour attached to them:
 
