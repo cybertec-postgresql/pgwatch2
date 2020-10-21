@@ -1721,7 +1721,7 @@ func WriteMetricsToJsonFile(msgArr []MetricStoreMessage, jsonPath string) error 
 		return nil
 	}
 
-	jsonOutFile, err := os.Create(jsonPath)
+	jsonOutFile, err := os.OpenFile(jsonPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
 	if err != nil {
 		atomic.AddUint64(&datastoreWriteFailuresCounter, 1)
 		return err
@@ -4434,7 +4434,7 @@ func main() {
 			go MetricsBatcher(DATASTORE_INFLUX, opts.BatchingDelayMs, buffered_persist_ch, persist_ch)
 		}
 
-		if opts.Datastore == "graphite" {
+		if opts.Datastore == DATASTORE_GRAPHITE {
 			if opts.GraphiteHost == "" || opts.GraphitePort == "" {
 				log.Fatal("--graphite-host/port needed!")
 			}
@@ -4442,7 +4442,7 @@ func main() {
 			InitGraphiteConnection(opts.GraphiteHost, int(graphite_port))
 			log.Info("starting GraphitePersister...")
 			go MetricsPersister(DATASTORE_GRAPHITE, persist_ch)
-		} else if opts.Datastore == "influx" {
+		} else if opts.Datastore == DATASTORE_INFLUX {
 			// check connection and store connection string
 			conn_str, err := InitAndTestInfluxConnection("1", opts.InfluxHost, opts.InfluxPort, opts.InfluxDbname, opts.InfluxUser,
 				opts.InfluxPassword, opts.InfluxSSL, opts.InfluxSSLSkipVerify, opts.InfluxRetentionDays)
