@@ -152,7 +152,7 @@ def cherrypy_checkboxes_to_bool(param_dict, keys):
 def cherrypy_empty_text_to_nulls(param_dict, keys):
     """'key': '' => 'key': None"""
     for k in keys:
-        if k in param_dict and param_dict[k].strip() == '':
+        if k in param_dict and type(param_dict[k]) == str and param_dict[k].strip() == '':
             param_dict[k] = None
 
 
@@ -260,8 +260,8 @@ def insert_monitored_db(params, cmd_args=None):
     ret = []
     # to enable adding DBs via POST requests where nonmandatory fields are not specified
     expected_monitored_db_params = [ ('md_port', '5432'), ('md_password', ''),
-          ('md_root_ca_path', ''), ('md_client_cert_path', ''), ('md_client_key_path', ''), ('md_config', ''), ('md_statement_timeout_seconds', '5'), ('md_dbtype', 'postgres'),
-          ('md_only_if_master', False), ( 'md_custom_tags', ''), ('md_host_config', ''), ('md_include_pattern', ''), ('md_exclude_pattern', ''), ('md_group', 'default'),
+          ('md_root_ca_path', ''), ('md_client_cert_path', ''), ('md_client_key_path', ''), ('md_config', None), ('md_statement_timeout_seconds', '5'), ('md_dbtype', 'postgres'),
+          ('md_only_if_master', False), ( 'md_custom_tags', None), ('md_host_config', None), ('md_include_pattern', ''), ('md_exclude_pattern', ''), ('md_group', 'default'),
           ('md_password_type', 'plain-text'), ('md_sslmode', 'disable'), ('md_config_standby', None), ('md_preset_config_name_standby', None)]
     for p, default in expected_monitored_db_params:
         if not p in params:
