@@ -798,20 +798,27 @@
       "decimals": 1,
       "description": "",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 5,
-        "w": 12,
+        "h": 8,
+        "w": 24,
         "x": 0,
         "y": 2
       },
+      "hiddenSeries": false,
       "id": 18,
       "interval": "15m",
       "legend": {
+        "alignAsTable": true,
         "avg": true,
         "current": false,
+        "hideZero": true,
         "max": false,
         "min": false,
+        "rightSide": true,
         "show": true,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": true
       },
@@ -819,16 +826,14 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "avg_query_runtime",
-          "yaxis": 2
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -910,7 +915,7 @@
           "decimals": 1,
           "format": "short",
           "label": null,
-          "logBase": 1,
+          "logBase": 10,
           "max": null,
           "min": null,
           "show": true
@@ -940,20 +945,27 @@
       "decimals": 1,
       "description": "Based on pg_stat_statements.calls",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
-        "y": 2
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 10
       },
+      "hiddenSeries": false,
       "id": 17,
       "interval": "",
       "legend": {
+        "alignAsTable": true,
         "avg": true,
         "current": false,
+        "hideZero": true,
         "max": false,
         "min": false,
+        "rightSide": true,
         "show": true,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": true
       },
@@ -961,6 +973,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1052,7 +1067,7 @@
           "decimals": 1,
           "format": "short",
           "label": null,
-          "logBase": 1,
+          "logBase": 10,
           "max": null,
           "min": null,
           "show": true
@@ -1081,20 +1096,27 @@
       "datasource": null,
       "description": "Requires \"pg_stat_statements\" on server. For regular queries (calls >10)",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 5,
-        "w": 12,
+        "h": 8,
+        "w": 24,
         "x": 0,
-        "y": 7
+        "y": 18
       },
+      "hiddenSeries": false,
       "id": 15,
       "interval": "15m",
       "legend": {
+        "alignAsTable": true,
         "avg": true,
         "current": false,
+        "hideZero": true,
         "max": false,
         "min": false,
+        "rightSide": true,
         "show": true,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": true
       },
@@ -1102,16 +1124,14 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "avg_query_runtime",
-          "yaxis": 2
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -1213,147 +1233,6 @@
     },
     {
       "aliasColors": {
-        "load_5": "#BA43A9"
-      },
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "decimals": 0,
-      "description": "",
-      "fill": 1,
-      "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
-        "y": 7
-      },
-      "id": 19,
-      "interval": "30m",
-      "legend": {
-        "avg": true,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 2,
-      "links": [],
-      "nullPointMode": "null",
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "",
-          "yaxis": 2
-        }
-      ],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "alias": "$tag_dbname",
-          "dsType": null,
-          "format": "time_series",
-          "group": [],
-          "groupBy": [
-            {
-              "params": [
-                "$interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "none"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "cpu_load",
-          "metricColumn": "none",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT last(\"size_b\")   FROM \"db_size\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY dbname, time($__interval) fill(none)",
-          "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval) as time,\n  dbname,\n  avg((data->'size_b')::int8) db_size\nfrom\n  db_size\nwhere \n  dbname in ($dbname)\n  and $__timeFilter(time)\ngroup by\n  1, 2\norder by\n  1, 2",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "load_5min"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": [],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "DB size",
-      "tooltip": {
-        "shared": true,
-        "sort": 2,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "decimals": 0,
-          "format": "bytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "ms",
-          "label": "",
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {
         "TX rollback ratio": "#890F02"
       },
       "bars": false,
@@ -1364,22 +1243,29 @@
       "editable": true,
       "error": false,
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
-        "h": 5,
-        "w": 12,
+        "h": 8,
+        "w": 24,
         "x": 0,
-        "y": 12
+        "y": 26
       },
+      "hiddenSeries": false,
       "id": 8,
       "interval": "5m",
       "legend": {
-        "alignAsTable": false,
+        "alignAsTable": true,
         "avg": true,
         "current": false,
+        "hideEmpty": false,
+        "hideZero": true,
         "max": false,
         "min": false,
+        "rightSide": true,
         "show": true,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": true
       },
@@ -1387,6 +1273,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1494,53 +1383,51 @@
     },
     {
       "aliasColors": {
-        "#Backends": "#F9E2D2",
-        "Deadlocks (1h rate)": "#BF1B00"
+        "load_5": "#BA43A9"
       },
       "bars": false,
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
       "decimals": 1,
-      "editable": true,
-      "error": false,
+      "description": "",
       "fill": 1,
-      "grid": {},
+      "fillGradient": 0,
       "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
-        "y": 12
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 34
       },
-      "id": 9,
-      "interval": "15m",
+      "hiddenSeries": false,
+      "id": 19,
+      "interval": "30m",
       "legend": {
+        "alignAsTable": true,
         "avg": true,
         "current": false,
+        "hideZero": true,
         "max": false,
         "min": false,
+        "rightSide": true,
         "show": true,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": true
       },
       "lines": true,
       "linewidth": 2,
       "links": [],
-      "nullPointMode": "connected",
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "Deadlocks (1h rate)",
-          "yaxis": 1
-        },
-        {
-          "alias": "Temp bytes written",
-          "yaxis": 2
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -1559,24 +1446,25 @@
             },
             {
               "params": [
-                "null"
+                "none"
               ],
               "type": "fill"
             }
           ],
+          "measurement": "cpu_load",
           "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "",
+          "query": "SELECT last(\"size_b\")   FROM \"db_size\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY dbname, time($__interval) fill(none)",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg(((tb-tb_lag)::numeric*3600) / extract(epoch from (time - time_lag)))\nfrom (\n        select \n          (data->>'temp_bytes')::int8 as tb, lag((data->>'temp_bytes')::int8) over w as tb_lag,\n          time, lag(time) over w as time_lag, dbname\n        from db_stats\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)\n) x\nwhere tb >= tb_lag and time > time_lag\ngroup by 1, 2\norder by 1, 2\n",
-          "refId": "C",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval) as time,\n  dbname,\n  avg((data->'size_b')::int8) db_size\nfrom\n  db_size\nwhere \n  dbname in ($dbname)\n  and $__timeFilter(time)\ngroup by\n  1, 2\norder by\n  1, 2",
+          "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "value"
+                  "load_5min"
                 ],
                 "type": "field"
               },
@@ -1601,12 +1489,11 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Temp bytes written (1h rate)",
+      "title": "DB size",
       "tooltip": {
-        "msResolution": false,
         "shared": true,
         "sort": 2,
-        "value_type": "cumulative"
+        "value_type": "individual"
       },
       "type": "graph",
       "xaxis": {
@@ -1621,17 +1508,17 @@
           "decimals": 1,
           "format": "bytes",
           "label": null,
-          "logBase": 1,
+          "logBase": 10,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
-          "format": "Bps",
-          "label": null,
+          "format": "ms",
+          "label": "",
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": false
         }
       ],
@@ -1651,20 +1538,27 @@
       "decimals": 1,
       "description": "Requires according \"metric fetching helpers\" on the monitored server",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 5,
-        "w": 12,
+        "h": 7,
+        "w": 24,
         "x": 0,
-        "y": 17
+        "y": 42
       },
+      "hiddenSeries": false,
       "id": 12,
       "interval": "15m",
       "legend": {
+        "alignAsTable": true,
         "avg": true,
         "current": false,
+        "hideZero": true,
         "max": false,
         "min": false,
+        "rightSide": true,
         "show": true,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": true
       },
@@ -1672,6 +1566,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -1783,6 +1680,155 @@
     },
     {
       "aliasColors": {
+        "#Backends": "#F9E2D2",
+        "Deadlocks (1h rate)": "#BF1B00"
+      },
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": 1,
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "grid": {},
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "hiddenSeries": false,
+      "id": 9,
+      "interval": "15m",
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "hideZero": true,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 2,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_dbname",
+          "dsType": null,
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  dbname,\n  sum(tb-tb_lag) as temp_bytes\nfrom (\n        select \n          (data->>'temp_bytes')::int8 as tb, lag((data->>'temp_bytes')::int8) over w as tb_lag,\n          time, dbname\n        from db_stats\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)\n) x\nwhere tb >= tb_lag\ngroup by 1, 2\norder by 1, 2\n",
+          "refId": "C",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Temp bytes written",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 2,
+        "value_type": "cumulative"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": null,
+          "format": "bytes",
+          "label": null,
+          "logBase": 10,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "Bps",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {
         "DB Size": "#2F575E",
         "WAL rate": "#0A50A1"
       },
@@ -1794,23 +1840,29 @@
       "editable": true,
       "error": false,
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
-        "y": 17
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 56
       },
       "height": "",
+      "hiddenSeries": false,
       "id": 10,
       "interval": "15m",
       "legend": {
-        "alignAsTable": false,
+        "alignAsTable": true,
         "avg": true,
         "current": false,
+        "hideZero": true,
         "max": false,
         "min": false,
+        "rightSide": true,
         "show": true,
+        "sort": "avg",
+        "sortDesc": true,
         "total": false,
         "values": true
       },
@@ -1818,20 +1870,14 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "WAL rate (bytes/h)",
-          "yaxis": 2
-        },
-        {
-          "alias": "DB Size",
-          "yaxis": 2
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -1861,7 +1907,7 @@
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg((wal-wal_lag) / extract(epoch from (time - time_lag))) as \"WAL rate\"\nfrom (\n        select \n          (data->>'xlog_location_b')::int8 as wal, lag((data->>'xlog_location_b')::int8) over w as wal_lag,\n          time, lag(time) over w as time_lag, dbname\n        from wal\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)\n) x\nwhere wal >= wal_lag and time > time_lag\ngroup by 1, 2\norder by 1, 2",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  dbname,\n  avg((wal-wal_lag) / extract(epoch from (time - time_lag))) as \"WAL rate\"\nfrom (\n        select \n          (data->>'xlog_location_b')::int8 as wal, lag((data->>'xlog_location_b')::int8) over w as wal_lag,\n          time, lag(time) over w as time_lag, dbname\n        from wal\n        where dbname in ($dbname) and $__timeFilter(time)\n        window w as (partition by dbname order by time)\n) x\nwhere wal >= wal_lag and time > time_lag\ngroup by 1, 2\norder by 1, 2",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1925,7 +1971,7 @@
           "decimals": 1,
           "format": "Bps",
           "label": null,
-          "logBase": 1,
+          "logBase": 10,
           "max": null,
           "min": null,
           "show": true
@@ -1933,146 +1979,6 @@
         {
           "decimals": 1,
           "format": "bytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "decimals": 1,
-      "description": "Based on pg_stat_activity info",
-      "fill": 1,
-      "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 0,
-        "y": 22
-      },
-      "id": 11,
-      "interval": "15m",
-      "legend": {
-        "avg": true,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": true,
-      "steppedLine": false,
-      "targets": [
-        {
-          "alias": "$tag_dbname",
-          "dsType": null,
-          "format": "time_series",
-          "group": [],
-          "groupBy": [
-            {
-              "params": [
-                "$interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "0"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "backends",
-          "metricColumn": "none",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT mean(\"idleintransaction\") + mean(\"waiting\") + mean(\"active\")  FROM \"backends\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY dbname, time($__interval) fill(none)",
-          "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  dbname,\n  avg((data->'idleintransaction')::int + (data->'waiting')::int + (data->'active')::int) as sessions\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  and dbname in ($dbname)\nGROUP BY\n  1, 2\nORDER BY\n  1, 2\n",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "idle"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "dbname",
-              "operator": "=~",
-              "value": "/^$dbname$/"
-            }
-          ],
-          "timeColumn": "time",
-          "where": [
-            {
-              "name": "$__timeFilter",
-              "params": [],
-              "type": "macro"
-            }
-          ]
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Non-idle sessions",
-      "tooltip": {
-        "shared": true,
-        "sort": 2,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "decimals": 1,
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -2096,20 +2002,27 @@
       "decimals": 0,
       "description": "",
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
-        "y": 22
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 64
       },
+      "hiddenSeries": false,
       "id": 16,
       "interval": "15m",
       "legend": {
+        "alignAsTable": true,
         "avg": true,
         "current": false,
+        "hideZero": false,
         "max": false,
         "min": false,
+        "rightSide": true,
         "show": true,
+        "sort": "avg",
+        "sortDesc": false,
         "total": false,
         "values": true
       },
@@ -2117,6 +2030,9 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -2227,14 +2143,165 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": 1,
+      "description": "Based on pg_stat_activity info",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 73
+      },
+      "hiddenSeries": false,
+      "id": 11,
+      "interval": "15m",
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "hideZero": true,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "avg",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "$tag_dbname",
+          "dsType": null,
+          "format": "time_series",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "0"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "backends",
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT mean(\"idleintransaction\") + mean(\"waiting\") + mean(\"active\")  FROM \"backends\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY dbname, time($__interval) fill(none)",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  dbname,\n  avg((data->'idleintransaction')::int + (data->'waiting')::int + (data->'active')::int) as sessions\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\n  and dbname in ($dbname)\nGROUP BY\n  1, 2\nORDER BY\n  1, 2\n",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "idle"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "dbname",
+              "operator": "=~",
+              "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Non-idle sessions",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 1,
+          "format": "short",
+          "label": null,
+          "logBase": 10,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
       "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2019/05/Cybertec_Logo_wei%C3%9F-transparent_300x80px-01.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "datasource": null,
       "editable": true,
       "error": false,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 27
+        "y": 81
       },
       "id": 14,
       "links": [],
@@ -2244,7 +2311,7 @@
       "type": "text"
     }
   ],
-  "schemaVersion": 18,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [
     "pgwatch2"
@@ -2254,18 +2321,49 @@
       {
         "allValue": null,
         "current": {
+          "selected": false,
+          "tags": [],
+          "text": "yes",
+          "value": "yes"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "current_primaries_only",
+        "options": [
+          {
+            "selected": true,
+            "text": "yes",
+            "value": "yes"
+          },
+          {
+            "selected": false,
+            "text": "no",
+            "value": "no"
+          }
+        ],
+        "query": "yes,no",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
           "text": "All",
           "value": "$__all"
         },
         "datasource": null,
-        "definition": "",
+        "definition": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics a WHERE case when '$current_primaries_only' = 'yes' then (select (data->'in_recovery_int')::int as in_recovery_int from db_stats where dbname = a.dbname and time > now() - '1h'::interval order by time desc limit 1) = 0 else true end ORDER BY 1;",
         "hide": 0,
         "includeAll": true,
+        "index": -1,
         "label": null,
         "multi": true,
         "name": "dbname",
         "options": [],
-        "query": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics ORDER BY 1;",
+        "query": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics a WHERE case when '$current_primaries_only' = 'yes' then (select (data->'in_recovery_int')::int as in_recovery_int from db_stats where dbname = a.dbname and time > now() - '1h'::interval order by time desc limit 1) = 0 else true end ORDER BY 1;",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -2281,6 +2379,7 @@
         "auto_count": 30,
         "auto_min": "10s",
         "current": {
+          "selected": false,
           "text": "15m",
           "value": "15m"
         },
@@ -2373,5 +2472,8 @@
   "timezone": "browser",
   "title": "Global DB overview",
   "uid": null,
+  "variables": {
+    "list": []
+  },
   "version": 1
 }
