@@ -10,6 +10,39 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## v1.8.1 [2020-10-22]
+
+Main changes:
+
+* New feature - optional "standby" configs. Enables for example to save on data volumes when having a lot of replicas.
+* New PG dashboard - DB overview time lag comparison, enables to visually compare 2 time ranges.
+* New PG dashboard - Systems stats time lag comparison, enables to visually compare 2 time ranges.
+* Metrics - introduce a new metrics attribute "statement_timeout_seconds" to override per host "statement_timeout".
+* Documentation - add separate "docs" section backed by readthedocs: https://pgwatch2.readthedocs.io/.
+* Gatherer improvement - allow "adhoc" mode to monitor all DB-s of an instance.
+* Gatherer improvement - make startup connection check to config/metricsDB more resilient.
+* Gatherer improvement - append instead of overwrite when using JSON-file metrics persistence.
+* Metrics - Add an "azure" preset tuned for Microsoft's managed service (@Sascha8a).
+* Dashboards - replace "Session count" panel with TPS / QPS for "DB Overview" (PG).
+* Dashboards - make "Stat Statements Top" a lot faster for (PG).
+* Dashboards - major overhaul of Global DB Overview (PG).
+* Dashboards - tag all preset dashboards with "pgwatch2".
+* Metric helpers - More secure SECURITY DEFINER helpers, search_path is now inspecting during rollout (@laurenz).
+* Docker images - set 500ms wal-fsync-delay for InfluxDB backed images.
+* Docker images - add a new "db-bootstrapper" image that can roll out config DB or metric DB schemas.
+* Docker component update - Influx 1.8.3, Go 1.15.3.
+* Code - switch to Go Modules (@pashagolub).
+
+NB! When migrating existing "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
+applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2/sql/config_store/migrations/ if using
+ther pre-built packages) folder. Also it is highly recommended to refresh all the metric definitions as they're constantly improved.
+For that there's also a refresh_metrics_from_github.sh script provided. YAML based setups don't need any extra actions besides
+refreshing from Git or installing the new RPM / DEB / Tar packages.
+
+This release added 1 SQL diff to be applied for Config DB based setups:
+https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/config_store/migrations/v1.8.1-1_standby_config.sql
+
+
 ## v1.8.0 [2020-07-09]
 
 * New feature - native support for Pgpool status monitoring + a dash. Makes use of SHOW POOL_NODES and SHOW POOL_PROCESSES commands.
