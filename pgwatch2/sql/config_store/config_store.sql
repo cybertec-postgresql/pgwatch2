@@ -2,7 +2,7 @@ create schema if not exists pgwatch2 authorization pgwatch2;
 
 set search_path to pgwatch2, public;
 
-alter database pgwatch2 set search_path to pgwatch2, public;
+alter database pgwatch2 set search_path to public, pgwatch2;
 
 set role to pgwatch2; -- NB! Role/db create script is in bootstrap/create_db_pgwatch.sql
 
