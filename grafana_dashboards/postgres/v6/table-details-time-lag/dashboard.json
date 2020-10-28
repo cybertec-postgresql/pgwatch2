@@ -1,0 +1,1607 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "hiddenSeries": false,
+      "id": 2,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(ins-ins_lag) as \"INSERT\"\nfrom (\n        select \n          (data->'n_tup_ins')::int8 as ins,\n          lag((data->'n_tup_ins')::int8) over w as ins_lag,\n          time\n        from\n          table_stats\n        where\n          dbname = '$dbname'\n          and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n          and $__timeFilter(time)\n        window w as (order by time)\n\n) x\nwhere ins >= ins_lag\ngroup by 1\norder by 1",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(ins-ins_lag) as \"INSERT-$lag_interval\"\nfrom (\n        select \n          (data->'n_tup_ins')::int8 as ins,\n          lag((data->'n_tup_ins')::int8) over w as ins_lag,\n          time + '$lag_interval'::interval as time\n        from\n          table_stats\n        where\n          dbname = '$dbname'\n          and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n          and time between ($__timeFrom()::timestamptz - '$lag_interval'::interval) and ($__timeTo()::timestamptz - '$lag_interval'::interval)\n        window w as (order by time)\n\n) x\nwhere ins >= ins_lag\ngroup by 1\norder by 1",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "INSERT-s",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": null,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "hiddenSeries": false,
+      "id": 3,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(upd-upd_lag) as \"UPDATE\"\nfrom (\n        select \n          (data->'n_tup_upd')::int8 as upd,\n          lag((data->'n_tup_upd')::int8) over w as upd_lag,\n          time\n        from\n          table_stats\n        where\n          dbname = '$dbname'\n          and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n          and $__timeFilter(time)\n        window w as (order by time)\n\n) x\nwhere upd >= upd_lag\ngroup by 1\norder by 1",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(upd-upd_lag) as \"UPDATE-$lag_interval\"\nfrom (\n        select \n          (data->'n_tup_upd')::int8 as upd,\n          lag((data->'n_tup_upd')::int8) over w as upd_lag,\n          time + '$lag_interval'::interval as time\n        from\n          table_stats\n        where\n          dbname = '$dbname'\n          and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n          and time between ($__timeFrom()::timestamptz - '$lag_interval'::interval) and ($__timeTo()::timestamptz - '$lag_interval'::interval)\n        window w as (order by time)\n\n) x\nwhere upd >= upd_lag\ngroup by 1\norder by 1",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "UPDATE-s",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 4,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(del-del_lag) as \"DELETE\"\nfrom (\n        select \n          (data->'n_tup_del')::int8 as del,\n          lag((data->'n_tup_del')::int8) over w as del_lag,\n          time\n        from\n          table_stats\n        where\n          dbname = '$dbname'\n          and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n          and $__timeFilter(time)\n        window w as (order by time)\n\n) x\nwhere del >= del_lag\ngroup by 1\norder by 1",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  sum(del-del_lag) as \"DELETE-$lag_interval\"\nfrom (\n        select \n          (data->'n_tup_del')::int8 as del,\n          lag((data->'n_tup_del')::int8) over w as del_lag,\n          time + '$lag_interval'::interval as time\n        from\n          table_stats\n        where\n          dbname = '$dbname'\n          and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n          and time between ($__timeFrom()::timestamptz - '$lag_interval'::interval) and ($__timeTo()::timestamptz - '$lag_interval'::interval)\n        window w as (order by time)\n\n) x\nwhere del >= del_lag\ngroup by 1\norder by 1",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "DELETE-s",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": null,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "hiddenSeries": false,
+      "id": 5,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  sum(seq_scan-seq_scan_lag) as seq_scan\nFROM (  \n  SELECT\n    (data->'seq_scan')::int8 as seq_scan, lag((data->'seq_scan')::int8) over w as seq_scan_lag,\n    time\n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time) AND dbname = '$dbname'\n    AND tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n  WINDOW w as (order by time)\n) x\nWHERE seq_scan >= seq_scan_lag\nGROUP BY 1\nORDER BY 1",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  sum(seq_scan-seq_scan_lag) as \"seq_scan-$lag_interval\"\nFROM (  \n  SELECT\n    (data->'seq_scan')::int8 as seq_scan, lag((data->'seq_scan')::int8) over w as seq_scan_lag,\n    time + '$lag_interval'::interval as time\n  FROM\n    table_stats\n  WHERE\n    time between ($__timeFrom()::timestamptz - '$lag_interval'::interval) and ($__timeTo()::timestamptz - '$lag_interval'::interval)\n    AND dbname = '$dbname'\n    AND tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n  WINDOW w as (order by time)\n) x\nWHERE seq_scan >= seq_scan_lag\nGROUP BY 1\nORDER BY 1",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Seq. Scan",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": null,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "hiddenSeries": false,
+      "id": 6,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  sum(idx_scan-idx_scan_lag) as idx_scan\nFROM (  \n  SELECT\n    (data->'idx_scan')::int8 as idx_scan, lag((data->'idx_scan')::int8) over w as idx_scan_lag,\n    time\n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time) AND dbname = '$dbname'\n    AND tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n  WINDOW w as (order by time)\n) x\nWHERE idx_scan >= idx_scan_lag\nGROUP BY 1\nORDER BY 1",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  sum(idx_scan-idx_scan_lag) as \"idx_scan-$lag_interval\"\nFROM (  \n  SELECT\n    (data->'idx_scan')::int8 as idx_scan, lag((data->'idx_scan')::int8) over w as idx_scan_lag,\n    time + '$lag_interval'::interval as time\n  FROM\n    table_stats\n  WHERE\n    time between ($__timeFrom()::timestamptz - '$lag_interval'::interval) and ($__timeTo()::timestamptz - '$lag_interval'::interval)\n    AND dbname = '$dbname'\n    AND tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n  WINDOW w as (order by time)\n) x\nWHERE idx_scan >= idx_scan_lag\nGROUP BY 1\nORDER BY 1",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Idx. Scan",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": 1,
+      "description": "i.e. the main table  excluding indexes and TOAST",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "hiddenSeries": false,
+      "id": 7,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg( case when hh = hh_lag and hr = hr_lag then null else (hh-hh_lag)::numeric * 100 / (hh-hh_lag+hr-hr_lag) end ) as \"Heap hit\"\nfrom (\n        select \n          (data->'heap_blks_hit')::int8 as hh, lag((data->'heap_blks_hit')::int8) over w as hh_lag,\n          (data->'heap_blks_read')::int8 as hr, lag((data->'heap_blks_read')::int8) over w as hr_lag,\n          time\n        from table_io_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere hh >= hh_lag and hr >= hr_lag\ngroup by 1\norder by 1",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  avg( case when hh = hh_lag and hr = hr_lag then null else (hh-hh_lag)::numeric * 100 / (hh-hh_lag+hr-hr_lag) end ) as \"Heap hit-$lag_interval\"\nfrom (\n        select \n          (data->'heap_blks_hit')::int8 as hh, lag((data->'heap_blks_hit')::int8) over w as hh_lag,\n          (data->'heap_blks_read')::int8 as hr, lag((data->'heap_blks_read')::int8) over w as hr_lag,\n          time +'$lag_interval'::interval as time\n        from table_io_stats\n        where dbname = '$dbname'\n        and time between ($__timeFrom()::timestamptz - '$lag_interval'::interval) and ($__timeTo()::timestamptz - '$lag_interval'::interval)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere hh >= hh_lag and hr >= hr_lag\ngroup by 1\norder by 1",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Shared buffers hit rate - Heap",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 2,
+          "format": "percent",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": 1,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      },
+      "hiddenSeries": false,
+      "id": 8,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  100 * avg( case when tr = tr_lag and th = th_lag and tir = tir_lag and tih = tir_lag then null else (coalesce(th,0)-coalesce(th_lag,0) + coalesce(tih,0)-coalesce(tih_lag,0))::numeric / (coalesce(th,0)-coalesce(th_lag,0) + coalesce(tr,0)-coalesce(tr_lag,0) + coalesce(tir,0)-coalesce(tir_lag,0) + coalesce(tih,0)-coalesce(tih_lag,0)) end ) as \"Toast hit\"\nfrom (\n        select \n          (data->'toast_blks_read')::int8 as tr, lag((data->'toast_blks_read')::int8) over w as tr_lag,\n          (data->'toast_blks_hit')::int8 as th, lag((data->'toast_blks_hit')::int8) over w as th_lag,\n          (data->'tidx_blks_read')::int8 as tir, lag((data->'tidx_blks_read')::int8) over w as tir_lag,\n          (data->'tidx_blks_hit')::int8 as tih, lag((data->'tidx_blks_hit')::int8) over w as tih_lag,\n          time\n        from table_io_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere th > th_lag or tih > tih_lag or tr > tr_lag or tir > tir_lag\ngroup by 1\norder by 1",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "format": "time_series",
+          "group": [],
+          "hide": false,
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  100 * avg( case when tr = tr_lag and th = th_lag and tir = tir_lag and tih = tir_lag then null else (coalesce(th,0)-coalesce(th_lag,0) + coalesce(tih,0)-coalesce(tih_lag,0))::numeric / (coalesce(th,0)-coalesce(th_lag,0) + coalesce(tr,0)-coalesce(tr_lag,0) + coalesce(tir,0)-coalesce(tir_lag,0) + coalesce(tih,0)-coalesce(tih_lag,0)) end ) as \"Toast hit-$lag_interval\"\nfrom (\n        select \n          (data->'toast_blks_read')::int8 as tr, lag((data->'toast_blks_read')::int8) over w as tr_lag,\n          (data->'toast_blks_hit')::int8 as th, lag((data->'toast_blks_hit')::int8) over w as th_lag,\n          (data->'tidx_blks_read')::int8 as tir, lag((data->'tidx_blks_read')::int8) over w as tir_lag,\n          (data->'tidx_blks_hit')::int8 as tih, lag((data->'tidx_blks_hit')::int8) over w as tih_lag,\n          time + '$lag_interval'::interval as time\n        from table_io_stats\n        where dbname = '$dbname'\n        and time between ($__timeFrom()::timestamptz - '$lag_interval'::interval) and ($__timeTo()::timestamptz - '$lag_interval'::interval)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere th > th_lag or tih > tih_lag or tr > tr_lag or tir > tir_lag\ngroup by 1\norder by 1",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Shared buffers hit rate - Toast",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 2,
+          "format": "percent",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": 1,
+      "description": "Assuming 8k blocks. Hit + read",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 63
+      },
+      "hiddenSeries": false,
+      "id": 9,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  8192 * sum(hh-hh_lag+hr-hr_lag) as \"Heap read\"\nfrom (\n        select \n          (data->'heap_blks_hit')::int8 as hh, lag((data->'heap_blks_hit')::int8) over w as hh_lag,\n          (data->'heap_blks_read')::int8 as hr, lag((data->'heap_blks_read')::int8) over w as hr_lag,\n          time\n        from table_io_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere hr >= hr_lag and hh >= hh_lag\ngroup by 1\norder by 1",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "format": "time_series",
+          "group": [],
+          "hide": false,
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  8192 * sum(hh-hh_lag+hr-hr_lag) as \"Heap read-$lag_interval\"\nfrom (\n        select \n          (data->'heap_blks_hit')::int8 as hh, lag((data->'heap_blks_hit')::int8) over w as hh_lag,\n          (data->'heap_blks_read')::int8 as hr, lag((data->'heap_blks_read')::int8) over w as hr_lag,\n          time + '$lag_interval'::interval as time\n        from table_io_stats\n        where dbname = '$dbname'\n        and time between ($__timeFrom()::timestamptz - '$lag_interval'::interval) and ($__timeTo()::timestamptz - '$lag_interval'::interval)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere hr >= hr_lag and hh >= hh_lag\ngroup by 1\norder by 1",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Block bandwidth - Heap",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": null,
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": 1,
+      "description": "Assuming 8k blocks. Hit + read",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 72
+      },
+      "hiddenSeries": false,
+      "id": 10,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  8192 * sum(ih-ih_lag+ir-ir_lag) as \"Idx read\"\nfrom (\n        select \n          (data->'idx_blks_hit')::int8 as ih, lag((data->'idx_blks_hit')::int8) over w as ih_lag,\n          (data->'idx_blks_read')::int8 as ir, lag((data->'idx_blks_read')::int8) over w as ir_lag,\n          time\n        from table_io_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere ir >= ir_lag and ih >= ih_lag\ngroup by 1\norder by 1",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "format": "time_series",
+          "group": [],
+          "hide": false,
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  8192 * sum(ih-ih_lag+ir-ir_lag) as \"Idx read-$lag_interval\"\nfrom (\n        select \n          (data->'idx_blks_hit')::int8 as ih, lag((data->'idx_blks_hit')::int8) over w as ih_lag,\n          (data->'idx_blks_read')::int8 as ir, lag((data->'idx_blks_read')::int8) over w as ir_lag,\n          time + '$lag_interval'::interval as time\n        from table_io_stats\n        where dbname = '$dbname'\n        and time between ($__timeFrom()::timestamptz - '$lag_interval'::interval) and ($__timeTo()::timestamptz - '$lag_interval'::interval)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere ir >= ir_lag and ih >= ih_lag\ngroup by 1\norder by 1",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Block bandwidth - Indexes",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": null,
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "decimals": 1,
+      "description": "Assuming 8k blocks. Hit + read",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 81
+      },
+      "hiddenSeries": false,
+      "id": 11,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  8192 * sum(coalesce(th,0)-coalesce(th_lag,0) + coalesce(tr,0)-coalesce(tr_lag,0) + coalesce(tir,0)-coalesce(tir_lag,0) + coalesce(tih,0)-coalesce(tih_lag,0)) as \"Toast read\"\nfrom (\n        select \n          (data->'toast_blks_read')::int8 as tr, lag((data->'toast_blks_read')::int8) over w as tr_lag,\n          (data->'toast_blks_hit')::int8 as th, lag((data->'toast_blks_hit')::int8) over w as th_lag,\n          (data->'tidx_blks_read')::int8 as tir, lag((data->'tidx_blks_read')::int8) over w as tir_lag,\n          (data->'tidx_blks_hit')::int8 as tih, lag((data->'tidx_blks_hit')::int8) over w as tih_lag,\n          time\n        from table_io_stats\n        where dbname = '$dbname' and $__timeFilter(time)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere th > th_lag or tih > tih_lag or tr > tr_lag or tir > tir_lag\ngroup by 1\norder by 1",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "format": "time_series",
+          "group": [],
+          "hide": false,
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  8192 * sum(coalesce(th,0)-coalesce(th_lag,0) + coalesce(tr,0)-coalesce(tr_lag,0) + coalesce(tir,0)-coalesce(tir_lag,0) + coalesce(tih,0)-coalesce(tih_lag,0)) as \"Toast read-$lag_interval\"\nfrom (\n        select \n          (data->'toast_blks_read')::int8 as tr, lag((data->'toast_blks_read')::int8) over w as tr_lag,\n          (data->'toast_blks_hit')::int8 as th, lag((data->'toast_blks_hit')::int8) over w as th_lag,\n          (data->'tidx_blks_read')::int8 as tir, lag((data->'tidx_blks_read')::int8) over w as tir_lag,\n          (data->'tidx_blks_hit')::int8 as tih, lag((data->'tidx_blks_hit')::int8) over w as tih_lag,\n          time + '$lag_interval'::interval as time\n        from table_io_stats\n        where dbname = '$dbname'\n        and time between ($__timeFrom()::timestamptz - '$lag_interval'::interval) and ($__timeTo()::timestamptz - '$lag_interval'::interval)\n        and tag_data @> jsonb_build_object('table_full_name', '$table_full_name')\n        window w as (order by time)\n) x\nwhere th > th_lag or tih > tih_lag or tr > tr_lag or tir > tir_lag\ngroup by 1\norder by 1",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Block bandwidth - Toast",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": null,
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    }
+  ],
+  "schemaVersion": 22,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": null,
+          "value": null
+        },
+        "datasource": null,
+        "definition": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics ORDER BY 1;",
+        "hide": 0,
+        "includeAll": false,
+        "index": -1,
+        "label": null,
+        "multi": false,
+        "name": "dbname",
+        "options": [],
+        "query": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics ORDER BY 1;",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "text": null,
+          "value": null
+        },
+        "datasource": null,
+        "definition": "SELECT DISTINCT tag_data->>'table_full_name' FROM table_stats WHERE time > now() - '1d'::interval AND dbname = '$dbname' ORDER BY 1",
+        "hide": 0,
+        "includeAll": false,
+        "index": -1,
+        "label": null,
+        "multi": false,
+        "name": "table_full_name",
+        "options": [],
+        "query": "SELECT DISTINCT tag_data->>'table_full_name' FROM table_stats WHERE time > now() - '1d'::interval AND dbname = '$dbname' ORDER BY 1",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": false,
+          "text": "10m",
+          "value": "10m"
+        },
+        "hide": 0,
+        "label": null,
+        "name": "agg_interval",
+        "options": [
+          {
+            "selected": false,
+            "text": "1s",
+            "value": "1s"
+          },
+          {
+            "selected": false,
+            "text": "1m",
+            "value": "1m"
+          },
+          {
+            "selected": false,
+            "text": "2m",
+            "value": "2m"
+          },
+          {
+            "selected": false,
+            "text": "3m",
+            "value": "3m"
+          },
+          {
+            "selected": false,
+            "text": "5m",
+            "value": "5m"
+          },
+          {
+            "selected": true,
+            "text": "10m",
+            "value": "10m"
+          },
+          {
+            "selected": false,
+            "text": "15m",
+            "value": "15m"
+          },
+          {
+            "selected": false,
+            "text": "30m",
+            "value": "30m"
+          },
+          {
+            "selected": false,
+            "text": "1h",
+            "value": "1h"
+          },
+          {
+            "selected": false,
+            "text": "6h",
+            "value": "6h"
+          },
+          {
+            "selected": false,
+            "text": "12h",
+            "value": "12h"
+          },
+          {
+            "selected": false,
+            "text": "1d",
+            "value": "1d"
+          },
+          {
+            "selected": false,
+            "text": "7d",
+            "value": "7d"
+          }
+        ],
+        "query": "1s,1m,2m,3m,5m,10m,15m,30m,1h,6h,12h,1d,7d",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      },
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "selected": false,
+          "text": "1d",
+          "value": "1d"
+        },
+        "hide": 0,
+        "label": null,
+        "name": "lag_interval",
+        "options": [
+          {
+            "selected": false,
+            "text": "1h",
+            "value": "1h"
+          },
+          {
+            "selected": false,
+            "text": "6h",
+            "value": "6h"
+          },
+          {
+            "selected": false,
+            "text": "12h",
+            "value": "12h"
+          },
+          {
+            "selected": true,
+            "text": "1d",
+            "value": "1d"
+          },
+          {
+            "selected": false,
+            "text": "7d",
+            "value": "7d"
+          },
+          {
+            "selected": false,
+            "text": "14d",
+            "value": "14d"
+          },
+          {
+            "selected": false,
+            "text": "30d",
+            "value": "30d"
+          }
+        ],
+        "query": "1h,6h,12h,1d,7d,14d,30d",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-12h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "",
+  "title": "Table details time lag comparison",
+  "uid": null,
+  "variables": {
+    "list": []
+  },
+  "version": 1
+}
