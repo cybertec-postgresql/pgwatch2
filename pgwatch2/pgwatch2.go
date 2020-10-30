@@ -1120,6 +1120,14 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 }
 
 func OldPostgresMetricsDeleter(metricAgeDaysThreshold int64, schemaType string) {
+	sqlDoesOldPartListingFuncExist := `SELECT count(*) FROM information_schema.routines WHERE routine_schema = 'admin' AND routine_name = 'get_old_time_partitions'`
+	oldPartListingFuncExists := false // if func existing (>v1.8.1) then use it to drop old partitions in smaller batches
+											// as for large setup (50+ DBs) one could reach the default "max_locks_per_transaction" otherwise
+
+	ret, err := DBExecRead(metricDb, METRICDB_IDENT, sqlDoesOldPartListingFuncExist)
+	if err == nil && len(ret) > 0 && ret[0]["count"].(int64) > 0 {
+		oldPartListingFuncExists = true
+	}
 
 	for {
 		// metric|metric-time|metric-dbname-time|custom
@@ -1128,21 +1136,43 @@ func OldPostgresMetricsDeleter(metricAgeDaysThreshold int64, schemaType string) 
 			if err != nil {
 				log.Errorf("Failed to delete old (>%d days) metrics from Postgres: %v", metricAgeDaysThreshold, err)
 				time.Sleep(time.Second * 300)
-			} else {
-				log.Infof("Deleted %d old metrics rows...", rows_deleted)
-				time.Sleep(time.Hour * 12)
+				continue
 			}
-		} else if schemaType == "metric-time" || schemaType == "metric-dbname-time" || schemaType == "timescale" {
+			log.Infof("Deleted %d old metrics rows...", rows_deleted)
+		} else if schemaType == "timescale" || (!oldPartListingFuncExists && (schemaType == "metric-time" || schemaType == "metric-dbname-time")) {
 			parts_dropped, err := DropOldTimePartitions(metricAgeDaysThreshold)
 
 			if err != nil {
 				log.Errorf("Failed to drop old partitions (>%d days) from Postgres: %v", metricAgeDaysThreshold, err)
 				time.Sleep(time.Second * 300)
+				continue
+			}
+			log.Infof("Dropped %d old metric partitions...", parts_dropped)
+		} else if oldPartListingFuncExists && (schemaType == "metric-time" || schemaType == "metric-dbname-time") {
+			partsToDrop, err := GetOldTimePartitions(metricAgeDaysThreshold)
+			if err != nil {
+				log.Errorf("Failed to get a listing of old (>%d days) time partitions from Postgres metrics DB - check that the admin.get_old_time_partitions() function is rolled out: %v", metricAgeDaysThreshold, err)
+				time.Sleep(time.Second * 300)
+				continue
+			}
+			if len(partsToDrop) > 0 {
+				log.Infof("Dropping %d old metric partitions one by one...", len(partsToDrop))
+				for _, toDrop := range partsToDrop {
+					sqlDropTable := fmt.Sprintf(`DROP TABLE IF EXISTS %s`, toDrop)
+					log.Debugf("Dropping old metric data partition: %s", toDrop)
+					_, err := DBExecRead(metricDb, METRICDB_IDENT, sqlDropTable)
+					if err != nil {
+						log.Errorf("Failed to drop old partition %s from Postgres metrics DB: %v", toDrop, err)
+						time.Sleep(time.Second * 300)
+					} else {
+						time.Sleep(time.Second * 5)
+					}
+				}
 			} else {
-				log.Infof("Dropped %d old metric partitions...", parts_dropped)
-				time.Sleep(time.Hour * 12)
+				log.Infof("No old metric partitions found to drop...")
 			}
 		}
+		time.Sleep(time.Hour * 12)
 	}
 }
 
@@ -1215,6 +1245,23 @@ func DropOldTimePartitions(metricAgeDaysThreshold int64) (int, error) {
 	parts_dropped = int(ret[0]["drop_old_time_partitions"].(int64))
 
 	return parts_dropped, err
+}
+
+func GetOldTimePartitions(metricAgeDaysThreshold int64) ([]string, error) {
+	partsToDrop := make([]string, 0)
+	var err error
+	sqlGetOldParts := `select admin.get_old_time_partitions($1)`
+
+	ret, err := DBExecRead(metricDb, METRICDB_IDENT, sqlGetOldParts, metricAgeDaysThreshold)
+	if err != nil {
+		log.Error("Failed to get a listing of old time partitions from Postgres metricDB:", err)
+		return partsToDrop, err
+	}
+	for _, row := range ret {
+		partsToDrop = append(partsToDrop, row["get_old_time_partitions"].(string))
+	}
+
+	return partsToDrop, nil
 }
 
 func CheckIfPGSchemaInitializedOrFail() string {

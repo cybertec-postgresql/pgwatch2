@@ -12,12 +12,21 @@ A single / separate table for each distinct metric in the "public" schema. No pa
 
 ## metric-time
 
-A single "master" table for each distinct metric in the "public" schema + weekly partitions in the "subpartitions" schema. Works on PG 11+ versions. Suitable for up to ~25 monitored DBs. Reduced IO compared to "metric" as old data partitions will be dropped, not deleted.
+A single top-level table for each distinct metric in the "public" schema + weekly partitions in the "subpartitions" schema.
+Works on PG 11+ versions. Suitable for up to ~50 monitored DBs. Reduced IO compared to "metric" as old data partitions will be dropped, not deleted.
+
+Default storage schema for the "pgwatch2-postgres" Docker image.
 
 ## metric-dbname-time
 
-A single "master" table for each distinct metric in the "public" schema + 2 level subpartitions ("dbname" + monthly time based) in the "subpartitions" schema. Works on PG 11+ versions. Suitable for 25+ monitored DBs.
-NB! Currently minimum effective retention period with this model is 30 days. This will be lifted once PG 12 comes out.
+A single top level table for each distinct metric in the "public" schema + 2 levels of subpartitions ("dbname" + weekly time based) in the "subpartitions" schema.
+Works on PG 11+ versions. Provides the fastest query runtimes when having long retention intervals / lots of metrics data or slow disks and accessing mostly only a single DB's metrics at a time.
+Best used for 50+ monitored DBs.
+
+Also note that when having extremely many hosts under monitoring it might be necessary to increase the "max_locks_per_transaction"
+postgresql.conf parameter on the metrics DB for automatic old partition dropping to work. One could of course also drop old
+data partitions with some custom script / Cron when increasing "max_locks_per_transaction" is not wanted, and actually this
+kind of approach is also working behind the scenes for versions above v1.8.1.
 
 ## custom
 
@@ -27,8 +36,10 @@ For cases where the available presets are not satisfactory / applicable. All dat
 
 Assumes TimescaleDB (v1.7+) extension and "outsources" partition management for normal metrics to the extensions. Realtime
 metrics still use the "metric-time" schema as sadly Timescale doesn't support unlogged tables. Additionally one can also
-tune the chunking and historic data compression intervals - by default it's 2 days and 1 day. To change use the admin.timescale_change_chunk_interval() and admin.timescale_change_compress_interval()
-functions.
+tune the chunking and historic data compression intervals - by default it's 2 days and 1 day. To change use the
+admin.timescale_change_chunk_interval() and admin.timescale_change_compress_interval() functions.
+
+Most suitable storage schema when using long retention periods due to built-in extra compression.
 
 # Data size considerations
 
