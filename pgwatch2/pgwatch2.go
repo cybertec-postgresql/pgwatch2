@@ -267,6 +267,7 @@ var preset_metric_def_map map[string]map[string]float64 // read from metrics fol
 var lastSuccessfulDatastoreWriteTimeEpoch int64
 var datastoreWriteFailuresCounter uint64
 var datastoreWriteSuccessCounter uint64
+var totalMetricFetchFailuresCounter uint64
 var datastoreTotalWriteTimeMicroseconds uint64
 var totalMetricsFetchedCounter uint64
 var totalMetricsReusedFromCacheCounter uint64
@@ -581,6 +582,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", stmtTimeout))
 		}
 		if err != nil {
+			atomic.AddUint64(&totalMetricFetchFailuresCounter, 1)
 			return nil, err, duration
 		}
 	}
@@ -588,6 +590,9 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 	t1 := time.Now()
 	data, err := DBExecRead(conn, dbUnique, sql, args...)
 	t2 := time.Now()
+	if err != nil {
+		atomic.AddUint64(&totalMetricFetchFailuresCounter, 1)
+	}
 
 	return data, err, t2.Sub(t1)
 }
@@ -4079,6 +4084,7 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	"totalDatasetsFetchedCounter": %d,
 	"metricPointsPerMinuteLast5MinAvg": %v,
 	"metricsDropped": %d,
+	"totalMetricFetchFailuresCounter": %d,
 	"datastoreWriteFailuresCounter": %d,
 	"datastoreSuccessfulWritesCounter": %d,
 	"datastoreAvgSuccessfulWriteTimeMillis": %.1f,
@@ -4091,6 +4097,7 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	cacheMetrics := atomic.LoadUint64(&totalMetricsReusedFromCacheCounter)
 	totalDatasets := atomic.LoadUint64(&totalDatasetsFetchedCounter)
 	metricsDropped := atomic.LoadUint64(&totalMetricsDroppedCounter)
+	metricFetchFailuresCounter := atomic.LoadUint64(&totalMetricFetchFailuresCounter)
 	datastoreFailures := atomic.LoadUint64(&datastoreWriteFailuresCounter)
 	datastoreSuccess := atomic.LoadUint64(&datastoreWriteSuccessCounter)
 	datastoreTotalTimeMicros := atomic.LoadUint64(&datastoreTotalWriteTimeMicroseconds) // successful writes only
@@ -4101,7 +4108,7 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	if metricPointsPerMinute == -1 { // calculate avg. on the fly if 1st summarization hasn't happened yet
 		metricPointsPerMinute = int64((totalMetrics * 60) / gathererUptimeSeconds)
 	}
-	_, _ = io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix()-secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, gathererUptimeSeconds))
+	_, _ = io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix()-secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, metricFetchFailuresCounter, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, gathererUptimeSeconds))
 }
 
 func StartStatsServer(port int64) {
