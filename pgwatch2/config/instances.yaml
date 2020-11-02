@@ -1,4 +1,5 @@
-- unique_name: test1  # functions also as prefix for found DBs if using patterns/continous discovery
+- unique_name: test1  # an arbitrary name for the monitored DB. functions also as prefix for found DBs if using continuous discovery "dbtype"-s
+                      # NB! Should be chosen carefully - cannot be (easily) changed for the already stored metric data!
   dbtype: postgres    # postgres|pgbouncer|postgres-continuous-discovery|patroni|patroni-continuous-discovery
   host: localhost
   port: 5432
@@ -7,19 +8,18 @@
   password: somepass
   sslmode: disable
 #  libpq_conn_str: postgresql://user@localhost:5432/postgres  # overrides single connect params. no pwd encryption possible
-  stmt_timeout: 5
+  stmt_timeout: 5 # in seconds
   is_superuser: false # setting to true will try to auto-create all metric fetching "helpers"
-  preset_metrics: minimal
+  preset_metrics: minimal # from list of presets defined in "metrics/preset-configs.yaml"
   custom_metrics:    # if both preset and custom are specified, custom wins
   preset_metrics_standby: # optional metrics configuration for standby / replica state, v1.8.1+
   custom_metrics_standby:
-  dbname_include_pattern:
+  dbname_include_pattern: # regex to filter databases to actually monitor for the "continuous" modes
   dbname_exclude_pattern:
   is_enabled: true
-  group: default
-  custom_tags:      # possibility for the user to add extra Influx tags
-    env: prod
-    cloud: aws
+  group: default # just for logical grouping of DB hosts or for "sharding", i.e. splitting the workload between many gatherer daemons
+  custom_tags:      # option to add arbitrary tags (Influx / Postgres storage only) for every stored data row,
+    aws_instance_id: i-0af01c0123456789a       # for example to fetch data from some other source onto a same Grafana graph
   sslrootcert: ''
   sslcert: ''
   sslkey: ''
@@ -32,7 +32,7 @@
   user: postgres
   password:
   sslmode: disable
-  host_config:    # host_config used only for dbtype=patroni|patroni-continuous-discovery currently
+  host_config:    # used for storing patroni connect info (dbtype=patroni|patroni-continuous-discovery) or log parsing settings
     dcs_type: etcd
     dcs_endpoints: ["http://localhost:2379"]
     scope: batman
