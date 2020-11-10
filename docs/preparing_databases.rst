@@ -95,8 +95,12 @@ For completely unprivileged monitoring users the following *helpers* are recomme
   psql -f /etc/pgwatch2/metrics/00_helpers/get_wal_size/$pgver/metric.sql mydb
   psql -f /etc/pgwatch2/metrics/00_helpers/get_stat_statements/$pgver/metric.sql mydb
 
-NB! Note that there might not be an exact Postgres version match for helper definitions - then replace *$pgver* with the next
-available version number above your server's Postgres version number.
+NB! Note that there might not be an exact Postgres version match for helper definitions - then replace *$pgver* with the previous
+available version number below your server's Postgres version number.
+
+NB! Also note that as of v1.8.1 some helpers definition SQL-s scripts (like for "get_stat_statements") will inspect also
+the "search_path" and by default **will not install into schemas that have PUBLIC CREATE privileges**, like the "public"
+schema by default has!
 
 Also when rolling out helpers make sure the `search_path` is at defaults or set so that it's also accessible for the monitoring role
 as currently neither helpers nor metric definition SQL-s don't assume any particualar schema and depend on the `search_path` including everything needed.
