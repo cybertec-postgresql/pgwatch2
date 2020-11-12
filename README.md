@@ -1,4 +1,4 @@
-![Docker Pulls](https://img.shields.io/docker/pulls/cybertec/pgwatch2)
+![Docker Pulls](https://img.shields.io/docker/pulls/cybertec/pgwatch2-nonroot)
 
 # pgwatch2
 
