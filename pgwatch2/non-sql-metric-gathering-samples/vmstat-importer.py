@@ -65,17 +65,17 @@ def executeSQL(sql, params=None, connection=None, statement_timeout=None, quiet=
     return result, None
 
 
-def ensureSubpartition(): # TODO could be optimized
+def ensureSubpartition(dbname, time):  # TODO could be optimized
     sqlSchemaType = 'SELECT schema_type FROM admin.storage_schema_type'
     sqlEnsureMetricTime = 'select * from admin.ensure_partition_metric_time(%s, %s)'
-    sqlEnsureMetricDbnameTime = 'select * from admin.ensure_partition_metric_dbname_time(%, %s, %s)'
+    sqlEnsureMetricDbnameTime = 'select * from admin.ensure_partition_metric_dbname_time(%s, %s, %s)'
 
-    ret, err = executeSQL(sqlSchemaType)
-    if ret:
+    ret, err = executeSQL(sqlSchemaType, connection=metricsDBConn)
+    if ret and len(ret) == 1:
         if ret[0]['schema_type'] == 'metric-time':
-            executeSQL(sqlEnsureMetricTime)
+            executeSQL(sqlEnsureMetricTime, (PGWATCH2_METRIC_NAME, time), connection=metricsDBConn)
         elif ret[0]['schema_type'] == 'metric-dbname-time':
-            executeSQL(sqlEnsureMetricDbnameTime, (PGWATCH2_METRIC_NAME, ))
+            executeSQL(sqlEnsureMetricDbnameTime, (PGWATCH2_METRIC_NAME, dbname, time), connection=metricsDBConn)
 
 
 def parseVmstatLineToDict(line):
@@ -133,7 +133,8 @@ def insertOneVmstatLine(line):  # TODO use COPY or prepared statements
     time, lineDict = parseVmstatLineToDict(line)
     if lineDict and time:
         logging.info('storing line: %s', lineDict)
-        executeSQL(sqlInsert, (time, args.pgwatch2_dbname, psycopg2.extras.Json(lineDict), psycopg2.extras.Json(args.pgwatch2_tag_data) if args.pgwatch2_tag_data else None, time, args.pgwatch2_dbname), connection=metricsDBConn, async_commit=True)
+        ensureSubpartition(args.pgwatch2_dbname, time)
+        executeSQL(sqlInsert, (time, args.pgwatch2_dbname, psycopg2.extras.Json(lineDict), args.pgwatch2_tag_data, time, args.pgwatch2_dbname), connection=metricsDBConn, async_commit=True)
 
 
 if __name__ == '__main__':
