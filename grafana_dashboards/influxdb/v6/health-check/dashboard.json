@@ -3677,7 +3677,7 @@
         {
           "targetBlank": true,
           "title": "DB overview",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=9&fullscreen"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=18&fullscreen"
         }
       ],
       "mappingType": 1,

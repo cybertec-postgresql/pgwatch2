@@ -315,7 +315,13 @@
       "hideTimeOverride": true,
       "id": 44,
       "interval": null,
-      "links": [],
+      "links": [
+        {
+          "targetBlank": true,
+          "title": "Postgres Version Overview",
+          "url": "/dashboard/db/postgres-version-overview?$__all_variables"
+        }
+      ],
       "mappingType": 1,
       "mappingTypes": [
         {
@@ -3452,7 +3458,7 @@
         {
           "targetBlank": true,
           "title": "DB overview",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=9&fullscreen"
+          "url": "/dashboard/db/db-overview?$__all_variables&panelId=19&fullscreen"
         }
       ],
       "mappingType": 1,
