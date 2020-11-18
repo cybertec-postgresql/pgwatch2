@@ -869,10 +869,10 @@
       ],
       "datasource": null,
       "decimals": 1,
-      "description": "Last CPU load_5 value. NB! Requires get_load_average() function making use of PL/Pythonu",
+      "description": "Percentage of rows touched by queries that are actually returned to the client. Low numbers (< 10%) for an OLTP workload can hint at missing indexes",
       "editable": true,
       "error": false,
-      "format": "none",
+      "format": "percent",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -926,7 +926,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "alias": "load_5",
+          "alias": "",
           "dsType": "influxdb",
           "groupBy": [
             {
@@ -942,18 +942,18 @@
               "type": "fill"
             }
           ],
-          "measurement": "cpu_load",
+          "measurement": "db_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT \"load_5\"  FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter GROUP BY time(1h) fill(none)",
-          "rawQuery": false,
+          "query": "SELECT  non_negative_derivative(mean(\"tup_fetched\")) / non_negative_derivative(mean(\"tup_returned\")) * 100 FROM \"db_stats\" WHERE \"dbname\" =~ /^$dbname$/ AND  $timeFilter GROUP BY time($agg_interval) fill(none)",
+          "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "load_5min"
+                  "tup_fetched"
                 ],
                 "type": "field"
               },
@@ -975,7 +975,7 @@
       "thresholds": "",
       "timeFrom": "6h",
       "timeShift": null,
-      "title": "CPU Load Avg.",
+      "title": "Tuples fetched vs returned",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [

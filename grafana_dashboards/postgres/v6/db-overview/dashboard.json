@@ -954,10 +954,10 @@
       ],
       "datasource": null,
       "decimals": 1,
-      "description": "Last CPU load_5 value + 6h history. NB! Requires get_load_average() function making use of PL/Pythonu",
+      "description": "Percentage of rows touched by queries that are actually returned to the client. Low numbers (< 10%) for an OLTP workload can hint at missing indexes",
       "editable": true,
       "error": false,
-      "format": "none",
+      "format": "percent",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -1034,7 +1034,7 @@
           "policy": "default",
           "query": "",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  avg((data->>'load_5min')::numeric)\nFROM\n  cpu_load\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY 1\nORDER BY 1\n",
+          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  100 * avg((fetched - fetched_lag)::numeric / (returned - returned_lag)) as fetched_vs_returned_pct\nFROM (\n\nSELECT\n  time,\n  (data->'tup_fetched')::int8 as fetched,\n  lag((data->'tup_fetched')::int8) over w as fetched_lag,\n  (data->'tup_returned')::int8 as returned,\n  lag((data->'tup_returned')::int8) over w as returned_lag\nFROM\n  db_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nWINDOW w AS (ORDER BY time)\n) x  \nWHERE returned > returned_lag AND fetched >= fetched_lag\nGROUP BY 1\nORDER BY 1\n\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1071,7 +1071,7 @@
       "thresholds": "",
       "timeFrom": "6h",
       "timeShift": null,
-      "title": "CPU Load Avg.",
+      "title": "Tuples fetched vs returned",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -2392,7 +2392,6 @@
         "auto_min": "10s",
         "current": {
           "selected": false,
-          "tags": [],
           "text": "5m",
           "value": "5m"
         },
