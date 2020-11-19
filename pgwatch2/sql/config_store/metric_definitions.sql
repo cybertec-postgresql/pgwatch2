@@ -6178,6 +6178,21 @@ true
 );
 
 
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'vmstat',
+9.1,
+$sql$
+SELECT
+    (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+    r, b, swpd, free, buff, cache, si, so, bi, bo, "in", cs, us, sy, id, wa, st, cpu_count, load_1m, load_5m, load_15m, total_memory
+from
+    get_vmstat();
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
+);
+
+
 /* Metric attributes */
 -- truncate pgwatch2.metric_attribute;
 
