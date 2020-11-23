@@ -174,7 +174,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  1000 * avg((data->'bi')::int8) as bi,\n  1000 * avg((data->'bo')::int8) as bo\nFROM\n  vmstat\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY 1\nORDER BY 1\n",
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  avg((data->'bi')::int8) as bi,\n  avg((data->'bo')::int8) as bo\nFROM\n  vmstat\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY 1\nORDER BY 1\n",
           "refId": "A",
           "select": [
             [
@@ -284,7 +284,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  1000 * avg((data->'si')::int8) as si,\n  1000 * avg((data->'so')::int8) as so\nFROM\n  vmstat\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY 1\nORDER BY 1\n",
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  avg((data->'si')::int8) as si,\n  avg((data->'so')::int8) as so\nFROM\n  vmstat\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY 1\nORDER BY 1\n",
           "refId": "A",
           "select": [
             [
@@ -394,7 +394,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  1000 * avg((data->'free')::int8) as free,\n  1000 * avg((data->'buff')::int8) as buff,\n  1000 * avg((data->'cache')::int8) as cache,\n  1000 * avg((data->'swpd')::int8) as swpd\nFROM\n  vmstat\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY 1\nORDER BY 1\n",
+          "rawSql": "SELECT\n  $__timeGroup(time, $agg_interval),\n  avg((data->'free')::int8) as free,\n  avg((data->'buff')::int8) as buff,\n  avg((data->'cache')::int8) as cache,\n  avg((data->'swpd')::int8) as swpd\nFROM\n  vmstat\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY 1\nORDER BY 1\n",
           "refId": "A",
           "select": [
             [

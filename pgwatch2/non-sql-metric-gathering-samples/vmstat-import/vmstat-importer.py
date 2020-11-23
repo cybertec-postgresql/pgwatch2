@@ -10,11 +10,13 @@ import logging
 
 
 PGWATCH2_METRIC_NAME = 'vmstat'
+VMSTAT_BYTE_UNITS = {'k': 1000, 'K': 1024, 'm': 1000000, 'M': 1048576}
 
 args = None  # cmd. line input params
 timezone = None
 linesProcessed = 0
 metricsDBConn = None  # re-use conn if inputting a file
+vmstatBlockBytes = 1024
 
 
 def getPGConnection(autocommit=True):
@@ -109,14 +111,14 @@ procs -----------------------memory---------------------- ---swap-- -----io---- 
     time = splits[17] + ' ' + splits[18] + ' ' + timezone
     ret['r'] = int(splits[0])
     ret['b'] = int(splits[1])
-    ret['swpd'] = int(splits[2])
-    ret['free'] = int(splits[3])
-    ret['buff'] = int(splits[4])
-    ret['cache'] = int(splits[5])
-    ret['si'] = int(splits[6])
-    ret['so'] = int(splits[7])
-    ret['bi'] = int(splits[8])
-    ret['bo'] = int(splits[9])
+    ret['swpd'] = int(splits[2]) * vmstatBlockBytes
+    ret['free'] = int(splits[3]) * vmstatBlockBytes
+    ret['buff'] = int(splits[4]) * vmstatBlockBytes
+    ret['cache'] = int(splits[5]) * vmstatBlockBytes
+    ret['si'] = int(splits[6]) * vmstatBlockBytes
+    ret['so'] = int(splits[7]) * vmstatBlockBytes
+    ret['bi'] = int(splits[8]) * vmstatBlockBytes
+    ret['bo'] = int(splits[9]) * vmstatBlockBytes
     ret['in'] = int(splits[10])
     ret['cs'] = int(splits[11])
     ret['us'] = int(splits[12])
@@ -143,6 +145,7 @@ if __name__ == '__main__':
     argp.add_argument('-f', '--file', dest='file', required=True, help='''Path to the vmstat log file or '-' for stdin piping''')
     argp.add_argument('--pgwatch2-dbname', dest='pgwatch2_dbname', required=True, help='''The host name / unique DB name on pgwatch2 side''')
     argp.add_argument('--pgwatch2-tag-data', dest='pgwatch2_tag_data', default=None, help='''In JSON format''')
+    argp.add_argument('--vmstat-unit', dest='vmstat_unit', default='K', help='''Vmstat -S / --unit parameter. Default is 'K' ~ 1024 bytes per reported block''')
     # pgwatch2 metrics DB connect info
     argp.add_argument('-H', '--host', dest='host', default='localhost')
     argp.add_argument('-d', '--dbname', dest='dbname', required=True)
@@ -155,6 +158,12 @@ if __name__ == '__main__':
         args.user = os.getenv('PGUSER')
         if not args.user:
             args.user = os.getenv('USER')
+    if args.vmstat_unit and not args.vmstat_unit in VMSTAT_BYTE_UNITS:
+        print('--vmstat-unit must be one of:', VMSTAT_BYTE_UNITS.keys())
+        exit(1)
+    else:
+        global vmstat_block_bytes
+        vmstatBlockBytes = VMSTAT_BYTE_UNITS[args.vmstat_unit]
 
     logging.basicConfig(format='%(asctime)s %(message)s', level=(logging.DEBUG if args.verbose else logging.WARNING))
 
