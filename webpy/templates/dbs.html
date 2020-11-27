@@ -77,12 +77,12 @@
             <tr>
                 <td>ID</td>
                 <td title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data). Will be used as prefix during DB discovery mode">Unique name</td>
-                <td title="NB! For 'pgbouncer' insert the 'to be monitored' pool name to 'dbname' field. For dbtype='postgres-continuous-discovery|patroni-continuous-discovery' one can also specify regex inclusion/exclusion patterns. For 'patroni' host/port are not used as it's read from DCS (specify DCS info under 'Host config')">DB type</td>
+                <td title="NB! For 'pgbouncer' insert the 'to be monitored' pool name to 'dbname' field. For 'discovery' DB types one can also specify regex inclusion/exclusion patterns. For 'patroni' host/port are not used as it's read from DCS (specify DCS info under 'Host config')">DB type</td>
                 <td>DB host</td>
                 <td>DB port</td>
-                <td title="If left empty, all non-template DBs found from the cluster will be added to monitoring (if not already monitored), prefixed with the 'Unique name'. For 'pgbouncer' DB type insert the 'pool' name. Not relevant for 'postgres-continuous-discovery'">DB dbname <span class="glyphicon glyphicon-info-sign" title="If left empty, all non-template DBs found from the cluster will be added to monitoring (if not already monitored), prefixed with the 'Unique name'. For 'pgbouncer' DB type insert the 'pool' name. Not relevant for 'postgres-continuous-discovery'."></span></td>
-                <td title="POSIX regex input. Relevant only for dbtype=postgres-continuous-discovery|patroni-continuous-discovery">DB name inclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=postgres-continuous-discovery"></span></td>
-                <td title="POSIX regex input. Relevant only for dbtype=postgres-continuous-discovery|patroni-continuous-discovery">DB name exclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for dbtype=postgres-continuous-discovery"></span></td>
+                <td title="If left empty, all non-template DBs found from the cluster will be added to monitoring (if not already monitored), prefixed with the 'Unique name'. For 'pgbouncer' DB type insert the 'pool' name. Not relevant for 'postgres-continuous-discovery'">DB dbname <span class="glyphicon glyphicon-info-sign" title="If left empty, all non-template DBs found from the cluster will be added to monitoring (if not already monitored), prefixed with the 'Unique name'. For 'pgbouncer' DB type insert the 'pool' name. Not relevant for 'discovery' DB types."></span></td>
+                <td title="POSIX regex input. Relevant only for 'discovery' DB types">DB name inclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for 'discovery' DB types"></span></td>
+                <td title="POSIX regex input. Relevant only for 'discovery' DB types">DB name exclusion pattern<span class="glyphicon glyphicon-info-sign" title="POSIX regex input. Relevant only for 'discovery' DB types"></span></td>
                 <td title="The login role for actual metrics fetching from the specified host">DB user</td>
                 <td title="NB! By default password is stored in plain-text in the database">DB password</td>
                 <td title="NB! To use, an identical cipher key(file) must be used to launch the Web UI and the Gatherer">Password encryption<span class="glyphicon glyphicon-info-sign" title="To use, an identical cipher key(file) must be used to launch the Web UI and the Gatherer"></span></td>
@@ -120,6 +120,7 @@
                             <option value="pgpool"{% if row['md_dbtype'] == "pgpool" %}selected{% endif %}>pgpool</option>
                             <option value="patroni"{% if row['md_dbtype'] == "patroni" %}selected{% endif %}>patroni</option>
                             <option value="patroni-continuous-discovery"{% if row['md_dbtype'] == "patroni-continuous-discovery" %}selected{% endif %}>patroni-continuous-discovery</option>
+                            <option value="patroni-namespace-discovery"{% if row['md_dbtype'] == "patroni-namespace-discovery" %}selected{% endif %}>patroni-namespace-discovery</option>
                         </select>
                     </td>
                     <td><input type="text" name="md_hostname" value="{{row['md_hostname']|e}}" size="10"></td>
@@ -195,6 +196,7 @@
                             <option value="pgpool">pgpool</option>
                             <option value="patroni">patroni</option>
                             <option value="patroni-continuous-discovery">patroni-continuous-discovery</option>
+                            <option value="patroni-namespace-discovery">patroni-namespace-discovery</option>
                         </select>
                     </td>
                     <td><input type="text" name="md_hostname" id="md_hostname" value="" size="10"></td>
@@ -400,7 +402,7 @@
                 alert("'Unique name' cannot be empty");
                 return false;
             }
-            if (hostname == null || !(hostname.trim() > '') && !(dbtype == "patroni" || dbtype == "patroni-continuous-discovery")) {
+            if (hostname == null || !(hostname.trim() > '') && !(dbtype == "patroni" || dbtype == "patroni-continuous-discovery" || dbtype == "patroni-namespace-discovery")) {
                 alert("'DB host' cannot be empty");
                 return false;
             }
@@ -412,7 +414,7 @@
                 alert("'DB name' cannot be filled for 'patroni-continuous-discovery'. Use regex patterns for limiting DB-s to be monitored");
                 return false;
             }
-            if (port == null || !(port.trim() > '') && !(dbtype == "patroni"  || dbtype == "patroni-continuous-discovery")) {
+            if (port == null || !(port.trim() > '') && !(dbtype == "patroni"  || dbtype == "patroni-continuous-discovery" || dbtype == "patroni-namespace-discovery")) {
                 alert("'DB port' cannot be empty");
                 return false;
             }
@@ -453,7 +455,7 @@
                 alert('NB! Preset Config set to "pgbouncer"');
             } else if ($(this).val() == 'postgres' || $(this).val() == 'postgres-continuous-discovery') {
                 $("#md_preset_config_name").val('');
-            } else if ($(this).val() == 'patroni' || $(this).val() == 'patroni-continuous-discovery') {
+            } else if ($(this).val() == 'patroni' || $(this).val() == 'patroni-continuous-discovery' || $(this).val() == 'patroni-namespace-discovery') {
                 alert('NB! "Host config" pre-filled with Etcd localhost values');
                 $("#md_port").val('');
                 $("#md_hostname").val('');

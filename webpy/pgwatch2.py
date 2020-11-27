@@ -293,7 +293,7 @@ def insert_monitored_db(params, cmd_args=None):
         else:
             params['md_password'] = crypto.encrypt(cmd_args.aes_gcm_keyphrase, password_plain)
 
-    if not params['md_dbname'] and params['md_dbtype'] not in ['postgres-continuous-discovery', 'patroni', 'patroni-continuous-discovery']:     # add all DBs found
+    if not params['md_dbname'] and params['md_dbtype'] not in ['postgres-continuous-discovery', 'patroni', 'patroni-continuous-discovery', 'patroni-namespace-discovery']:     # add all DBs found
         if params['md_dbtype'] == 'postgres':
             # get all active non-template DBs from the entered host
             active_dbs_on_host, err = datadb.executeOnRemoteHost(sql_active_dbs, host=params['md_hostname'], port=params['md_port'],

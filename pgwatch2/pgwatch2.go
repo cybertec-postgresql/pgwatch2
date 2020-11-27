@@ -746,7 +746,7 @@ func GetMonitoredDatabasesFromConfigDB() ([]MonitoredDatabase, error) {
 				temp_arr = append(temp_arr, rdb.DBName)
 			}
 			log.Debugf("Resolved %d DBs with prefix \"%s\": [%s]", len(resolved), md.DBUniqueName, strings.Join(temp_arr, ", "))
-		} else if md.DBType == DBTYPE_PATRONI || md.DBType == DBTYPE_PATRONI_CONT {
+		} else if md.DBType == DBTYPE_PATRONI || md.DBType == DBTYPE_PATRONI_CONT || md.DBType == DBTYPE_PATRONI_NAMESPACE_DISCOVERY {
 			resolved, err := ResolveDatabasesFromPatroni(md)
 			if err != nil {
 				log.Errorf("Failed to resolve DBs for \"%s\": %s", md.DBUniqueName, err)
