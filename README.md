@@ -69,6 +69,18 @@ Two most common deployment options are:
 
 ![Component diagram](https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgwatch2_architecture_push.png)
 
+# Metrics storage options
+
+For storing metrics collected by the pgwatch2 daemon there are quite some options available:
+
+* PostgreSQL - v11+ recommended. Multiple storage partitioning layouts available depending on the amount of servers to be monitored.
+* PostgreSQL with the TimescaleDB extension - offers good compression and generally recommended when monitoring 100+ databases.
+* InfluxDB - Time-Series optimized database. Note that the newly released v2.0 is not yet supported. Good Grafana integration but quite limited query language.
+* Prometheus - here the pgwatch2 daemon would not store anything directly but just expose an endpoint for remote scraping / storage via Prometheus.
+* Graphite - legacy support for Graphite. Not recommended anymore for new installations as it does not support the "tag" system.
+
+See the [documentation](https://pgwatch2.readthedocs.io/en/latest/components.html?highlight=timescale#metrics-storage-db) for more details.
+
 # Steps to configure your database for monitoring
 
 As a base requirement you'll need a login user (non-superuser suggested) for connecting to your PostgreSQL servers and fetching metrics queries.
