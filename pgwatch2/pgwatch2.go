@@ -4428,7 +4428,7 @@ func main() {
 		}
 
 		fileBased = true
-	} else {
+	} else if !adHocMode {
 		// make sure all PG params are there
 		if opts.User == "" {
 			opts.User = os.Getenv("USER")
