@@ -93,6 +93,8 @@ CREATE ROLE pgwatch2 WITH LOGIN PASSWORD 'secret';
 -- account used for monitoring can only open a limited number of connections (there are according checks in code also though)
 ALTER ROLE pgwatch2 CONNECTION LIMIT 3;
 GRANT pg_monitor TO pgwatch2;   -- system role available for v10+ servers to reduce superuser usage
+GRANT CONNECT ON DATABASE mydb TO pgwatch2;
+GRANT USAGE ON SCHEMA public TO pgwatch2; -- NB! pgwatch doesn't necessarily require using the public schema though!
 ```
 
 Additionally, for extra insights on "to be monitored" databases, it's recommended to install and activate the [pg_stat_statement](https://www.postgresql.org/docs/12/pgstatstatements.html)

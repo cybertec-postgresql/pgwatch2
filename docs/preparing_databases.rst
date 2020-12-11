@@ -35,6 +35,8 @@ SQL scripts (see below for explanation) accordingly, as in those by default the 
   -- (there are according checks in code, but multiple instances might be launched)
   ALTER ROLE pgwatch2 CONNECTION LIMIT 3;
   GRANT pg_monitor TO pgwatch2;   // v10+
+  GRANT CONNECT ON DATABASE mydb TO pgwatch2;
+  GRANT USAGE ON SCHEMA public TO pgwatch2; -- NB! pgwatch doesn't necessarily require using the public schema though!
 
 For most monitored databases it's extremely beneficial (to troubleshooting performance issues) to also activate the
 `pg\_stat\_statements <https://www.postgresql.org/docs/current/pgstatstatements.html>`__ extension which will give us exact "per query" performance aggregates and also enables to calculate
