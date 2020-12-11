@@ -126,7 +126,7 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
         cd /etc/pgwatch2/sql/metric_store
         psql -f roll_out_metric_time.sql pgwatch2_metrics
 
-      **NB! Default retention for Postgres storage is 2 weeks!** To change, use the ``--pg-retention-days / PW2_RETENTION_DAYS`` gatherer parameter.
+      **NB! Default retention for Postgres storage is 2 weeks!** To change, use the ``--pg-retention-days / PW2_PG_RETENTION_DAYS`` gatherer parameter.
 
 #. **Prepare the "to-be-monitored" databases for metrics collection**
 
