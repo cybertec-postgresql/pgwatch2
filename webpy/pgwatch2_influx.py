@@ -96,10 +96,14 @@ def exec_for_time_pairs(isql, dbname, pairs, decimal_digits=2):
             continue
         sum = 0
         count = 0
-        for values in res.raw['series'][0]['values']:
-            sum += values[1]
-            count += 1
-        ret.append(round(sum / float(count), decimal_digits))
+        try:
+            for values in res.raw['series'][0]['values']:
+                sum += values[1]
+                count += 1
+            ret.append(round(sum / float(count), decimal_digits))
+        except:
+            logging.exception('skipping un-expected Influx resultset row')
+            ret.append('-')
     return ret
 
 
