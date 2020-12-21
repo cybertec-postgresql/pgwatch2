@@ -1,6 +1,10 @@
 from datetime import datetime
 from datetime import timedelta
-from influxdb import InfluxDBClient
+try:
+    import influxdb
+    from influxdb import InfluxDBClient
+except:
+    print('Could not import InfluxDBClient - expected if using Postgres metric storage')
 import logging
 
 STATEMENT_SORT_COLUMNS = ['total_time', 'mean_time', 'calls', 'shared_blks_hit', 'shared_blks_read', 'shared_blks_written',
@@ -37,13 +41,16 @@ def influx_query(influxql, params=None):
 
 
 def get_active_dbnames():
-    iql = '''SHOW TAG VALUES WITH KEY = "dbname"'''
-    res = influx_query(iql)
-    dbnames = set()
-    for s in res.raw.get('series', []):
-        for db in s['values']:
-            dbnames.add(db[1])
-    return sorted(list(dbnames))
+    try:
+        iql = '''SHOW TAG VALUES WITH KEY = "dbname"'''
+        res = influx_query(iql)
+        dbnames = set()
+        for s in res.raw.get('series', []):
+            for db in s['values']:
+                dbnames.add(db[1])
+        return sorted(list(dbnames))
+    except (requests.exceptions.ConnectionError, influxdb.exceptions.InfluxDBClientError):
+        raise Exception('ERROR getting DB listing from metrics DB: Could not connect to InfluxDB')
 
 
 def delete_influx_data_single(db_unique):

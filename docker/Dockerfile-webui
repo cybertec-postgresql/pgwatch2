@@ -11,7 +11,8 @@ ADD webpy /pgwatch2/webpy
 ADD docker/launch-wrapper-webui.sh /pgwatch2
 
 # Get Web UI requirements
-RUN pip3 install -r /pgwatch2/webpy/requirements.txt \
+RUN pip3 install -r /pgwatch2/webpy/requirements_pg_metrics.txt \
+    && pip3 install -r /pgwatch2/webpy/requirements_influx_metrics.txt \
     && chgrp -R 0 /pgwatch2 \
     && chmod -R g=u /pgwatch2 \
     && mkdir /pgwatch2/persistent-config \

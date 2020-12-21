@@ -9,7 +9,6 @@ from pathlib import Path
 import cherrypy
 import time
 import datadb
-import influxdb
 import pgwatch2_influx
 import psycopg2
 import requests
@@ -156,9 +155,9 @@ class Root:
 
         try:
             active_dbnames = pgwatch2_influx.get_active_dbnames() if cmd_args.datastore == 'influx' else pgwatch2.get_all_dbnames()
-        except (requests.exceptions.ConnectionError, influxdb.exceptions.InfluxDBClientError):
-            logging.exception('ERROR getting DB listing from metrics DB: Could not connect to InfluxDB')
-            messages.append('ERROR getting DB listing from metrics DB: Could not connect to InfluxDB')
+        except Exception as e:
+            logging.exception(e)
+            messages.append(str(e))
         except Exception as e:
             logging.exception('ERROR getting DB listing from metrics DB')
             messages.append('ERROR getting DB listing from metrics DB: ' + str(e))
@@ -411,6 +410,7 @@ if __name__ == '__main__':
         if err:
             logging.warning("metrics DB connection test failed: %s", err)
     elif cmd_args.datastore == 'influx':
+        import influxdb
         pgwatch2_influx.influx_set_connection_params(cmd_args.influx_host, cmd_args.influx_port, cmd_args.influx_user,
                                                      cmd_args.influx_password, cmd_args.influx_database, cmd_args.influx_require_ssl)
 
