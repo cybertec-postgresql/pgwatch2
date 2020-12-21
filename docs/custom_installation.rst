@@ -151,8 +151,8 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
          # first we need Python 3 and "pip" - the Python package manager
          sudo apt install python3 python3-pip
          cd /etc/pgwatch2/webpy/
-         sudo pip3 install -U -r requirements.txt
-         # NB! Feel free to remove "influxdb" package from the file if using only Postgres storage
+         sudo pip3 install -U -r requirements_pg_metrics.txt
+         # NB! Replace with "requirements_influx_metrics.txt" if using InfluxDB to store metrics
 
    #. Exposing component logs (optional)
 
