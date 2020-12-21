@@ -4881,6 +4881,7 @@ func main() {
 				time.Sleep(time.Second * 1)
 			}
 		}
+
 		// loop over existing channels and stop workers if DB or metric removed from config
 		log.Debug("checking if any workers need to be shut down...")
 		control_channel_list := make([]string, len(control_channels))
@@ -4891,36 +4892,43 @@ func main() {
 		}
 		gatherers_shut_down := 0
 
-	next_chan:
 		for _, db_metric := range control_channel_list {
 			splits := strings.Split(db_metric, ":")
 			db := splits[0]
 			metric := splits[1]
+			var currentMetricConfig map[string]float64
+			singleMetricDisabled := false
 
-			_, ok := hostsToShutDownDueToRoleChange[db]
-
-			if !ok { // maybe some single metric was disabled
-				for _, host := range monitored_dbs {
-					if host.DBUniqueName == db {
-						metricConfig := metric_config
-
-						for metric_key := range metricConfig {
-							if metric_key == metric && metricConfig[metric_key] > 0 {
-								continue next_chan
-							}
-						}
-					}
+			_, wholeDbShutDown := hostsToShutDownDueToRoleChange[db]
+			if !wholeDbShutDown {	// maybe some single metric was disabled
+				db_pg_version_map_lock.RLock()
+				monitored_db_cache_lock.RLock()
+				if db_pg_version_map[db].IsInRecovery {
+					currentMetricConfig = monitored_db_cache[db].MetricsStandby
+				} else {
+					currentMetricConfig	= monitored_db_cache[db].Metrics
 				}
+				db_pg_version_map_lock.RUnlock()
+				monitored_db_cache_lock.RUnlock()
 			}
-			log.Infof("shutting down gatherer for [%s:%s] ...", db, metric)
-			control_channels[db_metric] <- ControlMessage{Action: GATHERER_STATUS_STOP}
-			delete(control_channels, db_metric)
-			log.Debugf("control channel for [%s:%s] deleted", db, metric)
-			gatherers_shut_down++
+
+			interval, isMetricActive := currentMetricConfig[metric]
+			if !isMetricActive || interval <= 0 {
+				singleMetricDisabled = true
+			}
+
+			if wholeDbShutDown || singleMetricDisabled {
+				log.Infof("shutting down gatherer for [%s:%s] ...", db, metric)
+				control_channels[db_metric] <- ControlMessage{Action: GATHERER_STATUS_STOP}
+				delete(control_channels, db_metric)
+				log.Debugf("control channel for [%s:%s] deleted", db, metric)
+				gatherers_shut_down++
+			}
 		}
 		if gatherers_shut_down > 0 {
 			log.Warningf("sent STOP message to %d gatherers (it might take some minutes for them to stop though)", gatherers_shut_down)
 		}
+
 		log.Debugf("main sleeping %ds...", opts.ServersRefreshLoopSeconds)
 		time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
 	}
