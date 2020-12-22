@@ -39,7 +39,7 @@ Main changes:
 * Docker component update - Go 1.15.6.
 
 This release added 1 SQL diff to be applied for Config DB based setups:
-https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/config_store/migrations/v1.8.2-1_standby_config.sql
+https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/config_store/migrations/v1.8.2-1_patroni_namespace_discovery.sql
 
 
 ## v1.8.1 [2020-10-22]
