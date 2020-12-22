@@ -442,7 +442,7 @@
                 alert("'Unique name' can only start with a letter or underscore");
                 return false;
             }
-            if (db_unique.match(/[^\d\w_]/)) {
+            if (db_unique.match(/[^\d\w_@]/)) {
                 alert("'Unique name' can only contain letters, digits and underscores");
                 return false;
             }
