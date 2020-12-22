@@ -7,7 +7,7 @@ $$
 from os import getloadavg
 la = getloadavg()
 return [la[0], la[1], la[2]]
-$$ LANGUAGE plpython3u VOLATILE SECURITY DEFINER;
+$$ LANGUAGE plpython3u VOLATILE;
 
 GRANT EXECUTE ON FUNCTION get_load_average() TO pgwatch2;
 

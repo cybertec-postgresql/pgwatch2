@@ -4535,7 +4535,7 @@ $$
 from os import getloadavg
 la = getloadavg()
 return [la[0], la[1], la[2]]
-$$ LANGUAGE plpython3u VOLATILE SECURITY DEFINER;
+$$ LANGUAGE plpython3u VOLATILE;
 
 GRANT EXECUTE ON FUNCTION get_load_average() TO pgwatch2;
 
@@ -4949,7 +4949,6 @@ CREATE OR REPLACE FUNCTION get_psutil_cpu(
     OUT "user" float8, OUT system float8, OUT idle float8, OUT iowait float8, OUT irqs float8, OUT other float8
 )
  LANGUAGE plpython3u
- SECURITY DEFINER
 AS $FUNCTION$
 
 from os import getloadavg
@@ -5014,7 +5013,6 @@ CREATE OR REPLACE FUNCTION get_psutil_mem(
 	OUT swap_total float8, OUT swap_used float8, OUT swap_free float8, OUT swap_percent float8
 )
  LANGUAGE plpython3u
- SECURITY DEFINER
 AS $FUNCTION$
 from psutil import virtual_memory, swap_memory
 vm = virtual_memory()
@@ -5148,7 +5146,6 @@ CREATE OR REPLACE FUNCTION get_psutil_disk_io_total(
 	OUT read_count float8, OUT write_count float8, OUT read_bytes float8, OUT write_bytes float8
 )
  LANGUAGE plpython3u
- SECURITY DEFINER
 AS $FUNCTION$
 from psutil import disk_io_counters
 dc = disk_io_counters(perdisk=False)

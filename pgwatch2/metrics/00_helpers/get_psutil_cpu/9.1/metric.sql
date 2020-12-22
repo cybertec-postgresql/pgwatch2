@@ -9,7 +9,6 @@ CREATE OR REPLACE FUNCTION get_psutil_cpu(
     OUT "user" float8, OUT system float8, OUT idle float8, OUT iowait float8, OUT irqs float8, OUT other float8
 )
  LANGUAGE plpython3u
- SECURITY DEFINER
 AS $FUNCTION$
 
 from os import getloadavg

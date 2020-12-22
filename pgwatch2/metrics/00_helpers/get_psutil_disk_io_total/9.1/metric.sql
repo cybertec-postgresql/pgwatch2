@@ -5,7 +5,6 @@ CREATE OR REPLACE FUNCTION get_psutil_disk_io_total(
 	OUT read_count float8, OUT write_count float8, OUT read_bytes float8, OUT write_bytes float8
 )
  LANGUAGE plpython3u
- SECURITY DEFINER
 AS $FUNCTION$
 from psutil import disk_io_counters
 dc = disk_io_counters(perdisk=False)

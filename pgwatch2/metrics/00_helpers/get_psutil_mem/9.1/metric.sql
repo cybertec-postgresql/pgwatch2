@@ -6,7 +6,6 @@ CREATE OR REPLACE FUNCTION get_psutil_mem(
 	OUT swap_total float8, OUT swap_used float8, OUT swap_free float8, OUT swap_percent float8
 )
  LANGUAGE plpython3u
- SECURITY DEFINER
 AS $FUNCTION$
 from psutil import virtual_memory, swap_memory
 vm = virtual_memory()
