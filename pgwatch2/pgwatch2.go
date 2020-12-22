@@ -4208,6 +4208,13 @@ func SyncMonitoredDBsToDatastore(monitored_dbs []MonitoredDatabase, persistence_
 	}
 }
 
+func CheckFolderExistAndReadable(path string) bool {
+	if _, err := ioutil.ReadDir(path); err != nil {
+		return false
+	}
+	return true
+}
+
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
@@ -4428,7 +4435,11 @@ func main() {
 		}
 
 		fileBased = true
-	} else if !adHocMode {
+	} else if adHocMode && (len(opts.MetricsFolder) == 0 && CheckFolderExistAndReadable("/etc/pgwatch2/metrics")) {
+		// don't need the Config DB connection actually for ad-hoc mode if metric definitions are there
+		opts.MetricsFolder = "/etc/pgwatch2/metrics" // prebuilt packages / Docker default location
+		log.Infof("--metrics-folder path not specified, using %s", opts.MetricsFolder)
+	} else {	// normal "Config DB" mode
 		// make sure all PG params are there
 		if opts.User == "" {
 			opts.User = os.Getenv("USER")
