@@ -4,3 +4,4 @@ psycopg2-binary
 influxdb
 decorator
 cryptography
+requests
