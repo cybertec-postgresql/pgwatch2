@@ -10,6 +10,38 @@ or a specific version
 
 ```docker run -d -p 3000:3000 -p 8080:8080 --name pw2 cybertec/pgwatch2:x.y.z```
 
+## Notice on updating old setups
+
+When migrating existing "config DB" based setups, all previous schema migration diffs with bigger version numbers need to be
+applied first from the "pgwatch2/sql/config_store/migrations/" (or /etc/pgwatch2/sql/config_store/migrations/ if using
+ther pre-built packages) folder. Also it is highly recommended to refresh all the metric definitions as they're constantly improved.
+For that there's also a refresh_metrics_from_github.sh script provided. YAML based setups don't need any extra actions besides
+refreshing from Git or installing the new RPM / DEB / Tar packages.
+
+
+## v1.8.2 [2020-12-22]
+
+Main changes:
+
+* Gatherer fix - avoid unnecessary internal restarts of metrics gathering introduced in v1.8.1. Was causing much bigger metric volumes than usual.
+* Metrics fix - remove "spill_bytes" from v13 "replication" metric as it didn't make it into the final Postgres release.
+* New feature - support automatic monitoring of whole Patroni "namespaces" with DB type "patroni-namespace-discovery". NB! Only when "etcd" is used as DCS.
+* New dashboard - "Table details time lag" to visually compare table access pattern from two time ranges.
+* Gatherer improvement - do not connect to config DB in adhoc mode as it's not really not needed.
+* Gatherer improvement - add "totalMetricFetchFailuresCounter" to the Stats / Health-check port output.
+* Postgres metrics DB - try per-table dropping of old data partitions first, to reduce the chance of running out of locks.
+* Web UI improvement - don't require the InfluxDB driver when using Postgres metrics storage.
+* Web UI - "stats-summary" page corrections. Note that the page is only for quick verification that metrics are being gathered and deprecated.
+* Metrics DB - correct a typo in the TimescaleDB rollout script.
+* Metrics - add new metric + helper 'vmstat'.
+* Metric helpers - more secure helpers, removing SECURITY DEFINER where not critically needed
+* Dashboards - "DB Overview": replace "CPU load" which is not available with tup_fetched vs tup_returned ratio.
+* Docker component update - Go 1.15.6.
+
+This release added 1 SQL diff to be applied for Config DB based setups:
+https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/config_store/migrations/v1.8.2-1_standby_config.sql
+
+
 ## v1.8.1 [2020-10-22]
 
 Main changes:
