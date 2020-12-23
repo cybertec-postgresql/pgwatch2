@@ -133,7 +133,7 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 	}
 	kapi := client.NewKeysAPI(c)
 
-	if database.DBType == DBTYPE_PATRONI_NAMESPACE_DISCOVERY {	// all scopes, all DBs (regex filtering applies if defined)
+	if database.DBType == DBTYPE_PATRONI_NAMESPACE_DISCOVERY { // all scopes, all DBs (regex filtering applies if defined)
 		if len(database.DBName) > 0 {
 			log.Errorf("Skipping Patroni entry %s - cannot specify a DB name when monitoring all scopes (regex patterns are supported though)", database.DBUniqueName)
 			return ret, errors.New(fmt.Sprintf("Skipping Patroni entry %s - cannot specify a DB name when monitoring all scopes (regex patterns are supported though)", database.DBUniqueName))
@@ -151,7 +151,7 @@ func EtcdGetClusterMembers(database MonitoredDatabase) ([]PatroniClusterMember, 
 
 		for _, node := range resp.Node.Nodes {
 			log.Errorf("[%s] Patroni namespace discovery - found a scope from etcd: %+v", database.DBUniqueName, node.Key)
-			scope := path.Base(node.Key)	// Key="/service/batman"
+			scope := path.Base(node.Key) // Key="/service/batman"
 			scopeMembers, err := extractEtcdScopeMembers(database, scope, kapi, true)
 			if err != nil {
 				continue

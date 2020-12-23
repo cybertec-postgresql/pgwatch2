@@ -116,10 +116,10 @@ type MetricAttrs struct {
 	IsInstanceLevel           bool                 `yaml:"is_instance_level"`
 	MetricStorageName         string               `yaml:"metric_storage_name"`
 	ExtensionVersionOverrides []ExtensionOverrides `yaml:"extension_version_based_overrides"`
-	IsPrivate                 bool                 `yaml:"is_private"`     // used only for extension overrides currently and ignored otherwise
-	DisabledDays              string               `yaml:"disabled_days"`  // Cron style, 0 = Sunday. Ranges allowed: 0,2-4
-	DisableTimes              []string             `yaml:"disabled_times"` // "11:00-13:00"
-	StatementTimeoutSeconds   int64                `yaml:"statement_timeout_seconds"`	// overrides per monitored DB settings
+	IsPrivate                 bool                 `yaml:"is_private"`                // used only for extension overrides currently and ignored otherwise
+	DisabledDays              string               `yaml:"disabled_days"`             // Cron style, 0 = Sunday. Ranges allowed: 0,2-4
+	DisableTimes              []string             `yaml:"disabled_times"`            // "11:00-13:00"
+	StatementTimeoutSeconds   int64                `yaml:"statement_timeout_seconds"` // overrides per monitored DB settings
 }
 
 type MetricVersionProperties struct {
@@ -137,12 +137,12 @@ type ControlMessage struct {
 }
 
 type MetricFetchMessage struct {
-	DBUniqueName     string
-	DBUniqueNameOrig string
-	MetricName       string
-	DBType           string
-	Interval         time.Duration
-	CreatedOn        time.Time
+	DBUniqueName        string
+	DBUniqueNameOrig    string
+	MetricName          string
+	DBType              string
+	Interval            time.Duration
+	CreatedOn           time.Time
 	StmtTimeoutOverride int64
 }
 
@@ -579,7 +579,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 		if stmtTimeoutOverride > 0 {
 			stmtTimeout = stmtTimeoutOverride
 		}
-		if stmtTimeout > 0 {	// 0 = don't change, use DB level settings
+		if stmtTimeout > 0 { // 0 = don't change, use DB level settings
 			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", stmtTimeout))
 		}
 		if err != nil {
@@ -1128,14 +1128,14 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 func OldPostgresMetricsDeleter(metricAgeDaysThreshold int64, schemaType string) {
 	sqlDoesOldPartListingFuncExist := `SELECT count(*) FROM information_schema.routines WHERE routine_schema = 'admin' AND routine_name = 'get_old_time_partitions'`
 	oldPartListingFuncExists := false // if func existing (>v1.8.1) then use it to drop old partitions in smaller batches
-											// as for large setup (50+ DBs) one could reach the default "max_locks_per_transaction" otherwise
+	// as for large setup (50+ DBs) one could reach the default "max_locks_per_transaction" otherwise
 
 	ret, err := DBExecRead(metricDb, METRICDB_IDENT, sqlDoesOldPartListingFuncExist)
 	if err == nil && len(ret) > 0 && ret[0]["count"].(int64) > 0 {
 		oldPartListingFuncExists = true
 	}
 
-	time.Sleep(time.Hour * 1)	// to reduce distracting log messages at startup
+	time.Sleep(time.Hour * 1) // to reduce distracting log messages at startup
 
 	for {
 		// metric|metric-time|metric-dbname-time|custom
@@ -4439,7 +4439,7 @@ func main() {
 		// don't need the Config DB connection actually for ad-hoc mode if metric definitions are there
 		opts.MetricsFolder = "/etc/pgwatch2/metrics" // prebuilt packages / Docker default location
 		log.Infof("--metrics-folder path not specified, using %s", opts.MetricsFolder)
-	} else {	// normal "Config DB" mode
+	} else { // normal "Config DB" mode
 		// make sure all PG params are there
 		if opts.User == "" {
 			opts.User = os.Getenv("USER")
@@ -4911,13 +4911,13 @@ func main() {
 			singleMetricDisabled := false
 
 			_, wholeDbShutDown := hostsToShutDownDueToRoleChange[db]
-			if !wholeDbShutDown {	// maybe some single metric was disabled
+			if !wholeDbShutDown { // maybe some single metric was disabled
 				db_pg_version_map_lock.RLock()
 				monitored_db_cache_lock.RLock()
 				if db_pg_version_map[db].IsInRecovery {
 					currentMetricConfig = monitored_db_cache[db].MetricsStandby
 				} else {
-					currentMetricConfig	= monitored_db_cache[db].Metrics
+					currentMetricConfig = monitored_db_cache[db].Metrics
 				}
 				db_pg_version_map_lock.RUnlock()
 				monitored_db_cache_lock.RUnlock()
