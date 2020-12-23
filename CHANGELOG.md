@@ -18,6 +18,12 @@ ther pre-built packages) folder. Also it is highly recommended to refresh all th
 For that there's also a refresh_metrics_from_github.sh script provided. YAML based setups don't need any extra actions besides
 refreshing from Git or installing the new RPM / DEB / Tar packages.
 
+## v1.8.3 [2020-12-23]
+
+Main changes:
+
+* Gatherer fix - avoid unnecessary internal restarts of metrics gathering introduced in v1.8.1. Was causing much bigger metric data volumes than usual.
+
 
 ## v1.8.2 [2020-12-22]
 
