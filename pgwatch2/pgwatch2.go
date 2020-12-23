@@ -4904,31 +4904,48 @@ func main() {
 		gatherers_shut_down := 0
 
 		for _, db_metric := range control_channel_list {
+			var currentMetricConfig map[string]float64
+			var dbInfo MonitoredDatabase
+			var ok, dbRemovedFromConfig bool
+			singleMetricDisabled := false
 			splits := strings.Split(db_metric, ":")
 			db := splits[0]
 			metric := splits[1]
-			var currentMetricConfig map[string]float64
-			singleMetricDisabled := false
+			//log.Debugf("Checking if need to shut down worker for [%s:%s]...", db, metric)
 
-			_, wholeDbShutDown := hostsToShutDownDueToRoleChange[db]
-			if !wholeDbShutDown { // maybe some single metric was disabled
-				db_pg_version_map_lock.RLock()
+			_, wholeDbShutDownDueToRoleChange := hostsToShutDownDueToRoleChange[db]
+			if !wholeDbShutDownDueToRoleChange {
 				monitored_db_cache_lock.RLock()
-				if db_pg_version_map[db].IsInRecovery {
-					currentMetricConfig = monitored_db_cache[db].MetricsStandby
-				} else {
-					currentMetricConfig = monitored_db_cache[db].Metrics
-				}
-				db_pg_version_map_lock.RUnlock()
+				dbInfo, ok = monitored_db_cache[db]
 				monitored_db_cache_lock.RUnlock()
+				if !ok { // normal removing of DB from config
+					dbRemovedFromConfig = true
+					log.Debugf("DB %s removed from config, shutting down all metric worker processes...", db)
+				}
 			}
 
-			interval, isMetricActive := currentMetricConfig[metric]
-			if !isMetricActive || interval <= 0 {
-				singleMetricDisabled = true
+			if !(wholeDbShutDownDueToRoleChange || dbRemovedFromConfig) { // maybe some single metric was disabled
+				db_pg_version_map_lock.RLock()
+				verInfo, ok := db_pg_version_map[db]
+				db_pg_version_map_lock.RUnlock()
+				if !ok {
+					log.Warningf("Could not find PG version info for DB %s, skipping shutdown check of metric worker process for %s", db, metric)
+					continue
+				}
+
+				if verInfo.IsInRecovery && len(dbInfo.MetricsStandby) > 0 {
+					currentMetricConfig = dbInfo.MetricsStandby
+				} else {
+					currentMetricConfig = dbInfo.Metrics
+				}
+
+				interval, isMetricActive := currentMetricConfig[metric]
+				if !isMetricActive || interval <= 0 {
+					singleMetricDisabled = true
+				}
 			}
 
-			if wholeDbShutDown || singleMetricDisabled {
+			if wholeDbShutDownDueToRoleChange || dbRemovedFromConfig || singleMetricDisabled {
 				log.Infof("shutting down gatherer for [%s:%s] ...", db, metric)
 				control_channels[db_metric] <- ControlMessage{Action: GATHERER_STATUS_STOP}
 				delete(control_channels, db_metric)
