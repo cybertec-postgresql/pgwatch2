@@ -244,6 +244,8 @@ var specialMetrics = map[string]bool{RECO_METRIC_NAME: true, SPECIAL_METRIC_CHAN
 var configDb *sqlx.DB
 var metricDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
+var graphite_host string
+var graphite_port int
 var log = logging.MustGetLogger("main")
 var metric_def_map map[string]map[decimal.Decimal]MetricVersionProperties
 var metric_def_map_lock = sync.RWMutex{}
@@ -1700,6 +1702,8 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 		} else if data_source == DATASTORE_POSTGRES {
 			err = SendToPostgres(msg)
 		} else if data_source == DATASTORE_GRAPHITE {
+			log.Info("Reconnect to graphite")
+			InitGraphiteConnection(graphite_host, graphite_port)
 			for _, m := range msg {
 				err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO add baching
 			}
@@ -4506,8 +4510,10 @@ func main() {
 			if opts.GraphiteHost == "" || opts.GraphitePort == "" {
 				log.Fatal("--graphite-host/port needed!")
 			}
-			graphite_port, _ := strconv.ParseInt(opts.GraphitePort, 10, 64)
-			InitGraphiteConnection(opts.GraphiteHost, int(graphite_port))
+			port, _ := strconv.ParseInt(opts.GraphitePort, 10, 64)
+			graphite_host = opts.GraphiteHost
+			graphite_port = int(port)
+			InitGraphiteConnection(graphite_host, graphite_port)
 			log.Info("starting GraphitePersister...")
 			go MetricsPersister(DATASTORE_GRAPHITE, persist_ch)
 		} else if opts.Datastore == DATASTORE_INFLUX {
