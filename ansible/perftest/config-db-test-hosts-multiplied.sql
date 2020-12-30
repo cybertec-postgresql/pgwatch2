@@ -29,9 +29,9 @@ $$ LANGUAGE sql;
 -- Need to get rid of the "duplicate hosts guard", that's normally desired
 DROP INDEX pgwatch2.monitored_db_md_hostname_md_port_md_dbname_md_is_enabled_idx;
 
-INSERT INTO pgwatch2.monitored_db (md_unique_name, md_preset_config_name, md_config, md_hostname, md_port, md_dbname, md_user, md_password, md_group, md_statement_timeout_seconds)
+INSERT INTO pgwatch2.monitored_db (md_unique_name, md_preset_config_name, md_config, md_hostname, md_port, md_dbname, md_user, md_password, md_group, md_statement_timeout_seconds, md_is_superuser)
 SELECT
-  'test_host_'||id||'_'|| get_entries_count_by_group(id::text) + 1, 'exhaustive', null, host, '5432', 'postgres', 'pgwatch2', 'perftesting', id, 10
+  'test_host_'||id||'_'|| get_entries_count_by_group(id::text) + 1, 'exhaustive', null, host, '5432', 'postgres', 'pgwatch2', 'perftesting', id, 10, true
 FROM
   pgwatch2.test_hosts,
   generate_series(1, cpus * 10) i
