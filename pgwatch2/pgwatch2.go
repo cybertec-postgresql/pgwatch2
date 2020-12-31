@@ -1702,10 +1702,12 @@ func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *li
 		} else if data_source == DATASTORE_POSTGRES {
 			err = SendToPostgres(msg)
 		} else if data_source == DATASTORE_GRAPHITE {
-			log.Info("Reconnect to graphite")
-			InitGraphiteConnection(graphite_host, graphite_port)
 			for _, m := range msg {
 				err = SendToGraphite(m.DBUniqueName, m.MetricName, m.Data) // TODO add baching
+				if err != nil {
+					log.Info("Reconnect to graphite")
+					InitGraphiteConnection(graphite_host, graphite_port)
+				}
 			}
 		} else {
 			log.Fatal("Invalid datastore:", data_source)
