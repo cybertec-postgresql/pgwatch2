@@ -70,7 +70,7 @@ replicaCount: 1
 
 image:
   repository: cybertec/pgwatch2-postgres
-  tag: 1.8.0
+  tag: 1.8.3
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
