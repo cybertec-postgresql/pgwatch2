@@ -12,6 +12,7 @@ RETURNS void AS
 $SQL$
 DECLARE
     r record;
+    l_timescale_version numeric;
 BEGIN
 
   INSERT INTO admin.config
@@ -25,8 +26,15 @@ BEGIN
   LOOP
     -- RAISE NOTICE 'setting % to %s ...', r.metric, new_interval;
     PERFORM set_chunk_time_interval(r.metric, new_interval);
-    PERFORM remove_compress_chunks_policy(format('public.%I', r.metric));
-    PERFORM add_compress_chunks_policy(format('public.%I', r.metric), new_interval);
+
+    SELECT ((regexp_matches(extversion, '\d+\.\d+'))[1])::numeric INTO l_timescale_version FROM pg_extension WHERE extname = 'timescaledb';
+    IF l_timescale_version >= 2.0 THEN
+        PERFORM remove_compression_policy(format('public.%I', r.metric), true);
+        PERFORM add_compression_policy(format('public.%I', r.metric), new_interval);
+    ELSE
+        PERFORM remove_compress_chunks_policy(format('public.%I', r.metric));
+        PERFORM add_compress_chunks_policy(format('public.%I', r.metric), new_interval);
+    END IF;
   END LOOP;
 
 END;

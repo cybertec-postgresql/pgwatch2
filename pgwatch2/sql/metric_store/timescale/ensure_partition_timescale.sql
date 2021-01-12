@@ -20,6 +20,7 @@ DECLARE
     $$;
     l_chunk_time_interval interval;
     l_compress_chunk_interval interval;
+    l_timescale_version numeric;
 BEGIN
     --RAISE NOTICE 'creating partition % ...', metric;
 
@@ -44,7 +45,12 @@ BEGIN
         EXECUTE format($$COMMENT ON TABLE public.%I IS 'pgwatch2-generated-metric-lvl'$$, metric);
         PERFORM create_hypertable(format('public.%I', metric), 'time', chunk_time_interval => l_chunk_time_interval);
         EXECUTE format(l_compression_policy, metric);
-        PERFORM add_compress_chunks_policy(format('public.%I', metric), l_compress_chunk_interval);
+        SELECT ((regexp_matches(extversion, '\d+\.\d+'))[1])::numeric INTO l_timescale_version FROM pg_extension WHERE extname = 'timescaledb';
+        IF l_timescale_version >= 2.0 THEN
+          PERFORM add_compression_policy(format('public.%I', metric), l_compress_chunk_interval);
+        ELSE
+          PERFORM add_compress_chunks_policy(format('public.%I', metric), l_compress_chunk_interval);
+        END IF;
     END IF;
 
 END;

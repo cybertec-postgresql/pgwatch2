@@ -39,6 +39,8 @@ ALTER TABLE some_metric SET (
 );
 
 SELECT add_compress_chunks_policy('some_metric', INTERVAL '1 day');
+-- for Timescale v2.0+:
+-- PERFORM add_compression_policy('some_metric', INTERVAL '1 day');
 
 */
 
