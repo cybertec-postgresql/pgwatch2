@@ -1,6 +1,8 @@
 # Rollout sequence
 
-First rollout the below files and then the chosen schema type's folder contents or use the according "roll_out_*" files.2
+Pick a storage schema and execute the according "roll_out_*.psql" file via the "psql" CLI tool coming with Postgres,
+or manually first rollout the below files and then the chosen schema type's folder contents as superuser.
+
 * "00_schema_base.sql" - schema type and listing of all known "dbname"-s are stored here
 * "01_old_metrics_cleanup_procedures.sql" - used to list all unique dbnames and to delete/drop old metrics by the application (can also be used for manual cleanup).
 
@@ -34,12 +36,16 @@ For cases where the available presets are not satisfactory / applicable. All dat
 
 ## timescale
 
+Most suitable storage schema when using long retention periods or hundreds of databases due to built-in extra compression.
+Typical compression ratios vary from 3 to 10x and also querying of larger historical data sets is typically faster.
+
 Assumes TimescaleDB (v1.7+) extension and "outsources" partition management for normal metrics to the extensions. Realtime
 metrics still use the "metric-time" schema as sadly Timescale doesn't support unlogged tables. Additionally one can also
 tune the chunking and historic data compression intervals - by default it's 2 days and 1 day. To change use the
 admin.timescale_change_chunk_interval() and admin.timescale_change_compress_interval() functions.
 
-Most suitable storage schema when using long retention periods due to built-in extra compression.
+Note that if wanting to store a deeper history of 6 months or a year then additionally using [Continous Aggregates](https://docs.timescale.com/latest/using-timescaledb/continuous-aggregates)
+might be a good idea. This will though also require modifying the Grafana dashboards, so it's out of scope for pgwatch2.
 
 # Data size considerations
 
