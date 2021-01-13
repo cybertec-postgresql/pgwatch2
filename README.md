@@ -42,7 +42,7 @@ variables see [ENV_VARIABLES.md](https://github.com/cybertec-postgresql/pgwatch2
 * Intuitive metrics presentation using the Grafana dashboarding engine with optional Alerting
 * Lots of pre-configured dashboards and metric configurations covering all Statistics Collector data
 * Easy extensibility by defining metrics in pure SQL (thus they could also be from business domain)
-* 4 supported data stores for metrics storage (PostgreSQL, InfluxDB, Graphite, Prometheus)
+* 4 supported data stores for metrics storage (PostgreSQL with or without TimescaleDB, InfluxDB, Graphite, Prometheus)
 * Multiple configuration options (YAML, PostgreSQL, ENV) supporting both "push" and "pull" models
 * Possible to monitoring all or a subset of DBs of a PostgreSQL cluster
 * Global or DB level configuration of metrics/intervals
