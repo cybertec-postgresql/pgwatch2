@@ -191,19 +191,20 @@ In this mode the pgwatch2 agents should be running on all database hosts separat
 possible though, it would counter the core idea of Prometheus and would make scrapes also longer, risking timeouts.
 There's also a separate "Preset Config" named "prometheus". More [details](https://pgwatch2.readthedocs.io/en/latest/installation_options.html#prometheus-mode).
 
-# Kubernetes / Helm
+# Kubernetes / OpenShift / Helm
 
-Cloud deployments of pgwatch2 should be no problem - there are some simple K8s deployment templates provided and also a
-Helm chart in the "openshift_k8s" [folder](https://github.com/cybertec-postgresql/pgwatch2/tree/master/openshift_k8s).
+Cloud deployments of pgwatch2 should be no problem - there are some simple deployment templates provided and also some
+Helm charts in the "openshift_k8s" [folder](https://github.com/cybertec-postgresql/pgwatch2/tree/master/openshift_k8s).
 
-Helm setup values should be reviewed / edited in `./openshift_k8s/helm-chart`, whereas installation is done by the following command:
+NB! Helm setup values should always be reviewed / edited as the defaults are rather for testing purposes. Installation
+is done by the following command:
 
 ```shell script
 cd openshift_k8s
-helm install ./helm-chart --name pgwatch2 -f chart-values.yml
+helm install -f chart-values-k8s-pg-storage.yml pgwatch2 helm-chart-k8s-pg-storage
 ``` 
 
-Please have a look at `openshift_k8s/helm-chart/values.yaml` to get additional information of configurable options.
+Please have a look at the according (K8s or OpenShift) `values.yaml` files to get additional information of configurable options.
 
 # Contributing
 
