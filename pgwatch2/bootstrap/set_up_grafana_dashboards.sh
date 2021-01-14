@@ -16,6 +16,7 @@ while true ; do
   elif [[ $DB_OK -gt 0 ]] ; then
     exit 0
   elif [[ $DB_OK == 0 ]] ; then
+    sleep 5 # give Grafana some more time to bootstrap the schema if maybe on some weak cloud instance
     break
   fi
 
