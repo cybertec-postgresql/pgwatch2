@@ -2787,6 +2787,7 @@
       "interval": null,
       "links": [
         {
+          "targetBlank": true,
           "title": "\"Index overview\" dashboard",
           "url": "/dashboard/db/index-overview"
         }
