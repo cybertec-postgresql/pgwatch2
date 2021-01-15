@@ -50,7 +50,7 @@ variables see [ENV_VARIABLES.md](https://github.com/cybertec-postgresql/pgwatch2
 * PgBouncer, Pgpool-II, AWS RDS and Patroni support
 * Internal health-check API to monitor metrics gathering status
 * Security options like SSL / HTTPS for all connections and password encryption for connect strings
-* Very low resource requirements for the collector even when monitoring hundreds of DBs
+* Very low resource requirements for the collector - 1 CPU core can handle ~3k monitored DBs at 1GB RAM usage
 * Log parsing capabilities when deployed locally in "push" mode
 
 # Component diagram for the default Docker setup
