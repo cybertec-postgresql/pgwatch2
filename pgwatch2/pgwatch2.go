@@ -4097,6 +4097,7 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	"datastoreWriteFailuresCounter": %d,
 	"datastoreSuccessfulWritesCounter": %d,
 	"datastoreAvgSuccessfulWriteTimeMillis": %.1f,
+	"databasesMonitored": %d,
 	"gathererUptimeSeconds": %d
 }
 `
@@ -4117,7 +4118,8 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	if metricPointsPerMinute == -1 { // calculate avg. on the fly if 1st summarization hasn't happened yet
 		metricPointsPerMinute = int64((totalMetrics * 60) / gathererUptimeSeconds)
 	}
-	_, _ = io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix()-secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, metricFetchFailuresCounter, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, gathererUptimeSeconds))
+	databasesMonitored := len(monitored_db_cache)	// including replicas
+	_, _ = io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix()-secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, metricFetchFailuresCounter, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, databasesMonitored, gathererUptimeSeconds))
 }
 
 func StartStatsServer(port int64) {
