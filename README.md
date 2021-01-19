@@ -1,4 +1,4 @@
-![Docker Pulls](https://img.shields.io/docker/pulls/cybertec/pgwatch2-nonroot)
+[![Docker Pulls](https://img.shields.io/docker/pulls/cybertec/pgwatch2-nonroot)](https://hub.docker.com/search?q=cybertec%20pgwatch2&type=image)
 
 # pgwatch2
 
@@ -14,7 +14,7 @@ Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution. Sup
 
 # Quick Start
 
-For the fastest setup experience Docker images are provided via Docker Hub (for a Docker quickstart see
+For the fastest setup experience [Docker images](https://hub.docker.com/search?q=cybertec%20pgwatch2&type=image) are provided via Docker Hub (for a Docker quickstart see
 [here](https://docs.docker.com/get-started/)). For custom setups see the according [chapter](https://pgwatch2.readthedocs.io/en/latest/custom_installation.html)
 from documentation or turn to the "Releases" tab for pre-built DEB / RPM / Tar packages directly.
 
