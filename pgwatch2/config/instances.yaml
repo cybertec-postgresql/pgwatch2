@@ -6,7 +6,7 @@
   dbname: pgwatch2
   user: someuser
   password: somepass
-  sslmode: disable
+  sslmode: disable    # supported options: disable, require, verify-ca, verify-full
 #  libpq_conn_str: postgresql://user@localhost:5432/postgres  # overrides single connect params. no pwd encryption possible
   stmt_timeout: 5 # in seconds
   is_superuser: false # setting to true will try to auto-create all metric fetching "helpers"
