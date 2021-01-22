@@ -6,6 +6,12 @@ or manually first rollout the below files and then the chosen schema type's fold
 * "00_schema_base.sql" - schema type and listing of all known "dbname"-s are stored here
 * "01_old_metrics_cleanup_procedures.sql" - used to list all unique dbnames and to delete/drop old metrics by the application (can also be used for manual cleanup).
 
+NB! The SQL files by default assume that "pgwatch2" user will owns the schema - to changge run the below command for example:
+
+```bash
+find . -name '*.sql' -exec sed -i 's/pgwatch2;/pgwatch2_owner;/g' {} \;
+```
+
 # Schema types
 
 ## metric
