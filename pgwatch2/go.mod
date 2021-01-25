@@ -18,6 +18,7 @@ require (
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/prometheus/client_golang v1.7.1
 	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e
+	github.com/shirou/gopsutil/v3 v3.20.12 // indirect
 	github.com/shopspring/decimal v1.2.0
 	go.etcd.io/etcd v3.3.25+incompatible
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a

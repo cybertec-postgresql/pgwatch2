@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/mem"
 	"io"
 	"io/ioutil"
 	"math"
@@ -25,6 +27,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/coreos/go-systemd/daemon"
@@ -34,6 +37,8 @@ import (
 	"github.com/lib/pq"
 	"github.com/marpaia/graphite-golang"
 	"github.com/op/go-logging"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/load"
 	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/pbkdf2"
 	"gopkg.in/yaml.v2"
@@ -237,10 +242,16 @@ const SPECIAL_METRIC_CHANGE_EVENTS = "change_events"
 const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
 const SPECIAL_METRIC_PGBOUNCER_STATS = "pgbouncer_stats"
 const SPECIAL_METRIC_PGPOOL_STATS = "pgpool_stats"
+const METRIC_CPU_LOAD = "cpu_load"
+const METRIC_PSUTIL_CPU = "psutil_cpu"
+const METRIC_PSUTIL_DISK = "psutil_disk"
+const METRIC_PSUTIL_DISK_IO_TOTAL = "psutil_disk_io_total"
+const METRIC_PSUTIL_MEM = "psutil_mem"
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true, DBTYPE_PGPOOL: true, DBTYPE_PATRONI_NAMESPACE_DISCOVERY: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT, DBTYPE_PATRONI_NAMESPACE_DISCOVERY} // used for informational purposes
 var specialMetrics = map[string]bool{RECO_METRIC_NAME: true, SPECIAL_METRIC_CHANGE_EVENTS: true, SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS: true}
+var directlyFetchableOSMetrics = map[string]bool{METRIC_PSUTIL_CPU: true, METRIC_PSUTIL_DISK: true, METRIC_PSUTIL_DISK_IO_TOTAL: true, "psutil_mem": true, METRIC_CPU_LOAD: true}
 var configDb *sqlx.DB
 var metricDb *sqlx.DB
 var graphiteConnection *graphite.Graphite
@@ -297,6 +308,12 @@ var instanceMetricCacheTimestampLock = sync.RWMutex{}
 var MinExtensionInfoAvailable, _ = decimal.NewFromString("9.1")
 var regexIsAlpha = regexp.MustCompile("^[a-zA-Z]+$")
 var rBouncerAndPgpoolVerMatch = regexp.MustCompile(`\d+\.+\d+`) // extract $major.minor from "4.1.2 (karasukiboshi)" or "PgBouncer 1.12.0"
+var tryDirectOSStats bool
+
+// "cache" of last CPU utilization stats for GetGoPsutilCPU to get more exact results and not having to sleep
+var prevCPULoadTimeStatsLock sync.RWMutex
+var prevCPULoadTimeStats cpu.TimesStat
+var prevCPULoadTimestamp time.Time
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
@@ -3051,6 +3068,8 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 	var last_uptime_s int64 = -1 // used for "server restarted" event detection
 	var last_error_notification_time time.Time
 	var vme DBVersionMapEntry
+	var mvp MetricVersionProperties
+	var err error
 	failed_fetches := 0
 	metricNameForStorage := metricName
 	lastDBVersionFetchTime := time.Unix(0, 0) // check DB ver. ev. 5 min
@@ -3092,10 +3111,12 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 
 	for {
 		if lastDBVersionFetchTime.Add(time.Minute * time.Duration(5)).Before(time.Now()) {
-			vme, _ = DBGetPGVersion(dbUniqueName, dbType, false) // in case of errors just ignore metric "disabled" time ranges
-			lastDBVersionFetchTime = time.Now()
+			vme, err = DBGetPGVersion(dbUniqueName, dbType, false) // in case of errors just ignore metric "disabled" time ranges
+			if err != nil {
+				lastDBVersionFetchTime = time.Now()
+			}
 
-			mvp, err := GetMetricVersionProperties(metricName, vme, nil)
+			mvp, err = GetMetricVersionProperties(metricName, vme, nil)
 			if err == nil && mvp.MetricAttrs.StatementTimeoutSeconds > 0 {
 				stmtTimeoutOverride = mvp.MetricAttrs.StatementTimeoutSeconds
 			} else {
@@ -3107,13 +3128,25 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 		if metricCurrentlyDisabled && opts.TestdataDays == 0 {
 			log.Debugf("[%s][%s] Ignoring fetch as metric disabled for current time range", dbUniqueName, metricName)
 		} else {
+			var metricStoreMessages []MetricStoreMessage
+			var err error
+			mfm := MetricFetchMessage{DBUniqueName: dbUniqueName, DBUniqueNameOrig: dbUniqueNameOrig, MetricName: metricName, DBType: dbType, Interval: time.Second * time.Duration(interval), StmtTimeoutOverride: stmtTimeoutOverride}
 
+			// 1st try local overrides for some metrics if operating in push mode
+			if tryDirectOSStats && IsDirectlyFetchableMetric(metricName) {
+				metricStoreMessages, err = FetchStatsDirectlyFromOS(mfm, vme, mvp)
+				if err != nil {
+					log.Errorf("[%s][%s] Could not reader metric directly from OS: %v", dbUniqueName, metricName, err)
+				}
+			}
 			t1 := time.Now()
-			metricStoreMessages, err := FetchMetrics(
-				MetricFetchMessage{DBUniqueName: dbUniqueName, DBUniqueNameOrig: dbUniqueNameOrig, MetricName: metricName, DBType: dbType, Interval: time.Second * time.Duration(interval), StmtTimeoutOverride: stmtTimeoutOverride},
-				host_state,
-				store_ch,
-				"")
+			if metricStoreMessages == nil {
+				metricStoreMessages, err = FetchMetrics(
+					mfm,
+					host_state,
+					store_ch,
+					"")
+			}
 			t2 := time.Now()
 
 			if t2.Sub(t1) > (time.Second * time.Duration(interval)) {
@@ -3216,6 +3249,57 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 		}
 
 	}
+}
+
+func FetchStatsDirectlyFromOS(msg MetricFetchMessage, vme DBVersionMapEntry, mvp MetricVersionProperties) ([]MetricStoreMessage, error) {
+	var data []map[string]interface{}
+	var err error
+
+	if msg.MetricName == METRIC_CPU_LOAD { // could function pointers work here?
+		data, err = GetLoadAvgLocal()
+	} else if msg.MetricName == METRIC_PSUTIL_CPU {
+		data, err = GetGoPsutilCPU(msg.Interval)
+	} else if msg.MetricName == METRIC_PSUTIL_DISK {
+		data, err = GetGoPsutilDiskPG(msg.DBUniqueName)
+	} else if msg.MetricName == METRIC_PSUTIL_DISK_IO_TOTAL {
+		data, err = GetGoPsutilDiskTotals()
+	} else if msg.MetricName == METRIC_PSUTIL_MEM {
+		data, err = GetGoPsutilMem()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	msm := DatarowsToMetricstoreMessage(data, msg, vme, mvp)
+	return []MetricStoreMessage{msm}, nil
+}
+
+// data + custom tags + counters
+func DatarowsToMetricstoreMessage(data []map[string]interface{}, msg MetricFetchMessage, vme DBVersionMapEntry, mvp MetricVersionProperties) MetricStoreMessage {
+	md, err := GetMonitoredDatabaseByUniqueName(msg.DBUniqueName)
+	if err != nil {
+		log.Errorf("Could not resolve DBUniqueName %s, cannot set custom attributes for gathered data: %v", msg.DBUniqueName, err)
+	}
+
+	atomic.AddUint64(&totalMetricsFetchedCounter, uint64(len(data)))
+
+	return MetricStoreMessage{
+		DBUniqueName:            msg.DBUniqueName,
+		DBType:                  msg.DBType,
+		MetricName:              msg.MetricName,
+		CustomTags:              md.CustomTags,
+		Data:                    data,
+		MetricDefinitionDetails: mvp,
+		RealDbname:              vme.RealDbname,
+		SystemIdentifier:        vme.SystemIdentifier,
+	}
+}
+
+func IsDirectlyFetchableMetric(metric string) bool {
+	if _, ok := directlyFetchableOSMetrics[metric]; ok {
+		return true
+	}
+	return false
 }
 
 func IsStringInSlice(target string, slice []string) bool {
@@ -4118,7 +4202,7 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	if metricPointsPerMinute == -1 { // calculate avg. on the fly if 1st summarization hasn't happened yet
 		metricPointsPerMinute = int64((totalMetrics * 60) / gathererUptimeSeconds)
 	}
-	databasesMonitored := len(monitored_db_cache)	// including replicas
+	databasesMonitored := len(monitored_db_cache) // including replicas
 	_, _ = io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix()-secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, metricFetchFailuresCounter, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, databasesMonitored, gathererUptimeSeconds))
 }
 
@@ -4223,6 +4307,271 @@ func CheckFolderExistAndReadable(path string) bool {
 	return true
 }
 
+func goPsutilCalcCPUUtilization(probe0, probe1 cpu.TimesStat) float64 {
+	return 100 - (100.0 * (probe1.Idle - probe0.Idle + probe1.Iowait - probe0.Iowait + probe1.Steal - probe0.Steal) / (probe1.Total() - probe0.Total()))
+}
+
+// Simulates "psutil" metric output. Assumes the result from last call as input, otherwise uses a 1s measurement
+// https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/metrics/psutil_cpu/9.0/metric.sql
+func GetGoPsutilCPU(interval time.Duration) ([]map[string]interface{}, error) {
+	prevCPULoadTimeStatsLock.RLock()
+	prevTime := prevCPULoadTimestamp
+	prevTimeStat := prevCPULoadTimeStats
+	prevCPULoadTimeStatsLock.RUnlock()
+
+	if prevTime.IsZero() || (time.Now().UnixNano()-prevTime.UnixNano()) < 1e9 { // give "short" stats on first run, based on a 1s probe
+		probe0, err := cpu.Times(false)
+		if err != nil {
+			return nil, err
+		}
+		prevTimeStat = probe0[0]
+		time.Sleep(1e9)
+	}
+
+	curCallStats, err := cpu.Times(false)
+	if err != nil {
+		return nil, err
+	}
+	if prevTime.IsZero() || time.Now().UnixNano()-prevTime.UnixNano() < 1e9 || time.Now().Unix()-prevTime.Unix() >= int64(interval.Seconds()) {
+		prevCPULoadTimeStatsLock.Lock() // update the cache
+		prevCPULoadTimeStats = curCallStats[0]
+		prevCPULoadTimestamp = time.Now()
+		prevCPULoadTimeStatsLock.Unlock()
+	}
+
+	la, err := load.Avg()
+	if err != nil {
+		return nil, err
+	}
+
+	cpus, err := cpu.Counts(true)
+	if err != nil {
+		return nil, err
+	}
+
+	retMap := make(map[string]interface{})
+	retMap["epoch_ns"] = time.Now().UnixNano()
+	retMap["cpu_utilization"] = math.Round(100*goPsutilCalcCPUUtilization(prevTimeStat, curCallStats[0])) / 100
+	retMap["load_1m_norm"] = math.Round(100*la.Load1/float64(cpus)) / 100
+	retMap["load_1m"] = math.Round(100*la.Load1) / 100
+	retMap["load_5m_norm"] = math.Round(100*la.Load5/float64(cpus)) / 100
+	retMap["load_5m"] = math.Round(100*la.Load5) / 100
+	retMap["user"] = math.Round(10000.0*(curCallStats[0].User-prevTimeStat.User)/(curCallStats[0].Total()-prevTimeStat.Total())) / 100
+	retMap["system"] = math.Round(10000.0*(curCallStats[0].System-prevTimeStat.System)/(curCallStats[0].Total()-prevTimeStat.Total())) / 100
+	retMap["idle"] = math.Round(10000.0*(curCallStats[0].Idle-prevTimeStat.Idle)/(curCallStats[0].Total()-prevTimeStat.Total())) / 100
+	retMap["iowait"] = math.Round(10000.0*(curCallStats[0].Iowait-prevTimeStat.Iowait)/(curCallStats[0].Total()-prevTimeStat.Total())) / 100
+	retMap["irqs"] = math.Round(10000.0*(curCallStats[0].Irq-prevTimeStat.Irq+curCallStats[0].Softirq-prevTimeStat.Softirq)/(curCallStats[0].Total()-prevTimeStat.Total())) / 100
+	retMap["other"] = math.Round(10000.0*(curCallStats[0].Steal-prevTimeStat.Steal+curCallStats[0].Guest-prevTimeStat.Guest+curCallStats[0].GuestNice-prevTimeStat.GuestNice)/(curCallStats[0].Total()-prevTimeStat.Total())) / 100
+
+	return []map[string]interface{}{retMap}, nil
+}
+
+func GetGoPsutilMem() ([]map[string]interface{}, error) {
+	vm, err := mem.VirtualMemory()
+	if err != nil {
+		return nil, err
+	}
+
+	retMap := make(map[string]interface{})
+	retMap["epoch_ns"] = time.Now().UnixNano()
+	retMap["total"] = int64(vm.Total)
+	retMap["used"] = int64(vm.Used)
+	retMap["free"] = int64(vm.Free)
+	retMap["buff_cache"] = int64(vm.Buffers)
+	retMap["available"] = int64(vm.Available)
+	retMap["percent"] = math.Round(100*vm.UsedPercent) / 100
+	retMap["swap_total"] = int64(vm.SwapTotal)
+	retMap["swap_used"] = int64(vm.SwapCached)
+	retMap["swap_free"] = int64(vm.SwapFree)
+	retMap["swap_percent"] = math.Round(100*float64(vm.SwapCached)/float64(vm.SwapTotal)) / 100
+
+	return []map[string]interface{}{retMap}, nil
+}
+
+func GetGoPsutilDiskTotals() ([]map[string]interface{}, error) {
+	d, err := disk.IOCounters()
+	if err != nil {
+		return nil, err
+	}
+
+	retMap := make(map[string]interface{})
+	var readBytes, writeBytes, reads, writes float64
+
+	retMap["epoch_ns"] = time.Now().UnixNano()
+	for _, v := range d { // summarize all disk devices
+		readBytes += float64(v.ReadBytes) // datatype float is just an oversight in the original psutil helper
+		// but can't change it without causing problems on storage level (InfluxDB)
+		writeBytes += float64(v.WriteBytes)
+		reads += float64(v.ReadCount)
+		writes += float64(v.WriteCount)
+	}
+	retMap["read_bytes"] = readBytes
+	retMap["write_bytes"] = writeBytes
+	retMap["read_count"] = reads
+	retMap["write_count"] = writes
+
+	return []map[string]interface{}{retMap}, nil
+}
+
+func getPathUnderlyingDeviceId(path string) (uint64, error) {
+	fp, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	fi, err := fp.Stat()
+	if err != nil {
+		return 0, err
+	}
+	stat := fi.Sys().(*syscall.Stat_t)
+	return stat.Dev, nil
+}
+
+// connects actually to the instance to determine PG relevant disk paths / mounts
+func GetGoPsutilDiskPG(dbUnique string) ([]map[string]interface{}, error) {
+	sql := `select current_setting('data_directory') as dd, current_setting('log_directory') as ld, current_setting('server_version_num')::int as pgver`
+	sqlTS := `select spcname::text as name, pg_catalog.pg_tablespace_location(oid) as location from pg_catalog.pg_tablespace where not spcname like any(array[E'pg\\_%'])`
+	var ddDevice, ldDevice, walDevice uint64
+
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, 0, sql)
+	if err != nil || len(data) == 0 {
+		log.Errorf("Failed to determine relevant PG disk paths via SQL: %v", err)
+		return nil, err
+	}
+
+	dataDirPath := data[0]["dd"].(string)
+	ddUsage, err := disk.Usage(dataDirPath)
+	if err != nil {
+		log.Errorf("Could not determine disk usage for path %v: %v", dataDirPath, err)
+		return nil, err
+	}
+
+	retRows := make([]map[string]interface{}, 0)
+	epoch_ns := time.Now().UnixNano()
+	dd := make(map[string]interface{})
+	dd["epoch_ns"] = epoch_ns
+	dd["tag_dir_or_tablespace"] = "data_directory"
+	dd["tag_path"] = dataDirPath
+	dd["total"] = float64(ddUsage.Total)
+	dd["used"] = float64(ddUsage.Used)
+	dd["free"] = float64(ddUsage.Free)
+	dd["percent"] = math.Round(100*ddUsage.UsedPercent) / 100
+	retRows = append(retRows, dd)
+
+	ddDevice, err = getPathUnderlyingDeviceId(dataDirPath)
+	if err != nil {
+		log.Errorf("Could not determine disk device ID of data_directory %v: %v", dataDirPath, err)
+	}
+
+	logDirPath := data[0]["ld"].(string)
+	if !strings.HasPrefix(logDirPath, "/") {
+		logDirPath = path.Join(dataDirPath, logDirPath)
+	}
+	if len(logDirPath) > 0 && CheckFolderExistAndReadable(logDirPath) { // syslog etc considered out of scope
+		ldDevice, err = getPathUnderlyingDeviceId(logDirPath)
+		if err != nil {
+			log.Infof("Could not determine disk device ID of log_directory %v: %v", logDirPath, err)
+		}
+		if err != nil || ldDevice != ddDevice { // no point to report same data in case of single folder configuration
+			ld := make(map[string]interface{})
+			ldUsage, err := disk.Usage(logDirPath)
+			if err != nil {
+				log.Infof("Could not determine disk usage for path %v: %v", logDirPath, err)
+			} else {
+				ld["epoch_ns"] = epoch_ns
+				ld["tag_dir_or_tablespace"] = "log_directory"
+				ld["tag_path"] = logDirPath
+				ld["total"] = float64(ldUsage.Total)
+				ld["used"] = float64(ldUsage.Used)
+				ld["free"] = float64(ldUsage.Free)
+				ld["percent"] = math.Round(100*ldUsage.UsedPercent) / 100
+				retRows = append(retRows, ld)
+			}
+		}
+	}
+
+	var walDirPath string
+	if CheckFolderExistAndReadable(path.Join(dataDirPath, "pg_wal")) {
+		walDirPath = path.Join(dataDirPath, "pg_wal")
+	} else if CheckFolderExistAndReadable(path.Join(dataDirPath, "pg_xlog")) {
+		walDirPath = path.Join(dataDirPath, "pg_xlog") // < v10
+	}
+
+	if len(walDirPath) > 0 {
+		walDevice, err = getPathUnderlyingDeviceId(walDirPath)
+		if err != nil {
+			log.Infof("Could not determine disk device ID of WAL directory %v: %v", walDirPath, err) // storing anyways
+		}
+
+		if err != nil || walDevice != ddDevice || walDevice != ldDevice { // no point to report same data in case of single folder configuration
+			walUsage, err := disk.Usage(walDirPath)
+			if err != nil {
+				log.Errorf("Could not determine disk usage for WAL directory %v: %v", walDirPath, err)
+			} else {
+				wd := make(map[string]interface{})
+				wd["epoch_ns"] = epoch_ns
+				wd["tag_dir_or_tablespace"] = "pg_wal"
+				wd["tag_path"] = walDirPath
+				wd["total"] = float64(walUsage.Total)
+				wd["used"] = float64(walUsage.Used)
+				wd["free"] = float64(walUsage.Free)
+				wd["percent"] = math.Round(100*walUsage.UsedPercent) / 100
+				retRows = append(retRows, wd)
+			}
+		}
+	}
+
+	data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", false, 0, sqlTS)
+	if err != nil {
+		log.Infof("Failed to determine relevant PG tablespace paths via SQL: %v", err)
+	} else if len(data) > 0 {
+		for _, row := range data {
+			tsPath := row["location"].(string)
+			tsName := row["name"].(string)
+
+			tsDevice, err := getPathUnderlyingDeviceId(tsPath)
+			if err != nil {
+				log.Errorf("Could not determine disk device ID of tablespace %s (%s): %v", tsName, tsPath, err)
+				continue
+			}
+
+			if tsDevice == ddDevice || tsDevice == ldDevice || tsDevice == walDevice {
+				continue
+			}
+			tsUsage, err := disk.Usage(tsPath)
+			if err != nil {
+				log.Errorf("Could not determine disk usage for tablespace %s, directory %s: %v", row["name"].(string), row["location"].(string), err)
+			}
+			ts := make(map[string]interface{})
+			ts["epoch_ns"] = epoch_ns
+			ts["tag_dir_or_tablespace"] = tsName
+			ts["tag_path"] = tsPath
+			ts["total"] = float64(tsUsage.Total)
+			ts["used"] = float64(tsUsage.Used)
+			ts["free"] = float64(tsUsage.Free)
+			ts["percent"] = math.Round(100*tsUsage.UsedPercent) / 100
+			retRows = append(retRows, ts)
+		}
+	}
+
+	return retRows, nil
+}
+
+func GetLoadAvgLocal() ([]map[string]interface{}, error) {
+	la, err := load.Avg()
+	if err != nil {
+		log.Errorf("Could not inquiry local system load average: %v", err)
+		return nil, err
+	}
+
+	row := make(map[string]interface{})
+	row["epoch_ns"] = time.Now().UnixNano()
+	row["load_1min"] = la.Load1
+	row["load_5min"] = la.Load5
+	row["load_15min"] = la.Load15
+
+	return []map[string]interface{}{row}, nil
+}
+
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
@@ -4269,6 +4618,7 @@ type Options struct {
 	AdHocCreateHelpers      string `long:"adhoc-create-helpers" description:"Ad-hoc mode: try to auto-create helpers. Needs superuser to succeed [Default: false]" default:"false" env:"PW2_ADHOC_CREATE_HELPERS"`
 	AdHocUniqueName         string `long:"adhoc-name" description:"Ad-hoc mode: Unique 'dbname' for Influx. [Default: adhoc]" default:"adhoc" env:"PW2_ADHOC_NAME"`
 	InternalStatsPort       int64  `long:"internal-stats-port" description:"Port for inquiring monitoring status in JSON format. [Default: 8081]" default:"8081" env:"PW2_INTERNAL_STATS_PORT"`
+	DirectOSStats           string `long:"direct-os-stats" description:"Extract OS related psutil statistics not via PL/Python wrappers but directly on host [Default: off]" default:"off" env:"PW2_DIRECT_OS_STATS"`
 	ConnPooling             string `long:"conn-pooling" description:"Enable re-use of metrics fetching connections [Default: off]" default:"off" env:"PW2_CONN_POOLING"`
 	AesGcmKeyphrase         string `long:"aes-gcm-keyphrase" description:"Decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE"`
 	AesGcmKeyphraseFile     string `long:"aes-gcm-keyphrase-file" description:"File with decryption key for AES-GCM-256 passwords" env:"PW2_AES_GCM_KEYPHRASE_FILE"`
@@ -4322,6 +4672,8 @@ func main() {
 	logging.SetFormatter(logging.MustStringFormatter(`%{level:.4s} %{shortfunc}: %{message}`))
 
 	log.Debugf("opts: %+v", opts)
+
+	tryDirectOSStats = StringToBoolOrFail(opts.DirectOSStats, "--direct-os-stats")
 
 	if opts.ServersRefreshLoopSeconds <= 1 {
 		log.Fatal("--servers-refresh-loop-seconds must be greater than 1")

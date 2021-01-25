@@ -61,6 +61,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_VERSION** Show Git build version and exit.
 - **PW2_PING** Try to connect to all configured DB-s, report errors and then exit.
 - **PW2_INSTANCE_LEVEL_CACHE_MAX_SECONDS** Max allowed staleness for instance level metric data shared between DBs of an instance. Affects 'continuous' host types only. Set to 0 to disable. Default: 30
+- **PW2_DIRECT_OS_STATS** Extract OS related psutil statistics not via PL/Python wrappers but directly on host, i.e. assumes "push" setup. Default: off.
 
 
 ## Web UI
