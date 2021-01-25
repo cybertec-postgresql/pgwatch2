@@ -51,7 +51,7 @@ DECLARE
 BEGIN
   FOR r IN select * from admin.get_top_level_metric_tables()
   LOOP
-    raise notice 'dropping %', r.table_name;
+    raise notice 'truncating %', r.table_name;
     EXECUTE 'TRUNCATE TABLE ' || r.table_name;
     i := i + 1;
   END LOOP;
