@@ -622,7 +622,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  dbname,\n  max((data->'waiting')::int) as waiting\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\nGROUP BY\n  1, 2\n",
+          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  dbname,\n  max((data->'waiting')::int) as waiting\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\nGROUP BY\n  1, 2\nORDER BY\n  1, 2",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
