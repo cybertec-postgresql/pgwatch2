@@ -17,6 +17,8 @@ type Exporter struct {
 	totalScrapes, totalScrapeFailures prometheus.Counter
 }
 
+const PROM_INSTANCE_UP_STATE_METRIC = "instance_up"
+
 func NewExporter() (*Exporter, error) {
 	return &Exporter{
 		lastScrapeErrors: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -56,6 +58,9 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 	for name, md := range monitoredDatabases {
+		setInstanceUpDownState(ch, md)	// makes easier to differentiate between PG instance / machine  failures
+										// https://prometheus.io/docs/instrumenting/writing_exporters/#failed-scrapes
+
 		for metric, interval := range md.Metrics {
 			if metric == "change_events" {
 				log.Warningf("[%s] Skipping change_events metric as host state is not supported for Prometheus currently", md.DBUniqueName)
@@ -86,6 +91,36 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- e.totalScrapeFailures
 	e.lastScrapeErrors.Set(lastScrapeErrors)
 	ch <- e.lastScrapeErrors
+}
+
+func setInstanceUpDownState(ch chan<- prometheus.Metric, md MonitoredDatabase) {
+	log.Debugf("checking availability of configured DB [%s:%s]...", md.DBUniqueName, PROM_INSTANCE_UP_STATE_METRIC)
+	vme, err := DBGetPGVersion(md.DBUniqueName, md.DBType, true)
+	data := make(map[string]interface{})
+	if err != nil {
+		data[PROM_INSTANCE_UP_STATE_METRIC] = 0
+		log.Errorf("[%s:%s] could not determine instance version, reporting as 'down': %v", md.DBUniqueName, PROM_INSTANCE_UP_STATE_METRIC, err)
+		//return
+	} else {
+		data[PROM_INSTANCE_UP_STATE_METRIC] = 1
+	}
+	data[EPOCH_COLUMN_NAME] = time.Now().UnixNano()
+
+	pm := MetricStoreMessageToPromMetrics(MetricStoreMessage{
+		DBUniqueName:     md.DBUniqueName,
+		DBType:           md.DBType,
+		MetricName:       PROM_INSTANCE_UP_STATE_METRIC,
+		CustomTags:       md.CustomTags,
+		Data:             []map[string]interface{}{data},
+		RealDbname:       vme.RealDbname,
+		SystemIdentifier: vme.SystemIdentifier,
+	})
+
+	if len(pm) > 0 {
+		ch <- pm[0]
+	} else {
+		log.Errorf("Could not formulate an instance state report - should not happen")
+	}
 }
 
 func getMonitoredDatabasesSnapshot() map[string]MonitoredDatabase {
@@ -190,6 +225,10 @@ func MetricStoreMessageToPromMetrics(msg MetricStoreMessage) []prometheus.Metric
 					}
 				}
 			}
+			if msg.MetricName == PROM_INSTANCE_UP_STATE_METRIC {
+				fieldPromDataType = prometheus.GaugeValue
+			}
+
 			for _, ignoredColumns := range msg.MetricDefinitionDetails.ColumnAttrs.PrometheusIgnoredColumns {
 				if ignoredColumns == field {
 					skip = true
@@ -201,10 +240,19 @@ func MetricStoreMessageToPromMetrics(msg MetricStoreMessage) []prometheus.Metric
 			}
 			var desc *prometheus.Desc
 			if opts.PrometheusNamespace != "" {
-				desc = prometheus.NewDesc(fmt.Sprintf("%s_%s_%s", opts.PrometheusNamespace, msg.MetricName, field),
-					msg.MetricName, label_keys, nil)
+				if msg.MetricName == PROM_INSTANCE_UP_STATE_METRIC { // handle the special "instance_up" check
+					desc = prometheus.NewDesc(fmt.Sprintf("%s_%s", opts.PrometheusNamespace, msg.MetricName),
+						msg.MetricName, label_keys, nil)
+				} else {
+					desc = prometheus.NewDesc(fmt.Sprintf("%s_%s_%s", opts.PrometheusNamespace, msg.MetricName, field),
+						msg.MetricName, label_keys, nil)
+				}
 			} else {
-				desc = prometheus.NewDesc(fmt.Sprintf("%s_%s", msg.MetricName, field), msg.MetricName, label_keys, nil)
+				if msg.MetricName == PROM_INSTANCE_UP_STATE_METRIC {	// handle the special "instance_up" check
+					desc = prometheus.NewDesc(fmt.Sprintf("%s", field), msg.MetricName, label_keys, nil)
+				} else {
+					desc = prometheus.NewDesc(fmt.Sprintf("%s_%s", msg.MetricName, field), msg.MetricName, label_keys, nil)
+				}
 			}
 			m := prometheus.MustNewConstMetric(desc, fieldPromDataType, value, label_values...)
 			promMetrics = append(promMetrics, prometheus.NewMetricWithTimestamp(epoch_time, m))
