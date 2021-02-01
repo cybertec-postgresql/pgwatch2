@@ -309,6 +309,8 @@ var MinExtensionInfoAvailable, _ = decimal.NewFromString("9.1")
 var regexIsAlpha = regexp.MustCompile("^[a-zA-Z]+$")
 var rBouncerAndPgpoolVerMatch = regexp.MustCompile(`\d+\.+\d+`) // extract $major.minor from "4.1.2 (karasukiboshi)" or "PgBouncer 1.12.0"
 var tryDirectOSStats bool
+var unreachableDBsLock sync.RWMutex
+var unreachableDB = make(map[string]time.Time)
 
 // "cache" of last CPU utilization stats for GetGoPsutilCPU to get more exact results and not having to sleep
 var prevCPULoadTimeStatsLock sync.RWMutex
@@ -2865,6 +2867,10 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 				}
 			}
 
+			if strings.Contains(err.Error(), "connection refused") {
+				SetDBUnreachableState(msg.DBUniqueName)
+			}
+
 			if retryWithSuperuserSQL && mvp.SqlSU != "" {
 				firstErr = err
 				log.Infof("[%s:%s] Normal fetch failed, re-trying to fetch with SU SQL", msg.DBUniqueName, msg.MetricName)
@@ -2890,6 +2896,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 				data = FilterPgbouncerData(data, md.DBName, vme)
 			}
 
+			ClearDBUnreachableStateIfAny(msg.DBUniqueName)
 		}
 	}
 
@@ -2925,6 +2932,18 @@ send_to_storage_channel:
 		return []MetricStoreMessage{MetricStoreMessage{DBUniqueName: msg.DBUniqueName, MetricName: msg.MetricName, Data: data, CustomTags: md.CustomTags,
 			MetricDefinitionDetails: mvp, RealDbname: vme.RealDbname, SystemIdentifier: vme.SystemIdentifier}}, nil
 	}
+}
+
+func SetDBUnreachableState(dbUnique string) {
+	unreachableDBsLock.Lock()
+	unreachableDB[dbUnique] = time.Now()
+	unreachableDBsLock.Unlock()
+}
+
+func ClearDBUnreachableStateIfAny(dbUnique string) {
+	unreachableDBsLock.Lock()
+	delete(unreachableDB, dbUnique)
+	unreachableDBsLock.Unlock()
 }
 
 func GetFromInstanceCacheIfNotOlderThanSeconds(msg MetricFetchMessage, maxAgeSeconds int64) []map[string]interface{} {
@@ -4182,6 +4201,7 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	"datastoreSuccessfulWritesCounter": %d,
 	"datastoreAvgSuccessfulWriteTimeMillis": %.1f,
 	"databasesMonitored": %d,
+	"unreachableDBs": %d,
 	"gathererUptimeSeconds": %d
 }
 `
@@ -4202,8 +4222,13 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	if metricPointsPerMinute == -1 { // calculate avg. on the fly if 1st summarization hasn't happened yet
 		metricPointsPerMinute = int64((totalMetrics * 60) / gathererUptimeSeconds)
 	}
+	monitored_db_cache_lock.RLock()
 	databasesMonitored := len(monitored_db_cache) // including replicas
-	_, _ = io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix()-secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, metricFetchFailuresCounter, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, databasesMonitored, gathererUptimeSeconds))
+	monitored_db_cache_lock.RUnlock()
+	unreachableDBsLock.RLock()
+	unreachableDBs := len(unreachableDB)
+	unreachableDBsLock.RUnlock()
+	_, _ = io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix()-secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, metricFetchFailuresCounter, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, databasesMonitored, unreachableDBs, gathererUptimeSeconds))
 }
 
 func StartStatsServer(port int64) {
@@ -5313,6 +5338,7 @@ func main() {
 				delete(control_channels, db_metric)
 				log.Debugf("control channel for [%s:%s] deleted", db, metric)
 				gatherers_shut_down++
+				ClearDBUnreachableStateIfAny(db)
 			}
 		}
 		if gatherers_shut_down > 0 {
