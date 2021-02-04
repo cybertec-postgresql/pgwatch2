@@ -248,6 +248,8 @@ const METRIC_PSUTIL_CPU = "psutil_cpu"
 const METRIC_PSUTIL_DISK = "psutil_disk"
 const METRIC_PSUTIL_DISK_IO_TOTAL = "psutil_disk_io_total"
 const METRIC_PSUTIL_MEM = "psutil_mem"
+const DEFAULT_METRICS_DEFINITION_PATH_PKG = "/etc/pgwatch2/metrics" // prebuilt packages / Docker default location
+const DEFAULT_METRICS_DEFINITION_PATH_DOCKER = "/pgwatch2/metrics"  // prebuilt packages / Docker default location
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true, DBTYPE_PGPOOL: true, DBTYPE_PATRONI_NAMESPACE_DISCOVERY: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT, DBTYPE_PATRONI_NAMESPACE_DISCOVERY} // used for informational purposes
@@ -275,7 +277,7 @@ var last_sql_fetch_error sync.Map
 var influx_host_count = 1
 var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently supported
 // secondary Influx meant for HA or Grafana load balancing for 100+ instances with lots of alerts
-var fileBased = false
+var fileBasedMetrics = false
 var adHocMode = false
 var preset_metric_def_map map[string]map[string]float64 // read from metrics folder in "file mode"
 /// internal statistics calculation
@@ -3741,7 +3743,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 		return err
 	}
 
-	if fileBased {
+	if fileBasedMetrics {
 		helpers, err := ReadMetricsFromFolder(path.Join(opts.MetricsFolder, FILE_BASED_METRIC_HELPERS_DIR), false)
 		if err != nil {
 			log.Errorf("Failed to fetch helpers from \"%s\": %s", path.Join(opts.MetricsFolder, FILE_BASED_METRIC_HELPERS_DIR), err)
@@ -4333,7 +4335,7 @@ func SyncMonitoredDBsToDatastore(monitored_dbs []MonitoredDatabase, persistence_
 	}
 }
 
-func CheckFolderExistAndReadable(path string) bool {
+func CheckFolderExistsAndReadable(path string) bool {
 	if _, err := ioutil.ReadDir(path); err != nil {
 		return false
 	}
@@ -4499,7 +4501,7 @@ func GetGoPsutilDiskPG(dbUnique string) ([]map[string]interface{}, error) {
 	if !strings.HasPrefix(logDirPath, "/") {
 		logDirPath = path.Join(dataDirPath, logDirPath)
 	}
-	if len(logDirPath) > 0 && CheckFolderExistAndReadable(logDirPath) { // syslog etc considered out of scope
+	if len(logDirPath) > 0 && CheckFolderExistsAndReadable(logDirPath) { // syslog etc considered out of scope
 		ldDevice, err = getPathUnderlyingDeviceId(logDirPath)
 		if err != nil {
 			log.Infof("Could not determine disk device ID of log_directory %v: %v", logDirPath, err)
@@ -4523,9 +4525,9 @@ func GetGoPsutilDiskPG(dbUnique string) ([]map[string]interface{}, error) {
 	}
 
 	var walDirPath string
-	if CheckFolderExistAndReadable(path.Join(dataDirPath, "pg_wal")) {
+	if CheckFolderExistsAndReadable(path.Join(dataDirPath, "pg_wal")) {
 		walDirPath = path.Join(dataDirPath, "pg_wal")
-	} else if CheckFolderExistAndReadable(path.Join(dataDirPath, "pg_xlog")) {
+	} else if CheckFolderExistsAndReadable(path.Join(dataDirPath, "pg_xlog")) {
 		walDirPath = path.Join(dataDirPath, "pg_xlog") // < v10
 	}
 
@@ -4643,7 +4645,7 @@ type Options struct {
 	JsonStorageFile      string `long:"json-storage-file" description:"Path to file where metrics will be stored when --datastore=json, one metric set per line" env:"PW2_JSON_STORAGE_FILE"`
 	// Params for running based on local config files, enabled distributed "push model" based metrics gathering. Metrics are sent directly to Influx/Graphite.
 	Config                  string `short:"c" long:"config" description:"File or folder of YAML files containing info on which DBs to monitor and where to store metrics" env:"PW2_CONFIG"`
-	MetricsFolder           string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER" default:"/etc/pgwatch2/metrics"`
+	MetricsFolder           string `short:"m" long:"metrics-folder" description:"Folder of metrics definitions" env:"PW2_METRICS_FOLDER"`
 	BatchingDelayMs         int64  `long:"batching-delay-ms" description:"Max milliseconds to wait for a batched metrics flush. [Default: 250]" default:"250" env:"PW2_BATCHING_MAX_DELAY_MS"`
 	AdHocConnString         string `long:"adhoc-conn-str" description:"Ad-hoc mode: monitor a single Postgres DB specified by a standard Libpq connection string" env:"PW2_ADHOC_CONN_STR"`
 	AdHocDBType             string `long:"adhoc-dbtype" description:"Ad-hoc mode: postgres|postgres-continuous-discovery" default:"postgres" env:"PW2_ADHOC_DBTYPE"`
@@ -4746,19 +4748,10 @@ func main() {
 		if len(opts.Config) > 0 {
 			log.Fatal("Conflicting flags! --adhoc-conn-str and --config cannot be both set")
 		}
-		if len(opts.MetricsFolder) == 0 {
-			opts.MetricsFolder = "/etc/pgwatch2/metrics"
-			log.Warningf("--metrics-folder path not specified, using %s", opts.MetricsFolder)
+		if len(opts.MetricsFolder) > 0 && !CheckFolderExistsAndReadable(opts.MetricsFolder) {
+			log.Warningf("--metrics-folder \"%s\" not readable, trying 1st default paths and then Config DB to fetch metric definitions...", opts.MetricsFolder)
 		}
-		_, err := ioutil.ReadDir(opts.MetricsFolder)
-		if err != nil {
-			// try Docker image default file based metrics path
-			opts.MetricsFolder = "/pgwatch2/metrics"
-			_, err = ioutil.ReadDir(opts.MetricsFolder)
-			if err != nil {
-				log.Fatal("--adhoc-conn-str requires also --metrics-folder param")
-			}
-		}
+
 		if len(opts.User) > 0 && len(opts.Password) > 0 {
 			log.Fatal("Conflicting flags! --adhoc-conn-str and --user/--password cannot be both set")
 		}
@@ -4796,16 +4789,17 @@ func main() {
 	}
 
 	// running in config file based mode?
-	if len(opts.Config) > 0 || len(opts.MetricsFolder) > 0 {
-		if len(opts.MetricsFolder) == 0 {
-			opts.MetricsFolder = "/etc/pgwatch2/metrics" // prebuilt packages default location
+	if len(opts.Config) > 0 {
+		if opts.MetricsFolder == "" && CheckFolderExistsAndReadable(DEFAULT_METRICS_DEFINITION_PATH_PKG) {
+			opts.MetricsFolder = DEFAULT_METRICS_DEFINITION_PATH_PKG
 			log.Warningf("--metrics-folder path not specified, using %s", opts.MetricsFolder)
-		}
-
-		// verify that metric/config paths are readable
-		_, err := ioutil.ReadDir(opts.MetricsFolder)
-		if err != nil {
-			log.Fatalf("Could not read --metrics-folder path %s: %s", opts.MetricsFolder, err)
+		} else if opts.MetricsFolder == "" && CheckFolderExistsAndReadable(DEFAULT_METRICS_DEFINITION_PATH_DOCKER) {
+			opts.MetricsFolder = DEFAULT_METRICS_DEFINITION_PATH_DOCKER
+			log.Warningf("--metrics-folder path not specified, using %s", opts.MetricsFolder)
+		} else {
+			if !CheckFolderExistsAndReadable(opts.MetricsFolder) {
+				log.Fatalf("Could not read --metrics-folder path %s", opts.MetricsFolder)
+			}
 		}
 
 		if !adHocMode {
@@ -4827,11 +4821,18 @@ func main() {
 			}
 		}
 
-		fileBased = true
-	} else if adHocMode && (len(opts.MetricsFolder) == 0 && CheckFolderExistAndReadable("/etc/pgwatch2/metrics")) {
+		fileBasedMetrics = true
+	} else if adHocMode && opts.MetricsFolder != "" && CheckFolderExistsAndReadable(opts.MetricsFolder) {
 		// don't need the Config DB connection actually for ad-hoc mode if metric definitions are there
-		opts.MetricsFolder = "/etc/pgwatch2/metrics" // prebuilt packages / Docker default location
-		log.Infof("--metrics-folder path not specified, using %s", opts.MetricsFolder)
+		fileBasedMetrics = true
+	} else if adHocMode && opts.MetricsFolder == "" && (CheckFolderExistsAndReadable(DEFAULT_METRICS_DEFINITION_PATH_PKG) || CheckFolderExistsAndReadable(DEFAULT_METRICS_DEFINITION_PATH_DOCKER)) {
+		if CheckFolderExistsAndReadable(DEFAULT_METRICS_DEFINITION_PATH_PKG) {
+			opts.MetricsFolder = DEFAULT_METRICS_DEFINITION_PATH_PKG
+		} else if CheckFolderExistsAndReadable(DEFAULT_METRICS_DEFINITION_PATH_DOCKER) {
+			opts.MetricsFolder = DEFAULT_METRICS_DEFINITION_PATH_DOCKER
+		}
+		log.Warningf("--metrics-folder path not specified, using %s", opts.MetricsFolder)
+		fileBasedMetrics = true
 	} else { // normal "Config DB" mode
 		// make sure all PG params are there
 		if opts.User == "" {
@@ -4990,7 +4991,7 @@ func main() {
 
 		if time.Now().Unix()-last_metrics_refresh_time > METRIC_DEFINITION_REFRESH_TIME {
 			//metrics
-			if fileBased {
+			if fileBasedMetrics {
 				metrics, err = ReadMetricsFromFolder(opts.MetricsFolder, first_loop)
 			} else {
 				metrics, err = ReadMetricDefinitionMapFromPostgres(first_loop)
@@ -5003,7 +5004,7 @@ func main() {
 			}
 		}
 
-		if fileBased || adHocMode {
+		if fileBasedMetrics {
 			pmc, err := ReadPresetMetricsConfigFromFolder(opts.MetricsFolder, false)
 			if err != nil {
 				if first_loop {
