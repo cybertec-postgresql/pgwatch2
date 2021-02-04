@@ -167,6 +167,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "db_stats": 60,
     "db_size": 300,
     "index_stats": 900,
+    "instance_up": 60,
     "locks": 60,
     "locks_mode": 60,
     "recommendations": 43200,
