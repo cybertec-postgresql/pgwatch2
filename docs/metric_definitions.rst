@@ -49,6 +49,10 @@ Some things to note about the built-in metrics:
     This enables Postgres server log "tailing" for errors. Can't be used for "pull" setups though unless the DB logs are
     somehow mounted / copied over, as real file access is needed. See the :ref:`Log parsing <log_parsing>` chapter for
     details.
+  *instance_up*
+    For normal metrics there will be no data rows stored if the DB is not reachable, but for this one there will be a 0
+    stored for the "is_up" column that under normal operations would always be 1. This metric can be used to calculate
+    some "uptime" SLA indicator for example.
 
 
 Defining custom metrics

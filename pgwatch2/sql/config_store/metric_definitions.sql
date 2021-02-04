@@ -6190,6 +6190,21 @@ $sql$,
 );
 
 
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment)
+values (
+'instance_up',
+9.0,
+$sql$
+select
+    (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+    1::int as is_up
+;
+$sql$,
+'NB! This metric has some special handling attached to it - it will store a 0 value if the DB is not accessible.
+Thus it can be used to for example calculate some percentual "uptime" indicator.'
+);
+
+
 /* Metric attributes */
 -- truncate pgwatch2.metric_attribute;
 

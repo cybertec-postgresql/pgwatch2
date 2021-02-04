@@ -242,6 +242,7 @@ const SPECIAL_METRIC_CHANGE_EVENTS = "change_events"
 const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
 const SPECIAL_METRIC_PGBOUNCER_STATS = "pgbouncer_stats"
 const SPECIAL_METRIC_PGPOOL_STATS = "pgpool_stats"
+const SPECIAL_METRIC_INSTANCE_UP = "instance_up"
 const METRIC_CPU_LOAD = "cpu_load"
 const METRIC_PSUTIL_CPU = "psutil_cpu"
 const METRIC_PSUTIL_DISK = "psutil_disk"
@@ -2867,6 +2868,13 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 				}
 			}
 
+			if msg.MetricName == SPECIAL_METRIC_INSTANCE_UP {
+				log.Debugf("[%s:%s] failed to fetch metrics. marking instance as not up: %s", msg.DBUniqueName, msg.MetricName, err)
+				data = make([]map[string]interface{}, 1)
+				data[0] = map[string]interface{}{"epoch_ns": time.Now().UnixNano(), "is_up": 0} // NB! should be updated if the "instance_up" metric definition is changed
+				goto send_to_storage_channel
+			}
+
 			if strings.Contains(err.Error(), "connection refused") {
 				SetDBUnreachableState(msg.DBUniqueName)
 			}
@@ -4788,7 +4796,7 @@ func main() {
 	}
 
 	// running in config file based mode?
-	if len(opts.Config) > 0 {
+	if len(opts.Config) > 0 || len(opts.MetricsFolder) > 0 {
 		if len(opts.MetricsFolder) == 0 {
 			opts.MetricsFolder = "/etc/pgwatch2/metrics" // prebuilt packages default location
 			log.Warningf("--metrics-folder path not specified, using %s", opts.MetricsFolder)
