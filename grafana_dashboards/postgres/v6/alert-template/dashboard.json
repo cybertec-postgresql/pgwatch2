@@ -159,7 +159,7 @@
       "dashes": false,
       "datasource": null,
       "decimals": 0,
-      "description": "max_connections - used",
+      "description": "100.0 * connections / max_connections",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -217,7 +217,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  dbname,\n  avg((select (data->'max_connections')::int from settings where time > now() - '6h'::interval order by time desc limit 1) - (select (data->'numbackends')::int)) as is_primary\nFROM\n  db_stats\nWHERE\n  $__timeFilter(time)\nGROUP BY 1, 2\nORDER BY 1, 2\n",
+          "rawSql": "SELECT\n time,\n dbname,\n /* NB! the selected $__timeFilter should be greater than the 'settings' metric's interval, i.e. 2h+ when using some default preset config */\n 100.0 * max_total_sessions / (select coalesce((data->'max_connections')::int, 1) from settings where dbname = x.dbname and $__timeFilter(time) order by time desc limit 1) as pct_used\nFROM (\nSELECT\n  $__timeGroup(time, $__interval),\n  dbname,\n  max((data->'instance_total')::int) as max_total_sessions\nFROM\n  backends\nWHERE\n  $__timeFilter(time)\nGROUP BY 1, 2\nORDER BY 1, 2\n) x\nORDER BY 1, 2\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -249,10 +249,10 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Available connections < 10",
+      "title": "Instance connections used %",
       "tooltip": {
         "shared": true,
-        "sort": 0,
+        "sort": 2,
         "value_type": "individual"
       },
       "type": "graph",
@@ -266,7 +266,7 @@
       "yaxes": [
         {
           "decimals": 0,
-          "format": "short",
+          "format": "percent",
           "label": null,
           "logBase": 1,
           "max": null,
