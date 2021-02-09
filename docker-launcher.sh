@@ -78,5 +78,6 @@ touch /pgwatch2/persistent-config/db-bootstrap-done-marker
 
 fi
 
+sleep 1
 
 exec /usr/local/bin/supervisord --configuration=/etc/supervisor/supervisord.conf --nodaemon
