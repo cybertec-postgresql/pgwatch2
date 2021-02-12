@@ -12,7 +12,7 @@ metadata:
   name: {{ include "pgwatch2.fullname" . }}-influx
 spec:
   accessModes:
-{{ toYaml .Values.pgwatch2.persistentVolumes.database.accessModes | indent 4 }}
+{{ toYaml .Values.pgwatch2.persistentVolumes.influx.accessModes | indent 4 }}
 {{- if .Values.pgwatch2.persistentVolumes.influx.storageClass }}
 {{- if (eq "-" .Values.pgwatch2.persistentVolumes.influx.storageClass) }}
   storageClassName: ""
