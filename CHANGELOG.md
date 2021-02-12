@@ -18,6 +18,25 @@ ther pre-built packages) folder. Also it is highly recommended to refresh all th
 For that there's also a refresh_metrics_from_github.sh script provided. YAML based setups don't need any extra actions besides
 refreshing from Git or installing the new RPM / DEB / Tar packages.
 
+## v1.8.4 [2021-02-12]
+
+Main changes:
+
+* TimescaleDB metric storage - cope with v2.0 breaking API changes and improve indexing.
+* New gatherer feature - ability to extract "psutil_*" metrics (CPU, disk usage etc) directly from OS. Use "--direct-os-stats" parameter to enable.
+* Gatherer improvement - make Graphite storage connections more resilient. @eshkinkot
+* Gatherer improvement - add number of total monitored and currently unreachable databases to the stats port output.
+* Metrics - introduce a new 'instance_up' metric with values \[0|1\] to help with SLA type "uptime percentage" calculations.
+* Metrics - correct wal_receiver.replay_lag_b datatype to int8. @eshkinkot
+* Metrics - 'replication' now supports also cascaded setups as pg_stat_replication has actually data on "cascading primaries".
+* Dashboards - on PG "Alert template" dash replace DB based "Available connections" with "Instance connections used %".
+* Docker - give Grafana some more time to roll out its DB schema migrations.
+* Docker - introduce an explicit supervisord startup script to better time the startup sequence (5s pauses between components).
+* Docker - component update to InfluxDB 1.8.4, Grafana 6.7.5, Go 1.5.8.
+* Docker - limit Python PIP to pre v21 versions as it was breaking the build.
+* K8s / Openshift - more and better Helm chart templates.
+
+
 ## v1.8.3 [2020-12-23]
 
 Main changes:
