@@ -116,21 +116,21 @@ spec:
           persistentVolumeClaim:
             claimName: {{ if .Values.pgwatch2.persistentVolumes.database.existingClaim }}{{ .Values.pgwatch2.persistentVolumes.database.existingClaim }}{{- else }}{{ include "pgwatch2.fullname" . }}-database{{- end }}
         {{ else }}
-        emptyDir:
+          emptyDir:
         {{ end }}
         - name: grafana-volume
         {{- if .Values.pgwatch2.persistentVolumes.grafana.enabled }}
           persistentVolumeClaim:
             claimName: {{ if .Values.pgwatch2.persistentVolumes.grafana.existingClaim }}{{ .Values.pgwatch2.persistentVolumes.grafana.existingClaim }}{{- else }}{{ include "pgwatch2.fullname" . }}-grafana{{- end }}
         {{ else }}
-        emptyDir:
+          emptyDir:
         {{ end }}
         - name: influx-volume
         {{- if .Values.pgwatch2.persistentVolumes.influx.enabled }}
           persistentVolumeClaim:
             claimName: {{ if .Values.pgwatch2.persistentVolumes.influx.existingClaim }}{{ .Values.pgwatch2.persistentVolumes.influx.existingClaim }}{{- else }}{{ include "pgwatch2.fullname" . }}-influx{{- end }}
         {{ else }}
-        emptyDir:
+          emptyDir:
         {{ end }}
         {{- with .Values.nodeSelector }}
       nodeSelector:
