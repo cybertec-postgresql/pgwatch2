@@ -105,18 +105,21 @@ parameter in server configuration.
 
 If for security reasons a plain unprivileged database account is used for metrics gathering, this would mean that some
 protected PostgreSQL internal statistics cannot be fetched. This might be just OK (there's also an "unprivileged" preset),
-but it's also possible to expose such protected information in a safe and controlled way via a set of predefined SECURITY DEFINER functions.
+but it's also possible to expose such protected information in a safe and controlled way via a set of predefined SECURITY
+DEFINER functions. Note that another way to expose most of the protected metrics for Postgres v10+ instances would be to
+grant the special "pg_monitor" system role to the monitoring user like in the above paragraph.
 
 To be executed on the "to be monitored" database:
 
 ```
-psql -h mydb.com -U superuser -f /etc/pgwatch2/metrics/00_helpers/$pgver/get_stat_activity/$pgver/metric.sql mydb
+psql -h mydb.com -U superuser -f /etc/pgwatch2/metrics/00_helpers/get_stat_activity/$pgver/metric.sql mydb
 psql -h mydb.com -U superuser -f /etc/pgwatch2/metrics/00_helpers/get_stat_statements/$pgver/metric.sql mydb
 psql -h mydb.com -U superuser -f /etc/pgwatch2/metrics/00_helpers/get_stat_replication/$pgver/metric.sql mydb
 ```
 
 NB! By default the "helpers" assume that a role called "pgwatch2" will be used for metrics gathering. If not so, you need
-to change the SQL definitions.
+to change the SQL definitions. Also note that some helper scripts can refuse to install if the security of the target
+schema is too "open" for everyone (i.e. to the built-in "public" meta-role) and thus there's potential for misuse.
 
 ## Integration of OS level metrics
 
