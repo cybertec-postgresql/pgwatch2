@@ -136,8 +136,8 @@ and run additionally just the pgwatch2 collector.
     * ``--pg-metric-store-conn-str="postgresql://user:pwd@host:port/db"`` or ``PW2_PG_METRIC_STORE_CONN_STR="..."``
     * optionally also adjust the ``--pg-retention-days`` parameter. By default 30 days for InfluxDB and 14 days for Postgres are kept
 
-  3. If using the Web UI also set the first two parameters (--datastore and --pg-metric-store-conn-str) if wanting to
-     for example clean up data via the UI.
+  3. If using the Web UI also set the datastore parameters ``--datastore`` and ``--pg-metric-store-conn-str`` if wanting to
+     have an option to be able to clean up data also via the UI in a more targeted way.
 
   NB! When using Postgres metrics storage, the schema rollout script activates "asynchronous commiting" feature for the
   *pgwatch2* role in the metrics storage DB by default! If this is not wanted (no metrics can be lost in case of a crash),

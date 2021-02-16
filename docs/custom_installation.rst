@@ -184,7 +184,7 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
 
 #. **Start the pgwatch2 metrics collection agent**
 
-   #. The gatherer has quite some parameters (use the *--help* flag to show them all), but simplest form would be:
+   #. The gatherer has quite some parameters (use the *\-\-help* flag to show them all), but simplest form would be:
 
       ::
 

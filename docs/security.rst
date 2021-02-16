@@ -34,7 +34,7 @@ Some points on security:
 * Encryption / decryption of connection string passwords stored in the config DB or in YAML config files
 
   By default passwords are stored in plaintext but as of v1.5 it's possible to use an encryption passphrase, or a file
-  with the passphrase in it,  via *--aes-gcm-keyphrase / --aes-gcm-keyphrase-file* or *PW2_AES_GCM_KEYPHRASE / PW2_AES_GCM_KEYPHRASE_FILE* parameters.
+  with the passphrase in it,  via *\-\-aes-gcm-keyphrase / \-\-aes-gcm-keyphrase-file* or *PW2_AES_GCM_KEYPHRASE / PW2_AES_GCM_KEYPHRASE_FILE* parameters.
   If using the Web UI to store connection info, the same encryption key needs to be specified for both the Web UI and the
   gatherer. If using YAML configs then encrypted passwords can be generated using the *--aes-gcm-password-to-encrypt* flag
   for embedding in YAML.
