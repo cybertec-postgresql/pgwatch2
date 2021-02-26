@@ -241,6 +241,7 @@ const RECO_METRIC_NAME = "recommendations"
 const SPECIAL_METRIC_CHANGE_EVENTS = "change_events"
 const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
 const SPECIAL_METRIC_PGBOUNCER_STATS = "pgbouncer_stats"
+const SPECIAL_METRIC_PGBOUNCER_POOLS = "pgbouncer_pools"
 const SPECIAL_METRIC_PGPOOL_STATS = "pgpool_stats"
 const SPECIAL_METRIC_INSTANCE_UP = "instance_up"
 const METRIC_CPU_LOAD = "cpu_load"
@@ -863,7 +864,7 @@ retry:
 			}
 
 			if epoch_ns == 0 {
-				if !ts_warning_printed && msg.MetricName != SPECIAL_METRIC_PGBOUNCER_STATS {
+				if !ts_warning_printed && msg.MetricName != SPECIAL_METRIC_PGBOUNCER_STATS && msg.MetricName != SPECIAL_METRIC_PGBOUNCER_POOLS {
 					log.Warning("No timestamp_ns found, (gatherer) server time will be used. measurement:", msg.MetricName)
 					ts_warning_printed = true
 				}
@@ -957,7 +958,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 			}
 
 			if epoch_ns == 0 {
-				if !ts_warning_printed && msg.MetricName != SPECIAL_METRIC_PGBOUNCER_STATS {
+				if !ts_warning_printed && msg.MetricName != SPECIAL_METRIC_PGBOUNCER_STATS && msg.MetricName != SPECIAL_METRIC_PGBOUNCER_POOLS {
 					log.Warning("No timestamp_ns found, server time will be used. measurement:", msg.MetricName)
 					ts_warning_printed = true
 				}

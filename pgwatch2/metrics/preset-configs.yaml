@@ -42,6 +42,7 @@
   description: per DB stats
   metrics:
     pgbouncer_stats: 60
+    pgbouncer_pools: 60
 
 - name: pgpool
   description: pool global stats, 1 row per node ID

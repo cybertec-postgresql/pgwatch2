@@ -5099,6 +5099,16 @@ values (
 false
 );
 
+/* pgbouncer_pools - assumes also that monitored DB has type 'pgbouncer' */
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
+values (
+'pgbouncer_pools',
+0,
+'show pools',
+'pgbouncer per db statistics',
+false
+);
+
 /* pgpool_stats - assumes also that monitored DB has type 'pgpool' */
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
 values (

@@ -127,7 +127,8 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     }'),
     ('pgbouncer', 'per DB stats',
     '{
-    "pgbouncer_stats": 60
+    "pgbouncer_stats": 60,
+    "pgbouncer_pools": 60
     }'),
     ('pgpool', 'pool global stats, 1 row per node ID',
     '{
