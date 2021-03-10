@@ -147,7 +147,7 @@ psql -f /etc/pgwatch2/metrics/00_helpers/get_psutil_disk_io_total/9.1/metric.sql
 
 # Metric definitions
 
-Metrics in pgwatch2 are named SQL queries that can return pretty much everything you find useful. Metrocs can have different query
+Metrics in pgwatch2 are named SQL queries that can return pretty much everything you find useful. Metrics can have different query
 text versions for different target PostgreSQL versions, also optionally taking into account recovery state (primary / standby)
 and as of v1.8 also versions of installed extensions. Query output is automatically stored into the metric DB and optionally
 also indexed if a column's name is prefixed with the "tag_" modifier.
