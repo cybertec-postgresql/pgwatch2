@@ -1,1 +1,1 @@
-show stats
+show stats;
