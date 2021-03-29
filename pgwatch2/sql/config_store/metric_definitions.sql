@@ -1824,8 +1824,8 @@ values (
 $sql$
 WITH q_data AS (
     SELECT
-        (extract(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
         (regexp_replace(md5(query::varchar(1000)), E'\\D', '', 'g'))::varchar(10)::text as tag_queryid,
+        max(query::varchar(8000)) AS query,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
          use the stat_statements_no_query_text metric instead, created specifically for this use case.
@@ -1865,31 +1865,21 @@ WITH q_data AS (
                 'SHOW%'])
         GROUP BY
             tag_queryid
-),
-q_queryid_text AS (
-    SELECT
-        (regexp_replace(md5(query::varchar(1000)), E'\\D', '', 'g'))::varchar(10)::text as queryid,
-        query::varchar(8000)
-    FROM
-        get_stat_statements()
-    WHERE
-        dbid = (
-            SELECT
-                oid
-            FROM
-                pg_database
-            WHERE
-                datname = current_database()))
-SELECT
-    b.*,
-    (
-        SELECT
-            ltrim(regexp_replace(query, E'[ \\t\\n\\r]+', ' ', 'g'))
-        FROM
-            q_queryid_text
-        WHERE
-            q_queryid_text.queryid = b.tag_queryid
-        LIMIT 1) AS tag_query
+)
+SELECT (EXTRACT(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
+       b.tag_queryid,
+       b.users,
+       b.calls,
+       b.total_time,
+       b.shared_blks_hit,
+       b.shared_blks_read,
+       b.shared_blks_written,
+       b.shared_blks_dirtied,
+       b.temp_blks_read,
+       b.temp_blks_written,
+       b.blk_read_time,
+       b.blk_write_time,
+       ltrim(regexp_replace(b.query, E'[ \\t\\n\\r]+', ' ', 'g')) tag_query
 FROM (
     SELECT
         *
@@ -1970,8 +1960,8 @@ $sql$,
 $sql$
 WITH q_data AS (
     SELECT
-        (extract(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
         (regexp_replace(md5(query::varchar(1000)), E'\\D', '', 'g'))::varchar(10)::text as tag_queryid,
+        max(query::varchar(8000)) AS query,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
          use the stat_statements_no_query_text metric instead, created specifically for this use case.
@@ -2011,31 +2001,21 @@ WITH q_data AS (
                 'SHOW%'])
         GROUP BY
             tag_queryid
-),
-q_queryid_text AS (
-    SELECT
-        (regexp_replace(md5(query::varchar(1000)), E'\\D', '', 'g'))::varchar(10)::text as queryid,
-        query::varchar(8000)
-    FROM
-        pg_stat_statements
-    WHERE
-        dbid = (
-            SELECT
-                oid
-            FROM
-                pg_database
-            WHERE
-                datname = current_database()))
-SELECT
-    b.*,
-    (
-        SELECT
-            ltrim(regexp_replace(query, E'[ \\t\\n\\r]+', ' ', 'g'))
-        FROM
-            q_queryid_text
-        WHERE
-            q_queryid_text.queryid = b.tag_queryid
-        LIMIT 1) AS tag_query
+)
+SELECT (EXTRACT(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
+       b.tag_queryid,
+       b.users,
+       b.calls,
+       b.total_time,
+       b.shared_blks_hit,
+       b.shared_blks_read,
+       b.shared_blks_written,
+       b.shared_blks_dirtied,
+       b.temp_blks_read,
+       b.temp_blks_written,
+       b.blk_read_time,
+       b.blk_write_time,
+       ltrim(regexp_replace(b.query, E'[ \\t\\n\\r]+', ' ', 'g')) tag_query
 FROM (
     SELECT
         *
@@ -2122,7 +2102,6 @@ values (
 $sql$
 WITH q_data AS (
     SELECT
-        (extract(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
         queryid::text AS tag_queryid,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
@@ -2138,7 +2117,8 @@ WITH q_data AS (
         sum(temp_blks_read)::int8 AS temp_blks_read,
         sum(temp_blks_written)::int8 AS temp_blks_written,
         round(sum(blk_read_time)::numeric, 3)::double precision AS blk_read_time,
-        round(sum(blk_write_time)::numeric, 3)::double precision AS blk_write_time
+        round(sum(blk_write_time)::numeric, 3)::double precision AS blk_write_time,
+        max(query::varchar(8000)) AS query
     FROM
         get_stat_statements() s
     WHERE
@@ -2163,31 +2143,21 @@ WITH q_data AS (
                 'SHOW%'])
         GROUP BY
             queryid
-),
-q_queryid_text AS (
-    SELECT
-        queryid::text,
-        query::varchar(8000)
-    FROM
-        get_stat_statements()
-    WHERE
-        dbid = (
-            SELECT
-                oid
-            FROM
-                pg_database
-            WHERE
-                datname = current_database()))
-SELECT
-    b.*,
-    (
-        SELECT
-            ltrim(regexp_replace(query, E'[ \\t\\n\\r]+', ' ', 'g'))
-        FROM
-            q_queryid_text
-        WHERE
-            q_queryid_text.queryid = b.tag_queryid
-        LIMIT 1) AS tag_query
+)
+SELECT (EXTRACT(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
+       b.tag_queryid,
+       b.users,
+       b.calls,
+       b.total_time,
+       b.shared_blks_hit,
+       b.shared_blks_read,
+       b.shared_blks_written,
+       b.shared_blks_dirtied,
+       b.temp_blks_read,
+       b.temp_blks_written,
+       b.blk_read_time,
+       b.blk_write_time,
+       ltrim(regexp_replace(b.query, E'[ \\t\\n\\r]+', ' ', 'g')) tag_query
 FROM (
     SELECT
         *
@@ -2268,7 +2238,6 @@ $sql$,
 $sql$
 WITH q_data AS (
     SELECT
-        (extract(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
         queryid::text AS tag_queryid,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
@@ -2284,7 +2253,8 @@ WITH q_data AS (
         sum(temp_blks_read)::int8 AS temp_blks_read,
         sum(temp_blks_written)::int8 AS temp_blks_written,
         round(sum(blk_read_time)::numeric, 3)::double precision AS blk_read_time,
-        round(sum(blk_write_time)::numeric, 3)::double precision AS blk_write_time
+        round(sum(blk_write_time)::numeric, 3)::double precision AS blk_write_time,
+        max(query::varchar(8000)) AS query
     FROM
         pg_stat_statements s
     WHERE
@@ -2309,31 +2279,21 @@ WITH q_data AS (
                 'SHOW%'])
         GROUP BY
             queryid
-),
-q_queryid_text AS (
-    SELECT
-        queryid::text,
-        query::varchar(8000)
-    FROM
-        pg_stat_statements
-    WHERE
-        dbid = (
-            SELECT
-                oid
-            FROM
-                pg_database
-            WHERE
-                datname = current_database()))
-SELECT
-    b.*,
-    (
-        SELECT
-            ltrim(regexp_replace(query, E'[ \\t\\n\\r]+', ' ', 'g'))
-        FROM
-            q_queryid_text
-        WHERE
-            q_queryid_text.queryid = b.tag_queryid
-        LIMIT 1) AS tag_query
+)
+SELECT (EXTRACT(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
+       b.tag_queryid,
+       b.users,
+       b.calls,
+       b.total_time,
+       b.shared_blks_hit,
+       b.shared_blks_read,
+       b.shared_blks_written,
+       b.shared_blks_dirtied,
+       b.temp_blks_read,
+       b.temp_blks_written,
+       b.blk_read_time,
+       b.blk_write_time,
+       ltrim(regexp_replace(b.query, E'[ \\t\\n\\r]+', ' ', 'g')) tag_query
 FROM (
     SELECT
         *
@@ -2421,7 +2381,6 @@ values (
 $sql$
 WITH q_data AS (
     SELECT
-        (extract(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
         queryid::text AS tag_queryid,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
@@ -2440,7 +2399,8 @@ WITH q_data AS (
         round(sum(blk_write_time)::numeric, 3)::double precision AS blk_write_time,
         sum(wal_fpi)::int8 AS wal_fpi,
         sum(wal_bytes)::int8 AS wal_bytes,
-        round(sum(s.total_plan_time)::numeric, 3)::double precision AS total_plan_time
+        round(sum(s.total_plan_time)::numeric, 3)::double precision AS total_plan_time,
+        max(query::varchar(8000)) AS query
     FROM
         get_stat_statements() s
     WHERE
@@ -2465,31 +2425,25 @@ WITH q_data AS (
                 'SHOW%'])
         GROUP BY
             queryid
-),
-q_queryid_text AS (
-    SELECT
-        queryid::text,
-        query::varchar(8000)
-    FROM
-        get_stat_statements()
-    WHERE
-        dbid = (
-            SELECT
-                oid
-            FROM
-                pg_database
-            WHERE
-                datname = current_database()))
+)
 SELECT
-    b.*,
-    (
-        SELECT
-            ltrim(regexp_replace(query, E'[ \\t\\n\\r]+', ' ', 'g'))
-        FROM
-            q_queryid_text
-        WHERE
-            q_queryid_text.queryid = b.tag_queryid
-        LIMIT 1) AS tag_query
+    (EXTRACT(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
+    b.tag_queryid,
+    b.users,
+    b.calls,
+    b.total_time,
+    b.shared_blks_hit,
+    b.shared_blks_read,
+    b.shared_blks_written,
+    b.shared_blks_dirtied,
+    b.temp_blks_read,
+    b.temp_blks_written,
+    b.blk_read_time,
+    b.blk_write_time,
+    b.wal_fpi,
+    b.wal_bytes,
+    b.total_plan_time,
+    ltrim(regexp_replace(b.query, E'[ \\t\\n\\r]+', ' ', 'g')) AS tag_query
 FROM (
     SELECT
         *
@@ -2570,7 +2524,6 @@ $sql$,
 $sql$
 WITH q_data AS (
     SELECT
-        (extract(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
         queryid::text AS tag_queryid,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
@@ -2589,7 +2542,8 @@ WITH q_data AS (
         round(sum(blk_write_time)::numeric, 3)::double precision AS blk_write_time,
         sum(wal_fpi)::int8 AS wal_fpi,
         sum(wal_bytes)::int8 AS wal_bytes,
-        round(sum(s.total_plan_time)::numeric, 3)::double precision AS total_plan_time
+        round(sum(s.total_plan_time)::numeric, 3)::double precision AS total_plan_time,
+        max(query::varchar(8000)) AS query
     FROM
         pg_stat_statements s
     WHERE
@@ -2614,31 +2568,25 @@ WITH q_data AS (
                 'SHOW%'])
         GROUP BY
             queryid
-),
-q_queryid_text AS (
-    SELECT
-        queryid::text,
-        query::varchar(8000)
-    FROM
-        pg_stat_statements
-    WHERE
-        dbid = (
-            SELECT
-                oid
-            FROM
-                pg_database
-            WHERE
-                datname = current_database()))
+)
 SELECT
-    b.*,
-    (
-        SELECT
-            ltrim(regexp_replace(query, E'[ \\t\\n\\r]+', ' ', 'g'))
-        FROM
-            q_queryid_text
-        WHERE
-            q_queryid_text.queryid = b.tag_queryid
-        LIMIT 1) AS tag_query
+    (EXTRACT(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
+    b.tag_queryid,
+    b.users,
+    b.calls,
+    b.total_time,
+    b.shared_blks_hit,
+    b.shared_blks_read,
+    b.shared_blks_written,
+    b.shared_blks_dirtied,
+    b.temp_blks_read,
+    b.temp_blks_written,
+    b.blk_read_time,
+    b.blk_write_time,
+    b.wal_fpi,
+    b.wal_bytes,
+    b.total_plan_time,
+    ltrim(regexp_replace(b.query, E'[ \\t\\n\\r]+', ' ', 'g')) AS tag_query
 FROM (
     SELECT
         *
