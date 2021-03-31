@@ -23,6 +23,7 @@
     replication: 120
     replication_slots: 120
     settings: 7200
+    sequence_health: 3600
     sproc_stats: 180
     stat_statements: 180
     stat_statements_calls: 60
@@ -55,6 +56,7 @@
     db_stats: 60
     db_size: 300
     index_stats: 900
+    sequence_health: 3600
     sproc_stats: 180
     stat_statements: 180
     table_stats: 300
@@ -80,6 +82,7 @@
     logical_subscriptions: 120
     server_log_event_counts: 60
     settings: 7200
+    sequence_health: 3600
     sproc_stats: 180
     stat_statements: 180
     stat_statements_calls: 60
@@ -116,6 +119,7 @@
     logical_subscriptions: 120
     server_log_event_counts: 60
     settings: 7200
+    sequence_health: 3600
     sproc_stats: 180
     stat_statements: 180
     stat_statements_calls: 60
@@ -146,6 +150,7 @@
     replication: 120
     replication_slots: 120
     settings: 7200
+    sequence_health: 3600
     sproc_stats: 180
     stat_statements_calls: 60
     table_io_stats: 600
@@ -185,6 +190,7 @@
     replication: 120
     replication_slots: 120
     settings: 7200
+    sequence_health: 3600
     sproc_stats: 180
     stat_statements: 180
     stat_statements_calls: 60
@@ -233,6 +239,7 @@
     replication: 120
     replication_slots: 120
     settings: 7200
+    sequence_health: 3600
     sproc_stats: 180
     stat_statements: 180
     stat_statements_calls: 60
@@ -263,6 +270,7 @@
     change_events: 300
     table_io_stats: 600
     stat_statements: 180
+    sequence_health: 3600
     replication_slots: 60
     logical_subscriptions: 60
     stat_statements_calls: 60
