@@ -15,4 +15,14 @@ FROM
   pg_statio_user_tables
 WHERE
   NOT schemaname LIKE E'pg\\_temp%'
-  AND (heap_blks_read > 0 OR heap_blks_hit > 0 OR idx_blks_read > 0 OR idx_blks_hit > 0 OR tidx_blks_read > 0 OR tidx_blks_hit > 0);
+  AND (heap_blks_read > 0 OR heap_blks_hit > 0 OR idx_blks_read > 0 OR idx_blks_hit > 0 OR tidx_blks_read > 0 OR tidx_blks_hit > 0)
+ORDER BY
+  coalesce(heap_blks_read, 0) +
+  coalesce(heap_blks_hit, 0) +
+  coalesce(idx_blks_read, 0) +
+  coalesce(idx_blks_hit, 0) +
+  coalesce(toast_blks_read, 0) +
+  coalesce(toast_blks_hit, 0) +
+  coalesce(tidx_blks_read, 0) +
+  coalesce(tidx_blks_hit, 0)
+  DESC LIMIT 300;
