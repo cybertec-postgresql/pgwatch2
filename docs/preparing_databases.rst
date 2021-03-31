@@ -98,6 +98,7 @@ For completely unprivileged monitoring users the following *helpers* are recomme
   psql -f /etc/pgwatch2/metrics/00_helpers/get_stat_replication/$pgver/metric.sql mydb
   psql -f /etc/pgwatch2/metrics/00_helpers/get_wal_size/$pgver/metric.sql mydb
   psql -f /etc/pgwatch2/metrics/00_helpers/get_stat_statements/$pgver/metric.sql mydb
+  psql -f /etc/pgwatch2/metrics/00_helpers/get_sequences/$pgver/metric.sql mydb
 
 NB! Note that there might not be an exact Postgres version match for helper definitions - then replace *$pgver* with the previous
 available version number below your server's Postgres version number.
