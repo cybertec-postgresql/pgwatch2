@@ -1434,7 +1434,8 @@ from
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
   not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
-  and not relistemp; -- and temp tables
+  and not relistemp -- and temp tables
+order by table_size_b desc nulls last limit 300;
 $sql$,
 '{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}',
 true
@@ -1474,7 +1475,8 @@ from
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
   not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
-  and not relistemp; -- and temp tables
+  and not relistemp -- and temp tables
+order by table_size_b desc nulls last limit 300;
 $sql$,
 '{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}',
 true
@@ -1519,7 +1521,8 @@ from
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
   not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
-  and c.relpersistence != 't'; -- and temp tables
+  and c.relpersistence != 't' -- and temp tables
+order by table_size_b desc nulls last limit 300;
 $sql$,
 '{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}',
 true
@@ -1564,7 +1567,8 @@ from
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
   not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
-  and c.relpersistence != 't'; -- and temp tables
+  and c.relpersistence != 't' -- and temp tables
+order by table_size_b desc nulls last limit 300;
 $sql$,
 '{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}',
 true
@@ -1610,7 +1614,8 @@ from
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
   not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
-  and c.relpersistence != 't'; -- and temp tables
+  and c.relpersistence != 't' -- and temp tables
+order by table_size_b desc nulls last limit 300;
 $sql$,
 '{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}'
 );
@@ -1750,8 +1755,7 @@ select * from (
       group by
            1, 2, 3, 4
 ) x
---order by tag_table_full_name
-;
+order by table_size_b desc nulls last limit 300;
 $sql$,
 '{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}'
 );

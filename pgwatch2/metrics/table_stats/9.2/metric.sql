@@ -33,4 +33,5 @@ from
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
   not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
-  and c.relpersistence != 't'; -- and temp tables
+  and c.relpersistence != 't' -- and temp tables
+order by table_size_b desc nulls last limit 300;
