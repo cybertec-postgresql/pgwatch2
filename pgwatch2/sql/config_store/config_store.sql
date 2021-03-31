@@ -365,7 +365,31 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "table_stats": 300,
     "wal": 60,
     "wal_receiver": 120
-    }');
+    }'),
+    ('gce', 'similar to ''exhaustive'' with stuff not accessible on GCE managed PostgreSQL engine removed',
+     '{
+       "archiver": 60,
+       "backends": 60,
+       "bgwriter": 60,
+       "db_stats": 60,
+       "db_size": 300,
+       "index_stats": 900,
+       "locks": 60,
+       "locks_mode": 60,
+       "replication": 120,
+       "replication_slots": 120,
+       "settings": 7200,
+       "sequence_health": 3600,
+       "sproc_stats": 180,
+       "stat_statements": 180,
+       "stat_statements_calls": 60,
+       "table_io_stats": 600,
+       "table_stats": 300,
+       "wal": 60,
+       "wal_receiver": 120,
+       "change_events": 300,
+       "table_bloat_approx_summary_sql": 7200
+     }');
 
 /* one host for demo purposes, so that "docker run" could immediately show some graphs */
 --insert into pgwatch2.monitored_db (md_unique_name, md_preset_config_name, md_config, md_hostname, md_port, md_dbname, md_user, md_password)
