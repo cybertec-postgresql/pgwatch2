@@ -6464,16 +6464,45 @@ $sql$,
 Thus it can be used to for example calculate some percentual "uptime" indicator.'
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_is_helper, m_sql)
+values (
+'get_sequences',
+10,
+true,
+$sql$
+CREATE OR REPLACE FUNCTION get_sequences() RETURNS SETOF pg_sequences AS
+$$
+  select * from pg_sequences
+$$ LANGUAGE sql VOLATILE SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION get_sequences() TO pgwatch2;
+COMMENT ON FUNCTION get_sequences() IS 'created for pgwatch2';
+$sql$
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_sql_su)
 values (
 'sequence_health',
 10,
 $sql$
+with q_seq_data as (
+    select * from get_sequences()
+)
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  (select round(100.0 * coalesce(max(last_value::numeric / max_value), 0), 2) from pg_sequences where not cycle) as max_used_pct,
-  (select count(*) from pg_sequences where not cycle and last_value::numeric / max_value > 0.5) as "50p_used_seq_count",
-  (select count(*) from pg_sequences where not cycle and last_value::numeric / max_value > 0.75) as "75p_used_seq_count";
+  (select round(100.0 * coalesce(max(last_value::numeric / max_value), 0), 2)::float from q_seq_data where not cycle) as max_used_pct,
+  (select count(*) from q_seq_data where not cycle and last_value::numeric / max_value > 0.5) as p50_used_seq_count,
+  (select count(*) from q_seq_data where not cycle and last_value::numeric / max_value > 0.75) as p75_used_seq_count;
+$sql$,
+$sql$
+with q_seq_data as (
+    select * from pg_sequences
+)
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  (select round(100.0 * coalesce(max(last_value::numeric / max_value), 0), 2)::float from q_seq_data where not cycle) as max_used_pct,
+  (select count(*) from q_seq_data where not cycle and last_value::numeric / max_value > 0.5) as p50_used_seq_count,
+  (select count(*) from q_seq_data where not cycle and last_value::numeric / max_value > 0.75) as p75_used_seq_count;
 $sql$
 );
 
