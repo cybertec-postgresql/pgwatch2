@@ -12,7 +12,7 @@ After=network-online.target
 [Service]
 User=pgwatch2
 Type=notify
-ExecStart=/usr/bin/pgwatch2-daemon -c /etc/pgwatch2/config/instances.yaml -m /etc/pgwatch2/metrics/
+ExecStart=/usr/bin/pgwatch2-daemon -c /etc/pgwatch2/config/instances.yaml -m /etc/pgwatch2/metrics --datastore=postgres --pg-metric-store-conn-str=postgresql://pgwatch2@localhost:5432/pgwatch2_metrics
 Restart=on-failure
 TimeoutStartSec=0
 
