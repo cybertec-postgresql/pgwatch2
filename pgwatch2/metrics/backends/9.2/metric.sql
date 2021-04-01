@@ -1,5 +1,5 @@
 with sa_snapshot as (
-  select * from get_stat_activity() where not query like 'autovacuum:%'
+  select * from get_stat_activity()
 )
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
@@ -14,10 +14,10 @@ select
   (select extract(epoch from (now() - backend_start))::int
     from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
   (select extract(epoch from (now() - xact_start))::int
-    from sa_snapshot where xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
+    from sa_snapshot where not query like 'autovacuum:%' and xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
   (select extract(epoch from (now() - xact_start))::int
-   from get_stat_activity() where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
+   from sa_snapshot where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
   (select extract(epoch from max(now() - query_start))::int
-    from sa_snapshot where state = 'active') as longest_query_seconds,
-  (select count(*) from get_stat_activity() where query like 'autovacuum:%') as av_workers
+    from sa_snapshot where not query like 'autovacuum:%' and state = 'active') as longest_query_seconds,
+  (select count(*) from sa_snapshot where query like 'autovacuum:%') as av_workers
 ;
