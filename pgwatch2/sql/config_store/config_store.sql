@@ -101,7 +101,7 @@ create table if not exists schema_version (
     sv_created_on timestamptz not null default now()
 );
 
-insert into pgwatch2.schema_version (sv_tag) values ('1.8.2');
+insert into pgwatch2.schema_version (sv_tag) values ('1.8.4');
 
 
 insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
