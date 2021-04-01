@@ -6,19 +6,19 @@ alter database pgwatch2 set search_path to public, pgwatch2;
 
 set role to pgwatch2; -- NB! Role/db create script is in bootstrap/create_db_pgwatch.sql
 
-drop table if exists preset_config cascade;
+-- drop table if exists preset_config cascade;
 
 /* preset configs for typical usecases */
-create table pgwatch2.preset_config (
+create table if not exists pgwatch2.preset_config (
     pc_name text primary key,
     pc_description text not null,
     pc_config jsonb not null,
     pc_last_modified_on timestamptz not null default now()
 );
 
-drop table if exists pgwatch2.monitored_db;
+-- drop table if exists pgwatch2.monitored_db;
 
-create table pgwatch2.monitored_db (
+create table if not exists pgwatch2.monitored_db (
     md_id serial not null primary key,
     md_unique_name text not null,
     md_hostname text not null,
@@ -55,7 +55,8 @@ create table pgwatch2.monitored_db (
     CHECK (md_password_type in ('plain-text', 'aes-gcm-256'))
 );
 
-create unique index on monitored_db(md_hostname, md_port, md_dbname, md_is_enabled) where not md_dbtype ~ 'patroni'; -- prevent multiple active workers for the same db
+-- prevent multiple active workers for the same db
+create unique index if not exists monitored_db_md_hostname_md_port_md_dbname_md_is_enabled_idx on monitored_db(md_hostname, md_port, md_dbname, md_is_enabled) where not md_dbtype ~ 'patroni';
 
 
 alter table pgwatch2.monitored_db add constraint preset_or_custom_config check
@@ -66,7 +67,7 @@ alter table pgwatch2.monitored_db add constraint preset_or_custom_config check
     not (md_preset_config_name_standby is not null and md_config_standby is not null));
 
 
-create table metric (
+create table if not exists metric (
     m_id                serial primary key,
     m_name              text not null,
     m_pg_version_from   numeric not null,
@@ -95,7 +96,7 @@ create table metric_attribute (
 
 
 /* this should allow auto-rollout of schema changes for future (1.6+) releases. currently only informative */
-create table schema_version (
+create table if not exists schema_version (
     sv_tag text primary key,
     sv_created_on timestamptz not null default now()
 );
