@@ -1,30 +1,26 @@
-FROM ubuntu:16.04
+FROM golang:1.16.3
 
-RUN apt-get -q update && apt-get -qy install wget git && apt autoremove -y
-
-###
-### add pgwatch2 source
-###
-
-ADD pgwatch2 /pgwatch2
-
-
-# For showing Git versions via :8080/versions or 'pgwatch2 --version'
+# For showing Git version via 'pgwatch2 --version'
 ARG GIT_HASH
 ARG GIT_TIME
 ENV GIT_HASH=${GIT_HASH}
 ENV GIT_TIME=${GIT_TIME}
 
-###
-### Install Go and compile the gatherer daemon
-###
+ADD pgwatch2 /pgwatch2
+RUN cd /pgwatch2 && bash build_gatherer.sh
 
-RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.15.8.linux-amd64.tar.gz \
-    && tar -C /usr/local -xzf /tmp/go.tar.gz \
-    && export PATH=$PATH:/usr/local/go/bin \
-    && cd /pgwatch2 && bash build_gatherer.sh \
-    && rm -rf /usr/local/go /root/go /tmp/go.tar.gz \
-    && chgrp -R 0 /pgwatch2 \
+
+FROM ubuntu:16.04
+
+RUN apt-get -q update && apt-get -qy install wget git && apt autoremove -y && mkdir /pgwatch2
+
+ADD pgwatch2/metrics /pgwatch2/metrics
+ADD pgwatch2/config /pgwatch2/config
+
+# Copy over the compiled gatherer
+COPY --from=0 /pgwatch2/pgwatch2 /pgwatch2
+
+RUN chgrp -R 0 /pgwatch2 \
     && chmod -R g=u /pgwatch2
 
 # pgwatch2 internal status endpoint

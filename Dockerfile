@@ -1,3 +1,15 @@
+FROM golang:1.16.3
+
+# For showing Git version via 'pgwatch2 --version'
+ARG GIT_HASH
+ARG GIT_TIME
+ENV GIT_HASH=${GIT_HASH}
+ENV GIT_TIME=${GIT_TIME}
+
+ADD pgwatch2 /pgwatch2
+RUN cd /pgwatch2 && bash build_gatherer.sh
+
+
 FROM ubuntu:16.04
 
 RUN apt-get -q update \
@@ -30,26 +42,22 @@ RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_6.7.5_amd6
 
 # Add pgwatch2 sources
 ADD pgwatch2 /pgwatch2
+# Copy over the compiled gatherer
+COPY --from=0 /pgwatch2/pgwatch2 /pgwatch2
 ADD webpy /pgwatch2/webpy
 
-# For showing Git versions via :8080/versions or 'pgwatch2 --version'
+# For showing Git version via Web UI :8080/versions
 ARG GIT_HASH
 ARG GIT_TIME
 ENV GIT_HASH=${GIT_HASH}
 ENV GIT_TIME=${GIT_TIME}
+# For showing all component versions via :8080/versions. Assuming project is cloned from Github here
+RUN echo "${GIT_HASH} ${GIT_TIME}" > /pgwatch2/build_git_version.txt
 
-# Go installation [https://golang.org/dl/]
 # Grafana config customizations, Web UI requirements, compilation of the Go gatherer
-RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.15.8.linux-amd64.tar.gz \
-    && tar -C /usr/local -xzf /tmp/go.tar.gz \
-    && export PATH=$PATH:/usr/local/go/bin \
-    && cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
+RUN cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
     && pip3 install -r /pgwatch2/webpy/requirements_influx_metrics.txt \
     && pip2 install psutil \
-    && echo "$GIT_HASH" > /pgwatch2/build_git_version.txt \
-    && cd /pgwatch2 && bash build_gatherer.sh \
-    && rm /tmp/go.tar.gz \
-    && rm -rf /usr/local/go /root/go \
     && grafana-cli plugins install savantly-heatmap-panel
 
 # both Python 2 and 3 only there for the "transition" period, to not brake some people upgrading to a newer image.
@@ -57,9 +65,6 @@ RUN wget -q -O /tmp/go.tar.gz https://dl.google.com/go/go1.15.8.linux-amd64.tar.
 RUN pip3 install psutil
 
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
-
-# For showing all component versions via :8080/versions. Assuming project is cloned from Github here
-COPY .git/refs/heads/master /pgwatch2/build_git_version.txt
 
 # Set up supervisord [https://docs.docker.com/engine/admin/using_supervisord/]
 COPY supervisord.conf /etc/supervisor/supervisord.conf
