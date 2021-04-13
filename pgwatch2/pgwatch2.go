@@ -276,6 +276,7 @@ var db_conn_limiting_channel_lock = sync.RWMutex{}
 var last_sql_fetch_error sync.Map
 var influx_host_count = 1
 var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently supported
+var InfluxSkipSSLCertVerify, InfluxSkipSSLCertVerify2 bool
 // secondary Influx meant for HA or Grafana load balancing for 100+ instances with lots of alerts
 var fileBasedMetrics = false
 var adHocMode = false
@@ -795,6 +796,10 @@ func SendToInflux(connect_str, conn_id string, storeMessages []MetricStoreMessag
 	if len(storeMessages) == 0 {
 		return nil
 	}
+	skipSSLCertVerify := InfluxSkipSSLCertVerify	// conn_id == "0"
+	if conn_id == "1" {
+		skipSSLCertVerify = InfluxSkipSSLCertVerify2
+	}
 	ts_warning_printed := false
 	retries := 1 // 1 retry
 retry:
@@ -803,6 +808,7 @@ retry:
 		Addr:     connect_str,
 		Username: opts.InfluxUser,
 		Password: opts.InfluxPassword,
+		InsecureSkipVerify: skipSSLCertVerify,
 	})
 
 	if err != nil {
@@ -1907,6 +1913,8 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 								} else {
 									log.Errorf("Partial write into Influx, check / increase the max-values-per-tag in InfluxDB config: %v", err)
 								}
+							} else {
+								log.Errorf("Failed to write into datastore %d: %s", i, err)
 							}
 						} else {
 							log.Errorf("Failed to write into datastore %d: %s", i, err)
@@ -4714,6 +4722,22 @@ func main() {
 		log.Fatal("--servers-refresh-loop-seconds must be greater than 1")
 	}
 
+	if len(opts.InfluxSSLSkipVerify) > 0 {
+		var err error
+		InfluxSkipSSLCertVerify, err = strconv.ParseBool(opts.InfluxSSLSkipVerify)
+		if err != nil {
+			log.Fatal("Invalid --issl-skip-verify input: strconv.ParseBool compatible expected")
+		}
+	}
+
+	if len(opts.InfluxSSLSkipVerify2) > 0 {
+		var err error
+		InfluxSkipSSLCertVerify2, err = strconv.ParseBool(opts.InfluxSSLSkipVerify2)
+		if err != nil {
+			log.Fatal("Invalid --issl-skip-verify2 input: strconv.ParseBool compatible expected")
+		}
+	}
+
 	if len(opts.AesGcmKeyphraseFile) > 0 {
 		_, err := os.Stat(opts.AesGcmKeyphraseFile)
 		if os.IsNotExist(err) {
@@ -4908,7 +4932,7 @@ func main() {
 			go MetricsPersister(DATASTORE_GRAPHITE, persist_ch)
 		} else if opts.Datastore == DATASTORE_INFLUX {
 			// check connection and store connection string
-			conn_str, err := InitAndTestInfluxConnection("1", opts.InfluxHost, opts.InfluxPort, opts.InfluxDbname, opts.InfluxUser,
+			conn_str, err := InitAndTestInfluxConnection("0", opts.InfluxHost, opts.InfluxPort, opts.InfluxDbname, opts.InfluxUser,
 				opts.InfluxPassword, opts.InfluxSSL, opts.InfluxSSLSkipVerify, opts.InfluxRetentionDays)
 			if err != nil {
 				log.Fatal("Could not initialize InfluxDB", err)
@@ -4918,7 +4942,7 @@ func main() {
 				if len(opts.InfluxPort2) == 0 {
 					log.Fatal("Invalid Influx II connect info")
 				}
-				conn_str, err = InitAndTestInfluxConnection("2", opts.InfluxHost2, opts.InfluxPort2, opts.InfluxDbname2, opts.InfluxUser2,
+				conn_str, err = InitAndTestInfluxConnection("1", opts.InfluxHost2, opts.InfluxPort2, opts.InfluxDbname2, opts.InfluxUser2,
 					opts.InfluxPassword2, opts.InfluxSSL2, opts.InfluxSSLSkipVerify2, opts.InfluxRetentionDays)
 				if err != nil {
 					log.Fatal("Could not initialize InfluxDB II", err)
