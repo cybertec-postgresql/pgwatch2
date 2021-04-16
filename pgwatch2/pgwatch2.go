@@ -1954,10 +1954,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 			)[1]::text as ver, pg_is_in_recovery(), current_database()::text;
 	`
 	sql_sysid := `select /* pgwatch2_generated */ system_identifier::text from pg_control_system();`
-	sql_su := `select /* pgwatch2_generated */ rolsuper or exists (
-				 select * from pg_catalog.pg_auth_members m
-				 join pg_catalog.pg_roles b on (m.roleid = b.oid)
-        		 where m.member = r.oid and b.rolname = 'rds_superuser') as rolsuper
+	sql_su := `select /* pgwatch2_generated */ rolsuper
 			   from pg_roles r where rolname = session_user;`
 	sql_extensions := `select /* pgwatch2_generated */ extname::text, (regexp_matches(extversion, $$\d+\.?\d+?$$))[1]::text as extversion from pg_extension order by 1;`
 	pgpool_version := `SHOW POOL_VERSION` // supported from pgpool2 v3.0
