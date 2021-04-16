@@ -338,9 +338,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
       "stat_statements": 180,
       "sequence_health": 3600,
       "replication_slots": 60,
-      "logical_subscriptions": 60,
       "stat_statements_calls": 60,
-      "server_log_event_counts": 60,
       "table_bloat_approx_summary_sql": 7200
     }'),
    ('rds', 'similar to ''exhaustive'' with stuff not accessible on AWS RDS removed',
