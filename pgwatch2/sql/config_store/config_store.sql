@@ -320,6 +320,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     '{
       "kpi": 120,
       "wal": 60,
+      "wal_size": 300,
       "locks": 60,
       "db_size": 300,
       "archiver": 60,
