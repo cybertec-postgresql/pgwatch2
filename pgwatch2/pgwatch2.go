@@ -2510,36 +2510,40 @@ func DetectConfigurationChanges(dbUnique string, vme DBVersionMapEntry, storage_
 
 	mvp, err := GetMetricVersionProperties("configuration_hashes", vme, nil)
 	if err != nil {
-		log.Error("could not get index_hashes sql:", err)
+		log.Errorf("[%s][%s] could not get configuration_hashes sql: %v", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, err)
 		return change_counts
 	}
 
 	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "configuration_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
-		log.Error("could not read configuration_hashes from monitored host:", dbUnique, ", err:", err)
+		log.Errorf("[%s][%s] could not read configuration_hashes from monitored host: %v", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, err)
 		return change_counts
 	}
 
 	for _, dr := range data {
 		obj_ident := dr["tag_setting"].(string)
+		obj_value := dr["value"].(string)
 		prev_hash, ok := host_state["configuration_hashes"][obj_ident]
 		if ok { // we have existing state
-			if prev_hash != dr["value"].(string) {
-				log.Warningf("detected settings change: %s = %s (prev: %s)",
-					dr["tag_setting"], dr["value"], prev_hash)
+			if prev_hash != obj_value {
+				if obj_ident == "connection_ID" {
+					continue	// ignore some weird Azure managed PG service setting
+				}
+				log.Warningf("[%s][%s] detected settings change: %s = %s (prev: %s)",
+					dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, obj_ident, obj_value, prev_hash)
 				dr["event"] = "alter"
 				detected_changes = append(detected_changes, dr)
-				host_state["configuration_hashes"][obj_ident] = dr["value"].(string)
+				host_state["configuration_hashes"][obj_ident] = obj_value
 				change_counts.Altered += 1
 			}
 		} else { // check for new, delete not relevant here (pg_upgrade)
 			if !first_run {
-				log.Warning("detected new setting:", dr["tag_setting"])
+				log.Warningf("[%s][%s] detected new setting: %s", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, obj_ident)
 				dr["event"] = "create"
 				detected_changes = append(detected_changes, dr)
 				change_counts.Created += 1
 			}
-			host_state["configuration_hashes"][obj_ident] = dr["value"].(string)
+			host_state["configuration_hashes"][obj_ident] = obj_value
 		}
 	}
 
