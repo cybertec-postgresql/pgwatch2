@@ -19,6 +19,7 @@ Welcome to pgwatch2's documentation!
    docker_installation
    custom_installation
    preparing_databases
+   using_managed_services
    metric_definitions
    web_ui
    dashboarding_alerting
