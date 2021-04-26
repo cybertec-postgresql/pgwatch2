@@ -315,7 +315,7 @@ var rBouncerAndPgpoolVerMatch = regexp.MustCompile(`\d+\.+\d+`) // extract $majo
 var tryDirectOSStats bool
 var unreachableDBsLock sync.RWMutex
 var unreachableDB = make(map[string]time.Time)
-
+var pgBouncerNumericCountersStartVersion decimal.Decimal	// pgBouncer changed internal counters data type in v1.12
 // "cache" of last CPU utilization stats for GetGoPsutilCPU to get more exact results and not having to sleep
 var prevCPULoadTimeStatsLock sync.RWMutex
 var prevCPULoadTimeStats cpu.TimesStat
@@ -2665,36 +2665,39 @@ func CheckForPGObjectChangesAndStore(dbUnique string, vme DBVersionMapEntry, sto
 	}
 }
 
-func FilterPgbouncerData(data []map[string]interface{}, database_to_keep string, vme DBVersionMapEntry) []map[string]interface{} {
+func FilterPgbouncerData(data []map[string]interface{}, databaseToKeep string, vme DBVersionMapEntry) []map[string]interface{} {
 	filtered_data := make([]map[string]interface{}, 0)
 
-	if len(database_to_keep) > 0 {
-		for _, dr := range data {
-			//log.Debugf("bouncer dr: %+v", dr)
-			_, ok := dr["database"]
-			if !ok {
-				log.Warning("Expected 'database' key not found from pgbouncer_stats, not storing data")
-				continue
-			}
-			if dr["database"] != database_to_keep {
-				continue // we only want pgbouncer stats for the DB specified in monitored_dbs.md_dbname
-			}
-			delete(dr, "database") // remove 'database' as we use 'dbname' by convention
-
-			numericCounterVer, _ := decimal.NewFromString("1.12")
-			if vme.Version.GreaterThanOrEqual(numericCounterVer) { // v1.12 counters are of type numeric instead of int64
-				for k, v := range dr {
-					decimalCounter, err := decimal.NewFromString(string(v.([]uint8)))
-					if err != nil {
-						log.Errorf("Could not parse \"%+v\" to Decimal: %s", string(v.([]uint8)), err)
-						return filtered_data
-					}
-					dr[k] = decimalCounter.IntPart() // technically could cause overflow...but highly unlikely for 2^63
-				}
-			}
-			filtered_data = append(filtered_data, dr)
+	for _, dr := range data {
+		//log.Debugf("bouncer dr: %+v", dr)
+		if _, ok := dr["database"]; !ok {
+			log.Warning("Expected 'database' key not found from pgbouncer_stats, not storing data")
+			continue
 		}
+		if (len(databaseToKeep) > 0 && dr["database"] != databaseToKeep) || dr["database"] == "pgbouncer" {	// always ignore the internal 'pgbouncer' DB
+			log.Debugf("Skipping bouncer stats for pool entry %v as not the specified DBName of %s", dr["database"], databaseToKeep)
+			continue // and all others also if a DB / pool name was specified in config
+		}
+
+		dr["tag_database"] = dr["database"]		// support multiple databases / pools via tags if DbName left empty
+		delete(dr, "database")				// remove the original pool name
+
+		if vme.Version.GreaterThanOrEqual(pgBouncerNumericCountersStartVersion) { // v1.12 counters are of type numeric instead of int64
+			for k, v := range dr {
+				if k == "tag_database" {
+					continue
+				}
+				decimalCounter, err := decimal.NewFromString(string(v.([]uint8)))
+				if err != nil {
+					log.Errorf("Could not parse \"%+v\" to Decimal: %s", string(v.([]uint8)), err)
+					return filtered_data
+				}
+				dr[k] = decimalCounter.IntPart() // technically could cause overflow...but highly unlikely for 2^63
+			}
+		}
+		filtered_data = append(filtered_data, dr)
 	}
+
 	return filtered_data
 }
 
@@ -4683,9 +4686,10 @@ type Options struct {
 var opts Options
 
 func main() {
+	var err error
 	parser := flags.NewParser(&opts, flags.Default)
 
-	if _, err := parser.Parse(); err != nil {
+	if _, err = parser.Parse(); err != nil {
 		return
 	}
 
@@ -4895,6 +4899,10 @@ func main() {
 
 	useConnPooling = StringToBoolOrFail(opts.ConnPooling, "--conn-pooling")
 
+	if pgBouncerNumericCountersStartVersion, err = decimal.NewFromString("1.12"); err != nil {
+		log.Fatal("Could not convert string '1.12' to decimal")
+	}
+
 	if opts.InternalStatsPort > 0 && !opts.Ping {
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", opts.InternalStatsPort))
 		if err != nil {
@@ -5005,7 +5013,6 @@ func main() {
 	first_loop := true
 	var monitored_dbs []MonitoredDatabase
 	var last_metrics_refresh_time int64
-	var err error
 	var metrics map[string]map[decimal.Decimal]MetricVersionProperties
 	var hostLastKnownStatusInRecovery = make(map[string]bool) // isInRecovery
 	var metric_config map[string]float64                      // set to host.Metrics or host.MetricsStandby (in case optional config defined and in recovery state
