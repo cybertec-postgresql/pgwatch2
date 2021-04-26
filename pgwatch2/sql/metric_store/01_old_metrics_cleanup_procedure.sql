@@ -193,7 +193,7 @@ BEGIN
         else /* loop over all to level hypertables */
             FOR r IN (
                 select
-                  h.table_name as metric
+                  h.table_name::text as metric
                 from
                   _timescaledb_catalog.hypertable h
                 where
@@ -201,10 +201,17 @@ BEGIN
             )
             LOOP
                 --raise notice 'dropping old timescale sub-partitions for hypertable: %', r.metric;
-                FOR r2 in (select drop_chunks(older_than_days * ' 1 day'::interval , r.metric))
-                LOOP
-                    i := i + 1;
-                END LOOP;
+                IF (SELECT ((regexp_matches(extversion, '\d+\.\d+'))[1])::numeric FROM pg_extension WHERE extname = 'timescaledb') >= 2.0 THEN
+                    FOR r2 in (select drop_chunks(r.metric, older_than_days * ' 1 day'::interval))
+                    LOOP
+                        i := i + 1;
+                    END LOOP;
+                ELSE
+                    FOR r2 in (select drop_chunks(older_than_days * ' 1 day'::interval , r.metric))
+                    LOOP
+                        i := i + 1;
+                    END LOOP;
+                END IF;
             END LOOP;
         end if;
 

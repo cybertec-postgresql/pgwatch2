@@ -4984,8 +4984,7 @@ func main() {
 			log.Info("starting UniqueDbnamesListingMaintainer...")
 			go UniqueDbnamesListingMaintainer(true)
 
-			if opts.PGRetentionDays > 0 && (PGSchemaType == "metric" ||
-				PGSchemaType == "metric-time" || PGSchemaType == "metric-dbname-time") && opts.TestdataDays == 0 {
+			if opts.PGRetentionDays > 0 && PGSchemaType != "custom" && opts.TestdataDays == 0 {
 				log.Info("starting old Postgres metrics cleanup job...")
 				go OldPostgresMetricsDeleter(opts.PGRetentionDays, PGSchemaType)
 			}
