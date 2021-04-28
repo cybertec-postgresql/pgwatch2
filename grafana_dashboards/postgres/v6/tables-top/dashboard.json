@@ -1577,7 +1577,11 @@
     "list": [
       {
         "allValue": null,
-        "current": null,
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
         "datasource": null,
         "definition": "",
         "hide": 0,
