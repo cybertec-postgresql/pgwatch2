@@ -75,6 +75,9 @@ PgBouncer support
 Pgwatch2 also supports collecting internal statistics from the PgBouncer connection pooler, via the built-in special
 "pgbouncer" database and the ``SHOW STATS`` command. To enable it choose the according *DB Type*, provide connection
 info to the pooler port and make sure the **pgbouncer_stats** metric or "pgbouncer" preset config is selected for the host.
+Note that for the "DB Name" field you should insert not "pgbouncer" (although this special DB provides all the statistics)
+but the real name of the pool you wish to monitor or leave it empty to track all pools. In latter case individual pools
+will be identified / separated via the "database" tag.
 
 There's also a built-in Grafana dashboard for PgBouncer data, looking like that:
 
