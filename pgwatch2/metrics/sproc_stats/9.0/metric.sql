@@ -10,4 +10,8 @@ SELECT
 FROM
   pg_stat_user_functions f
   JOIN
-  pg_proc p ON p.oid = f.funcid;
+  pg_proc p ON p.oid = f.funcid
+ORDER BY
+  total_time DESC
+LIMIT
+  300;
