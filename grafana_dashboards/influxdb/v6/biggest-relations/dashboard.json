@@ -53,7 +53,7 @@
       "seriesOverrides": [],
       "targets": [
         {
-          "alias": "$tag_table_name",
+          "alias": "$tag_table_full_name",
           "dsType": "influxdb",
           "groupBy": [
             {
@@ -71,7 +71,7 @@
           ],
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT last(\"total_relation_size_b\")  as value FROM \"table_stats\" WHERE \"dbname\" = '$dbname' AND time > now() - 1h GROUP BY time(15m), \"table_name\" fill(0)",
+          "query": "SELECT last(\"total_relation_size_b\")  as value FROM \"table_stats\" WHERE \"dbname\" = '$dbname' AND time > now() - 1h GROUP BY time(15m), \"table_full_name\" fill(0)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -152,7 +152,7 @@
       "seriesOverrides": [],
       "targets": [
         {
-          "alias": "$tag_table_name",
+          "alias": "$tag_table_full_name",
           "dsType": "influxdb",
           "groupBy": [
             {
@@ -177,7 +177,7 @@
           "measurement": "table_stats",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT last(\"table_size_b\")  as value FROM \"table_stats\" WHERE \"dbname\" = '$dbname' AND time > now() - 1h GROUP BY time(15m), \"table_name\" fill(0)",
+          "query": "SELECT last(\"table_size_b\")  as value FROM \"table_stats\" WHERE \"dbname\" = '$dbname' AND time > now() - 1h GROUP BY time(15m), \"table_full_name\" fill(0)",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
