@@ -66,16 +66,17 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
         ::
 
           git clone https://github.com/cybertec-postgresql/pgwatch2.git
-          cd pgwatch2
+          cd pgwatch2/pgwatch2
           ./build_gatherer.sh
           # after fetching all the Go library dependencies (can take minutes)
-          # an executable named "pgwatch2" should be generated ...
+          # an executable named "pgwatch2" should be generated. Additionally it's a good idea
+          # to copy it to /usr/bin/pgwatch2-daemon as that's what the default SystemD service expects.
 
     * Configure a SystemD auto-start service (optional)
 
       Sample startup scripts can be found at */etc/pgwatch2/startup-scripts/pgwatch2.service* or online
       `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/startup-scripts/pgwatch2.service>`__.
-      Note that they are OS agnostic and always need some light adjustment of paths, etc - so always test them out.
+      Note that they are OS agnostic and might need some light adjustment of paths, etc - so always test them out.
 
 #. **Boostrap the config DB**
 
