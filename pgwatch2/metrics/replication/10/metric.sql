@@ -13,4 +13,7 @@ from
   /* NB! when the query fails, grant "pg_monitor" system role (exposing all stats) to the monitoring user
      or create specifically the "get_stat_replication" helper and use that instead of pg_stat_replication
   */
-  pg_stat_replication;
+  --
+  pg_stat_replication
+where
+  coalesce(application_name, '') not in ('pg_basebackup', 'pg_rewind');

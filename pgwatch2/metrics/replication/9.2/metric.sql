@@ -10,4 +10,7 @@ SELECT
   case when sync_state in ('sync', 'quorum') then 1 else 0 end as is_sync_int,
   case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int
 from
-  get_stat_replication();
+  get_stat_replication()
+where
+  coalesce(application_name, '') not in ('pg_basebackup', 'pg_rewind');
+
