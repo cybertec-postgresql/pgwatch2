@@ -971,9 +971,10 @@
       ],
       "datasource": null,
       "decimals": 1,
+      "description": "Percentage of rows touched by queries that are actually returned to the client. Low numbers (< 10%) for an OLTP workload can hint at missing indexes. Last 10m avg + 6h history.",
       "editable": true,
       "error": false,
-      "format": "bytes",
+      "format": "percent",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -990,7 +991,7 @@
       "height": "150",
       "hideTimeOverride": true,
       "id": 4,
-      "interval": "1h",
+      "interval": "10m",
       "links": [],
       "mappingType": 1,
       "mappingTypes": [
@@ -1049,7 +1050,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "select\n  time,\n  last_value-first_value as size_diff\nfrom (\n  select\n    date_trunc('hour', time) as time,\n    first_value((data->>'size_b')::int8) over w,\n    last_value((data->>'size_b')::int8) over w\n  from\n    db_size\n  where \n    dbname = '$dbname' and $__timeFilter(time)\n  window w as (\n     partition by date_trunc('hour', time) order by time rows BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING\n  )\n) x\ngroup by 1, 2\norder by 1;",
+          "rawSql": "SELECT\n  $__timeGroup(time, $__interval),\n  100 * avg((fetched - fetched_lag)::numeric / (returned - returned_lag)) as fetched_vs_returned_pct\nFROM (\n\nSELECT\n  time,\n  (data->'tup_fetched')::int8 as fetched,\n  lag((data->'tup_fetched')::int8) over w as fetched_lag,\n  (data->'tup_returned')::int8 as returned,\n  lag((data->'tup_returned')::int8) over w as returned_lag\nFROM\n  db_stats\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nWINDOW w AS (ORDER BY time)\n) x  \nWHERE returned > returned_lag AND fetched >= fetched_lag\nGROUP BY 1\nORDER BY 1\n\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -1080,7 +1081,7 @@
       "thresholds": "",
       "timeFrom": "6h",
       "timeShift": null,
-      "title": "DB size ch. 1h",
+      "title": "Tuples fetched vs returned",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -2454,8 +2455,8 @@
       {
         "allValue": null,
         "current": {
-          "text": null,
-          "value": null
+          "text": "",
+          "value": ""
         },
         "datasource": null,
         "definition": "",
