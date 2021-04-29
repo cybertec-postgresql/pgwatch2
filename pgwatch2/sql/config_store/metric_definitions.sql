@@ -1341,15 +1341,17 @@ $sql$
 select * from (
                   with recursive
                       q_root_part as (
-                          select c.oid,
-                                 c.relkind,
-                                 n.nspname root_schema,
-                                 c.relname root_relname
-                          from pg_class c
-                                   join pg_namespace n on n.oid = c.relnamespace
-                          where relkind = 'p'
-                            and relpersistence != 't'
-                            and not exists(select * from pg_inherits where inhrelid = c.oid)
+                            select c.oid,
+                                   c.relkind,
+                                   n.nspname root_schema,
+                                   c.relname root_relname
+                            from pg_class c
+                                     join pg_namespace n on n.oid = c.relnamespace
+                            where relkind in ('p', 'r')
+                              and relpersistence != 't'
+                              and not n.nspname like any (array[E'pg\\_%', 'information_schema', E'\\_timescaledb%'])
+                              and not exists(select * from pg_inherits where inhrelid = c.oid)
+                              and exists(select * from pg_inherits where inhparent = c.oid)
                       ),
                       q_parts (relid, relkind, level, root) as (
                           select oid, relkind, 1, oid
@@ -1394,6 +1396,8 @@ select * from (
                          tidx_blks_read,
                          tidx_blks_hit
                   from q_tstats
+                  where not tag_schema like E'\\_timescaledb%'
+                  and not exists (select * from q_root_part where oid = q_tstats.relid)
 
                   union all
 
@@ -1415,7 +1419,6 @@ select * from (
                            from q_tstats ts
                                     join q_parts qp on qp.relid = ts.relid
                                     join q_root_part qr on qr.oid = qp.root
-                           where qp.relkind = 'r'
                            group by 1, 2, 3, 4
                        ) x
               ) y
@@ -1669,9 +1672,11 @@ with recursive
                c.relname root_relname
         from pg_class c
                  join pg_namespace n on n.oid = c.relnamespace
-        where relkind = 'p'
+        where relkind in ('p', 'r')
           and relpersistence != 't'
+          and not n.nspname like any (array[E'pg\\_%', 'information_schema', E'\\_timescaledb%'])
           and not exists(select * from pg_inherits where inhrelid = c.oid)
+          and exists(select * from pg_inherits where inhparent = c.oid)
     ),
     q_parts (relid, relkind, level, root) as (
         select oid, relkind, 1, oid
@@ -1746,8 +1751,11 @@ select
     autovacuum_count,
     analyze_count,
     autoanalyze_count,
-    tx_freeze_age
+    tx_freeze_age,
+    relpersistence
 from q_tstats
+where not tag_schema like E'\\_timescaledb%'
+and not exists (select * from q_root_part where oid = q_tstats.relid)
 
 union all
 
@@ -1780,13 +1788,12 @@ select * from (
         sum(autovacuum_count)::int8 autovacuum_count,
         sum(analyze_count)::int8 analyze_count,
         sum(autoanalyze_count)::int8 autoanalyze_count,
-        max(tx_freeze_age)::int8 tx_freeze_age
+        max(tx_freeze_age)::int8 tx_freeze_age,
+        max(relpersistence) relpersistence
       from
            q_tstats ts
            join q_parts qp on qp.relid = ts.relid
            join q_root_part qr on qr.oid = qp.root
-      where
-           qp.relkind = 'r'
       group by
            1, 2, 3, 4
 ) x
