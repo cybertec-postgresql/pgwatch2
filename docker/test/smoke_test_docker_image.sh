@@ -34,8 +34,8 @@ DOCKER_RUN=$(docker run -d --rm --cpus=2 -p $LOCALHOST:$WEBUIPORT:8080 -p $LOCAL
 echo "OK. container $CONTAINER_NAME started"
 
 
-echo "sleeping 30s..."
-sleep 30
+echo "sleeping 60s..."
+sleep 60
 
 
 echo "checking Web UI response ..."
@@ -54,8 +54,8 @@ http --verify=no -f POST $LOCALHOST:$WEBUIPORT/dbs md_unique_name=smoke2 md_dbty
 echo "OK"
 
 
-echo "sleeping 120s..."
-sleep 120
+echo "sleeping 180s..."
+sleep 180
 
 
 echo "checking if metrics exists for added DB..."
