@@ -11,13 +11,13 @@ select
   (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
   (select count(*) from sa_snapshot where waiting) as waiting,
   (select extract(epoch from max(now() - query_start))::int from sa_snapshot where waiting) as longest_waiting_seconds,
-  (select extract(epoch from (now() - backend_start))::int
-    from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
-  (select extract(epoch from (now() - xact_start))::int
-    from sa_snapshot where not query like 'autovacuum:%' and xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
-  (select extract(epoch from (now() - xact_start))::int
-   from sa_snapshot where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
-  (select extract(epoch from max(now() - query_start))::int
-    from sa_snapshot where not query like 'autovacuum:%' and state = 'active') as longest_query_seconds,
+  (select round(avg(abs(extract(epoch from now() - query_start)))::numeric, 3)::float from sa_snapshot where waiting) as avg_waiting_seconds,
+  (select extract(epoch from (now() - backend_start))::int from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
+  (select round(avg(abs(extract(epoch from now() - backend_start)))::numeric, 3)::float from sa_snapshot) as avg_session_seconds,
+  (select extract(epoch from (now() - xact_start))::int from sa_snapshot where not query like 'autovacuum:%' and xact_start is not null order by xact_start limit 1) as longest_tx_seconds,
+  (select round(avg(abs(extract(epoch from now() - xact_start)))::numeric, 3)::float from sa_snapshot where not query like 'autovacuum:%' and xact_start is not null) as avg_tx_seconds,
+  (select extract(epoch from (now() - xact_start))::int from sa_snapshot where query like 'autovacuum:%' order by xact_start limit 1) as longest_autovacuum_seconds,
+  (select extract(epoch from max(now() - query_start))::int from sa_snapshot where not query like 'autovacuum:%' and state = 'active') as longest_query_seconds,
+  (select round(avg(abs(extract(epoch from now() - query_start)))::numeric, 3)::float from sa_snapshot where not query like 'autovacuum:%' and state = 'active') as avg_query_seconds,
   (select count(*) from sa_snapshot where query like 'autovacuum:%') as av_workers
 ;
