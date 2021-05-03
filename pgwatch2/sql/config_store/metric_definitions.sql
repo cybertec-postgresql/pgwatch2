@@ -928,7 +928,6 @@ values (
 10,
 $sql$
 /* NB! does not return all index stats but biggest, top scanned and biggest unused ones */
-explain analyze
 WITH q_locked_rels AS (
   select relation from pg_locks where mode = 'AccessExclusiveLock' and granted
 ),
