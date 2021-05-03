@@ -18,6 +18,34 @@ ther pre-built packages) folder. Also it is highly recommended to refresh all th
 For that there's also a refresh_metrics_from_github.sh script provided. YAML based setups don't need any extra actions besides
 refreshing from Git or installing the new RPM / DEB / Tar packages.
 
+
+## v1.8.5 [2021-05-03]
+
+Main changes:
+
+* TimescaleDB metric storage fix - honor retention management via --pg-retention-days parameter. Previously workaround was to configure TimescaleDB directly.
+* Gatherer fix - honor user input on InfluxDB SSL cert ignoring in all InfluxDB operations.
+* Gatherer improvement - support monitoring all PgBouncer pools from a single config entry when "DB name" left empty.
+* A new "Sessions overview" dashboards - together with some new 'backends' columns, gives a high-level user activity overview. PG only.
+* Gatherer improvement - do not consider rds_superuser on AWS RDS as superuser anymore to get rid of some out-of-the-box errors.
+* Metrics - reduce the amount of data pulled in by limiting most metrics to max 300 entries as mostly the "smaller fish" is not looked at.
+* Metrics - ignore TimescaleDB sub-partition (chunk) statistics for tables and only aggregating on the topmost level.
+* Metrics - add a 'gce' preset tuned for Google GCE managed PostgreSQL engine.
+* Metrics - adjust 'azure' preset by removing some metrics that generated errors by default.
+* Metrics - add 'sequence_health' metric + an accompanying get_sequences() helper to be able to detect upcoming sequence overflows.
+* Metrics - make some 'backend' fields more consistent. AV workers count now also into "total active per DB".
+* Metrics - make "stat_statements" 3x more performant. Thanks @bukem.
+* Metrics - add 4 avg query / TX characteristic columns to the "backend" metric to complement max values.
+* Config DB - adjust the SQL schema to be re-rollout proof.
+* Dashboards - fix "Tables top" for Grafana v7.4+ as there was some backwards-incompatible change.
+* Dashboards - only use fully qualified object names so that metrics could drop returning schema and table name separately in next version.
+* Dashboards - DB overview unprivileged: replace 1h DB growth with "tups fetched vs returned".
+* Documentation - a new chapter on monitoring managed cloud instances, plus many other smaller corrections.
+* Docker - start using multi-stage builds to compile the gatherer, reducing the image size slightly.
+* K8s / Openshift - Helm chart deployment template corrections. Thanks @pmpetit
+* Docker - component update to InfluxDB 1.8.5, Grafana 6.7.5, Go 1.16.3.
+
+
 ## v1.8.4 [2021-02-12]
 
 Main changes:
