@@ -155,7 +155,10 @@
       }
     },
     {
-      "aliasColors": {},
+      "aliasColors": {
+        "avg_query": "super-light-purple",
+        "longest_query": "dark-orange"
+      },
       "bars": false,
       "dashLength": 10,
       "dashes": false,
@@ -200,7 +203,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  max((data->'longest_query_seconds')::int8) as longest_query_seconds\nfrom backends\nwhere dbname = '$dbname' and $__timeFilter(time)\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  max((data->'longest_query_seconds')::int8) as longest_query,\n  max((data->'avg_query_seconds')::float) as avg_query\nfrom backends\nwhere dbname = '$dbname' and $__timeFilter(time)\ngroup by 1\norder by 1",
           "refId": "A",
           "select": [
             [
@@ -256,7 +259,7 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -266,6 +269,7 @@
     },
     {
       "aliasColors": {
+        "longest_waiting": "dark-red",
         "longest_waiting_seconds": "light-red"
       },
       "bars": false,
@@ -312,7 +316,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  max((data->'longest_waiting_seconds')::int8) as longest_waiting_seconds\nfrom backends\nwhere dbname = '$dbname' and $__timeFilter(time)\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  max((data->'longest_waiting_seconds')::int8) as longest_waiting,\n  max((data->'avg_waiting_seconds')::float) as avg_waiting\nfrom backends\nwhere dbname = '$dbname' and $__timeFilter(time)\ngroup by 1\norder by 1",
           "refId": "A",
           "select": [
             [
@@ -359,7 +363,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -379,6 +383,8 @@
     },
     {
       "aliasColors": {
+        "avg_tx": "light-blue",
+        "longest_tx": "dark-purple",
         "longest_tx_seconds": "dark-purple"
       },
       "bars": false,
@@ -425,7 +431,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  max((data->'longest_tx_seconds')::int8) as longest_tx_seconds\nfrom backends\nwhere dbname = '$dbname' and $__timeFilter(time)\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  max((data->'longest_tx_seconds')::int8) as longest_tx,\n  max((data->'avg_tx_seconds')::float) as avg_tx\nfrom backends\nwhere dbname = '$dbname' and $__timeFilter(time)\ngroup by 1\norder by 1",
           "refId": "A",
           "select": [
             [
@@ -537,7 +543,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  max((data->'longest_session_seconds')::int8) as longest_session_seconds\nfrom backends\nwhere dbname = '$dbname' and $__timeFilter(time)\ngroup by 1\norder by 1",
+          "rawSql": "select\n  $__timeGroup(time, $agg_interval),\n  max((data->'longest_session_seconds')::int8) as longest_session,\n  max((data->'avg_session_seconds')::float) as avg_session\nfrom backends\nwhere dbname = '$dbname' and $__timeFilter(time)\ngroup by 1\norder by 1",
           "refId": "A",
           "select": [
             [
@@ -603,7 +609,9 @@
       }
     },
     {
-      "aliasColors": {},
+      "aliasColors": {
+        "longest_autovacuum_seconds": "light-red"
+      },
       "bars": false,
       "dashLength": 10,
       "dashes": false,
@@ -1056,9 +1064,10 @@
         "auto_count": 30,
         "auto_min": "10s",
         "current": {
-          "selected": true,
-          "text": "10m",
-          "value": "10m"
+          "selected": false,
+          "tags": [],
+          "text": "5m",
+          "value": "5m"
         },
         "hide": 0,
         "label": null,
@@ -1075,12 +1084,12 @@
             "value": "1m"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "5m",
             "value": "5m"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "10m",
             "value": "10m"
           },
@@ -1138,7 +1147,7 @@
     ]
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-12h",
     "to": "now"
   },
   "timepicker": {
