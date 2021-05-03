@@ -1954,8 +1954,7 @@ select
     autovacuum_count,
     analyze_count,
     autoanalyze_count,
-    tx_freeze_age,
-    relpersistence
+    tx_freeze_age
 from q_tstats
 where not tag_schema like E'\\_timescaledb%'
 and not exists (select * from q_root_part where oid = q_tstats.relid)
@@ -1991,8 +1990,7 @@ select * from (
         sum(autovacuum_count)::int8 autovacuum_count,
         sum(analyze_count)::int8 analyze_count,
         sum(autoanalyze_count)::int8 autoanalyze_count,
-        max(tx_freeze_age)::int8 tx_freeze_age,
-        max(relpersistence) relpersistence
+        max(tx_freeze_age)::int8 tx_freeze_age
       from
            q_tstats ts
            join q_parts qp on qp.relid = ts.relid
