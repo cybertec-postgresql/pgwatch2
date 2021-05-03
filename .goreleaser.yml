@@ -9,7 +9,7 @@ before:
     - rm /tmp/webpy.tar
 
 builds:
-  - main: ./pgwatch2
+  - dir: pgwatch2
     binary: pgwatch2-daemon
     env:
       - CGO_ENABLED=0
@@ -61,6 +61,7 @@ archives:
       - ./pgwatch2/startup-scripts/**/*
       - ./pgwatch2/bootstrap/**/*
       - ./README.md
+
 nfpms:
   -
     # You can change the name of the package.
@@ -121,27 +122,24 @@ nfpms:
     # Files or directories to add to your package (beyond the binary).
     # Keys are source paths/globs to get the files from.
     # Values are the destination locations of the files in the package.
-    files:
-      "./pgwatch2/metrics/**/*": "/etc/pgwatch2/metrics"
-      "./pgwatch2/config/**/*": "/etc/pgwatch2/config"
-      "./pgwatch2/sql/**/*": "/etc/pgwatch2/sql"
-      "./pgwatch2/bootstrap/**/*": "/etc/pgwatch2/bootstrap"
-      "./pgwatch2/startup-scripts/pgwatch2.service": "/etc/pgwatch2/startup-scripts/pgwatch2.service"
-      "./grafana_dashboards/**/*": "/etc/pgwatch2/grafana-dashboards"
-      "./pgwatch2/webpy/**/*": "/etc/pgwatch2/webpy"
-      "./README.md": "/etc/pgwatch2/README.md"
-
-    # Config files to add to your package. They are about the same as
-    # the files keyword, except package managers treat them differently (while
-    # uninstalling, mostly).
-    # Keys are source paths/globs to get the files from.
-    # Values are the destination locations of the files in the package.
-    config_files:
-      "./pgwatch2/config/instances.yaml": "/etc/pgwatch2/config/instances.yaml"
-
-    # Scripts to execute during the installation of the package.
-    # Keys are the possible targets during the installation process
-    # Values are the paths to the scripts which will be executed
-
-    # Some attributes can be overrided per package format.
-    overrides:
+    contents:
+      - src: "./pgwatch2/metrics/**/*"
+        dst: "/etc/pgwatch2/metrics"
+      - src: "./pgwatch2/config/**/*"
+        dst: "/etc/pgwatch2/config"
+      - src: "./pgwatch2/sql/**/*"
+        dst: "/etc/pgwatch2/sql"
+      - src: "./pgwatch2/bootstrap/*"
+        dst: "/etc/pgwatch2/bootstrap"
+      - src: "./pgwatch2/startup-scripts/pgwatch2.service"
+        dst: "/etc/pgwatch2/startup-scripts/pgwatch2.service"
+      - src: "./grafana_dashboards/**/*"
+        dst: "/etc/pgwatch2/grafana-dashboards"
+      - src: "./pgwatch2/webpy/**/*"
+        dst: "/etc/pgwatch2/webpy"
+      - src: "./README.md"
+        dst: "/etc/pgwatch2/README.md"
+    # Config files
+      - src: "./pgwatch2/config/instances.yaml"
+        dst: "/etc/pgwatch2/config/instances.yaml"
+        type: config
