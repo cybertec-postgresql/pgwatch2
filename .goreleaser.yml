@@ -131,7 +131,6 @@ nfpms:
         type: config
       - src: "./pgwatch2/sql/*"
         dst: "/etc/pgwatch2/sql"
-        type: config
       - src: "./pgwatch2/bootstrap/*"
         dst: "/etc/pgwatch2/bootstrap"
       - src: "./pgwatch2/startup-scripts/pgwatch2.service"
