@@ -1391,7 +1391,7 @@ func UniqueDbnamesListingMaintainer(daemonMode bool) {
 
 	for {
 		if daemonMode {
-			time.Sleep(time.Hour * 6)
+			time.Sleep(time.Hour * 24)
 		}
 
 		log.Infof("Refreshing admin.all_distinct_dbname_metrics listing table...")
@@ -1437,6 +1437,9 @@ func UniqueDbnamesListingMaintainer(daemonMode bool) {
 					log.Errorf("Could not refresh Postgres all_distinct_dbname_metrics listing table for metric '%s': %s", metric_name, err)
 				} else if len(ret) > 0 {
 					log.Infof("Added %d entry to the Postgres all_distinct_dbname_metrics listing table for metric: %s", len(ret), metric_name)
+				}
+				if daemonMode {
+					time.Sleep(time.Minute)
 				}
 			}
 		}
