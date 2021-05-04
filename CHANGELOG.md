@@ -45,6 +45,8 @@ Main changes:
 * K8s / Openshift - Helm chart deployment template corrections. Thanks @pmpetit
 * Docker - component update to InfluxDB 1.8.5, Grafana 6.7.5, Go 1.16.3.
 
+NB! If upgrading from an older TimescaleDB storage based setup you should additionally re-roll out the [following file](https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/sql/metric_store/01_old_metrics_cleanup_procedure.sql)
+on the Metrics DB to make pgwatch2 honor the --pg-retention-days parameter.
 
 ## v1.8.4 [2021-02-12]
 
