@@ -123,23 +123,22 @@ nfpms:
     # Keys are source paths/globs to get the files from.
     # Values are the destination locations of the files in the package.
     contents:
-      - src: "./pgwatch2/metrics/**/*"
+      - src: "./pgwatch2/metrics/*"
         dst: "/etc/pgwatch2/metrics"
-      - src: "./pgwatch2/config/**/*"
+        type: config
+      - src: "./pgwatch2/config/*"
         dst: "/etc/pgwatch2/config"
-      - src: "./pgwatch2/sql/**/*"
+        type: config
+      - src: "./pgwatch2/sql/*"
         dst: "/etc/pgwatch2/sql"
+        type: config
       - src: "./pgwatch2/bootstrap/*"
         dst: "/etc/pgwatch2/bootstrap"
       - src: "./pgwatch2/startup-scripts/pgwatch2.service"
         dst: "/etc/pgwatch2/startup-scripts/pgwatch2.service"
-      - src: "./grafana_dashboards/**/*"
+      - src: "./grafana_dashboards/*"
         dst: "/etc/pgwatch2/grafana-dashboards"
-      - src: "./pgwatch2/webpy/**/*"
+      - src: "./pgwatch2/webpy/*"
         dst: "/etc/pgwatch2/webpy"
       - src: "./README.md"
         dst: "/etc/pgwatch2/README.md"
-    # Config files
-      - src: "./pgwatch2/config/instances.yaml"
-        dst: "/etc/pgwatch2/config/instances.yaml"
-        type: config
