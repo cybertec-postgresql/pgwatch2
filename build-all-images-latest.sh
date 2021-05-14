@@ -32,4 +32,12 @@ else
   echo "ok"
 fi
 
+echo "building build-docker-db-bootstrapper (log: build-docker-db-bootstrapper.log)"
+./build-docker-db-bootstrapper.sh &> build-docker-db-bootstrapper.log
+if [ $? -ne 0 ]; then
+  echo "failed. see log for details"
+else
+  echo "ok"
+fi
+
 echo "done"
