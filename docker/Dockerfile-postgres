@@ -51,7 +51,7 @@ RUN cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
     && pip2 install psutil \
     && echo "$GIT_HASH" > /pgwatch2/build_git_version.txt \
     && grafana-cli plugins install savantly-heatmap-panel \
-    && pip3 install supervisor && mkdir /var/log/supervisor
+    && pip3 install supervisor pyyaml && mkdir /var/log/supervisor
 
 # both Python 2 and 3 only there for the "transition" period, to not brake some people upgrading to a newer image.
 # at some point Python2 should be dropped completely.

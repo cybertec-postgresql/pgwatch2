@@ -37,7 +37,7 @@ RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_6.7.6_amd6
     && sed -i 's/\# index-version = \"inmem\"/index-version = \"tsi1\"/' /etc/influxdb/influxdb.conf \
     && sed -i 's/\# bind-address = \"127.0.0.1:8088\"/bind-address = \":8088\"/' /etc/influxdb/influxdb.conf \
     && sed -i 's/\# wal-fsync-delay = \"0s\"/wal-fsync-delay = \"500ms\"/' /etc/influxdb/influxdb.conf \
-    && pip3 install supervisor && mkdir /var/log/supervisor
+    && pip3 install supervisor pyyaml && mkdir /var/log/supervisor
 
 
 # Add pgwatch2 sources
