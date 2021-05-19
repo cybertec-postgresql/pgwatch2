@@ -11,8 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/mem"
 	"io"
 	"io/ioutil"
 	"math"
@@ -29,6 +27,9 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/coreos/go-systemd/daemon"
 	client "github.com/influxdata/influxdb1-client/v2"
@@ -277,6 +278,7 @@ var last_sql_fetch_error sync.Map
 var influx_host_count = 1
 var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently supported
 var InfluxSkipSSLCertVerify, InfluxSkipSSLCertVerify2 bool
+
 // secondary Influx meant for HA or Grafana load balancing for 100+ instances with lots of alerts
 var fileBasedMetrics = false
 var adHocMode = false
@@ -315,7 +317,7 @@ var rBouncerAndPgpoolVerMatch = regexp.MustCompile(`\d+\.+\d+`) // extract $majo
 var tryDirectOSStats bool
 var unreachableDBsLock sync.RWMutex
 var unreachableDB = make(map[string]time.Time)
-var pgBouncerNumericCountersStartVersion decimal.Decimal	// pgBouncer changed internal counters data type in v1.12
+var pgBouncerNumericCountersStartVersion decimal.Decimal // pgBouncer changed internal counters data type in v1.12
 // "cache" of last CPU utilization stats for GetGoPsutilCPU to get more exact results and not having to sleep
 var prevCPULoadTimeStatsLock sync.RWMutex
 var prevCPULoadTimeStats cpu.TimesStat
@@ -796,7 +798,7 @@ func SendToInflux(connect_str, conn_id string, storeMessages []MetricStoreMessag
 	if len(storeMessages) == 0 {
 		return nil
 	}
-	skipSSLCertVerify := InfluxSkipSSLCertVerify	// conn_id == "0"
+	skipSSLCertVerify := InfluxSkipSSLCertVerify // conn_id == "0"
 	if conn_id == "1" {
 		skipSSLCertVerify = InfluxSkipSSLCertVerify2
 	}
@@ -805,9 +807,9 @@ func SendToInflux(connect_str, conn_id string, storeMessages []MetricStoreMessag
 retry:
 
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     connect_str,
-		Username: opts.InfluxUser,
-		Password: opts.InfluxPassword,
+		Addr:               connect_str,
+		Username:           opts.InfluxUser,
+		Password:           opts.InfluxPassword,
 		InsecureSkipVerify: skipSSLCertVerify,
 	})
 
@@ -2530,7 +2532,7 @@ func DetectConfigurationChanges(dbUnique string, vme DBVersionMapEntry, storage_
 		if ok { // we have existing state
 			if prev_hash != obj_value {
 				if obj_ident == "connection_ID" {
-					continue	// ignore some weird Azure managed PG service setting
+					continue // ignore some weird Azure managed PG service setting
 				}
 				log.Warningf("[%s][%s] detected settings change: %s = %s (prev: %s)",
 					dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, obj_ident, obj_value, prev_hash)
@@ -2677,13 +2679,13 @@ func FilterPgbouncerData(data []map[string]interface{}, databaseToKeep string, v
 			log.Warning("Expected 'database' key not found from pgbouncer_stats, not storing data")
 			continue
 		}
-		if (len(databaseToKeep) > 0 && dr["database"] != databaseToKeep) || dr["database"] == "pgbouncer" {	// always ignore the internal 'pgbouncer' DB
+		if (len(databaseToKeep) > 0 && dr["database"] != databaseToKeep) || dr["database"] == "pgbouncer" { // always ignore the internal 'pgbouncer' DB
 			log.Debugf("Skipping bouncer stats for pool entry %v as not the specified DBName of %s", dr["database"], databaseToKeep)
 			continue // and all others also if a DB / pool name was specified in config
 		}
 
-		dr["tag_database"] = dr["database"]		// support multiple databases / pools via tags if DbName left empty
-		delete(dr, "database")				// remove the original pool name
+		dr["tag_database"] = dr["database"] // support multiple databases / pools via tags if DbName left empty
+		delete(dr, "database")              // remove the original pool name
 
 		if vme.Version.GreaterThanOrEqual(pgBouncerNumericCountersStartVersion) { // v1.12 counters are of type numeric instead of int64
 			for k, v := range dr {
@@ -4028,6 +4030,12 @@ func ConfigFileToMonitoredDatabases(configFilePath string) ([]MonitoredDatabase,
 		return hostList, err
 	}
 	for _, v := range c {
+		if v.Port == "" {
+			v.Port = "5432"
+		}
+		if v.DBType == "" {
+			v.DBType = DBTYPE_PG
+		}
 		if v.IsEnabled {
 			log.Debugf("Found active monitoring config entry: %#v", v)
 			if v.Group == "" {
