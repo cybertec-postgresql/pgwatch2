@@ -1,6 +1,6 @@
 - unique_name: test1  # an arbitrary name for the monitored DB. functions also as prefix for found DBs if using continuous discovery "dbtype"-s
                       # NB! Should be chosen carefully - cannot be (easily) changed for the already stored metric data!
-  dbtype: postgres    # postgres|pgbouncer|postgres-continuous-discovery|patroni|patroni-continuous-discovery
+  dbtype: postgres    # postgres|postgres-continuous-discovery|pgbouncer|pgpool|patroni|patroni-continuous-discovery|patroni-namespace-discovery
                       # defaults to postgres if not specified
   host: localhost
   port: 5432          # defaults to 5432 if not specified
