@@ -235,5 +235,9 @@ When adding a new "to be monitored" entry a *DB type* needs to be selected. Foll
 *patroni-continuous-discovery*
   As normal *patroni* DB type but all DB-s (or only those matching the regex if any provided) are monitored.
 
+*patroni-namespace-discovery*
+  Similar to *patroni-continuous-discovery* but all Patroni scopes (clusters) of an ETCD namespace are automatically monitored.
+  Optionally regexes on database names still apply if provided.
+
 NB! All "continuous" modes expect access to "template1" or "postgres" databasess of the specified cluster to determine
 the database names residing there.
