@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -58,8 +59,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 	for name, md := range monitoredDatabases {
-		setInstanceUpDownState(ch, md)	// makes easier to differentiate between PG instance / machine  failures
-										// https://prometheus.io/docs/instrumenting/writing_exporters/#failed-scrapes
+		setInstanceUpDownState(ch, md) // makes easier to differentiate between PG instance / machine  failures
+		// https://prometheus.io/docs/instrumenting/writing_exporters/#failed-scrapes
 
 		for metric, interval := range md.Metrics {
 			if metric == "change_events" {
@@ -91,6 +92,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- e.totalScrapeFailures
 	e.lastScrapeErrors.Set(lastScrapeErrors)
 	ch <- e.lastScrapeErrors
+
+	atomic.StoreInt64(&lastSuccessfulDatastoreWriteTimeEpoch, time.Now().Unix())
 }
 
 func setInstanceUpDownState(ch chan<- prometheus.Metric, md MonitoredDatabase) {
@@ -248,7 +251,7 @@ func MetricStoreMessageToPromMetrics(msg MetricStoreMessage) []prometheus.Metric
 						msg.MetricName, label_keys, nil)
 				}
 			} else {
-				if msg.MetricName == PROM_INSTANCE_UP_STATE_METRIC {	// handle the special "instance_up" check
+				if msg.MetricName == PROM_INSTANCE_UP_STATE_METRIC { // handle the special "instance_up" check
 					desc = prometheus.NewDesc(fmt.Sprintf("%s", field), msg.MetricName, label_keys, nil)
 				} else {
 					desc = prometheus.NewDesc(fmt.Sprintf("%s_%s", msg.MetricName, field), msg.MetricName, label_keys, nil)
