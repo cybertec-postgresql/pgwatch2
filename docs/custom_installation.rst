@@ -204,6 +204,9 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
       After initial verification that all works it's usually good idea to set verbosity back to default by removing the
       *verbose* flag.
 
+      Another tip to configure connection strings inside SystemD service files is to use the "systemd-escape" utility to
+      escape special characters like spaces etc if using the LibPQ connect string syntax rather than JDBC syntax.
+
    #. Alternative start command when using InfluxDB storage:
 
       ::
