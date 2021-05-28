@@ -63,9 +63,12 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		// https://prometheus.io/docs/instrumenting/writing_exporters/#failed-scrapes
 
 		for metric, interval := range md.Metrics {
-			if metric == "change_events" {
+			if metric == SPECIAL_METRIC_CHANGE_EVENTS {
 				log.Warningf("[%s] Skipping change_events metric as host state is not supported for Prometheus currently", md.DBUniqueName)
 				continue
+			}
+			if metric == PROM_INSTANCE_UP_STATE_METRIC {
+				continue // always included in Prometheus case
 			}
 			if interval > 0 {
 				log.Debugf("scraping [%s:%s]...", md.DBUniqueName, metric)
