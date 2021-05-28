@@ -101,8 +101,25 @@ The built-in Grafana dashboard for Pgpool data looks something like that:
    :target: https://raw.githubusercontent.com/cybertec-postgresql/pgwatch2/master/screenshots/pgpool_status.png
 
 
-AWS / Azure support
+Prometheus scraping
 -------------------
+
+pgwatch2 was originally designed with direct metrics storage in mind, but later also support for externally controlled
+`Prometheus <https://prometheus.io/>`__ scraping was added. Note that currently though the storage modes are exclusive, i.e. when
+you enable the Promotheus endpoint (default port 9187) there will be no direct metrics storage.
+
+To enable the scraping endpoint set ``--datastore=prometheus`` and optionally also ``--prometheus-port``, ``--prometheus-namespace``,
+``--prometheus-listen-addr``. Additionally note that you still need to specify some metrics config as usually - only metrics with
+interval values bigger than zero will be populated on scraping.
+
+NB! Currently a few built-in metrics that require some state to be stored between scrapes, e.g. the
+"change_events" metric, will currently be ignored. Also non-numeric data columns will be ignored! Tag columns will be preserved though
+as Prometheus "labels".
+
+
+
+AWS / Azure / GCE support
+-------------------------
 
 Due to popularity of various managed PostgreSQL offerings there's also support for some managed options in sense of
 *Preset Configs*, that take into account the fact that on such platforms you get a limited user that doesn't have access
@@ -114,3 +131,5 @@ there are following presets available:
 * **aurora** - for AWS Aurora managed PostgreSQL service
 
 * **azure** - for Azure Database for PostgreSQL managed databases
+
+* **gce** - for Google Cloud SQL for PostgreSQL managed databases
