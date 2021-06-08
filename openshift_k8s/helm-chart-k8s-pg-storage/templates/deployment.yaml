@@ -53,7 +53,7 @@ spec:
                   name: {{ template "pgwatch2.fullname" . }}-web
                   key: password
             {{- end }}
-            {{- if .Values.grafana.noAnonymous }}
+            {{- if and .Values.grafana.enabled .Values.grafana.noAnonymous }}
             - name: PW2_GRAFANANOANONYMOUS
               value: "{{ .Values.grafana.noAnonymous }}"
             - name: PW2_GRAFANAUSER
@@ -74,9 +74,11 @@ spec:
             - name: exporter
               containerPort: 9187
               protocol: TCP
+            {{- if .Values.grafana.enabled }}
             - name: grafana
               containerPort: 3000
               protocol: TCP
+            {{- end }}
             - name: database
               containerPort: 5432
               protocol: TCP

@@ -41,6 +41,7 @@ web:
     #      - pgwatch2-web.local
 
 grafana:
+  enabled: true
   service:
     type: ClusterIP
     servicePort: 3000

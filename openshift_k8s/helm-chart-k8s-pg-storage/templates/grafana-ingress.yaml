@@ -1,4 +1,4 @@
-{{- if .Values.grafana.ingress.enabled -}}
+{{- if and .Values.grafana.enabled .Values.grafana.ingress.enabled -}}
 {{- $fullName := include "pgwatch2.fullname" . -}}
 {{- $svcPort := .Values.grafana.service.servicePort -}}
 {{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
