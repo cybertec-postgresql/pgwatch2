@@ -1,0 +1,40 @@
+---
+- hosts: all
+  tasks:
+  - name: Add repository
+    ansible.builtin.apt_repository:
+      repo: deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_{{ ansible_distribution_version  }}/ /
+      state: present
+    when: ansible_distribution == 'Ubuntu' and ansible_distribution_version|float <= 20.04
+  - name: installing podman
+    ansible.builtin.package:
+      name: "podman"
+      state: present
+  - name: Pull an image
+    containers.podman.podman_image:
+      name: cybertec/pgwatch2-postgres
+  - name: Re-create a pgwatch2 container
+    containers.podman.podman_container:
+      name: pgwatch2
+      image: cybertec/pgwatch2-postgres
+      state: started
+      detach: true
+      exposed_ports:
+        - 3000,8080,25432
+      ports:
+        - 3000:3000
+        - 8080:8080
+        - 25432:5432
+      volumes:
+        - "pg:/var/lib/postgresql"
+        - "grafana:/var/lib/grafana"
+        - "pw2:/pgwatch2/persistent-config"
+      env:
+        PW2_TESTDB: true
+      cap_add:
+        - AUDIT_WRITE
+  - name: Wait for the database to be available
+    ansible.builtin.shell: podman exec pgwatch2 sh -c "until pg_isready;do sleep 5 ;done"
+  - name: Add the monitored databases
+    ansible.builtin.shell: podman exec pgwatch2 su -c "psql -d pgwatch2 -c \"insert into pgwatch2.monitored_db (md_unique_name, md_preset_config_name, md_config, md_hostname, md_port, md_dbname, md_user, md_password) select '{{ item.0 }}', 'full', null, '{{ item.1.host }}', '{{ item.1.port|default(5432) }}', '{{ item.1.dbname }}', '{{ item.1.username }}', '{{ item.1.password }}' where not exists ( select * from pgwatch2.monitored_db where (md_unique_name, md_hostname, md_dbname) = ('{{ item.0 }}', '{{ item.1.host }}', '{{ item.1.dbname }}')) ;\"" postgres
+    loop: "{{ databases | dictsort }}"

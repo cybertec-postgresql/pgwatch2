@@ -1,0 +1,22 @@
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: /usr/bin/python
+    gis:
+      ansible_user: root
+      ansible_host: 10.0.0.117
+      ansible_port: 22
+  vars:
+    databases:
+      test1:
+        host: 10.0.0.117
+        dbname: postgres
+        username: postgres
+        password: postgres
+      test2:
+        host: 10.0.0.117
+        dbname: gistest1
+        username: postgres
+        password: postgres
+
