@@ -350,8 +350,8 @@ chapter for indicative numbers.
 
         INFLUX_LATEST=$(curl -so- https://api.github.com/repos/influxdata/influxdb/releases/latest \
                           | jq .tag_name | grep -oE '[0-9\.]+')
-        wget https://dl.influxdata.com/influxdb/releases/influxdb_${INFLUX_LATEST}_amd64.deb
-        sudo dpkg -i influxdb_${INFLUX_LATEST}_amd64.deb
+        wget https://dl.influxdata.com/influxdb/releases/influxdb_${INFLUX_LATEST}_${ARCH}.deb
+        sudo dpkg -i influxdb_${INFLUX_LATEST}_${ARCH}.deb
 
 #. Review / adjust the config and start the server
 

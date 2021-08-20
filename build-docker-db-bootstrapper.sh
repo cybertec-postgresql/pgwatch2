@@ -1,2 +1,3 @@
 #!/bin/bash
-docker build --no-cache -t cybertec/pgwatch2-db-bootstrapper:latest -f docker/Dockerfile-db-bootstrapper .
+. common.sh
+docker build --no-cache --build-arg ARCH="$ARCH" -t cybertec/pgwatch2-db-bootstrapper:latest -f docker/Dockerfile-db-bootstrapper .

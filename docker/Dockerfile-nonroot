@@ -1,5 +1,7 @@
 FROM golang:1.16.3
 
+ARG ARCH=amd64
+
 # For showing Git version via 'pgwatch2 --version'
 ARG GIT_HASH
 ARG GIT_TIME
@@ -31,13 +33,13 @@ RUN pip3 install supervisor \
 # Influxdb [https://portal.influxdata.com/downloads]
 #   latest ver.: curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1
 
-RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_6.7.6_amd64.deb \
-    && wget -q -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.8.5_amd64.deb > influxdb_amd64.deb \
+RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_6.7.6_${ARCH}.deb \
+    && wget -q -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.8.5_${ARCH}.deb > influxdb_${ARCH}.deb \
     && dpkg -i grafana.deb && rm grafana.deb \
     && mkdir -p /var/run/grafana \
     && chgrp -R 0 /etc/grafana/ /usr/share/grafana /var/lib/grafana /var/log/grafana /var/run/grafana \
     && chmod -R g=u /etc/grafana/ /usr/share/grafana /var/lib/grafana /var/log/grafana /var/run/grafana \
-    && dpkg -i influxdb_amd64.deb && rm influxdb_amd64.deb \
+    && dpkg -i influxdb_${ARCH}.deb && rm influxdb_${ARCH}.deb \
     && chgrp -R 0 /var/lib/influxdb /var/log/influxdb /usr/lib/influxdb /etc/influxdb \
     && chmod -R g=u /var/lib/influxdb /var/log/influxdb /usr/lib/influxdb /etc/influxdb \
     && sed -i 's/\# query-log-enabled = true/query-log-enabled = false/' /etc/influxdb/influxdb.conf \

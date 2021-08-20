@@ -90,8 +90,8 @@ For InfluxDB typically something like that is enough though (assuming Debian bas
     influxd version # check current version
     INFLUX_LATEST=$(curl -so- https://api.github.com/repos/influxdata/influxdb/releases/latest \
                       | jq .tag_name | grep -oE '[0-9\.]+')
-    wget https://dl.influxdata.com/influxdb/releases/influxdb_${INFLUX_LATEST}_amd64.deb
-    sudo dpkg -i influxdb_${INFLUX_LATEST}_amd64.deb
+    wget https://dl.influxdata.com/influxdb/releases/influxdb_${INFLUX_LATEST}_${ARCH}.deb
+    sudo dpkg -i influxdb_${INFLUX_LATEST}_${ARCH}.deb
 
 For PostgreSQL one should distinguish between minor version updates and major version upgrades. Minor updates are quite
 straightforward and problem-free, consisting of running something like:
