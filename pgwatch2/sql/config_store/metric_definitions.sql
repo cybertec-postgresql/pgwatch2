@@ -626,6 +626,87 @@ $sql$,
 '{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s", "backup_duration_s", "checksum_last_failure_s"]}'
 );
 
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_sql_su, m_column_attrs)
+values (
+'db_stats',
+14,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  numbackends,
+  xact_commit,
+  xact_rollback,
+  blks_read,
+  blks_hit,
+  tup_returned,
+  tup_fetched,
+  tup_inserted,
+  tup_updated,
+  tup_deleted,
+  conflicts,
+  temp_files,
+  temp_bytes,
+  deadlocks,
+  blk_read_time,
+  blk_write_time,
+  extract(epoch from (now() - pg_postmaster_start_time()))::int8 as postmaster_uptime_s,
+  extract(epoch from (now() - pg_backup_start_time()))::int8 as backup_duration_s,
+  checksum_failures,
+  extract(epoch from (now() - checksum_last_failure))::int8 as checksum_last_failure_s,
+  case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int,
+  system_identifier::text as tag_sys_id,
+  session_time::int8,
+  active_time::int8,
+  idle_in_transaction_time::int8,
+  sessions,
+  sessions_abandoned,
+  sessions_fatal,
+  sessions_killed
+from
+  pg_stat_database, pg_control_system()
+where
+  datname = current_database();
+$sql$,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  numbackends,
+  xact_commit,
+  xact_rollback,
+  blks_read,
+  blks_hit,
+  tup_returned,
+  tup_fetched,
+  tup_inserted,
+  tup_updated,
+  tup_deleted,
+  conflicts,
+  temp_files,
+  temp_bytes,
+  deadlocks,
+  blk_read_time,
+  blk_write_time,
+  extract(epoch from (now() - coalesce((pg_stat_file('postmaster.pid', true)).modification, pg_postmaster_start_time())))::int8 as postmaster_uptime_s,
+  extract(epoch from (now() - pg_backup_start_time()))::int8 as backup_duration_s,
+  checksum_failures,
+  extract(epoch from (now() - checksum_last_failure))::int8 as checksum_last_failure_s,
+  case when pg_is_in_recovery() then 1 else 0 end as in_recovery_int,
+  system_identifier::text as tag_sys_id,
+  session_time::int8,
+  active_time::int8,
+  idle_in_transaction_time::int8,
+  sessions,
+  sessions_abandoned,
+  sessions_fatal,
+  sessions_killed
+from
+  pg_stat_database, pg_control_system()
+where
+  datname = current_database();
+$sql$,
+'{"prometheus_gauge_columns": ["numbackends", "postmaster_uptime_s", "backup_duration_s", "checksum_last_failure_s"]}'
+);
+
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
 values (
 'db_stats_aurora',
@@ -6727,6 +6808,48 @@ select
   (select round(100.0 * coalesce(max(last_value::numeric / max_value), 0), 2)::float from q_seq_data where not cycle) as max_used_pct,
   (select count(*) from q_seq_data where not cycle and last_value::numeric / max_value > 0.5) as p50_used_seq_count,
   (select count(*) from q_seq_data where not cycle and last_value::numeric / max_value > 0.75) as p75_used_seq_count;
+$sql$
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_sql_su)
+values (
+'replication_slot_stats',
+14,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  slot_name::text as tag_slot_name,
+  spill_txns,
+  spill_count,
+  spill_bytes,
+  stream_txns,
+  stream_count,
+  stream_bytes,
+  total_txns,
+  total_bytes
+from
+  pg_stat_replication_slots;
+$sql$
+);
+
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_sql_su)
+values (
+'wal_stats',
+14,
+$sql$
+select
+    (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+    wal_records,
+    wal_fpi,
+    (wal_bytes / 1000)::int8 as wal_bytes_kb,
+    wal_buffers_full,
+    wal_write,
+    wal_sync,
+    wal_write_time::int8,
+    wal_sync_time::int8
+from
+    pg_stat_wal;
 $sql$
 );
 
