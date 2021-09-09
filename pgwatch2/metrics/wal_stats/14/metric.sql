@@ -2,7 +2,7 @@ select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     wal_records,
     wal_fpi,
-    (wal_bytes / 1000)::int8 as wal_bytes_kb,
+    wal_bytes,
     wal_buffers_full,
     wal_write,
     wal_sync,
