@@ -324,8 +324,8 @@ var prevCPULoadTimeStats cpu.TimesStat
 var prevCPULoadTimestamp time.Time
 
 // Async Prom cache
-var promMetricCache = make(map[string][]MetricStoreMessage) // [dbUnique+metric]lastly_fetched_data
-var promMetricCacheLock = sync.RWMutex{}
+var promAsyncMetricCache = make(map[string][]MetricStoreMessage) // [dbUnique+metric]lastly_fetched_data
+var promAsyncMetricCacheLock = sync.RWMutex{}
 var promAsyncMode = false
 
 func IsPostgresDBType(dbType string) bool {
@@ -1887,9 +1887,9 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 							continue
 						}
 						msg := msg_arr[0]
-						promMetricCacheLock.Lock()
-						promMetricCache[msg.DBUniqueName+msg.MetricName] = msg_arr
-						promMetricCacheLock.Unlock()
+						promAsyncMetricCacheLock.Lock()
+						promAsyncMetricCache[msg.DBUniqueName+msg.MetricName] = msg_arr
+						promAsyncMetricCacheLock.Unlock()
 						log.Infof("[%s:%s] Added %d rows to Prom cache", msg.DBUniqueName, msg.MetricName, len(msg.Data))
 					} else if data_store == DATASTORE_INFLUX {
 						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg_arr)
@@ -2985,6 +2985,14 @@ func ClearDBUnreachableStateIfAny(dbUnique string) {
 	unreachableDBsLock.Lock()
 	delete(unreachableDB, dbUnique)
 	unreachableDBsLock.Unlock()
+}
+
+func PurgeMetricsFromPromAsyncCacheIfAny(dbUnique, metric string) {
+	if promAsyncMode {
+		promAsyncMetricCacheLock.Lock()
+		delete(promAsyncMetricCache, dbUnique+metric)
+		promAsyncMetricCacheLock.Unlock()
+	}
 }
 
 func GetFromInstanceCacheIfNotOlderThanSeconds(msg MetricFetchMessage, maxAgeSeconds int64) []map[string]interface{} {
@@ -5414,6 +5422,7 @@ func main() {
 				log.Debugf("control channel for [%s:%s] deleted", db, metric)
 				gatherers_shut_down++
 				ClearDBUnreachableStateIfAny(db)
+				PurgeMetricsFromPromAsyncCacheIfAny(db, metric)
 			}
 		}
 		if gatherers_shut_down > 0 {
