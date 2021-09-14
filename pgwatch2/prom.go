@@ -65,7 +65,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 		for metric, interval := range md.Metrics {
 			if metric == SPECIAL_METRIC_CHANGE_EVENTS {
-				log.Warningf("[%s] Skipping change_events metric as host state is not supported for Prometheus currently", md.DBUniqueName)
+				log.Infof("[%s] Skipping change_events metric as host state is not supported for Prometheus currently", md.DBUniqueName)
 				continue
 			}
 			if metric == PROM_INSTANCE_UP_STATE_METRIC {
