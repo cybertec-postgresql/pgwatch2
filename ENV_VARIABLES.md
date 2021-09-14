@@ -54,7 +54,9 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_TESTDATA_DAYS** For how many days to generate data. Requires Ad-hoc params to be set also.
 - **PW2_TESTDATA_MULTIPLIER** For how many hosts to generate data. Requires Ad-hoc params to be set also.
 - **PW2_PROMETHEUS_PORT** Prometheus port. Effective with --datastore=prometheus. Default: 9187
-- **PW2_PROMETHEUS_LISTEN_ADDR** Network interface to listen on". Default: "0.0.0.0"
+- **PW2_PROMETHEUS_LISTEN_ADDR** Network interface to listen on. Default: "0.0.0.0"
+- **PW2_PROMETHEUS_NAMESPACE** Prefix for all non-process (thus Postgres) metrics. Default: "pgwatch2"
+- **PW2_PROMETHEUS_ASYNC_MODE** Gather in background as with other storages and cache last fetch results for each metric in memory. Default: false
 - **PW2_ADD_SYSTEM_IDENTIFIER** Add system identifier to each captured metric (PG10+). Default: false
 - **PW2_SYSTEM_IDENTIFIER_FIELD** Control name of the "system identifier" field. Default: sys_id
 - **PW2_SERVERS_REFRESH_LOOP_SECONDS** Sleep time for the main loop. Default: 120
