@@ -15,8 +15,7 @@
     "editable": true,
     "gnetId": null,
     "graphTooltip": 0,
-    "id": 1,
-    "iteration": 1631692719809,
+    "id": null,
     "links": [],
     "panels": [
       {
@@ -1769,7 +1768,10 @@
     ],
     "schemaVersion": 27,
     "style": "dark",
-    "tags": [],
+    "tags": [
+        "pgwatch2",
+        "postgres"
+    ],
     "templating": {
       "list": [
         {
@@ -1818,6 +1820,6 @@
     "timepicker": {},
     "timezone": "",
     "title": "Health-check",
-    "uid": "zxBFeESnk",
-    "version": 22
+    "uid": null,
+    "version": 1
   }
