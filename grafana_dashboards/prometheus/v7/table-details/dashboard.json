@@ -721,11 +721,6 @@
       "list": [
         {
           "allValue": null,
-          "current": {
-            "selected": false,
-            "text": "adhoc",
-            "value": "adhoc"
-          },
           "datasource": null,
           "definition": "label_values(dbname)",
           "description": null,
@@ -736,17 +731,12 @@
           "multi": false,
           "name": "dbname",
           "options": [
-            {
-              "selected": true,
-              "text": "adhoc",
-              "value": "adhoc"
-            }
           ],
           "query": {
             "query": "label_values(dbname)",
             "refId": "StandardVariableQuery"
           },
-          "refresh": 0,
+          "refresh": 1,
           "regex": "",
           "skipUrlSync": false,
           "sort": 1,
@@ -759,9 +749,6 @@
         {
           "allValue": null,
           "current": {
-            "selected": true,
-            "text": "public.pgbench_accounts",
-            "value": "public.pgbench_accounts"
           },
           "datasource": null,
           "definition": "label_values(pgwatch2_table_stats_seq_scan{dbname=~\"$dbname\"}, table_full_name) ",
@@ -773,37 +760,12 @@
           "multi": false,
           "name": "table",
           "options": [
-            {
-              "selected": true,
-              "text": "public.pgbench_accounts",
-              "value": "public.pgbench_accounts"
-            },
-            {
-              "selected": false,
-              "text": "public.pgbench_accounts_copy",
-              "value": "public.pgbench_accounts_copy"
-            },
-            {
-              "selected": false,
-              "text": "public.pgbench_branches",
-              "value": "public.pgbench_branches"
-            },
-            {
-              "selected": false,
-              "text": "public.pgbench_history",
-              "value": "public.pgbench_history"
-            },
-            {
-              "selected": false,
-              "text": "public.pgbench_tellers",
-              "value": "public.pgbench_tellers"
-            }
           ],
           "query": {
             "query": "label_values(pgwatch2_table_stats_seq_scan{dbname=~\"$dbname\"}, table_full_name) ",
             "refId": "StandardVariableQuery"
           },
-          "refresh": 0,
+          "refresh": 1,
           "regex": "",
           "skipUrlSync": false,
           "sort": 1,

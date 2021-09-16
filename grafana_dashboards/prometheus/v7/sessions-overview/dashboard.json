@@ -718,11 +718,6 @@
       "list": [
         {
           "allValue": null,
-          "current": {
-            "selected": false,
-            "text": "adhoc",
-            "value": "adhoc"
-          },
           "datasource": null,
           "definition": "label_values(dbname)",
           "description": null,
@@ -733,22 +728,12 @@
           "multi": false,
           "name": "dbname",
           "options": [
-            {
-              "selected": true,
-              "text": "adhoc",
-              "value": "adhoc"
-            },
-            {
-              "selected": false,
-              "text": "kala2",
-              "value": "kala2"
-            }
           ],
           "query": {
             "query": "label_values(dbname)",
             "refId": "StandardVariableQuery"
           },
-          "refresh": 0,
+          "refresh": 1,
           "regex": "",
           "skipUrlSync": false,
           "sort": 1,
