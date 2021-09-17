@@ -637,6 +637,7 @@
           {
             "exemplar": true,
             "expr": "pgwatch2_table_stats_seconds_since_last_vacuum{dbname=\"$dbname\",table_full_name=\"$table\"}",
+            "instant": true,
             "interval": "",
             "legendFormat": "",
             "refId": "A"
@@ -700,6 +701,7 @@
           {
             "exemplar": true,
             "expr": "pgwatch2_table_stats_seconds_since_last_analyze{dbname=\"$dbname\",table_full_name=\"$table\"}",
+            "instant": true,
             "interval": "",
             "legendFormat": "",
             "refId": "A"
