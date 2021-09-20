@@ -70,14 +70,14 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "increase(pgwatch2_table_stats_n_tup_ins{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval])",
+            "expr": "increase(pgwatch2_table_stats_n_tup_ins{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval])",
             "interval": "",
             "legendFormat": "INS",
             "refId": "A"
           },
           {
             "exemplar": true,
-            "expr": "increase(pgwatch2_table_stats_n_tup_upd{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval])",
+            "expr": "increase(pgwatch2_table_stats_n_tup_upd{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "UPD",
@@ -85,7 +85,7 @@
           },
           {
             "exemplar": true,
-            "expr": "increase(pgwatch2_table_stats_n_tup_del{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval])",
+            "expr": "increase(pgwatch2_table_stats_n_tup_del{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "DEL",
@@ -187,7 +187,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "increase(pgwatch2_table_stats_seq_scan{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval])",
+            "expr": "increase(pgwatch2_table_stats_seq_scan{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval])",
             "interval": "",
             "legendFormat": "seq_scan",
             "refId": "A"
@@ -289,14 +289,14 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "pgwatch2_table_stats_table_size_b{dbname=\"$dbname\",table_full_name=\"$table\"}",
+            "expr": "pgwatch2_table_stats_table_size_b{dbname='$dbname',table_full_name=\"$table\"}",
             "interval": "",
             "legendFormat": "table_size",
             "refId": "A"
           },
           {
             "exemplar": true,
-            "expr": "pgwatch2_table_stats_total_relation_size_b{dbname=\"$dbname\",table_full_name=\"$table\"}",
+            "expr": "pgwatch2_table_stats_total_relation_size_b{dbname='$dbname',table_full_name=\"$table\"}",
             "hide": false,
             "interval": "",
             "legendFormat": "total_relation_size",
@@ -399,14 +399,14 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "100 * increase(pgwatch2_table_io_stats_heap_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) / (increase(pgwatch2_table_io_stats_heap_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_heap_blks_read{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]))",
+            "expr": "100 * increase(pgwatch2_table_io_stats_heap_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) / (increase(pgwatch2_table_io_stats_heap_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_heap_blks_read{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]))",
             "interval": "",
             "legendFormat": "heap",
             "refId": "A"
           },
           {
             "exemplar": true,
-            "expr": "100 * increase(pgwatch2_table_io_stats_idx_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) / (increase(pgwatch2_table_io_stats_idx_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_idx_blks_read{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]))",
+            "expr": "100 * increase(pgwatch2_table_io_stats_idx_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) / (increase(pgwatch2_table_io_stats_idx_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_idx_blks_read{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]))",
             "hide": false,
             "interval": "",
             "legendFormat": "idx",
@@ -414,7 +414,7 @@
           },
           {
             "exemplar": true,
-            "expr": "100 * (increase(pgwatch2_table_io_stats_toast_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_tidx_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval])) / (increase(pgwatch2_table_io_stats_toast_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_toast_blks_read{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_tidx_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_tidx_blks_read{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]))",
+            "expr": "100 * (increase(pgwatch2_table_io_stats_toast_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_tidx_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval])) / (increase(pgwatch2_table_io_stats_toast_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_toast_blks_read{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_tidx_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_tidx_blks_read{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]))",
             "hide": false,
             "interval": "",
             "legendFormat": "toast",
@@ -518,14 +518,14 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "8192 * (increase(pgwatch2_table_io_stats_heap_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_heap_blks_read{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]))",
+            "expr": "8192 * (increase(pgwatch2_table_io_stats_heap_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_heap_blks_read{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]))",
             "interval": "",
             "legendFormat": "heap",
             "refId": "A"
           },
           {
             "exemplar": true,
-            "expr": "8192 * (increase(pgwatch2_table_io_stats_idx_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_idx_blks_read{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]))",
+            "expr": "8192 * (increase(pgwatch2_table_io_stats_idx_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_idx_blks_read{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]))",
             "hide": false,
             "interval": "",
             "legendFormat": "idx",
@@ -533,7 +533,7 @@
           },
           {
             "exemplar": true,
-            "expr": "8192 * (increase(pgwatch2_table_io_stats_tidx_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_tidx_blks_read{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_toast_blks_hit{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_toast_blks_read{dbname=\"$dbname\",table_full_name=\"$table\"}[$agg_interval]))",
+            "expr": "8192 * (increase(pgwatch2_table_io_stats_tidx_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_tidx_blks_read{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_toast_blks_hit{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]) + increase(pgwatch2_table_io_stats_toast_blks_read{dbname='$dbname',table_full_name=\"$table\"}[$agg_interval]))",
             "hide": false,
             "interval": "",
             "legendFormat": "toast",
@@ -636,7 +636,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "pgwatch2_table_stats_seconds_since_last_vacuum{dbname=\"$dbname\",table_full_name=\"$table\"}",
+            "expr": "pgwatch2_table_stats_seconds_since_last_vacuum{dbname='$dbname',table_full_name=\"$table\"}",
             "instant": true,
             "interval": "",
             "legendFormat": "",
@@ -700,7 +700,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "pgwatch2_table_stats_seconds_since_last_analyze{dbname=\"$dbname\",table_full_name=\"$table\"}",
+            "expr": "pgwatch2_table_stats_seconds_since_last_analyze{dbname='$dbname',table_full_name=\"$table\"}",
             "instant": true,
             "interval": "",
             "legendFormat": "",

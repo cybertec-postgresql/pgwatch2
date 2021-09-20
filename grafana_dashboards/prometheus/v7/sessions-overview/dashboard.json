@@ -68,14 +68,14 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "rate(pgwatch2_db_stats_xact_commit{dbname=\"$dbname\"}[$agg_interval]) + rate(pgwatch2_db_stats_xact_rollback{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "rate(pgwatch2_db_stats_xact_commit{dbname='$dbname'}[$agg_interval]) + rate(pgwatch2_db_stats_xact_rollback{dbname='$dbname'}[$agg_interval])",
             "interval": "",
             "legendFormat": "TPS",
             "refId": "A"
           },
           {
             "exemplar": true,
-            "expr": "rate(pgwatch2_stat_statements_calls_calls{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "rate(pgwatch2_stat_statements_calls_calls{dbname='$dbname'}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "QPS",
@@ -182,14 +182,14 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "avg_over_time(pgwatch2_backends_total{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "avg_over_time(pgwatch2_backends_total{dbname='$dbname'}[$agg_interval])",
             "interval": "",
             "legendFormat": "Total",
             "refId": "A"
           },
           {
             "exemplar": true,
-            "expr": "avg_over_time(pgwatch2_backends_active{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "avg_over_time(pgwatch2_backends_active{dbname='$dbname'}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "Active",
@@ -197,7 +197,7 @@
           },
           {
             "exemplar": true,
-            "expr": "pgwatch2_backends_max_connections{dbname=\"$dbname\"}",
+            "expr": "pgwatch2_backends_max_connections{dbname='$dbname'}",
             "hide": false,
             "interval": "",
             "legendFormat": "Max. configured",
@@ -205,7 +205,7 @@
           },
           {
             "exemplar": true,
-            "expr": "avg_over_time(pgwatch2_backends_waiting{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "avg_over_time(pgwatch2_backends_waiting{dbname='$dbname'}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "Waiting",
@@ -213,7 +213,7 @@
           },
           {
             "exemplar": true,
-            "expr": "max_over_time(pgwatch2_backends_idleintransaction{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "max_over_time(pgwatch2_backends_idleintransaction{dbname='$dbname'}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "Idle in TX",
@@ -221,7 +221,7 @@
           },
           {
             "exemplar": true,
-            "expr": "increase(pgwatch2_db_stats_deadlocks{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "increase(pgwatch2_db_stats_deadlocks{dbname='$dbname'}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "Deadlocks",
@@ -320,14 +320,14 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "max_over_time(pgwatch2_backends_longest_query_seconds{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "max_over_time(pgwatch2_backends_longest_query_seconds{dbname='$dbname'}[$agg_interval])",
             "interval": "",
             "legendFormat": "Longest query ",
             "refId": "A"
           },
           {
             "exemplar": true,
-            "expr": "avg_over_time(pgwatch2_backends_longest_query_seconds{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "avg_over_time(pgwatch2_backends_longest_query_seconds{dbname='$dbname'}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "Avg. query",
@@ -429,14 +429,14 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "max_over_time(pgwatch2_backends_longest_tx_seconds{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "max_over_time(pgwatch2_backends_longest_tx_seconds{dbname='$dbname'}[$agg_interval])",
             "interval": "",
             "legendFormat": "Longest TX",
             "refId": "A"
           },
           {
             "exemplar": true,
-            "expr": "avg_over_time(pgwatch2_backends_avg_tx_seconds{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "avg_over_time(pgwatch2_backends_avg_tx_seconds{dbname='$dbname'}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "Avg. TX",
@@ -536,14 +536,14 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "max_over_time(pgwatch2_backends_longest_waiting_seconds{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "max_over_time(pgwatch2_backends_longest_waiting_seconds{dbname='$dbname'}[$agg_interval])",
             "interval": "",
             "legendFormat": "Longest query duration",
             "refId": "A"
           },
           {
             "exemplar": true,
-            "expr": "avg_over_time(pgwatch2_backends_avg_waiting_seconds{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "avg_over_time(pgwatch2_backends_avg_waiting_seconds{dbname='$dbname'}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "Avg. query duration",
@@ -649,7 +649,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "max_over_time(pgwatch2_backends_longest_autovacuum_seconds{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "max_over_time(pgwatch2_backends_longest_autovacuum_seconds{dbname='$dbname'}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "AV duration",
@@ -657,7 +657,7 @@
           },
           {
             "exemplar": true,
-            "expr": "max_over_time(pgwatch2_backends_av_workers{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "max_over_time(pgwatch2_backends_av_workers{dbname='$dbname'}[$agg_interval])",
             "hide": false,
             "interval": "",
             "legendFormat": "Active AV workers",

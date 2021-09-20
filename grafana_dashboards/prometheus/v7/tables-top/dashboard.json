@@ -71,7 +71,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "sum(topk($top, pgwatch2_table_stats_total_relation_size_b{dbname=\"$dbname\"})) by (table_full_name)",
+            "expr": "sum(topk($top, pgwatch2_table_stats_total_relation_size_b{dbname='$dbname'})) by (table_full_name)",
             "format": "table",
             "hide": false,
             "instant": true,
@@ -151,7 +151,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "sum(topk($top, pgwatch2_table_stats_table_size_b{dbname=\"$dbname\"})) by (table_full_name)",
+            "expr": "sum(topk($top, pgwatch2_table_stats_table_size_b{dbname='$dbname'})) by (table_full_name)",
             "format": "table",
             "hide": false,
             "instant": true,
@@ -231,7 +231,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "sum(topk($top, delta(pgwatch2_table_stats_total_relation_size_b{dbname=\"$dbname\"}[365d]))) by (table_full_name)",
+            "expr": "sum(topk($top, delta(pgwatch2_table_stats_total_relation_size_b{dbname='$dbname'}[365d]))) by (table_full_name)",
             "format": "table",
             "hide": false,
             "instant": true,
@@ -310,7 +310,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "topk($top, sum(increase(pgwatch2_table_stats_seq_scan{dbname=\"$dbname\",table_size_cardinality_mb=~\"3|4|5|6|7|8|9\"}[$__range])) by (table_full_name))",
+            "expr": "topk($top, sum(increase(pgwatch2_table_stats_seq_scan{dbname='$dbname',table_size_cardinality_mb=~\"3|4|5|6|7|8|9\"}[$__range])) by (table_full_name))",
             "format": "table",
             "hide": false,
             "instant": true,
@@ -390,7 +390,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "8192 * topk($top, sum(increase(pgwatch2_table_io_stats_heap_blks_read{dbname=\"$dbname\"}[$__range]) + increase(pgwatch2_table_io_stats_idx_blks_read{dbname=\"$dbname\"}[$__range])) by (table_full_name))",
+            "expr": "8192 * topk($top, sum(increase(pgwatch2_table_io_stats_heap_blks_read{dbname='$dbname'}[$__range]) + increase(pgwatch2_table_io_stats_idx_blks_read{dbname='$dbname'}[$__range])) by (table_full_name))",
             "format": "table",
             "hide": false,
             "instant": true,
@@ -470,7 +470,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "topk($top, sum(increase(pgwatch2_table_stats_n_tup_ins{dbname=\"$dbname\"}[$__range])) by (table_full_name))",
+            "expr": "topk($top, sum(increase(pgwatch2_table_stats_n_tup_ins{dbname='$dbname'}[$__range])) by (table_full_name))",
             "format": "table",
             "hide": false,
             "instant": true,
@@ -550,7 +550,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "topk($top, sum(increase(pgwatch2_table_stats_n_tup_upd{dbname=\"$dbname\"}[$__range])) by (table_full_name))",
+            "expr": "topk($top, sum(increase(pgwatch2_table_stats_n_tup_upd{dbname='$dbname'}[$__range])) by (table_full_name))",
             "format": "table",
             "hide": false,
             "instant": true,
@@ -630,7 +630,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "topk($top, sum(increase(pgwatch2_table_stats_n_tup_del{dbname=\"$dbname\"}[$__range])) by (table_full_name))",
+            "expr": "topk($top, sum(increase(pgwatch2_table_stats_n_tup_del{dbname='$dbname'}[$__range])) by (table_full_name))",
             "format": "table",
             "hide": false,
             "instant": true,

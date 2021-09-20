@@ -81,7 +81,7 @@
           {
             "alias": "TPS",
             "dsType": "influxdb",
-            "expr": "rate(pgwatch2_db_stats_xact_commit{dbname=\"$dbname\"}[$agg_interval]) + rate(pgwatch2_db_stats_xact_rollback{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "rate(pgwatch2_db_stats_xact_commit{dbname='$dbname'}[$agg_interval]) + rate(pgwatch2_db_stats_xact_rollback{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -189,7 +189,7 @@
             "alias": "QPS",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "rate(pgwatch2_stat_statements_calls_calls{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "rate(pgwatch2_stat_statements_calls_calls{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -302,7 +302,7 @@
             "alias": "avg_query_runtime_per_db",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "increase(pgwatch2_stat_statements_calls_total_time{dbname=\"$dbname\"}[$agg_interval]) / increase(pgwatch2_stat_statements_calls_calls{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "increase(pgwatch2_stat_statements_calls_total_time{dbname='$dbname'}[$agg_interval]) / increase(pgwatch2_stat_statements_calls_calls{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -417,7 +417,7 @@
             "alias": "",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "avg_over_time(pgwatch2_db_stats_numbackends{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "avg_over_time(pgwatch2_db_stats_numbackends{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -537,7 +537,7 @@
             "alias": "",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "rate(pgwatch2_db_stats_temp_bytes{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "rate(pgwatch2_db_stats_temp_bytes{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -663,7 +663,7 @@
             "alias": "db_size_change_last_hour",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "delta(pgwatch2_db_size_size_b{dbname=\"$dbname\"}[1h])",
+            "expr": "delta(pgwatch2_db_size_size_b{dbname='$dbname'}[1h])",
             "format": "time_series",
             "groupBy": [
               {
@@ -766,7 +766,7 @@
             "alias": "DELETE",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "increase(pgwatch2_db_stats_tup_inserted{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "increase(pgwatch2_db_stats_tup_inserted{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -819,7 +819,7 @@
             "alias": "UPDATE",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "increase(pgwatch2_db_stats_tup_updated{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "increase(pgwatch2_db_stats_tup_updated{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -865,7 +865,7 @@
             "alias": "UPDATE",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "increase(pgwatch2_db_stats_tup_deleted{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "increase(pgwatch2_db_stats_tup_deleted{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -1010,7 +1010,7 @@
             "alias": "Shared buffers hit ratio",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "100 * increase(pgwatch2_db_stats_blks_hit{dbname=\"$dbname\"}[$agg_interval]) / (increase(pgwatch2_db_stats_blks_hit{dbname=\"$dbname\"}[$agg_interval]) + increase(pgwatch2_db_stats_blks_read{dbname=\"$dbname\"}[$agg_interval]))",
+            "expr": "100 * increase(pgwatch2_db_stats_blks_hit{dbname='$dbname'}[$agg_interval]) / (increase(pgwatch2_db_stats_blks_hit{dbname='$dbname'}[$agg_interval]) + increase(pgwatch2_db_stats_blks_read{dbname='$dbname'}[$agg_interval]))",
             "format": "time_series",
             "groupBy": [
               {
@@ -1057,7 +1057,7 @@
             "alias": "TX rollback ratio",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "100 * increase(pgwatch2_db_stats_xact_rollback{dbname=\"$dbname\"}[$agg_interval]) / (increase(pgwatch2_db_stats_xact_rollback{dbname=\"$dbname\"}[$agg_interval]) + increase(pgwatch2_db_stats_xact_commit{dbname=\"$dbname\"}[$agg_interval]))",
+            "expr": "100 * increase(pgwatch2_db_stats_xact_rollback{dbname='$dbname'}[$agg_interval]) / (increase(pgwatch2_db_stats_xact_rollback{dbname='$dbname'}[$agg_interval]) + increase(pgwatch2_db_stats_xact_commit{dbname='$dbname'}[$agg_interval]))",
             "format": "time_series",
             "groupBy": [
               {
@@ -1201,7 +1201,7 @@
             "alias": "avg_query_runtime",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "increase(pgwatch2_stat_statements_calls_total_time{dbname=\"$dbname\"}[$agg_interval]) / increase(pgwatch2_stat_statements_calls_calls{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "increase(pgwatch2_stat_statements_calls_total_time{dbname='$dbname'}[$agg_interval]) / increase(pgwatch2_stat_statements_calls_calls{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -1356,7 +1356,7 @@
           {
             "alias": "WAL rate",
             "dsType": "influxdb",
-            "expr": "rate(pgwatch2_wal_xlog_location_b{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "rate(pgwatch2_wal_xlog_location_b{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -1412,7 +1412,7 @@
           {
             "alias": "DB Size",
             "dsType": "influxdb",
-            "expr": "avg_over_time(pgwatch2_db_size_size_b{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "avg_over_time(pgwatch2_db_size_size_b{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -1567,7 +1567,7 @@
             "alias": "# Sessions",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "avg_over_time(pgwatch2_backends_total{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "avg_over_time(pgwatch2_backends_total{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -1613,7 +1613,7 @@
             "alias": "# Sessions",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "avg_over_time(pgwatch2_backends_active{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "avg_over_time(pgwatch2_backends_active{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -1660,7 +1660,7 @@
             "alias": "# Sessions",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "max_over_time(pgwatch2_backends_waiting{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "max_over_time(pgwatch2_backends_waiting{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -1707,7 +1707,7 @@
             "alias": "# Sessions",
             "dsType": "influxdb",
             "exemplar": true,
-            "expr": "max_over_time(pgwatch2_backends_idleintransaction{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "max_over_time(pgwatch2_backends_idleintransaction{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -1753,7 +1753,7 @@
           {
             "alias": "Temp bytes written",
             "dsType": "influxdb",
-            "expr": "increase(pgwatch2_db_stats_deadlocks{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "increase(pgwatch2_db_stats_deadlocks{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -1889,7 +1889,7 @@
         "targets": [
           {
             "alias": "TPS",
-            "expr": "rate(pgwatch2_db_stats_xact_commit{dbname=\"$dbname\"}[$agg_interval]) + rate(pgwatch2_db_stats_xact_rollback{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "rate(pgwatch2_db_stats_xact_commit{dbname='$dbname'}[$agg_interval]) + rate(pgwatch2_db_stats_xact_rollback{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -1931,7 +1931,7 @@
           },
           {
             "alias": "QPS",
-            "expr": "rate(pgwatch2_stat_statements_calls_calls{dbname=\"$dbname\"}[$agg_interval])",
+            "expr": "rate(pgwatch2_stat_statements_calls_calls{dbname='$dbname'}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -2068,7 +2068,7 @@
           {
             "alias": "seq_scan",
             "exemplar": true,
-            "expr": "sum(increase(pgwatch2_table_stats_seq_scan{dbname=\"$dbname\",table_size_cardinality_mb=~\"3|4|5|6|7|8\"}[$agg_interval]))",
+            "expr": "sum(increase(pgwatch2_table_stats_seq_scan{dbname='$dbname',table_size_cardinality_mb=~\"3|4|5|6|7|8\"}[$agg_interval]))",
             "format": "time_series",
             "groupBy": [
               {
@@ -2219,7 +2219,7 @@
           {
             "alias": "$tag_lockmode",
             "exemplar": true,
-            "expr": "max_over_time(pgwatch2_locks_mode_count{dbname=\"$dbname\",lockmode=~\".*Exclusive.*\"}[$agg_interval])",
+            "expr": "max_over_time(pgwatch2_locks_mode_count{dbname='$dbname',lockmode=~\".*Exclusive.*\"}[$agg_interval])",
             "format": "time_series",
             "groupBy": [
               {
@@ -2335,9 +2335,6 @@
         {
           "allValue": null,
           "current": {
-            "selected": true,
-            "text": "adhoc",
-            "value": "adhoc"
           },
           "datasource": "Prometheus",
           "definition": "label_values(dbname)",
