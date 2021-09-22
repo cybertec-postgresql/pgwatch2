@@ -79,6 +79,7 @@
         "y": 0
       },
       "id": 2,
+      "maxDataPoints": null,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -98,7 +99,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "pgwatch2_db_stats_in_recovery_int{dbname='$dbname'}",
+          "expr": "max(last_over_time(pgwatch2_db_stats_in_recovery_int{dbname='$dbname'}))",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -162,7 +164,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "abs(pgwatch2_db_stats_postmaster_uptime_s{dbname='$dbname'})",
+          "expr": "max(abs(pgwatch2_db_stats_postmaster_uptime_s{dbname='$dbname'}))",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -222,7 +225,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "pgwatch2_settings_server_version_num{dbname='$dbname'}",
+          "expr": "max(pgwatch2_settings_server_version_num{dbname='$dbname'})",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -283,7 +287,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(pgwatch2_backends_longest_query_seconds{dbname='$dbname'}[$__interval])",
+          "expr": "max(max_over_time(pgwatch2_backends_longest_query_seconds{dbname='$dbname'}[$__interval]))",
           "interval": "10m",
           "legendFormat": "",
           "refId": "A"
@@ -324,6 +328,7 @@
         "y": 4
       },
       "id": 6,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -343,7 +348,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(pgwatch2_backends_active{dbname='$dbname'}[$__range])",
+          "expr": "max(max_over_time(pgwatch2_backends_active{dbname='$dbname'}[$__range]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -408,7 +413,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "pgwatch2_settings_max_connections{dbname='$dbname'}",
+          "expr": "max(pgwatch2_settings_max_connections{dbname='$dbname'})",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -454,6 +460,7 @@
         "y": 4
       },
       "id": 8,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -473,7 +480,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(pgwatch2_backends_waiting{dbname='$dbname'}[$__range])",
+          "expr": "max(max_over_time(pgwatch2_backends_waiting{dbname='$dbname'}[$__range]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -520,6 +527,7 @@
         "y": 4
       },
       "id": 9,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -539,7 +547,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "100 * increase(pgwatch2_db_stats_blks_hit{dbname='$dbname'}[$__range]) / (increase(pgwatch2_db_stats_blks_read{dbname='$dbname'}[$__range]) + increase(pgwatch2_db_stats_blks_hit{dbname='$dbname'}[$__range]))",
+          "expr": "100 * avg(increase(pgwatch2_db_stats_blks_hit{dbname='$dbname'}[$__range])) / (avg(increase(pgwatch2_db_stats_blks_read{dbname='$dbname'}[$__range])) + avg(increase(pgwatch2_db_stats_blks_hit{dbname='$dbname'}[$__range])))",
+          "instant": false,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -582,6 +591,7 @@
         "y": 8
       },
       "id": 10,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -601,7 +611,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "100 * increase(pgwatch2_db_stats_xact_rollback{dbname='$dbname'}[$__range]) / (increase(pgwatch2_db_stats_xact_rollback{dbname='$dbname'}[$__range]) + increase(pgwatch2_db_stats_xact_commit{dbname='$dbname'}[$__range]))",
+          "expr": "100 * avg(increase(pgwatch2_db_stats_xact_rollback{dbname='$dbname'}[$__range])) / (avg(increase(pgwatch2_db_stats_xact_rollback{dbname='$dbname'}[$__range])) + avg(increase(pgwatch2_db_stats_xact_commit{dbname='$dbname'}[$__range])))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -640,6 +650,7 @@
         "y": 8
       },
       "id": 11,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -659,7 +670,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(pgwatch2_db_stats_xact_rollback{dbname='$dbname'}[$__range]) + rate(pgwatch2_db_stats_xact_commit{dbname='$dbname'}[$__range])",
+          "expr": "avg(rate(pgwatch2_db_stats_xact_rollback{dbname='$dbname'}[$__range])) + avg(rate(pgwatch2_db_stats_xact_commit{dbname='$dbname'}[$__range]))",
+          "instant": false,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -698,6 +710,8 @@
         "y": 8
       },
       "id": 12,
+      "interval": null,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -716,8 +730,9 @@
       "pluginVersion": "7.5.9",
       "targets": [
         {
-          "exemplar": true,
-          "expr": "rate(pgwatch2_stat_statements_calls_calls{dbname='$dbname'}[$__range])",
+          "exemplar": false,
+          "expr": "avg(rate(pgwatch2_stat_statements_calls_calls{dbname='$dbname'}[$__range]))",
+          "instant": false,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -759,6 +774,7 @@
         "y": 8
       },
       "id": 13,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -778,7 +794,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(pgwatch2_backends_idleintransaction{dbname='$dbname'}[$__range])",
+          "expr": "max(max_over_time(pgwatch2_backends_idleintransaction{dbname='$dbname'}[$__range]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -817,6 +833,7 @@
         "y": 12
       },
       "id": 26,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -836,7 +853,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "60 * rate(pgwatch2_db_stats_tup_inserted{dbname='$dbname'}[$__range])",
+          "expr": "60 * avg(rate(pgwatch2_db_stats_tup_inserted{dbname='$dbname'}[$__range]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -875,6 +892,7 @@
         "y": 12
       },
       "id": 27,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -894,7 +912,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "60 * rate(pgwatch2_db_stats_tup_updated{dbname='$dbname'}[$__range])",
+          "expr": "60 * avg(rate(pgwatch2_db_stats_tup_updated{dbname='$dbname'}[$__range]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -933,6 +951,7 @@
         "y": 12
       },
       "id": 28,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -952,7 +971,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "60 * rate(pgwatch2_db_stats_tup_deleted{dbname='$dbname'}[$__range])",
+          "expr": "60 * avg(rate(pgwatch2_db_stats_tup_deleted{dbname='$dbname'}[$__range]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -969,7 +988,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 0,
+          "decimals": 1,
           "mappings": [],
           "noValue": "0",
           "thresholds": {
@@ -996,6 +1015,7 @@
         "y": 12
       },
       "id": 21,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1015,7 +1035,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "100 * increase(pgwatch2_db_stats_tup_fetched{dbname='$dbname'}[$__range]) / increase(pgwatch2_db_stats_tup_returned{dbname='$dbname'}[$__range])",
+          "expr": "100 * avg(increase(pgwatch2_db_stats_tup_fetched{dbname='$dbname'}[$__range])) / avg(increase(pgwatch2_db_stats_tup_returned{dbname='$dbname'}[$__range]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1057,6 +1077,7 @@
         "y": 16
       },
       "id": 14,
+      "maxDataPoints": null,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1076,7 +1097,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "pgwatch2_db_size_size_b{dbname='$dbname'}",
+          "expr": "max(pgwatch2_db_size_size_b{dbname='$dbname'})",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1118,6 +1140,7 @@
         "y": 16
       },
       "id": 17,
+      "interval": "1d",
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1137,7 +1160,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "delta(pgwatch2_db_size_size_b{dbname='$dbname'}[1d])",
+          "expr": "avg(delta(pgwatch2_db_size_size_b{dbname='$dbname'}[1d]))",
+          "instant": false,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1179,6 +1203,7 @@
         "y": 16
       },
       "id": 15,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1198,7 +1223,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "increase(pgwatch2_bgwriter_checkpoints_req{dbname='$dbname'}[$__range])",
+          "expr": "max(increase(pgwatch2_bgwriter_checkpoints_req{dbname='$dbname'}[$__range]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1240,6 +1265,7 @@
         "y": 16
       },
       "id": 16,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1259,7 +1285,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(pgwatch2_wal_xlog_location_b{dbname='$dbname'}[$__range])",
+          "expr": "max(rate(pgwatch2_wal_xlog_location_b{dbname='$dbname'}[$__range]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1301,6 +1327,7 @@
         "y": 20
       },
       "id": 18,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1320,7 +1347,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "increase(pgwatch2_db_stats_temp_bytes{dbname='$dbname'}[$__range])",
+          "expr": "max(increase(pgwatch2_db_stats_temp_bytes{dbname='$dbname'}[$__range]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1363,6 +1390,7 @@
         "y": 20
       },
       "id": 19,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1382,7 +1410,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(increase(pgwatch2_table_stats_seq_scan{dbname='$dbname',table_size_cardinality_mb=~\"3|4|5|6|7|8\"}[$__range]))",
+          "expr": "sum(max(increase(pgwatch2_table_stats_seq_scan{dbname='$dbname',table_size_cardinality_mb=~\"3|4|5|6|7|8\"}[$__range])))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1426,6 +1454,7 @@
         "y": 20
       },
       "id": 20,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1445,7 +1474,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(pgwatch2_backend_longest_autovacuum_seconds{dbname='$dbname'}[1d])",
+          "expr": "max(max_over_time(pgwatch2_backends_longest_autovacuum_seconds{dbname='$dbname'}[1d]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1488,6 +1517,7 @@
         "y": 20
       },
       "id": 25,
+      "maxDataPoints": null,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1507,7 +1537,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(pgwatch2_db_stats_backup_duration_s{dbname='$dbname'}[1d])",
+          "expr": "max(max_over_time(pgwatch2_db_stats_backup_duration_s{dbname='$dbname'}[1d]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1551,6 +1581,7 @@
         "y": 24
       },
       "id": 22,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1614,6 +1645,7 @@
         "y": 24
       },
       "id": 23,
+      "maxDataPoints": null,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1634,12 +1666,13 @@
         {
           "exemplar": true,
           "expr": "max(max_over_time({__name__=~\"(pgwatch2_backends_max_xmin_age_tx|replication_slots_xmin_age_tx)\",dbname='$dbname'}[$__range]))",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Max. XMIN horizon age",
+      "title": "Max. session XMIN horizon age",
       "type": "stat"
     },
     {
@@ -1676,6 +1709,7 @@
         "y": 24
       },
       "id": 24,
+      "maxDataPoints": 1,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1695,7 +1729,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "max_over_time(pgwatch2_replication_replay_lag_b{dbname='$dbname'}[$__range])",
+          "expr": "max(max_over_time(pgwatch2_replication_replay_lag_b{dbname='$dbname'}[$__range]))",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1756,7 +1790,8 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "pgwatch2_replication_slots_non_active_int{dbname='$dbname'}",
+          "expr": "max(pgwatch2_replication_slots_non_active_int{dbname='$dbname'})",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
