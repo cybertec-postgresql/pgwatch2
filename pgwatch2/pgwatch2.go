@@ -323,6 +323,11 @@ var prevCPULoadTimeStatsLock sync.RWMutex
 var prevCPULoadTimeStats cpu.TimesStat
 var prevCPULoadTimestamp time.Time
 
+// Async Prom cache
+var promAsyncMetricCache = make(map[string][]MetricStoreMessage) // [dbUnique+metric]lastly_fetched_data
+var promAsyncMetricCacheLock = sync.RWMutex{}
+var promAsyncMode = false
+
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
 		return false
@@ -1877,7 +1882,16 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 					}
 					retry_queue.PushFront(msg_arr)
 				} else {
-					if data_store == DATASTORE_INFLUX {
+					if data_store == DATASTORE_PROMETHEUS && promAsyncMode {
+						if len(msg_arr) == 0 || len(msg_arr[0].Data) == 0 { // no batching in async prom mode, so using 0 indexing ok
+							continue
+						}
+						msg := msg_arr[0]
+						promAsyncMetricCacheLock.Lock()
+						promAsyncMetricCache[msg.DBUniqueName+msg.MetricName] = msg_arr
+						promAsyncMetricCacheLock.Unlock()
+						log.Infof("[%s:%s] Added %d rows to Prom cache", msg.DBUniqueName, msg.MetricName, len(msg.Data))
+					} else if data_store == DATASTORE_INFLUX {
 						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg_arr)
 					} else if data_store == DATASTORE_POSTGRES {
 						err = SendToPostgres(msg_arr)
@@ -2971,6 +2985,14 @@ func ClearDBUnreachableStateIfAny(dbUnique string) {
 	unreachableDBsLock.Lock()
 	delete(unreachableDB, dbUnique)
 	unreachableDBsLock.Unlock()
+}
+
+func PurgeMetricsFromPromAsyncCacheIfAny(dbUnique, metric string) {
+	if promAsyncMode {
+		promAsyncMetricCacheLock.Lock()
+		delete(promAsyncMetricCache, dbUnique+metric)
+		promAsyncMetricCacheLock.Unlock()
+	}
 }
 
 func GetFromInstanceCacheIfNotOlderThanSeconds(msg MetricFetchMessage, maxAgeSeconds int64) []map[string]interface{} {
@@ -4647,6 +4669,7 @@ type Options struct {
 	PrometheusPort       int64  `long:"prometheus-port" description:"Prometheus port. Effective with --datastore=prometheus" default:"9187" env:"PW2_PROMETHEUS_PORT"`
 	PrometheusListenAddr string `long:"prometheus-listen-addr" description:"Network interface to listen on" default:"0.0.0.0" env:"PW2_PROMETHEUS_LISTEN_ADDR"`
 	PrometheusNamespace  string `long:"prometheus-namespace" description:"Prefix for all non-process (thus Postgres) metrics" default:"pgwatch2" env:"PW2_PROMETHEUS_NAMESPACE"`
+	PrometheusAsyncMode  string `long:"prometheus-async-mode" description:"Gather in background as with other storage and cache last fetch results in memory" default:"false" env:"PW2_PROMETHEUS_ASYNC_MODE"`
 	InfluxHost           string `long:"ihost" description:"Influx host" default:"localhost" env:"PW2_IHOST"`
 	InfluxPort           string `long:"iport" description:"Influx port" default:"8086" env:"PW2_IPORT"`
 	InfluxDbname         string `long:"idbname" description:"Influx DB name" default:"pgwatch2" env:"PW2_IDATABASE"`
@@ -4928,6 +4951,11 @@ func main() {
 		go StatsSummarizer()
 	}
 
+	promAsyncMode = StringToBoolOrFail(opts.PrometheusAsyncMode, "--prometheus-async-mode")
+	if promAsyncMode {
+		opts.BatchingDelayMs = 0 // using internal cache, no batching for storage smoothing needed
+	}
+
 	control_channels := make(map[string](chan ControlMessage)) // [db1+metric1]=chan
 	persist_ch := make(chan []MetricStoreMessage, 10000)
 	var buffered_persist_ch chan []MetricStoreMessage
@@ -5013,6 +5041,10 @@ func main() {
 				log.Fatal("Test data generation mode cannot be used with Prometheus data store")
 			}
 
+			if promAsyncMode {
+				log.Info("starting Prometheus Cache Persister...")
+				go MetricsPersister(DATASTORE_PROMETHEUS, persist_ch)
+			}
 			go StartPrometheusExporter(opts.PrometheusPort)
 		} else {
 			log.Fatal("Unknown datastore. Check the --datastore param")
@@ -5215,12 +5247,12 @@ func main() {
 					_ = TryCreateMetricsFetchingHelpers(db_unique)
 				}
 
-				if opts.Datastore != DATASTORE_PROMETHEUS && !opts.Ping {
+				if (opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode) && !opts.Ping {
 					time.Sleep(time.Millisecond * 100) // not to cause a huge load spike when starting the daemon with 100+ monitored DBs
 				}
 			}
 
-			if opts.Datastore == DATASTORE_PROMETHEUS || opts.Ping {
+			if (opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode) || opts.Ping {
 				continue
 			}
 
@@ -5390,6 +5422,7 @@ func main() {
 				log.Debugf("control channel for [%s:%s] deleted", db, metric)
 				gatherers_shut_down++
 				ClearDBUnreachableStateIfAny(db)
+				PurgeMetricsFromPromAsyncCacheIfAny(db, metric)
 			}
 		}
 		if gatherers_shut_down > 0 {

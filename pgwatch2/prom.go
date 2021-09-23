@@ -61,27 +61,45 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	for name, md := range monitoredDatabases {
 		setInstanceUpDownState(ch, md) // makes easier to differentiate between PG instance / machine  failures
 		// https://prometheus.io/docs/instrumenting/writing_exporters/#failed-scrapes
+		fetchedFromCacheCounts := make(map[string]int)
 
 		for metric, interval := range md.Metrics {
 			if metric == SPECIAL_METRIC_CHANGE_EVENTS {
-				log.Warningf("[%s] Skipping change_events metric as host state is not supported for Prometheus currently", md.DBUniqueName)
+				log.Infof("[%s] Skipping change_events metric as host state is not supported for Prometheus currently", md.DBUniqueName)
 				continue
 			}
 			if metric == PROM_INSTANCE_UP_STATE_METRIC {
 				continue // always included in Prometheus case
 			}
 			if interval > 0 {
-				log.Debugf("scraping [%s:%s]...", md.DBUniqueName, metric)
-				metricStoreMessages, err := FetchMetrics(
-					MetricFetchMessage{DBUniqueName: name, DBUniqueNameOrig: md.DBUniqueNameOrig, MetricName: metric, DBType: md.DBType, Interval: time.Second * time.Duration(interval)},
-					nil,
-					nil,
-					CONTEXT_PROMETHEUS_SCRAPE)
-				if err != nil {
-					log.Errorf("failed to scrape [%s:%s]: %v", name, metric, err)
-					e.totalScrapeFailures.Add(1)
-					lastScrapeErrors++
-					continue
+				var metricStoreMessages []MetricStoreMessage
+				var err error
+				var ok bool
+
+				if promAsyncMode {
+					promAsyncMetricCacheLock.RLock()
+					metricStoreMessages, ok = promAsyncMetricCache[md.DBUniqueName+metric]
+					promAsyncMetricCacheLock.RUnlock()
+					if !ok {
+						log.Debugf("[%s:%s] could not find data from the prom cache. maybe gathering interval not yet reached or zero rows returned, ignoring", md.DBUniqueName, metric)
+						fetchedFromCacheCounts[metric] = 0
+					} else {
+						log.Debugf("[%s:%s] fetched %d rows from the prom cache ...", md.DBUniqueName, metric, len(metricStoreMessages[0].Data))
+						fetchedFromCacheCounts[metric] = len(metricStoreMessages[0].Data)
+					}
+				} else {
+					log.Debugf("scraping [%s:%s]...", md.DBUniqueName, metric)
+					metricStoreMessages, err = FetchMetrics(
+						MetricFetchMessage{DBUniqueName: name, DBUniqueNameOrig: md.DBUniqueNameOrig, MetricName: metric, DBType: md.DBType, Interval: time.Second * time.Duration(interval)},
+						nil,
+						nil,
+						CONTEXT_PROMETHEUS_SCRAPE)
+					if err != nil {
+						log.Errorf("failed to scrape [%s:%s]: %v", name, metric, err)
+						e.totalScrapeFailures.Add(1)
+						lastScrapeErrors++
+						continue
+					}
 				}
 				if len(metricStoreMessages) > 0 {
 					promMetrics := MetricStoreMessageToPromMetrics(metricStoreMessages[0])
@@ -91,7 +109,11 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 				}
 			}
 		}
+		if promAsyncMode {
+			log.Infof("[%s] rowcounts fetched from the prom cache on scrape request: %+v", md.DBUniqueName, fetchedFromCacheCounts)
+		}
 	}
+
 	ch <- e.totalScrapeFailures
 	e.lastScrapeErrors.Set(lastScrapeErrors)
 	ch <- e.lastScrapeErrors
