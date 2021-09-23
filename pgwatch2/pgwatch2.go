@@ -251,6 +251,7 @@ const METRIC_PSUTIL_DISK_IO_TOTAL = "psutil_disk_io_total"
 const METRIC_PSUTIL_MEM = "psutil_mem"
 const DEFAULT_METRICS_DEFINITION_PATH_PKG = "/etc/pgwatch2/metrics" // prebuilt packages / Docker default location
 const DEFAULT_METRICS_DEFINITION_PATH_DOCKER = "/pgwatch2/metrics"  // prebuilt packages / Docker default location
+const DB_SIZE_CACHING_INTERVAL = 10 * time.Minute
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true, DBTYPE_PGPOOL: true, DBTYPE_PATRONI_NAMESPACE_DISCOVERY: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT, DBTYPE_PATRONI_NAMESPACE_DISCOVERY} // used for informational purposes
@@ -328,8 +329,8 @@ var promAsyncMetricCache = make(map[string][]MetricStoreMessage) // [dbUnique+me
 var promAsyncMetricCacheLock = sync.RWMutex{}
 var promAsyncMode = false
 var lastDBSizeMB = make(map[string]int64)
-var lastDBSizeFetchTime = make(map[string]time.Time) // 10min DB size caching
-var DbHasActiveMetricFetchers = make(map[string]bool)
+var lastDBSizeFetchTime = make(map[string]time.Time) // cached for DB_SIZE_CACHING_INTERVAL
+var lastDBSizeCheckLock sync.RWMutex
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
@@ -1967,16 +1968,33 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 
 func DBGetSizeMB(dbUnique string) (int64, error) {
 	sql_db_size := `select /* pgwatch2_generated */ pg_database_size(current_database());`
+	var sizeMB int64
 
-	log.Debugf("[%s] determining DB size ...", dbUnique)
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 60, sql_db_size) // can take some time on ancient FS, use 1min timeout
-	if err != nil {
-		log.Errorf("[%s] failed to determine DB size...cannot apply --min-db-size-mb flag. err: %v ...", dbUnique, err)
-		return 0, err
+	lastDBSizeCheckLock.RLock()
+	lastDBSizeCheckTime := lastDBSizeFetchTime[dbUnique]
+	lastDBSize, ok := lastDBSizeMB[dbUnique]
+	lastDBSizeCheckLock.RUnlock()
+
+	if !ok || lastDBSizeCheckTime.Add(DB_SIZE_CACHING_INTERVAL).Before(time.Now()) {
+
+		log.Debugf("[%s] determining DB size ...", dbUnique)
+		data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 60, sql_db_size) // can take some time on ancient FS, use 60s stmt timeout
+		if err != nil {
+			log.Errorf("[%s] failed to determine DB size...cannot apply --min-db-size-mb flag. err: %v ...", dbUnique, err)
+			return 0, err
+		}
+		sizeMB = data[0]["pg_database_size"].(int64) / 1048576
+		log.Debugf("[%s] DB size = %d MB, caching for %v ...", dbUnique, sizeMB, DB_SIZE_CACHING_INTERVAL)
+
+		lastDBSizeCheckLock.Lock()
+		lastDBSizeFetchTime[dbUnique] = time.Now()
+		lastDBSizeMB[dbUnique] = sizeMB
+		lastDBSizeCheckLock.Unlock()
+
+		return sizeMB, nil
 	}
-	sizeBytes := data[0]["pg_database_size"].(int64)
-	log.Debugf("[%s] DB size = %d B ...", dbUnique, sizeBytes)
-	return sizeBytes / 1048576, nil
+	log.Debugf("[%s] using cached DBsize %d MB for the --min-db-size-mb filter check", dbUnique, lastDBSize)
+	return lastDBSize, nil
 }
 
 func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapEntry, error) {
@@ -4273,6 +4291,7 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	"datastoreSuccessfulWritesCounter": %d,
 	"datastoreAvgSuccessfulWriteTimeMillis": %.1f,
 	"databasesMonitored": %d,
+	"databasesConfigured": %d,
 	"unreachableDBs": %d,
 	"gathererUptimeSeconds": %d
 }
@@ -4294,13 +4313,18 @@ func StatsServerHandler(w http.ResponseWriter, req *http.Request) {
 	if metricPointsPerMinute == -1 { // calculate avg. on the fly if 1st summarization hasn't happened yet
 		metricPointsPerMinute = int64((totalMetrics * 60) / gathererUptimeSeconds)
 	}
-	monitored_db_cache_lock.RLock()
-	databasesMonitored := len(monitored_db_cache) // including replicas
-	monitored_db_cache_lock.RUnlock()
+	monitoredDbs := getMonitoredDatabasesSnapshot()
+	databasesConfigured := len(monitoredDbs) // including replicas
+	databasesMonitored := 0
+	for _, md := range monitoredDbs {
+		if shouldDbBeMonitoredBasedOnCurrentState(md) {
+			databasesMonitored++
+		}
+	}
 	unreachableDBsLock.RLock()
 	unreachableDBs := len(unreachableDB)
 	unreachableDBsLock.RUnlock()
-	_, _ = io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix()-secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, metricFetchFailuresCounter, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, databasesMonitored, unreachableDBs, gathererUptimeSeconds))
+	_, _ = io.WriteString(w, fmt.Sprintf(jsonResponseTemplate, time.Now().Unix()-secondsFromLastSuccessfulDatastoreWrite, totalMetrics, cacheMetrics, totalDatasets, metricPointsPerMinute, metricsDropped, metricFetchFailuresCounter, datastoreFailures, datastoreSuccess, datastoreAvgSuccessfulWriteTimeMillis, databasesMonitored, databasesConfigured, unreachableDBs, gathererUptimeSeconds))
 }
 
 func StartStatsServer(port int64) {
@@ -4667,6 +4691,18 @@ func GetLoadAvgLocal() ([]map[string]interface{}, error) {
 	row["load_15min"] = la.Load15
 
 	return []map[string]interface{}{row}, nil
+}
+
+func shouldDbBeMonitoredBasedOnCurrentState(md MonitoredDatabase) bool {
+	vme, err := DBGetPGVersion(md.DBUniqueName, md.DBType, false)
+	if err == nil && vme.IsInRecovery && md.OnlyIfMaster {
+		return false
+	}
+	dbSize, err := DBGetSizeMB(md.DBUniqueName)
+	if err == nil && dbSize < opts.MinDbSizeMB {
+		return false
+	}
+	return true
 }
 
 type Options struct {
@@ -5265,35 +5301,17 @@ func main() {
 					_ = TryCreateMetricsFetchingHelpers(db_unique)
 				}
 
-				if (opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode) && !opts.Ping {
+				if !(opts.Ping || (opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode)) {
 					time.Sleep(time.Millisecond * 100) // not to cause a huge load spike when starting the daemon with 100+ monitored DBs
 				}
 			}
 
-			if (opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode) || opts.Ping {
-				continue
-			}
-
 			if IsPostgresDBType(host.DBType) {
 				if opts.MinDbSizeMB >= 8 { // an empty DB is a bit less than 8MB
-					var DBSizeMB int64
-					// check DB size every 10min only as can cause some IO on older FS-es
-					lastSizeCheckTime, ok := lastDBSizeFetchTime[db_unique]
-					if !ok || lastSizeCheckTime.Add(time.Minute*time.Duration(10)).Before(time.Now()) {
-						DBSizeMB, err = DBGetSizeMB(db_unique)
-						if err == nil { // ignore errors, i.e. only remove from montoring when we're certain it's under the threshold
-							lastDBSizeFetchTime[db_unique] = time.Now()
-							lastDBSizeMB[db_unique] = DBSizeMB
-						}
-					} else {
-						DBSizeMB = lastDBSizeMB[db_unique]
-						log.Debugf("[%s] using cached DBsize %d MB for the --min-db-size-mb filter check", db_unique, DBSizeMB)
-					}
+					DBSizeMB, _ := DBGetSizeMB(db_unique) // ignore errors, i.e. only remove from montoring when we're certain it's under the threshold
 					if DBSizeMB != 0 && DBSizeMB < opts.MinDbSizeMB {
-						log.Infof("[%s] DB will be ignored due to the --min-db-size-mb filter. Current (up to 10min cached) DB size = %d MB", db_unique, DBSizeMB)
-						if DbHasActiveMetricFetchers[db_unique] { // DB size was previosly above the threshold
-							hostsToShutDownDueToRoleChange[db_unique] = true
-						}
+						log.Infof("[%s] DB will be ignored due to the --min-db-size-mb filter. Current (up to %v cached) DB size = %d MB", db_unique, DB_SIZE_CACHING_INTERVAL, DBSizeMB)
+						hostsToShutDownDueToRoleChange[db_unique] = true // for the case when DB size was previosly above the threshold
 						continue
 					}
 				}
@@ -5318,6 +5336,10 @@ func main() {
 				}
 			}
 
+			if (opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode) || opts.Ping {
+				continue // don't launch fetching threads
+			}
+
 			for metric_name := range metric_config {
 				metric := metric_name
 				metric_def_ok := false
@@ -5340,7 +5362,6 @@ func main() {
 
 				if metric_def_ok && !ch_ok { // initialize a new per db/per metric control channel
 					if interval > 0 {
-						DbHasActiveMetricFetchers[db_unique] = true
 						host_metric_interval_map[db_metric] = interval
 						log.Infof("starting gatherer for [%s:%s] with interval %v s", db_unique, metric, interval)
 						control_channels[db_metric] = make(chan ControlMessage, 1)
@@ -5380,7 +5401,7 @@ func main() {
 			log.Infof("All configured %d DB hosts were reachable", len(monitored_dbs))
 			os.Exit(0)
 		}
-		if opts.Datastore == DATASTORE_PROMETHEUS { // special behaviour, no "ahead of time" metric collection
+		if opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode { // special behaviour, no "ahead of time" metric collection
 			log.Debugf("main sleeping %ds...", opts.ServersRefreshLoopSeconds)
 			time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
 			continue
@@ -5457,9 +5478,6 @@ func main() {
 			}
 
 			if wholeDbShutDownDueToRoleChange || dbRemovedFromConfig || singleMetricDisabled {
-				if wholeDbShutDownDueToRoleChange || dbRemovedFromConfig {
-					DbHasActiveMetricFetchers[db] = false
-				}
 				log.Infof("shutting down gatherer for [%s:%s] ...", db, metric)
 				control_channels[db_metric] <- ControlMessage{Action: GATHERER_STATUS_STOP}
 				delete(control_channels, db_metric)
