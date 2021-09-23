@@ -327,6 +327,9 @@ var prevCPULoadTimestamp time.Time
 var promAsyncMetricCache = make(map[string][]MetricStoreMessage) // [dbUnique+metric]lastly_fetched_data
 var promAsyncMetricCacheLock = sync.RWMutex{}
 var promAsyncMode = false
+var lastDBSizeMB = make(map[string]int64)
+var lastDBSizeFetchTime = make(map[string]time.Time) // 10min DB size caching
+var DbHasActiveMetricFetchers = make(map[string]bool)
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
@@ -1960,6 +1963,20 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 			}
 		}
 	}
+}
+
+func DBGetSizeMB(dbUnique string) (int64, error) {
+	sql_db_size := `select /* pgwatch2_generated */ pg_database_size(current_database());`
+
+	log.Debugf("[%s] determining DB size ...", dbUnique)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 60, sql_db_size) // can take some time on ancient FS, use 1min timeout
+	if err != nil {
+		log.Errorf("[%s] failed to determine DB size...cannot apply --min-db-size-mb flag. err: %v ...", dbUnique, err)
+		return 0, err
+	}
+	sizeBytes := data[0]["pg_database_size"].(int64)
+	log.Debugf("[%s] DB size = %d B ...", dbUnique, sizeBytes)
+	return sizeBytes / 1048576, nil
 }
 
 func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapEntry, error) {
@@ -4713,6 +4730,7 @@ type Options struct {
 	SystemIdentifierField        string `long:"system-identifier-field" description:"Tag key for system identifier value if --add-system-identifier" env:"PW2_SYSTEM_IDENTIFIER_FIELD" default:"sys_id"`
 	ServersRefreshLoopSeconds    int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERVERS_REFRESH_LOOP_SECONDS" default:"120"`
 	InstanceLevelCacheMaxSeconds int64  `long:"instance-level-cache-max-seconds" description:"Max allowed staleness for instance level metric data shared between DBs of an instance. Affects 'continuous' host types only. Set to 0 to disable" env:"PW2_INSTANCE_LEVEL_CACHE_MAX_SECONDS" default:"30"`
+	MinDbSizeMB                  int64  `long:"min-db-size-mb" description:"Smaller size DBs will be ignored and not monitored until they reach the threshold." env:"PW2_MIN_DB_SIZE_MB" default:"0"`
 	Version                      bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
 	Ping                         bool   `long:"ping" description:"Try to connect to all configured DB-s, report errors and then exit" env:"PW2_PING"`
 }
@@ -5257,6 +5275,28 @@ func main() {
 			}
 
 			if IsPostgresDBType(host.DBType) {
+				if opts.MinDbSizeMB >= 8 { // an empty DB is a bit less than 8MB
+					var DBSizeMB int64
+					// check DB size every 10min only as can cause some IO on older FS-es
+					lastSizeCheckTime, ok := lastDBSizeFetchTime[db_unique]
+					if !ok || lastSizeCheckTime.Add(time.Minute*time.Duration(10)).Before(time.Now()) {
+						DBSizeMB, err = DBGetSizeMB(db_unique)
+						if err == nil { // ignore errors, i.e. only remove from montoring when we're certain it's under the threshold
+							lastDBSizeFetchTime[db_unique] = time.Now()
+							lastDBSizeMB[db_unique] = DBSizeMB
+						}
+					} else {
+						DBSizeMB = lastDBSizeMB[db_unique]
+						log.Debugf("[%s] using cached DBsize %d MB for the --min-db-size-mb filter check", db_unique, DBSizeMB)
+					}
+					if DBSizeMB != 0 && DBSizeMB < opts.MinDbSizeMB {
+						log.Infof("[%s] DB will be ignored due to the --min-db-size-mb filter. Current (up to 10min cached) DB size = %d MB", db_unique, DBSizeMB)
+						if DbHasActiveMetricFetchers[db_unique] { // DB size was previosly above the threshold
+							hostsToShutDownDueToRoleChange[db_unique] = true
+						}
+						continue
+					}
+				}
 				ver, err := DBGetPGVersion(db_unique, host.DBType, false)
 				if err == nil { // ok to ignore error, re-tried on next loop
 					lastKnownStatusInRecovery := hostLastKnownStatusInRecovery[db_unique]
@@ -5300,6 +5340,7 @@ func main() {
 
 				if metric_def_ok && !ch_ok { // initialize a new per db/per metric control channel
 					if interval > 0 {
+						DbHasActiveMetricFetchers[db_unique] = true
 						host_metric_interval_map[db_metric] = interval
 						log.Infof("starting gatherer for [%s:%s] with interval %v s", db_unique, metric, interval)
 						control_channels[db_metric] = make(chan ControlMessage, 1)
@@ -5416,6 +5457,9 @@ func main() {
 			}
 
 			if wholeDbShutDownDueToRoleChange || dbRemovedFromConfig || singleMetricDisabled {
+				if wholeDbShutDownDueToRoleChange || dbRemovedFromConfig {
+					DbHasActiveMetricFetchers[db] = false
+				}
 				log.Infof("shutting down gatherer for [%s:%s] ...", db, metric)
 				control_channels[db_metric] <- ControlMessage{Action: GATHERER_STATUS_STOP}
 				delete(control_channels, db_metric)
