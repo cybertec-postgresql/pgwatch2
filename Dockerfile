@@ -27,10 +27,10 @@ RUN apt-get -q update \
 # Influxdb [https://portal.influxdata.com/downloads]
 #   latest ver.: curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1
 
-RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_6.7.6_${ARCH}.deb \
-    && wget -q -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.8.5_${ARCH}.deb > influxdb_${ARCH}.deb \
+RUN wget -O grafana.deb https://dl.grafana.com/oss/release/grafana_6.7.6_$ARCH.deb \
+    && wget -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.8.5_$ARCH.deb > influxdb_$ARCH.deb \
     && dpkg -i grafana.deb && rm grafana.deb \
-    && dpkg -i influxdb_${ARCH}.deb && rm influxdb_${ARCH}.deb \
+    && dpkg -i influxdb_$ARCH.deb && rm influxdb_$ARCH.deb \
     && sed -i 's/\# query-log-enabled = true/query-log-enabled = false/' /etc/influxdb/influxdb.conf \
     && sed -i 's/\# \[monitor\]/\[monitor\]/' /etc/influxdb/influxdb.conf \
     && sed -i 's/\# store-enabled = true/store-enabled = false/' /etc/influxdb/influxdb.conf \

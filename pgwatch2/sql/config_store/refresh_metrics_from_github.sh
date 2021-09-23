@@ -26,7 +26,7 @@ else
 fi
 
 echo "getting new metric definitions from Github ..."
-wget -q -O $METRICS_TMP_FILE $GITHUB_METRICS
+wget -O $METRICS_TMP_FILE $GITHUB_METRICS
 if [[ "$?" -ne 0 ]] ; then
   echo "could not fetch new metrics defs from Github, check the URL / connectivity ..."
   exit 1
