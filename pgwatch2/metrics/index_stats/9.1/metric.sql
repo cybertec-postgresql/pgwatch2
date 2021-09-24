@@ -1,6 +1,6 @@
 /* NB! does not return all index stats but biggest, top scanned and biggest unused ones */
 WITH q_locked_rels AS (
-  select relation from pg_locks where mode = 'AccessExclusiveLock' and granted
+  select relation from pg_locks where mode = 'AccessExclusiveLock'
 ),
 q_index_details AS (
   select

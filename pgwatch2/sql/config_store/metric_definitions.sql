@@ -716,7 +716,7 @@ values (
 $sql$
 /* NB! does not return all index stats but biggest, top scanned and biggest unused ones */
 WITH q_locked_rels AS (
-  select relation from pg_locks where mode = 'AccessExclusiveLock' and granted
+  select relation from pg_locks where mode = 'AccessExclusiveLock'
 ),
 q_index_details AS (
   select
@@ -822,7 +822,7 @@ values (
 $sql$
 /* NB! does not return all index stats but biggest, top scanned and biggest unused ones */
 WITH q_locked_rels AS (
-  select relation from pg_locks where mode = 'AccessExclusiveLock' and granted
+  select relation from pg_locks where mode = 'AccessExclusiveLock'
 ),
 q_index_details AS (
   select
@@ -929,7 +929,7 @@ values (
 $sql$
 /* NB! does not return all index stats but biggest, top scanned and biggest unused ones */
 WITH q_locked_rels AS (
-  select relation from pg_locks where mode = 'AccessExclusiveLock' and granted
+  select relation from pg_locks where mode = 'AccessExclusiveLock'
 ),
 q_index_details AS (
   select
@@ -1674,7 +1674,7 @@ from
   pg_class c on c.oid = ut.relid
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
-  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock')
   and not relistemp -- and temp tables
 order by table_size_b desc nulls last limit 300;
 $sql$,
@@ -1715,7 +1715,7 @@ from
   pg_class c on c.oid = ut.relid
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
-  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock')
   and not relistemp -- and temp tables
 order by table_size_b desc nulls last limit 300;
 $sql$,
@@ -1761,7 +1761,7 @@ from
   pg_class c on c.oid = ut.relid
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
-  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock')
   and c.relpersistence != 't' -- and temp tables
 order by table_size_b desc nulls last limit 300;
 $sql$,
@@ -1807,7 +1807,7 @@ from
   pg_class c on c.oid = ut.relid
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
-  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock')
   and c.relpersistence != 't' -- and temp tables
 order by table_size_b desc nulls last limit 300;
 $sql$,
@@ -1854,7 +1854,7 @@ from
   pg_class c on c.oid = ut.relid
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
-  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock')
   and c.relpersistence != 't' -- and temp tables
 order by table_size_b desc nulls last limit 300;
 $sql$,
@@ -1923,7 +1923,7 @@ with recursive
              pg_class c on c.oid = ut.relid
         where
           -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
-            not exists(select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
+            not exists(select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock')
           and c.relpersistence != 't' -- and temp tables
     )
 
