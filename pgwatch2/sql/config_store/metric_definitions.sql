@@ -6811,7 +6811,7 @@ select
 $sql$
 );
 
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_sql_su)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
 values (
 'replication_slot_stats',
 14,
@@ -6833,7 +6833,7 @@ $sql$
 );
 
 
-insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_sql_su)
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
 values (
 'wal_stats',
 14,
