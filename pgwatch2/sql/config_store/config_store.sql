@@ -105,7 +105,13 @@ insert into pgwatch2.schema_version (sv_tag) values ('1.8.5');
 
 
 insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
-    values ('minimal', 'single "Key Performance Indicators" query for fast cluster/db overview',
+    values ('test', 'only for test',
+    '{
+    "err_metric": 3,
+    "err_metric1": 3,
+    "db_size": 3
+    }'),
+    ('minimal', 'single "Key Performance Indicators" query for fast cluster/db overview',
     '{
     "kpi": 60
     }'),

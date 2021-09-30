@@ -496,11 +496,13 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 		if !(host_ident == METRICDB_IDENT || host_ident == CONFIGDB_IDENT) {
 			if conn != nil {
 				conn.Close()
+				log.Infof("%p conn close %v %v", conn, host_ident, conn.Stats())
 			}
 			monitored_db_conn_cache_lock.Lock()
 			defer monitored_db_conn_cache_lock.Unlock()
-			if _, ok := monitored_db_conn_cache[host_ident]; ok {
+			if conn, ok := monitored_db_conn_cache[host_ident]; ok {
 				monitored_db_conn_cache[host_ident] = nil
+				log.Infof("%p cache assign nil %v", conn, host_ident)
 			}
 			// connection problems or bad queries etc are quite common so caller should decide if to output something
 			log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
@@ -582,6 +584,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 			dbStats = conn.Stats()
 		}
 
+		log.Infof("%p if cache %v:%v exists %v %v", conn, dbUnique, metricName, exists, dbStats)
 		if !exists || conn == nil || dbStats.OpenConnections == 0 {
 
 			if md.DBType == DBTYPE_BOUNCER {
@@ -591,8 +594,10 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 			conn, err = GetPostgresDBConnection(libPQConnStr, md.Host, md.Port, md.DBName, md.User, md.Password,
 				md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
 			if err != nil {
+				log.Infof("%p open err %v:%v %v", conn, dbUnique, metricName, err)
 				return nil, err, duration
 			}
+			log.Infof("%p conn opened %v:%v", conn, dbUnique, metricName)
 
 			conn.SetMaxIdleConns(1)
 			conn.SetMaxOpenConns(MAX_PG_CONNECTIONS_PER_MONITORED_DB)
@@ -600,8 +605,10 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 			conn.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
 
 			monitored_db_conn_cache_lock.Lock()
+			log.Infof("%p assign to cache %p %v:%v", conn, monitored_db_conn_cache[dbUnique], dbUnique, metricName)
 			monitored_db_conn_cache[dbUnique] = conn
 			monitored_db_conn_cache_lock.Unlock()
+			log.Infof("%p cache unlock %v:%v", conn, dbUnique, metricName)
 		}
 
 	}

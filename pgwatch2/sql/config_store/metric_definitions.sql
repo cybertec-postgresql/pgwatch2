@@ -2,6 +2,27 @@
 
 -- truncate pgwatch2.metric;
 
+/* err_metric test */
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'err_metric',
+9.0,
+$sql$
+select error
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
+);
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'err_metric1',
+9.0,
+$sql$
+select error1
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
+);
+
 /* backends */
 
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_sql_su)
