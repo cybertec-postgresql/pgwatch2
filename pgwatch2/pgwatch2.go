@@ -500,7 +500,10 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 			monitored_db_conn_cache_lock.Lock()
 			defer monitored_db_conn_cache_lock.Unlock()
 			if _, ok := monitored_db_conn_cache[host_ident]; ok {
-				monitored_db_conn_cache[host_ident] = nil
+				// do not overwrite new already reopened pool (after conn.Close)
+				if monitored_db_conn_cache[host_ident] == conn {
+					monitored_db_conn_cache[host_ident] = nil
+				}
 			}
 			// connection problems or bad queries etc are quite common so caller should decide if to output something
 			log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
@@ -588,19 +591,25 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 				md.DBName = "pgbouncer"
 			}
 
-			conn, err = GetPostgresDBConnection(libPQConnStr, md.Host, md.Port, md.DBName, md.User, md.Password,
-				md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
-			if err != nil {
-				return nil, err, duration
-			}
-
-			conn.SetMaxIdleConns(1)
-			conn.SetMaxOpenConns(MAX_PG_CONNECTIONS_PER_MONITORED_DB)
-			// recycling periodically makes sense as long sessions might bloat memory or maybe conn info (password) was changed
-			conn.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
-
+			// only one metric can create connection in cache at a time
 			monitored_db_conn_cache_lock.Lock()
-			monitored_db_conn_cache[dbUnique] = conn
+			// recheck after lock acquire, pool can already be created
+			conn, exists = monitored_db_conn_cache[dbUnique]
+			if !exists || conn == nil {
+				conn, err = GetPostgresDBConnection(libPQConnStr, md.Host, md.Port, md.DBName, md.User, md.Password,
+					md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
+				if err != nil {
+					monitored_db_conn_cache_lock.Unlock()
+					return nil, err, duration
+				}
+
+				conn.SetMaxIdleConns(1)
+				conn.SetMaxOpenConns(MAX_PG_CONNECTIONS_PER_MONITORED_DB)
+				// recycling periodically makes sense as long sessions might bloat memory or maybe conn info (password) was changed
+				conn.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
+
+				monitored_db_conn_cache[dbUnique] = conn
+			}
 			monitored_db_conn_cache_lock.Unlock()
 		}
 
