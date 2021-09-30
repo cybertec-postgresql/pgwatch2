@@ -252,6 +252,7 @@ const METRIC_PSUTIL_MEM = "psutil_mem"
 const DEFAULT_METRICS_DEFINITION_PATH_PKG = "/etc/pgwatch2/metrics" // prebuilt packages / Docker default location
 const DEFAULT_METRICS_DEFINITION_PATH_DOCKER = "/pgwatch2/metrics"  // prebuilt packages / Docker default location
 const DB_SIZE_CACHING_INTERVAL = 10 * time.Minute
+const DB_METRIC_JOIN_STR = "¤¤¤" // just some unlikely string for a DB name to avoid using maps of maps for DB+metric data
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true, DBTYPE_PGPOOL: true, DBTYPE_PATRONI_NAMESPACE_DISCOVERY: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT, DBTYPE_PATRONI_NAMESPACE_DISCOVERY} // used for informational purposes
@@ -2240,7 +2241,7 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 	}
 
 	for _, dr := range data {
-		obj_ident := dr["tag_sproc"].(string) + ":" + dr["tag_oid"].(string)
+		obj_ident := dr["tag_sproc"].(string) + DB_METRIC_JOIN_STR + dr["tag_oid"].(string)
 		prev_hash, ok := host_state["sproc_hashes"][obj_ident]
 		if ok { // we have existing state
 			if prev_hash != dr["md5"].(string) {
@@ -2266,12 +2267,12 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		// turn resultset to map => [oid]=true for faster checks
 		current_oid_map := make(map[string]bool)
 		for _, dr := range data {
-			current_oid_map[dr["tag_sproc"].(string)+":"+dr["tag_oid"].(string)] = true
+			current_oid_map[dr["tag_sproc"].(string)+DB_METRIC_JOIN_STR+dr["tag_oid"].(string)] = true
 		}
 		for sproc_ident := range host_state["sproc_hashes"] {
 			_, ok := current_oid_map[sproc_ident]
 			if !ok {
-				splits := strings.Split(sproc_ident, ":")
+				splits := strings.Split(sproc_ident, DB_METRIC_JOIN_STR)
 				log.Info("detected delete of sproc:", splits[0], ", oid:", splits[1])
 				influx_entry := make(map[string]interface{})
 				influx_entry["event"] = "drop"
@@ -2877,10 +2878,10 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 
 	mvp, err := GetMetricVersionProperties(msg.MetricName, vme, nil)
 	if err != nil && msg.MetricName != RECO_METRIC_NAME {
-		epoch, ok := last_sql_fetch_error.Load(msg.MetricName + ":" + db_pg_version.String())
+		epoch, ok := last_sql_fetch_error.Load(msg.MetricName + DB_METRIC_JOIN_STR + db_pg_version.String())
 		if !ok || ((time.Now().Unix() - epoch.(int64)) > 3600) { // complain only 1x per hour
 			log.Infof("Failed to get SQL for metric '%s', version '%s': %v", msg.MetricName, vme.VersionStr, err)
-			last_sql_fetch_error.Store(msg.MetricName+":"+db_pg_version.String(), time.Now().Unix())
+			last_sql_fetch_error.Store(msg.MetricName+DB_METRIC_JOIN_STR+db_pg_version.String(), time.Now().Unix())
 		}
 		if strings.Contains(err.Error(), "too old") {
 			return nil, nil
@@ -5357,7 +5358,7 @@ func main() {
 					metric_def_map_lock.RUnlock()
 				}
 
-				var db_metric string = db_unique + ":" + metric
+				var db_metric string = db_unique + DB_METRIC_JOIN_STR + metric
 				_, ch_ok := control_channels[db_metric]
 
 				if metric_def_ok && !ch_ok { // initialize a new per db/per metric control channel
@@ -5440,7 +5441,7 @@ func main() {
 			var dbInfo MonitoredDatabase
 			var ok, dbRemovedFromConfig bool
 			singleMetricDisabled := false
-			splits := strings.Split(db_metric, ":")
+			splits := strings.Split(db_metric, DB_METRIC_JOIN_STR)
 			db := splits[0]
 			metric := splits[1]
 			//log.Debugf("Checking if need to shut down worker for [%s:%s]...", db, metric)
