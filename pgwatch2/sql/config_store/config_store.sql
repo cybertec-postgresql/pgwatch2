@@ -286,7 +286,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "stat_statements_calls": 60,
     "table_io_stats": 300,
     "table_stats": 300,
-    "wal": 60,
+    "wal": 60
     }'),
    ('superuser_no_python', 'like exhaustive, but no PL/Python helpers',
     '{
