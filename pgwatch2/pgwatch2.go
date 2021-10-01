@@ -365,7 +365,7 @@ func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password
 		conn_str := fmt.Sprintf("host=%s port=%s dbname='%s' sslmode=%s user=%s application_name=%s sslrootcert='%s' sslcert='%s' sslkey='%s'",
 			host, port, dbname, sslmode, user, APPLICATION_NAME, sslrootcert, sslcert, sslkey)
 		if password != "" { // having empty string as password effectively disables .pgpass so include only if password given
-			conn_str += "password=" + password
+			conn_str += fmt.Sprintf(" password='%s'", password)
 		}
 		db, err = sqlx.Open("postgres", conn_str)
 	}
@@ -4070,6 +4070,57 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 	return metrics_map, nil
 }
 
+func ExpandEnvVarsForConfigEntryIfStartsWithDollar(md MonitoredDatabase) (MonitoredDatabase, int) {
+	var changed int = 0
+
+	if strings.HasPrefix(md.DBName, "$") {
+		md.DBName = os.ExpandEnv(md.DBName)
+		changed++
+	}
+	if strings.HasPrefix(md.User, "$") {
+		md.User = os.ExpandEnv(md.User)
+		changed++
+	}
+	if strings.HasPrefix(md.Password, "$") {
+		md.Password = os.ExpandEnv(md.Password)
+		changed++
+	}
+	if strings.HasPrefix(md.PasswordType, "$") {
+		md.PasswordType = os.ExpandEnv(md.PasswordType)
+		changed++
+	}
+	if strings.HasPrefix(md.DBType, "$") {
+		md.DBType = os.ExpandEnv(md.DBType)
+		changed++
+	}
+	if strings.HasPrefix(md.DBUniqueName, "$") {
+		md.DBUniqueName = os.ExpandEnv(md.DBUniqueName)
+		changed++
+	}
+	if strings.HasPrefix(md.SslMode, "$") {
+		md.SslMode = os.ExpandEnv(md.SslMode)
+		changed++
+	}
+	if strings.HasPrefix(md.DBNameIncludePattern, "$") {
+		md.DBNameIncludePattern = os.ExpandEnv(md.DBNameIncludePattern)
+		changed++
+	}
+	if strings.HasPrefix(md.DBNameExcludePattern, "$") {
+		md.DBNameExcludePattern = os.ExpandEnv(md.DBNameExcludePattern)
+		changed++
+	}
+	if strings.HasPrefix(md.PresetMetrics, "$") {
+		md.PresetMetrics = os.ExpandEnv(md.PresetMetrics)
+		changed++
+	}
+	if strings.HasPrefix(md.PresetMetricsStandby, "$") {
+		md.PresetMetricsStandby = os.ExpandEnv(md.PresetMetricsStandby)
+		changed++
+	}
+
+	return md, changed
+}
+
 func ConfigFileToMonitoredDatabases(configFilePath string) ([]MonitoredDatabase, error) {
 	hostList := make([]MonitoredDatabase, 0)
 
@@ -4081,7 +4132,7 @@ func ConfigFileToMonitoredDatabases(configFilePath string) ([]MonitoredDatabase,
 	}
 	// TODO check mod timestamp or hash, from a global "caching map"
 	c := make([]MonitoredDatabase, 0) // there can be multiple configs in a single file
-	yamlFile = []byte(os.ExpandEnv(string(yamlFile)))
+	yamlFile = []byte(string(yamlFile))
 	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {
 		log.Errorf("Unmarshaling error: %v", err)
@@ -4102,7 +4153,11 @@ func ConfigFileToMonitoredDatabases(configFilePath string) ([]MonitoredDatabase,
 			if v.StmtTimeout == 0 {
 				v.StmtTimeout = 5
 			}
-			hostList = append(hostList, v)
+			vExp, changed := ExpandEnvVarsForConfigEntryIfStartsWithDollar(v)
+			if changed > 0 {
+				log.Debugf("[%s] %d config attributes expanded from ENV", vExp.DBUniqueName, changed)
+			}
+			hostList = append(hostList, vExp)
 		}
 	}
 	if len(hostList) == 0 {
