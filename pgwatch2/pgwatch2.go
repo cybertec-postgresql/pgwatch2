@@ -5242,7 +5242,7 @@ func main() {
 					}
 				}
 
-				if !opts.Ping && (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && IsPostgresDBType(db_type) && !ver.IsInRecovery {
+				if (!opts.Ping || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && host.IsSuperuser && IsPostgresDBType(db_type) && !ver.IsInRecovery {
 					log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
 					_ = TryCreateMetricsFetchingHelpers(db_unique)
 				}
