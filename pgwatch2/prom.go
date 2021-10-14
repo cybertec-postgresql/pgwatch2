@@ -61,6 +61,10 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	for name, md := range monitoredDatabases {
 		setInstanceUpDownState(ch, md) // makes easier to differentiate between PG instance / machine  failures
 		// https://prometheus.io/docs/instrumenting/writing_exporters/#failed-scrapes
+		if !shouldDbBeMonitoredBasedOnCurrentState(md) {
+			log.Infof("[%s] Not scraping DB due to user set constraints like DB size or standby state", md.DBUniqueName)
+			continue
+		}
 		fetchedFromCacheCounts := make(map[string]int)
 
 		for metric, interval := range md.Metrics {
