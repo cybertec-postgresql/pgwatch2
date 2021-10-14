@@ -54,7 +54,7 @@ with recursive
              pg_class c on c.oid = ut.relid
         where
           -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
-            not exists(select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock' and granted)
+            not exists(select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock')
           and c.relpersistence != 't' -- and temp tables
     )
 
