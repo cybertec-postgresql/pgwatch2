@@ -50,6 +50,11 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	e.totalScrapes.Add(1)
 	ch <- e.totalScrapes
 
+	isInitialized := atomic.LoadInt32(&mainLoopInitialized)
+	if isInitialized == 0 {
+		log.Warning("Main loop not yet initialized, not scraping DBs")
+		return
+	}
 	monitoredDatabases := getMonitoredDatabasesSnapshot()
 	if len(monitoredDatabases) == 0 {
 		log.Warning("No dbs configured for monitoring. Check config")
@@ -132,7 +137,6 @@ func setInstanceUpDownState(ch chan<- prometheus.Metric, md MonitoredDatabase) {
 	if err != nil {
 		data[PROM_INSTANCE_UP_STATE_METRIC] = 0
 		log.Errorf("[%s:%s] could not determine instance version, reporting as 'down': %v", md.DBUniqueName, PROM_INSTANCE_UP_STATE_METRIC, err)
-		//return
 	} else {
 		data[PROM_INSTANCE_UP_STATE_METRIC] = 1
 	}

@@ -332,6 +332,7 @@ var promAsyncMode = false
 var lastDBSizeMB = make(map[string]int64)
 var lastDBSizeFetchTime = make(map[string]time.Time) // cached for DB_SIZE_CACHING_INTERVAL
 var lastDBSizeCheckLock sync.RWMutex
+var mainLoopInitialized int32 // 0/1
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
@@ -555,7 +556,9 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 	conn_limit_channel, ok := db_conn_limiting_channel[dbUnique]
 	db_conn_limiting_channel_lock.RUnlock()
 	if !ok {
-		log.Fatal("db_conn_limiting_channel not initialized for ", dbUnique)
+		// hints at CPU starvation or a Prom scrape request when daemon just launched
+		log.Debugf("[%s:%s] db_conn_limiting_channel not yet initialized, ignoring DB read...", dbUnique, metricName)
+		return nil, errors.New("DB not yet initialized, ignoring DB read request"), duration
 	}
 
 	//log.Debugf("Waiting for SQL token [%s:%s]...", msg.DBUniqueName, msg.MetricName)
@@ -2085,7 +2088,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				if noCache {
 					return ver, err
 				} else {
-					log.Info("DBGetPGVersion failed, using old cached value", err)
+					log.Info("DBGetPGVersion failed, using old cached value. err:", err)
 					return ver, nil
 				}
 			}
@@ -5458,6 +5461,8 @@ func main() {
 				}
 			}
 		}
+
+		atomic.StoreInt32(&mainLoopInitialized, 1) // to hold off scraping until metric fetching runners have been initialized
 
 		if opts.Ping {
 			if len(failedInitialConnectHosts) > 0 {
