@@ -2023,13 +2023,14 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 	sql_extensions := `select /* pgwatch2_generated */ extname::text, (regexp_matches(extversion, $$\d+\.?\d+?$$))[1]::text as extversion from pg_extension order by 1;`
 	pgpool_version := `SHOW POOL_VERSION` // supported from pgpool2 v3.0
 
-	db_pg_version_map_lock.RLock()
+	db_pg_version_map_lock.Lock()
 	get_ver_lock, ok := db_get_pg_version_map_lock[dbUnique]
 	if !ok {
-		log.Fatal("db_get_pg_version_map_lock uninitialized")
+		db_get_pg_version_map_lock[dbUnique] = sync.RWMutex{}
+		get_ver_lock = db_get_pg_version_map_lock[dbUnique]
 	}
 	ver, ok = db_pg_version_map[dbUnique]
-	db_pg_version_map_lock.RUnlock()
+	db_pg_version_map_lock.Unlock()
 
 	if !noCache && ok && ver.LastCheckedOn.After(time.Now().Add(time.Minute*-2)) { // use cached version for 2 min
 		//log.Debugf("using cached postgres version %s for %s", ver.Version.String(), dbUnique)
