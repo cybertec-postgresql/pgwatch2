@@ -273,8 +273,6 @@ var monitored_db_cache map[string]MonitoredDatabase
 var monitored_db_cache_lock sync.RWMutex
 var monitored_db_conn_cache map[string]*sqlx.DB = make(map[string]*sqlx.DB)
 var monitored_db_conn_cache_lock = sync.RWMutex{}
-var db_conn_limiting_channel = make(map[string](chan bool))
-var db_conn_limiting_channel_lock = sync.RWMutex{}
 var last_sql_fetch_error sync.Map
 var influx_host_count = 1
 var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently supported
@@ -332,6 +330,8 @@ var lastDBSizeMB = make(map[string]int64)
 var lastDBSizeFetchTime = make(map[string]time.Time) // cached for DB_SIZE_CACHING_INTERVAL
 var lastDBSizeCheckLock sync.RWMutex
 var mainLoopInitialized int32 // 0/1
+
+var prevLoopMonitoredDBs []MonitoredDatabase // to be able to detect DBs removed from config
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
@@ -521,6 +521,22 @@ func InitSqlConnPoolForMonitoredDBIfNil(md MonitoredDatabase) error {
 	return nil
 }
 
+func CloseSqlConnPoolForMonitoredDBIfAny(dbUnique string) {
+	monitored_db_conn_cache_lock.Lock()
+	defer monitored_db_conn_cache_lock.Unlock()
+
+	conn, ok := monitored_db_conn_cache[dbUnique]
+	if !ok || conn == nil {
+		return
+	}
+
+	err := conn.Close()
+	if err != nil {
+		log.Error("[%s] Failed to close connection pool to %s nicely. Err: %v", dbUnique, err)
+	}
+	delete(monitored_db_conn_cache, dbUnique)
+}
+
 func InitPGVersionInfoFetchingLockIfNil(md MonitoredDatabase) {
 	db_pg_version_map_lock.Lock()
 	if _, ok := db_get_pg_version_map_lock[md.DBUniqueName]; !ok {
@@ -586,7 +602,8 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 	conn, exists = monitored_db_conn_cache[dbUnique]
 	monitored_db_conn_cache_lock.RUnlock()
 	if !exists || conn == nil {
-		log.Fatalf("SQL connection for dbUnique %s not found or nil", dbUnique) // Should always be initialized in the main loop DB discovery code ...
+		log.Errorf("SQL connection for dbUnique %s not found or nil", dbUnique) // Should always be initialized in the main loop DB discovery code ...
+		return nil, errors.New("SQL connection not found or nil"), duration
 	}
 
 	if !adHocMode && IsPostgresDBType(md.DBType) {
@@ -4740,6 +4757,35 @@ func shouldDbBeMonitoredBasedOnCurrentState(md MonitoredDatabase) bool {
 	return true
 }
 
+func ControlChannelsMapToList(control_channels map[string]chan ControlMessage) []string {
+	control_channel_list := make([]string, len(control_channels))
+	i := 0
+	for key := range control_channels {
+		control_channel_list[i] = key
+		i++
+	}
+	return control_channel_list
+}
+
+func CloseResourcesForRemovedMonitoredDBs(currentDBs, prevLoopDBs []MonitoredDatabase, shutDownDueToRoleChange map[string]bool) {
+	var curDBsMap = make(map[string]bool)
+
+	for _, curDB := range currentDBs {
+		curDBsMap[curDB.DBUniqueName] = true
+	}
+
+	for _, prevDB := range prevLoopDBs {
+		if _, ok := curDBsMap[prevDB.DBUniqueName]; !ok { // removed from config
+			CloseSqlConnPoolForMonitoredDBIfAny(prevDB.DBUniqueName)
+		}
+	}
+
+	// or to be ignored due to current instance state
+	for roleChanged := range shutDownDueToRoleChange {
+		CloseSqlConnPoolForMonitoredDBIfAny(roleChanged)
+	}
+}
+
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
@@ -5282,6 +5328,7 @@ func main() {
 			err := InitSqlConnPoolForMonitoredDBIfNil(host)
 			if err != nil {
 				log.Warningf("Could not init SQL connection pool for %s, retrying on next main loop. Err: %v", db_unique, err)
+				continue
 			}
 
 			InitPGVersionInfoFetchingLockIfNil(host)
@@ -5362,11 +5409,14 @@ func main() {
 				}
 			}
 
-			if (opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode) || opts.Ping {
-				continue // don't launch fetching threads
+			if opts.Ping {
+				continue // don't launch metric fetching threads
 			}
 
 			for metric_name := range metric_config {
+				if opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode {
+					continue // normal (non-async) Prom means only per-scrape fetching
+				}
 				metric := metric_name
 				metric_def_ok := false
 
@@ -5455,12 +5505,7 @@ func main() {
 
 		// loop over existing channels and stop workers if DB or metric removed from config
 		log.Debug("checking if any workers need to be shut down...")
-		control_channel_list := make([]string, len(control_channels))
-		i := 0
-		for key := range control_channels {
-			control_channel_list[i] = key
-			i++
-		}
+		control_channel_list := ControlChannelsMapToList(control_channels)
 		gatherers_shut_down := 0
 
 		for _, db_metric := range control_channel_list {
@@ -5515,6 +5560,10 @@ func main() {
 				PurgeMetricsFromPromAsyncCacheIfAny(db, metric)
 			}
 		}
+
+		CloseResourcesForRemovedMonitoredDBs(monitored_dbs, prevLoopMonitoredDBs, hostsToShutDownDueToRoleChange)
+		prevLoopMonitoredDBs = monitored_dbs
+
 		if gatherers_shut_down > 0 {
 			log.Warningf("sent STOP message to %d gatherers (it might take some minutes for them to stop though)", gatherers_shut_down)
 		}
