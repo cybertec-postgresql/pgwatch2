@@ -486,6 +486,49 @@ func InitAndTestMetricStoreConnection(connStr string, failOnErr bool) error {
 	return nil
 }
 
+// every DB under monitoring should have exactly 1 sql.DB connection assigned, that will internally limit parallel access
+func InitSqlConnPoolForMonitoredDBIfNil(md MonitoredDatabase) error {
+	monitored_db_conn_cache_lock.Lock()
+	defer monitored_db_conn_cache_lock.Unlock()
+
+	conn, ok := monitored_db_conn_cache[md.DBUniqueName]
+	if ok && conn != nil {
+		return nil
+	}
+
+	if md.DBType == DBTYPE_BOUNCER {
+		md.DBName = "pgbouncer"
+	}
+
+	conn, err := GetPostgresDBConnection(md.LibPQConnStr, md.Host, md.Port, md.DBName, md.User, md.Password,
+		md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
+	if err != nil {
+		return err
+	}
+
+	if useConnPooling {
+		conn.SetMaxIdleConns(opts.MaxParallelConnectionsPerDb)
+	} else {
+		conn.SetMaxIdleConns(0)
+	}
+	conn.SetMaxOpenConns(opts.MaxParallelConnectionsPerDb)
+	// recycling periodically makes sense as long sessions might bloat memory or maybe conn info (password) was changed
+	conn.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
+
+	monitored_db_conn_cache[md.DBUniqueName] = conn
+	log.Debugf("[%s] Connection pool initialized with max %d parallel connections. Conn pooling: %v", md.DBUniqueName, opts.MaxParallelConnectionsPerDb, useConnPooling)
+
+	return nil
+}
+
+func InitPGVersionInfoFetchingLockIfNil(md MonitoredDatabase) {
+	db_pg_version_map_lock.Lock()
+	if _, ok := db_get_pg_version_map_lock[md.DBUniqueName]; !ok {
+		db_get_pg_version_map_lock[md.DBUniqueName] = sync.RWMutex{}
+	}
+	db_pg_version_map_lock.Unlock()
+}
+
 func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
 	ret := make([]map[string]interface{}, 0)
 	var rows *sqlx.Rows
@@ -521,13 +564,13 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 	return ret, err
 }
 
-func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTimeoutOverride int64, sql string, args ...interface{}) ([](map[string]interface{}), error, time.Duration) {
+func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride int64, sql string, args ...interface{}) ([](map[string]interface{}), error, time.Duration) {
 	var conn *sqlx.DB
-	var libPQConnStr string
-	var exists bool
 	var md MonitoredDatabase
 	var err error
 	var duration time.Duration
+	var exists bool
+	var sqlStmtTimeout string
 
 	if strings.TrimSpace(sql) == "" {
 		return nil, errors.New("empty SQL"), duration
@@ -538,79 +581,12 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 		return nil, err, duration
 	}
 
-	db_conn_limiting_channel_lock.RLock()
-	conn_limit_channel, ok := db_conn_limiting_channel[dbUnique]
-	db_conn_limiting_channel_lock.RUnlock()
-	if !ok {
-		// hints at CPU starvation or a Prom scrape request when daemon just launched
-		log.Debugf("[%s:%s] db_conn_limiting_channel not yet initialized, ignoring DB read...", dbUnique, metricName)
-		return nil, errors.New("DB not yet initialized, ignoring DB read request"), duration
-	}
-
-	//log.Debugf("Waiting for SQL token [%s:%s]...", msg.DBUniqueName, msg.MetricName)
-	token := <-conn_limit_channel
-	defer func() {
-		conn_limit_channel <- token
-	}()
-
-	libPQConnStr = md.LibPQConnStr
-	if opts.AdHocConnString != "" {
-		libPQConnStr = opts.AdHocConnString
-	}
-
-	if !useCache {
-		if md.DBType == DBTYPE_BOUNCER {
-			md.DBName = "pgbouncer"
-		}
-
-		conn, err = GetPostgresDBConnection(libPQConnStr, md.Host, md.Port, md.DBName, md.User, md.Password,
-			md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
-		if err != nil {
-			return nil, err, duration
-		}
-		defer conn.Close()
-
-	} else {
-		var dbStats go_sql.DBStats
-		monitored_db_conn_cache_lock.RLock()
-		conn, exists = monitored_db_conn_cache[dbUnique]
-		monitored_db_conn_cache_lock.RUnlock()
-		if conn != nil {
-			dbStats = conn.Stats()
-		}
-
-		if !exists || conn == nil || dbStats.OpenConnections == 0 {
-
-			if md.DBType == DBTYPE_BOUNCER {
-				md.DBName = "pgbouncer"
-			}
-
-			// only one metric can create connection in cache at a time
-			monitored_db_conn_cache_lock.Lock()
-			// recheck after lock acquire, pool can already be created
-			conn, exists = monitored_db_conn_cache[dbUnique]
-			if !exists || conn == nil {
-				conn, err = GetPostgresDBConnection(libPQConnStr, md.Host, md.Port, md.DBName, md.User, md.Password,
-					md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
-				if err != nil {
-					monitored_db_conn_cache_lock.Unlock()
-					return nil, err, duration
-				}
-
-				if useConnPooling {
-					conn.SetMaxIdleConns(opts.MaxParallelConnectionsPerDb)
-				} else {
-					conn.SetMaxIdleConns(0)
-				}
-				conn.SetMaxOpenConns(opts.MaxParallelConnectionsPerDb)
-				// recycling periodically makes sense as long sessions might bloat memory or maybe conn info (password) was changed
-				conn.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
-
-				monitored_db_conn_cache[dbUnique] = conn
-			}
-			monitored_db_conn_cache_lock.Unlock()
-		}
-
+	monitored_db_conn_cache_lock.RLock()
+	// sqlx.DB itself is parallel safe
+	conn, exists = monitored_db_conn_cache[dbUnique]
+	monitored_db_conn_cache_lock.RUnlock()
+	if !exists || conn == nil {
+		log.Fatalf("SQL connection for dbUnique %s not found or nil", dbUnique) // Should always be initialized in the main loop DB discovery code ...
 	}
 
 	if !adHocMode && IsPostgresDBType(md.DBType) {
@@ -619,7 +595,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 			stmtTimeout = stmtTimeoutOverride
 		}
 		if stmtTimeout > 0 { // 0 = don't change, use DB level settings
-			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", stmtTimeout))
+			sqlStmtTimeout = fmt.Sprintf("SET statement_timeout TO '%ds';", stmtTimeout) // bundle with SQL to avoid transaction round-trip time
 		}
 		if err != nil {
 			atomic.AddUint64(&totalMetricFetchFailuresCounter, 1)
@@ -628,7 +604,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 	}
 
 	t1 := time.Now()
-	data, err := DBExecRead(conn, dbUnique, sql, args...)
+	data, err := DBExecRead(conn, dbUnique, sqlStmtTimeout+sql, args...)
 	t2 := time.Now()
 	if err != nil {
 		atomic.AddUint64(&totalMetricFetchFailuresCounter, 1)
@@ -1981,7 +1957,7 @@ func DBGetSizeMB(dbUnique string) (int64, error) {
 	if !ok || lastDBSizeCheckTime.Add(DB_SIZE_CACHING_INTERVAL).Before(time.Now()) {
 
 		log.Debugf("[%s] determining DB size ...", dbUnique)
-		data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 60, sql_db_size) // can take some time on ancient FS, use 60s stmt timeout
+		data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 60, sql_db_size) // can take some time on ancient FS, use 60s stmt timeout
 		if err != nil {
 			log.Errorf("[%s] failed to determine DB size...cannot apply --min-db-size-mb flag. err: %v ...", dbUnique, err)
 			return 0, err
@@ -2038,7 +2014,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 		}
 
 		if dbType == DBTYPE_BOUNCER {
-			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, 0, "show version")
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, "show version")
 			if err != nil {
 				return verNew, err
 			}
@@ -2056,7 +2032,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				verNew.Version, _ = decimal.NewFromString(matches[0])
 			}
 		} else if dbType == DBTYPE_PGPOOL {
-			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, 0, pgpool_version)
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, pgpool_version)
 			if err != nil {
 				return verNew, err
 			}
@@ -2073,7 +2049,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				verNew.Version, _ = decimal.NewFromString(matches[0])
 			}
 		} else {
-			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql)
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sql)
 			if err != nil {
 				if noCache {
 					return ver, err
@@ -2089,14 +2065,14 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 
 			if verNew.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) && addSystemIdentifier {
 				log.Debugf("[%s] determining system identifier version (pg ver: %v)", dbUnique, verNew.VersionStr)
-				data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql_sysid)
+				data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sql_sysid)
 				if err == nil && len(data) > 0 {
 					verNew.SystemIdentifier = data[0]["system_identifier"].(string)
 				}
 			}
 
 			log.Debugf("[%s] determining if monitoring user is a superuser...", dbUnique)
-			data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql_su)
+			data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", 0, sql_su)
 			if err == nil {
 				verNew.IsSuperuser = data[0]["rolsuper"].(bool)
 			}
@@ -2104,7 +2080,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 
 			if verNew.Version.GreaterThanOrEqual(MinExtensionInfoAvailable) {
 				//log.Debugf("[%s] determining installed extensions info...", dbUnique)
-				data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql_extensions)
+				data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", 0, sql_extensions)
 				if err != nil {
 					log.Errorf("[%s] failed to determine installed extensions info: %v", dbUnique, err)
 				} else {
@@ -2237,7 +2213,7 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "sproc_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "sproc_hashes", mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Error("could not read sproc_hashes from monitored host: ", dbUnique, ", err:", err)
 		return change_counts
@@ -2323,7 +2299,7 @@ func DetectTableChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "table_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "table_hashes", mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Error("could not read table_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -2409,7 +2385,7 @@ func DetectIndexChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "index_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "index_hashes", mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Error("could not read index_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -2494,7 +2470,7 @@ func DetectPrivilegeChanges(dbUnique string, vme DBVersionMapEntry, storage_ch c
 	}
 
 	// returns rows of: object_type, tag_role, tag_object, privilege_type
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "privilege_changes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "privilege_changes", mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Errorf("[%s][%s] failed to fetch object privileges info: %v", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, err)
 		return change_counts
@@ -2572,7 +2548,7 @@ func DetectConfigurationChanges(dbUnique string, vme DBVersionMapEntry, storage_
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "configuration_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "configuration_hashes", mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Errorf("[%s][%s] could not read configuration_hashes from monitored host: %v", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, err)
 		return change_counts
@@ -2643,7 +2619,7 @@ func GetRecommendations(dbUnique string, vme DBVersionMapEntry) ([]map[string]in
 	log.Debugf("Processing %d recommendation metrics for \"%s\"", len(reco_metrics), dbUnique)
 
 	for m, mvp := range reco_metrics {
-		data, err, duration := DBExecReadByDbUniqueName(dbUnique, m, useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+		data, err, duration := DBExecReadByDbUniqueName(dbUnique, m, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 		total_duration += duration
 		if err != nil {
 			if strings.Contains(err.Error(), "does not exist") { // some more exotic extensions missing is expected, don't pollute the error log
@@ -2769,7 +2745,7 @@ func FetchMetricsPgpool(msg MetricFetchMessage, vme DBVersionMapEntry, mvp Metri
 
 	for _, sql := range sql_lines {
 		if strings.HasPrefix(sql, "SHOW POOL_NODES") {
-			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, 0, sql)
+			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, 0, sql)
 			duration = duration + dur
 			if err != nil {
 				log.Errorf("[%s][%s] Could not fetch PgPool statistics: %v", msg.DBUniqueName, msg.MetricName, err)
@@ -2824,7 +2800,7 @@ func FetchMetricsPgpool(msg MetricFetchMessage, vme DBVersionMapEntry, mvp Metri
 				continue
 			}
 
-			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, 0, sql)
+			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, 0, sql)
 			duration = duration + dur
 			if err != nil {
 				log.Errorf("[%s][%s] Could not fetch PgPool statistics: %v", msg.DBUniqueName, msg.MetricName, err)
@@ -2926,7 +2902,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 	} else if msg.DBType == DBTYPE_PGPOOL {
 		data, _, duration = FetchMetricsPgpool(msg, vme, mvp)
 	} else {
-		data, err, duration = DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, msg.StmtTimeoutOverride, sql)
+		data, err, duration = DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, msg.StmtTimeoutOverride, sql)
 
 		if err != nil {
 			// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
@@ -3801,7 +3777,7 @@ retry:
 func DoesFunctionExists(dbUnique, functionName string) bool {
 	log.Debug("Checking for function existence", dbUnique, functionName)
 	sql := fmt.Sprintf("select /* pgwatch2_generated */ 1 from pg_proc join pg_namespace n on pronamespace = n.oid where proname = '%s' and n.nspname = 'public'", functionName)
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sql)
 	if err != nil {
 		log.Error("Failed to check for function existence", dbUnique, functionName, err)
 		return false
@@ -3842,7 +3818,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 					log.Warning("Could not find query text for", dbUnique, helperName)
 					continue
 				}
-				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, mvp.Sql)
+				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", 0, mvp.Sql)
 				if err != nil {
 					log.Warning("Failed to create a metric fetching helper for", dbUnique, helperName)
 					log.Warning(err)
@@ -3874,7 +3850,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 					log.Warning("Could not find query text for", dbUnique, metric)
 					continue
 				}
-				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", true, 0, mvp.Sql)
+				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", 0, mvp.Sql)
 				if err != nil {
 					log.Warning("Failed to create a metric fetching helper for", dbUnique, metric)
 					log.Warning(err)
@@ -4612,7 +4588,7 @@ func GetGoPsutilDiskPG(dbUnique string) ([]map[string]interface{}, error) {
 	sqlTS := `select spcname::text as name, pg_catalog.pg_tablespace_location(oid) as location from pg_catalog.pg_tablespace where not spcname like any(array[E'pg\\_%'])`
 	var ddDevice, ldDevice, walDevice uint64
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, 0, sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sql)
 	if err != nil || len(data) == 0 {
 		log.Errorf("Failed to determine relevant PG disk paths via SQL: %v", err)
 		return nil, err
@@ -4700,7 +4676,7 @@ func GetGoPsutilDiskPG(dbUnique string) ([]map[string]interface{}, error) {
 		}
 	}
 
-	data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", false, 0, sqlTS)
+	data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", 0, sqlTS)
 	if err != nil {
 		log.Infof("Failed to determine relevant PG tablespace paths via SQL: %v", err)
 	} else if len(data) > 0 {
@@ -5303,32 +5279,18 @@ func main() {
 				log.Warningf("Encrypted password type found for host \"%s\", but no decryption keyphrase specified. Use --aes-gcm-keyphrase or --aes-gcm-keyphrase-file params", db_unique)
 			}
 
-			db_conn_limiting_channel_lock.RLock()
-			_, exists := db_conn_limiting_channel[db_unique]
-			db_conn_limiting_channel_lock.RUnlock()
-
-			if !exists { // new host, initialize DB connection limiting structure
-				db_conn_limiting_channel_lock.Lock()
-				db_conn_limiting_channel[db_unique] = make(chan bool, opts.MaxParallelConnectionsPerDb)
-				i := 0
-				for i < opts.MaxParallelConnectionsPerDb {
-					//log.Debugf("initializing db_conn_limiting_channel %d for [%s]", i, db_unique)
-					db_conn_limiting_channel[db_unique] <- true
-					i++
-				}
-				db_conn_limiting_channel_lock.Unlock()
-
-				db_pg_version_map_lock.Lock()
-				db_get_pg_version_map_lock[db_unique] = sync.RWMutex{}
-				db_pg_version_map_lock.Unlock()
+			err := InitSqlConnPoolForMonitoredDBIfNil(host)
+			if err != nil {
+				log.Warningf("Could not init SQL connection pool for %s, retrying on next main loop. Err: %v", db_unique, err)
 			}
+
+			InitPGVersionInfoFetchingLockIfNil(host)
 
 			_, connectFailedSoFar := failedInitialConnectHosts[db_unique]
 
-			if !exists || connectFailedSoFar {
+			if connectFailedSoFar { // idea is not to spwan any runners before we've successfully pinged the DB
 				var err error
 				var ver DBVersionMapEntry
-				metric_config = make(map[string]float64)
 
 				if connectFailedSoFar {
 					log.Infof("retrying to connect to uninitialized DB \"%s\"...", db_unique)
