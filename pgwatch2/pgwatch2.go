@@ -217,9 +217,8 @@ const DATASTORE_POSTGRES = "postgres"
 const DATASTORE_PROMETHEUS = "prometheus"
 const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
 const FILE_BASED_METRIC_HELPERS_DIR = "00_helpers"
-const PG_CONN_RECYCLE_SECONDS = 1800          // applies for monitored nodes
-const APPLICATION_NAME = "pgwatch2"           // will be set on all opened PG connections for informative purposes
-const MAX_PG_CONNECTIONS_PER_MONITORED_DB = 2 // for limiting max concurrent queries on a single DB, sql.DB maxPoolSize cannot be fully trusted
+const PG_CONN_RECYCLE_SECONDS = 1800 // applies for monitored nodes
+const APPLICATION_NAME = "pgwatch2"  // will be set on all opened PG connections for informative purposes
 const GATHERER_STATUS_START = "START"
 const GATHERER_STATUS_STOP = "STOP"
 const METRICDB_IDENT = "metricDb"
@@ -499,21 +498,8 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 	rows, err = conn.Queryx(sql, args...)
 
 	if err != nil {
-		if !(host_ident == METRICDB_IDENT || host_ident == CONFIGDB_IDENT) {
-			if conn != nil {
-				conn.Close()
-			}
-			monitored_db_conn_cache_lock.Lock()
-			defer monitored_db_conn_cache_lock.Unlock()
-			if _, ok := monitored_db_conn_cache[host_ident]; ok {
-				// do not overwrite new already reopened pool (after conn.Close)
-				if monitored_db_conn_cache[host_ident] == conn {
-					monitored_db_conn_cache[host_ident] = nil
-				}
-			}
-			// connection problems or bad queries etc are quite common so caller should decide if to output something
-			log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
-		}
+		// connection problems or bad queries etc are quite common so caller should decide if to output something
+		log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -611,8 +597,12 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 					return nil, err, duration
 				}
 
-				conn.SetMaxIdleConns(1)
-				conn.SetMaxOpenConns(MAX_PG_CONNECTIONS_PER_MONITORED_DB)
+				if useConnPooling {
+					conn.SetMaxIdleConns(opts.MaxParallelConnectionsPerDb)
+				} else {
+					conn.SetMaxIdleConns(0)
+				}
+				conn.SetMaxOpenConns(opts.MaxParallelConnectionsPerDb)
 				// recycling periodically makes sense as long sessions might bloat memory or maybe conn info (password) was changed
 				conn.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
 
@@ -4836,6 +4826,7 @@ type Options struct {
 	ServersRefreshLoopSeconds    int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERVERS_REFRESH_LOOP_SECONDS" default:"120"`
 	InstanceLevelCacheMaxSeconds int64  `long:"instance-level-cache-max-seconds" description:"Max allowed staleness for instance level metric data shared between DBs of an instance. Affects 'continuous' host types only. Set to 0 to disable" env:"PW2_INSTANCE_LEVEL_CACHE_MAX_SECONDS" default:"30"`
 	MinDbSizeMB                  int64  `long:"min-db-size-mb" description:"Smaller size DBs will be ignored and not monitored until they reach the threshold." env:"PW2_MIN_DB_SIZE_MB" default:"0"`
+	MaxParallelConnectionsPerDb  int    `long:"max-parallel-connections-per-db" description:"Max parallel metric fetches per DB. Note the multiplication effect on multi-DB instances" default:"2"`
 	Version                      bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
 	Ping                         bool   `long:"ping" description:"Try to connect to all configured DB-s, report errors and then exit" env:"PW2_PING"`
 }
@@ -4882,6 +4873,10 @@ func main() {
 
 	if opts.ServersRefreshLoopSeconds <= 1 {
 		log.Fatal("--servers-refresh-loop-seconds must be greater than 1")
+	}
+
+	if opts.MaxParallelConnectionsPerDb < 1 {
+		log.Fatal("--max-parallel-connections-per-db must be >= 1")
 	}
 
 	if len(opts.InfluxSSLSkipVerify) > 0 {
@@ -5314,9 +5309,9 @@ func main() {
 
 			if !exists { // new host, initialize DB connection limiting structure
 				db_conn_limiting_channel_lock.Lock()
-				db_conn_limiting_channel[db_unique] = make(chan bool, MAX_PG_CONNECTIONS_PER_MONITORED_DB)
+				db_conn_limiting_channel[db_unique] = make(chan bool, opts.MaxParallelConnectionsPerDb)
 				i := 0
-				for i < MAX_PG_CONNECTIONS_PER_MONITORED_DB {
+				for i < opts.MaxParallelConnectionsPerDb {
 					//log.Debugf("initializing db_conn_limiting_channel %d for [%s]", i, db_unique)
 					db_conn_limiting_channel[db_unique] <- true
 					i++
