@@ -87,7 +87,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 				if promAsyncMode {
 					promAsyncMetricCacheLock.RLock()
-					metricStoreMessages, ok = promAsyncMetricCache[md.DBUniqueName+metric]
+					metricStoreMessages, ok = promAsyncMetricCache[md.DBUniqueName][metric]
 					promAsyncMetricCacheLock.RUnlock()
 					if !ok {
 						log.Debugf("[%s:%s] could not find data from the prom cache. maybe gathering interval not yet reached or zero rows returned, ignoring", md.DBUniqueName, metric)

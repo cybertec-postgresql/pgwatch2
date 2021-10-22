@@ -323,7 +323,7 @@ var prevCPULoadTimeStats cpu.TimesStat
 var prevCPULoadTimestamp time.Time
 
 // Async Prom cache
-var promAsyncMetricCache = make(map[string][]MetricStoreMessage) // [dbUnique+metric]lastly_fetched_data
+var promAsyncMetricCache = make(map[string]map[string][]MetricStoreMessage) // [dbUnique][metric]lastly_fetched_data
 var promAsyncMetricCacheLock = sync.RWMutex{}
 var promAsyncMode = false
 var lastDBSizeMB = make(map[string]int64)
@@ -530,6 +530,7 @@ func CloseSqlConnPoolForMonitoredDBIfAny(dbUnique string) {
 		return
 	}
 
+	log.Debugf("[%s] Closing SQL connection pool ...", dbUnique)
 	err := conn.Close()
 	if err != nil {
 		log.Error("[%s] Failed to close connection pool to %s nicely. Err: %v", dbUnique, err)
@@ -1714,17 +1715,15 @@ func GetMonitoredDatabaseByUniqueName(name string) (MonitoredDatabase, error) {
 }
 
 func UpdateMonitoredDBCache(data []MonitoredDatabase) {
-	if len(data) > 0 {
-		monitored_db_cache_new := make(map[string]MonitoredDatabase)
+	monitored_db_cache_new := make(map[string]MonitoredDatabase)
 
-		for _, row := range data {
-			monitored_db_cache_new[row.DBUniqueName] = row
-		}
-
-		monitored_db_cache_lock.Lock()
-		monitored_db_cache = monitored_db_cache_new
-		monitored_db_cache_lock.Unlock()
+	for _, row := range data {
+		monitored_db_cache_new[row.DBUniqueName] = row
 	}
+
+	monitored_db_cache_lock.Lock()
+	monitored_db_cache = monitored_db_cache_new
+	monitored_db_cache_lock.Unlock()
 }
 
 func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *list.List, limit int) error {
@@ -1887,9 +1886,7 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 							continue
 						}
 						msg := msg_arr[0]
-						promAsyncMetricCacheLock.Lock()
-						promAsyncMetricCache[msg.DBUniqueName+msg.MetricName] = msg_arr
-						promAsyncMetricCacheLock.Unlock()
+						PromAsyncCacheAddMetricData(msg.DBUniqueName, msg.MetricName, msg_arr)
 						log.Infof("[%s:%s] Added %d rows to Prom cache", msg.DBUniqueName, msg.MetricName, len(msg.Data))
 					} else if data_store == DATASTORE_INFLUX {
 						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg_arr)
@@ -3022,8 +3019,13 @@ func ClearDBUnreachableStateIfAny(dbUnique string) {
 func PurgeMetricsFromPromAsyncCacheIfAny(dbUnique, metric string) {
 	if promAsyncMode {
 		promAsyncMetricCacheLock.Lock()
-		delete(promAsyncMetricCache, dbUnique+metric)
-		promAsyncMetricCacheLock.Unlock()
+		defer promAsyncMetricCacheLock.Unlock()
+
+		if metric == "" {
+			delete(promAsyncMetricCache, dbUnique) // whole host removed from config
+		} else {
+			delete(promAsyncMetricCache[dbUnique], metric)
+		}
 	}
 }
 
@@ -4750,9 +4752,11 @@ func shouldDbBeMonitoredBasedOnCurrentState(md MonitoredDatabase) bool {
 	if err == nil && vme.IsInRecovery && md.OnlyIfMaster {
 		return false
 	}
-	dbSize, err := DBGetSizeMB(md.DBUniqueName)
-	if err == nil && dbSize < opts.MinDbSizeMB {
-		return false
+	if opts.MinDbSizeMB >= 8 {
+		dbSize, err := DBGetSizeMB(md.DBUniqueName)
+		if err == nil && dbSize < opts.MinDbSizeMB {
+			return false
+		}
 	}
 	return true
 }
@@ -4767,6 +4771,13 @@ func ControlChannelsMapToList(control_channels map[string]chan ControlMessage) [
 	return control_channel_list
 }
 
+func DoCloseResourcesForRemovedMonitoredDBIfAny(dbUnique string) {
+
+	CloseSqlConnPoolForMonitoredDBIfAny(dbUnique)
+
+	PurgeMetricsFromPromAsyncCacheIfAny(dbUnique, "")
+}
+
 func CloseResourcesForRemovedMonitoredDBs(currentDBs, prevLoopDBs []MonitoredDatabase, shutDownDueToRoleChange map[string]bool) {
 	var curDBsMap = make(map[string]bool)
 
@@ -4776,13 +4787,32 @@ func CloseResourcesForRemovedMonitoredDBs(currentDBs, prevLoopDBs []MonitoredDat
 
 	for _, prevDB := range prevLoopDBs {
 		if _, ok := curDBsMap[prevDB.DBUniqueName]; !ok { // removed from config
-			CloseSqlConnPoolForMonitoredDBIfAny(prevDB.DBUniqueName)
+			DoCloseResourcesForRemovedMonitoredDBIfAny(prevDB.DBUniqueName)
 		}
 	}
 
 	// or to be ignored due to current instance state
-	for roleChanged := range shutDownDueToRoleChange {
-		CloseSqlConnPoolForMonitoredDBIfAny(roleChanged)
+	for roleChangedDB := range shutDownDueToRoleChange {
+		DoCloseResourcesForRemovedMonitoredDBIfAny(roleChangedDB)
+	}
+}
+
+func PromAsyncCacheInitIfRequired(dbUnique, metric string) { // cache structure: [dbUnique][metric]lastly_fetched_data
+	if opts.Datastore == DATASTORE_PROMETHEUS && promAsyncMode {
+		promAsyncMetricCacheLock.Lock()
+		defer promAsyncMetricCacheLock.Unlock()
+		if _, ok := promAsyncMetricCache[dbUnique]; !ok {
+			metricMap := make(map[string][]MetricStoreMessage)
+			promAsyncMetricCache[dbUnique] = metricMap
+		}
+	}
+}
+
+func PromAsyncCacheAddMetricData(dbUnique, metric string, msgArr []MetricStoreMessage) { // cache structure: [dbUnique][metric]lastly_fetched_data
+	promAsyncMetricCacheLock.Lock()
+	defer promAsyncMetricCacheLock.Unlock()
+	if _, ok := promAsyncMetricCache[dbUnique]; ok {
+		promAsyncMetricCache[dbUnique][metric] = msgArr
 	}
 }
 
@@ -5194,6 +5224,7 @@ func main() {
 	}
 
 	first_loop := true
+	mainLoopCount := 0
 	var monitored_dbs []MonitoredDatabase
 	var last_metrics_refresh_time int64
 	var metrics map[string]map[decimal.Decimal]MetricVersionProperties
@@ -5202,6 +5233,8 @@ func main() {
 
 	for { //main loop
 		hostsToShutDownDueToRoleChange := make(map[string]bool) // hosts went from master to standby and have "only if master" set
+		var control_channel_name_list []string
+		gatherers_shut_down := 0
 
 		if time.Now().Unix()-last_metrics_refresh_time > METRIC_DEFINITION_REFRESH_TIME {
 			//metrics
@@ -5268,9 +5301,9 @@ func main() {
 					log.Debugf("Found %d databases to monitor from %d config items...", len(monitored_dbs), len(mc))
 				} else {
 					if first_loop {
-						log.Fatalf("Could not read/parse monitoring config from path: %s", opts.Config)
+						log.Fatalf("Could not read/parse monitoring config from path: %s. err: %v", opts.Config, err)
 					} else {
-						log.Errorf("Could not read/parse monitoring config from path: %s", opts.Config)
+						log.Errorf("Could not read/parse monitoring config from path: %s. using last valid config data. err: %v", opts.Config, err)
 					}
 					time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
 					continue
@@ -5282,7 +5315,7 @@ func main() {
 				if first_loop {
 					log.Fatal("could not fetch active hosts - check config!", err)
 				} else {
-					log.Error("could not fetch active hosts:", err)
+					log.Error("could not fetch active hosts, using last valid config data. err:", err)
 					time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
 					continue
 				}
@@ -5415,7 +5448,7 @@ func main() {
 
 			for metric_name := range metric_config {
 				if opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode {
-					continue // normal (non-async) Prom means only per-scrape fetching
+					continue // normal (non-async, no background fetching) Prom mode means only per-scrape fetching
 				}
 				metric := metric_name
 				metric_def_ok := false
@@ -5441,6 +5474,7 @@ func main() {
 						host_metric_interval_map[db_metric] = interval
 						log.Infof("starting gatherer for [%s:%s] with interval %v s", db_unique, metric, interval)
 						control_channels[db_metric] = make(chan ControlMessage, 1)
+						PromAsyncCacheInitIfRequired(db_unique, metric)
 						if opts.BatchingDelayMs > 0 {
 							go MetricGathererLoop(db_unique, db_unique_orig, db_type, metric, metric_config, control_channels[db_metric], buffered_persist_ch)
 						} else {
@@ -5479,11 +5513,6 @@ func main() {
 			log.Infof("All configured %d DB hosts were reachable", len(monitored_dbs))
 			os.Exit(0)
 		}
-		if opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode { // special behaviour, no "ahead of time" metric collection
-			log.Debugf("main sleeping %ds...", opts.ServersRefreshLoopSeconds)
-			time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
-			continue
-		}
 
 		if opts.TestdataDays != 0 {
 			log.Info("Waiting for all metrics generation goroutines to stop ...")
@@ -5503,12 +5532,16 @@ func main() {
 			}
 		}
 
-		// loop over existing channels and stop workers if DB or metric removed from config
-		log.Debug("checking if any workers need to be shut down...")
-		control_channel_list := ControlChannelsMapToList(control_channels)
-		gatherers_shut_down := 0
+		if mainLoopCount == 0 {
+			goto MainLoopSleep
+		}
 
-		for _, db_metric := range control_channel_list {
+		// loop over existing channels and stop workers if DB or metric removed from config
+		// or state change makes it uninteresting
+		log.Debug("checking if any workers need to be shut down...")
+		control_channel_name_list = ControlChannelsMapToList(control_channels)
+
+		for _, db_metric := range control_channel_name_list {
 			var currentMetricConfig map[string]float64
 			var dbInfo MonitoredDatabase
 			var ok, dbRemovedFromConfig bool
@@ -5561,12 +5594,16 @@ func main() {
 			}
 		}
 
-		CloseResourcesForRemovedMonitoredDBs(monitored_dbs, prevLoopMonitoredDBs, hostsToShutDownDueToRoleChange)
-		prevLoopMonitoredDBs = monitored_dbs
-
 		if gatherers_shut_down > 0 {
 			log.Warningf("sent STOP message to %d gatherers (it might take some minutes for them to stop though)", gatherers_shut_down)
 		}
+
+		// Destroy conn pools, Prom async cache
+		CloseResourcesForRemovedMonitoredDBs(monitored_dbs, prevLoopMonitoredDBs, hostsToShutDownDueToRoleChange)
+
+	MainLoopSleep:
+		mainLoopCount++
+		prevLoopMonitoredDBs = monitored_dbs
 
 		log.Debugf("main sleeping %ds...", opts.ServersRefreshLoopSeconds)
 		time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
