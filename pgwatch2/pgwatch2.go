@@ -332,6 +332,10 @@ var lastDBSizeCheckLock sync.RWMutex
 var mainLoopInitialized int32 // 0/1
 
 var prevLoopMonitoredDBs []MonitoredDatabase // to be able to detect DBs removed from config
+var undersizedDBs = make(map[string]bool)    // DBs below the --min-db-size-mb limit, if set
+var undersizedDBsLock = sync.RWMutex{}
+var recoveryIgnoredDBs = make(map[string]bool) // DBs in recovery state and OnlyIfMaster specified in config
+var recoveryIgnoredDBsLock = sync.RWMutex{}
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
@@ -521,7 +525,7 @@ func InitSqlConnPoolForMonitoredDBIfNil(md MonitoredDatabase) error {
 	return nil
 }
 
-func CloseSqlConnPoolForMonitoredDBIfAny(dbUnique string) {
+func CloseOrLimitSqlConnPoolForMonitoredDBIfAny(dbUnique string) {
 	monitored_db_conn_cache_lock.Lock()
 	defer monitored_db_conn_cache_lock.Unlock()
 
@@ -530,12 +534,43 @@ func CloseSqlConnPoolForMonitoredDBIfAny(dbUnique string) {
 		return
 	}
 
-	log.Debugf("[%s] Closing SQL connection pool ...", dbUnique)
-	err := conn.Close()
-	if err != nil {
-		log.Error("[%s] Failed to close connection pool to %s nicely. Err: %v", dbUnique, err)
+	if (IsDBUndersized(dbUnique) || IsDBIgnoredBasedOnRecoveryState(dbUnique)) && useConnPooling {
+
+		s := conn.Stats()
+		if s.MaxOpenConnections > 1 {
+			log.Debugf("[%s] Limiting SQL connection pool to max 1 connection due to dormant state ...", dbUnique)
+			conn.SetMaxIdleConns(1)
+			conn.SetMaxOpenConns(1)
+		}
+
+	} else { // removed from config
+		log.Debugf("[%s] Closing SQL connection pool ...", dbUnique)
+		err := conn.Close()
+		if err != nil {
+			log.Error("[%s] Failed to close connection pool to %s nicely. Err: %v", dbUnique, err)
+		}
+		delete(monitored_db_conn_cache, dbUnique)
 	}
-	delete(monitored_db_conn_cache, dbUnique)
+}
+
+func RestoreSqlConnPoolLimitsForPreviouslyDormantDB(dbUnique string) {
+	if !useConnPooling {
+		return
+	}
+	monitored_db_conn_cache_lock.Lock()
+	defer monitored_db_conn_cache_lock.Unlock()
+
+	conn, ok := monitored_db_conn_cache[dbUnique]
+	if !ok || conn == nil {
+		log.Error("DB conn to re-instate pool limits not found, should not happen")
+		return
+	}
+
+	log.Debugf("[%s] Re-instating SQL connection pool max connections ...", dbUnique)
+
+	conn.SetMaxIdleConns(opts.MaxParallelConnectionsPerDb)
+	conn.SetMaxOpenConns(opts.MaxParallelConnectionsPerDb)
+
 }
 
 func InitPGVersionInfoFetchingLockIfNil(md MonitoredDatabase) {
@@ -4748,17 +4783,7 @@ func GetLoadAvgLocal() ([]map[string]interface{}, error) {
 }
 
 func shouldDbBeMonitoredBasedOnCurrentState(md MonitoredDatabase) bool {
-	vme, err := DBGetPGVersion(md.DBUniqueName, md.DBType, false)
-	if err == nil && vme.IsInRecovery && md.OnlyIfMaster {
-		return false
-	}
-	if opts.MinDbSizeMB >= 8 {
-		dbSize, err := DBGetSizeMB(md.DBUniqueName)
-		if err == nil && dbSize < opts.MinDbSizeMB {
-			return false
-		}
-	}
-	return true
+	return !IsDBDormant(md.DBUniqueName)
 }
 
 func ControlChannelsMapToList(control_channels map[string]chan ControlMessage) []string {
@@ -4773,7 +4798,7 @@ func ControlChannelsMapToList(control_channels map[string]chan ControlMessage) [
 
 func DoCloseResourcesForRemovedMonitoredDBIfAny(dbUnique string) {
 
-	CloseSqlConnPoolForMonitoredDBIfAny(dbUnique)
+	CloseOrLimitSqlConnPoolForMonitoredDBIfAny(dbUnique)
 
 	PurgeMetricsFromPromAsyncCacheIfAny(dbUnique, "")
 }
@@ -4814,6 +4839,42 @@ func PromAsyncCacheAddMetricData(dbUnique, metric string, msgArr []MetricStoreMe
 	if _, ok := promAsyncMetricCache[dbUnique]; ok {
 		promAsyncMetricCache[dbUnique][metric] = msgArr
 	}
+}
+
+func SetUndersizedDBState(dbUnique string, state bool) {
+	undersizedDBsLock.Lock()
+	undersizedDBs[dbUnique] = state
+	undersizedDBsLock.Unlock()
+}
+
+func IsDBUndersized(dbUnique string) bool {
+	undersizedDBsLock.RLock()
+	defer undersizedDBsLock.RUnlock()
+	undersized, ok := undersizedDBs[dbUnique]
+	if ok {
+		return undersized
+	}
+	return false
+}
+
+func SetRecoveryIgnoredDBState(dbUnique string, state bool) {
+	recoveryIgnoredDBsLock.Lock()
+	recoveryIgnoredDBs[dbUnique] = state
+	recoveryIgnoredDBsLock.Unlock()
+}
+
+func IsDBIgnoredBasedOnRecoveryState(dbUnique string) bool {
+	recoveryIgnoredDBsLock.RLock()
+	defer recoveryIgnoredDBsLock.RUnlock()
+	recoveryIgnored, ok := undersizedDBs[dbUnique]
+	if ok {
+		return recoveryIgnored
+	}
+	return false
+}
+
+func IsDBDormant(dbUnique string) bool {
+	return IsDBUndersized(dbUnique) || IsDBIgnoredBasedOnRecoveryState(dbUnique)
 }
 
 type Options struct {
@@ -5352,6 +5413,7 @@ func main() {
 			db_unique_orig := host.DBUniqueNameOrig
 			db_type := host.DBType
 			metric_config = host.Metrics
+			wasInstancePreviouslyDormant := IsDBDormant(db_unique)
 
 			if host.PasswordType == "aes-gcm-256" && len(opts.AesGcmKeyphrase) == 0 && len(opts.AesGcmKeyphraseFile) == 0 {
 				// Warn if any encrypted hosts found but no keyphrase given
@@ -5413,12 +5475,19 @@ func main() {
 			}
 
 			if IsPostgresDBType(host.DBType) {
+				var DBSizeMB int64
+
 				if opts.MinDbSizeMB >= 8 { // an empty DB is a bit less than 8MB
-					DBSizeMB, _ := DBGetSizeMB(db_unique) // ignore errors, i.e. only remove from montoring when we're certain it's under the threshold
-					if DBSizeMB != 0 && DBSizeMB < opts.MinDbSizeMB {
-						log.Infof("[%s] DB will be ignored due to the --min-db-size-mb filter. Current (up to %v cached) DB size = %d MB", db_unique, DB_SIZE_CACHING_INTERVAL, DBSizeMB)
-						hostsToShutDownDueToRoleChange[db_unique] = true // for the case when DB size was previosly above the threshold
-						continue
+					DBSizeMB, _ = DBGetSizeMB(db_unique) // ignore errors, i.e. only remove from montoring when we're certain it's under the threshold
+					if DBSizeMB != 0 {
+						if DBSizeMB < opts.MinDbSizeMB {
+							log.Infof("[%s] DB will be ignored due to the --min-db-size-mb filter. Current (up to %v cached) DB size = %d MB", db_unique, DB_SIZE_CACHING_INTERVAL, DBSizeMB)
+							hostsToShutDownDueToRoleChange[db_unique] = true // for the case when DB size was previosly above the threshold
+							SetUndersizedDBState(db_unique, true)
+							continue
+						} else {
+							SetUndersizedDBState(db_unique, false)
+						}
 					}
 				}
 				ver, err := DBGetPGVersion(db_unique, host.DBType, false)
@@ -5427,6 +5496,7 @@ func main() {
 					if ver.IsInRecovery && host.OnlyIfMaster {
 						log.Infof("[%s] to be removed from monitoring due to 'master only' property and status change", db_unique)
 						hostsToShutDownDueToRoleChange[db_unique] = true
+						SetRecoveryIgnoredDBState(db_unique, true)
 						continue
 					} else if lastKnownStatusInRecovery != ver.IsInRecovery {
 						if ver.IsInRecovery && len(host.MetricsStandby) > 0 {
@@ -5437,8 +5507,13 @@ func main() {
 							log.Warningf("Switching metrics collection for \"%s\" to primary config...", db_unique)
 							metric_config = host.Metrics
 							hostLastKnownStatusInRecovery[db_unique] = false
+							SetRecoveryIgnoredDBState(db_unique, false)
 						}
 					}
+				}
+
+				if wasInstancePreviouslyDormant && !IsDBDormant(db_unique) {
+					RestoreSqlConnPoolLimitsForPreviouslyDormantDB(db_unique)
 				}
 			}
 
