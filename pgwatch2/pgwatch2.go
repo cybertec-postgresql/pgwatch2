@@ -4939,7 +4939,7 @@ type Options struct {
 	ServersRefreshLoopSeconds    int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERVERS_REFRESH_LOOP_SECONDS" default:"120"`
 	InstanceLevelCacheMaxSeconds int64  `long:"instance-level-cache-max-seconds" description:"Max allowed staleness for instance level metric data shared between DBs of an instance. Affects 'continuous' host types only. Set to 0 to disable" env:"PW2_INSTANCE_LEVEL_CACHE_MAX_SECONDS" default:"30"`
 	MinDbSizeMB                  int64  `long:"min-db-size-mb" description:"Smaller size DBs will be ignored and not monitored until they reach the threshold." env:"PW2_MIN_DB_SIZE_MB" default:"0"`
-	MaxParallelConnectionsPerDb  int    `long:"max-parallel-connections-per-db" description:"Max parallel metric fetches per DB. Note the multiplication effect on multi-DB instances" default:"2"`
+	MaxParallelConnectionsPerDb  int    `long:"max-parallel-connections-per-db" description:"Max parallel metric fetches per DB. Note the multiplication effect on multi-DB instances" env:"PW2_MAX_PARALLEL_CONNECTIONS_PER_DB" default:"2"`
 	Version                      bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
 	Ping                         bool   `long:"ping" description:"Try to connect to all configured DB-s, report errors and then exit" env:"PW2_PING"`
 }
