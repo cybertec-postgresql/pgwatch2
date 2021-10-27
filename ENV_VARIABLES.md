@@ -66,6 +66,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_DIRECT_OS_STATS** Extract OS related psutil statistics not via PL/Python wrappers but directly on host, i.e. assumes "push" setup. Default: off.
 - **PW2_MIN_DB_SIZE_MB** Smaller size DBs will be ignored and not monitored until they reach the threshold. Default: 0 (no size-based limiting).
 - **PW2_MAX_PARALLEL_CONNECTIONS_PER_DB** Max parallel metric fetches per DB. Note the multiplication effect on multi-DB instances. Default: 2
+- **PW2_EMERGENCY_PAUSE_TRIGGERFILE** When the file exists no metrics will be temporarily fetched / scraped. Default: /tmp/pgwatch2-emergency-pause
 
 
 ## Web UI

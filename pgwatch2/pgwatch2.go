@@ -4877,6 +4877,18 @@ func IsDBDormant(dbUnique string) bool {
 	return IsDBUndersized(dbUnique) || IsDBIgnoredBasedOnRecoveryState(dbUnique)
 }
 
+func DoesEmergencyTriggerfileExist() bool {
+	// Main idea of the feature is to be able to quickly free monitored DBs / network of any extra "monitoring effect" load.
+	// In highly automated K8s / IaC environments such a temporary change might involve pull requests, peer reviews, CI/CD etc
+	// which can all take too long vs "exec -it pgwatch2-pod -- touch /tmp/pgwatch2-emergency-pause".
+	// NB! After creating the file it can still take up to --servers-refresh-loop-seconds (2min def.) for change to take effect!
+	if opts.EmergencyPauseTriggerfile == "" {
+		return false
+	}
+	_, err := os.Stat(opts.EmergencyPauseTriggerfile)
+	return err == nil
+}
+
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
@@ -4942,6 +4954,7 @@ type Options struct {
 	MaxParallelConnectionsPerDb  int    `long:"max-parallel-connections-per-db" description:"Max parallel metric fetches per DB. Note the multiplication effect on multi-DB instances" env:"PW2_MAX_PARALLEL_CONNECTIONS_PER_DB" default:"2"`
 	Version                      bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
 	Ping                         bool   `long:"ping" description:"Try to connect to all configured DB-s, report errors and then exit" env:"PW2_PING"`
+	EmergencyPauseTriggerfile    string `long:"emergency-pause-triggerfile" description:"When the file exists no metrics will be temporarily fetched / scraped" env:"PW2_EMERGENCY_PAUSE_TRIGGERFILE" default:"/tmp/pgwatch2-emergency-pause"`
 }
 
 var opts Options
@@ -5381,6 +5394,11 @@ func main() {
 					continue
 				}
 			}
+		}
+
+		if DoesEmergencyTriggerfileExist() {
+			log.Warningf("Emergency pause triggerfile detected at %s, ignoring currently configured DBs", opts.EmergencyPauseTriggerfile)
+			monitored_dbs = make([]MonitoredDatabase, 0)
 		}
 
 		UpdateMonitoredDBCache(monitored_dbs)
