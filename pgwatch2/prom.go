@@ -50,6 +50,11 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	e.totalScrapes.Add(1)
 	ch <- e.totalScrapes
 
+	isInitialized := atomic.LoadInt32(&mainLoopInitialized)
+	if isInitialized == 0 {
+		log.Warning("Main loop not yet initialized, not scraping DBs")
+		return
+	}
 	monitoredDatabases := getMonitoredDatabasesSnapshot()
 	if len(monitoredDatabases) == 0 {
 		log.Warning("No dbs configured for monitoring. Check config")
@@ -82,7 +87,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 				if promAsyncMode {
 					promAsyncMetricCacheLock.RLock()
-					metricStoreMessages, ok = promAsyncMetricCache[md.DBUniqueName+metric]
+					metricStoreMessages, ok = promAsyncMetricCache[md.DBUniqueName][metric]
 					promAsyncMetricCacheLock.RUnlock()
 					if !ok {
 						log.Debugf("[%s:%s] could not find data from the prom cache. maybe gathering interval not yet reached or zero rows returned, ignoring", md.DBUniqueName, metric)
@@ -127,12 +132,11 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 func setInstanceUpDownState(ch chan<- prometheus.Metric, md MonitoredDatabase) {
 	log.Debugf("checking availability of configured DB [%s:%s]...", md.DBUniqueName, PROM_INSTANCE_UP_STATE_METRIC)
-	vme, err := DBGetPGVersion(md.DBUniqueName, md.DBType, true)
+	vme, err := DBGetPGVersion(md.DBUniqueName, md.DBType, !promAsyncMode) // NB! in async mode 2min cache can mask smaller downtimes!
 	data := make(map[string]interface{})
 	if err != nil {
 		data[PROM_INSTANCE_UP_STATE_METRIC] = 0
 		log.Errorf("[%s:%s] could not determine instance version, reporting as 'down': %v", md.DBUniqueName, PROM_INSTANCE_UP_STATE_METRIC, err)
-		//return
 	} else {
 		data[PROM_INSTANCE_UP_STATE_METRIC] = 1
 	}
