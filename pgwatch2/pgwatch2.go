@@ -129,12 +129,13 @@ type MetricAttrs struct {
 }
 
 type MetricVersionProperties struct {
-	Sql         string
-	SqlSU       string
-	MasterOnly  bool
-	StandbyOnly bool
-	ColumnAttrs MetricColumnAttrs // Prometheus Metric Type (Counter is default) and ignore list
-	MetricAttrs MetricAttrs
+	Sql                  string
+	SqlSU                string
+	MasterOnly           bool
+	StandbyOnly          bool
+	ColumnAttrs          MetricColumnAttrs // Prometheus Metric Type (Counter is default) and ignore list
+	MetricAttrs          MetricAttrs
+	CallsHelperFunctions bool
 }
 
 type ControlMessage struct {
@@ -304,6 +305,7 @@ var PGSchemaType string
 var failedInitialConnectHosts = make(map[string]bool) // hosts that couldn't be connected to even once
 var addRealDbname bool
 var addSystemIdentifier bool
+var noHelperFunctions bool
 var forceRecreatePGMetricPartitions = false // to signal override PG metrics storage cache
 var lastMonitoredDBsUpdate time.Time
 var instanceMetricCache = make(map[string]([]map[string]interface{})) // [dbUnique+metric]lastly_fetched_data
@@ -336,6 +338,7 @@ var undersizedDBs = make(map[string]bool)    // DBs below the --min-db-size-mb l
 var undersizedDBsLock = sync.RWMutex{}
 var recoveryIgnoredDBs = make(map[string]bool) // DBs in recovery state and OnlyIfMaster specified in config
 var recoveryIgnoredDBsLock = sync.RWMutex{}
+var regexSQLHelperFunctionCalled = regexp.MustCompile(`(?m)select.*from\s+get_\w+\(\)`) // SQL helpers expected to follow get_smth() naming
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
@@ -2935,6 +2938,13 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL if it's defined
 
 	sql = mvp.Sql
+
+	if noHelperFunctions && mvp.CallsHelperFunctions && mvp.SqlSU != "" {
+		log.Debugf("[%s:%s] Using SU SQL instead of normal one due to --no-helper-functions input", msg.DBUniqueName, msg.MetricName)
+		sql = mvp.SqlSU
+		retryWithSuperuserSQL = false
+	}
+
 	if (vme.IsSuperuser || (retryWithSuperuserSQL && firstErr != nil)) && mvp.SqlSU != "" {
 		sql = mvp.SqlSU
 		retryWithSuperuserSQL = false
@@ -3684,12 +3694,13 @@ func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decim
 			ma = ParseMetricAttrsFromString(row["ma_metric_attrs"].(string))
 		}
 		metric_def_map_new[row["m_name"].(string)][d] = MetricVersionProperties{
-			Sql:         row["m_sql"].(string),
-			SqlSU:       row["m_sql_su"].(string),
-			MasterOnly:  row["m_master_only"].(bool),
-			StandbyOnly: row["m_standby_only"].(bool),
-			ColumnAttrs: ca,
-			MetricAttrs: ma,
+			Sql:                  row["m_sql"].(string),
+			SqlSU:                row["m_sql_su"].(string),
+			MasterOnly:           row["m_master_only"].(bool),
+			StandbyOnly:          row["m_standby_only"].(bool),
+			ColumnAttrs:          ca,
+			MetricAttrs:          ma,
+			CallsHelperFunctions: DoesMetricDefinitionCallHelperFunctions(row["m_sql"].(string)),
 		}
 	}
 	return metric_def_map_new, err
@@ -4051,7 +4062,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 					log.Warningf("Invalid metric structure - version folder names should consist of only numerics/dots, found: %s", pgVer.Name())
 					continue
 				}
-				d, err := decimal.NewFromString(pgVer.Name())
+				dirName, err := decimal.NewFromString(pgVer.Name())
 				if err != nil {
 					log.Errorf("Could not parse \"%s\" to Decimal: %s", pgVer.Name(), err)
 					continue
@@ -4085,11 +4096,11 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 						if !ok {
 							metrics_map[f.Name()] = make(map[decimal.Decimal]MetricVersionProperties)
 						}
-						mvp, ok = mvpVer[d]
+						mvp, ok = mvpVer[dirName]
 						if !ok {
 							mvp = MetricVersionProperties{Sql: string(metric_sql[:]), ColumnAttrs: metricColumnAttrs, MetricAttrs: metricAttrs}
 						}
-
+						mvp.CallsHelperFunctions = DoesMetricDefinitionCallHelperFunctions(mvp.Sql)
 						if strings.Contains(md.Name(), "_master") {
 							mvp.MasterOnly = true
 						}
@@ -4099,7 +4110,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 						if strings.Contains(md.Name(), "_su") {
 							mvp.SqlSU = string(metric_sql[:])
 						}
-						metrics_map[f.Name()][d] = mvp
+						metrics_map[f.Name()][dirName] = mvp
 					}
 				}
 			}
@@ -4895,6 +4906,13 @@ func DoesEmergencyTriggerfileExist() bool {
 	return err == nil
 }
 
+func DoesMetricDefinitionCallHelperFunctions(sqlDefinition string) bool {
+	if !noHelperFunctions { // save on regex matching --no-helper-functions param not set, information will not be used then anyways
+		return false
+	}
+	return regexSQLHelperFunctionCalled.MatchString(strings.ToLower(sqlDefinition))
+}
+
 type Options struct {
 	// Slice of bool will append 'true' each time the option
 	// is encountered (can be set multiple times, like -vvv)
@@ -4961,6 +4979,7 @@ type Options struct {
 	Version                      bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
 	Ping                         bool   `long:"ping" description:"Try to connect to all configured DB-s, report errors and then exit" env:"PW2_PING"`
 	EmergencyPauseTriggerfile    string `long:"emergency-pause-triggerfile" description:"When the file exists no metrics will be temporarily fetched / scraped" env:"PW2_EMERGENCY_PAUSE_TRIGGERFILE" default:"/tmp/pgwatch2-emergency-pause"`
+	NoHelperFunctions            string `long:"no-helper-functions" description:"Ignore metric definitions using helper functions (in form get_smth()) and don't also roll out any helpers automatically" env:"PW2_NO_HELPER_FUNCTIONS" default:"false"`
 }
 
 var opts Options
@@ -5099,6 +5118,9 @@ func main() {
 		if opts.SystemIdentifierField == "" {
 			log.Fatal("--system-identifier-field cannot be empty when --add-system-identifier enabled")
 		}
+	}
+	if opts.NoHelperFunctions != "" {
+		noHelperFunctions = StringToBoolOrFail(opts.NoHelperFunctions, "--no-helper-functions")
 	}
 
 	// running in config file based mode?
@@ -5489,8 +5511,12 @@ func main() {
 				}
 
 				if !opts.Ping && (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && IsPostgresDBType(db_type) && !ver.IsInRecovery {
-					log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
-					_ = TryCreateMetricsFetchingHelpers(db_unique)
+					if noHelperFunctions {
+						log.Infof("[%s] Skipping rollout out helper functions due to the --no-helper-functions flag ...", db_unique)
+					} else {
+						log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
+						_ = TryCreateMetricsFetchingHelpers(db_unique)
+					}
 				}
 
 				if !(opts.Ping || (opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode)) {
