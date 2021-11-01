@@ -543,13 +543,15 @@ func CloseOrLimitSqlConnPoolForMonitoredDBIfAny(dbUnique string) {
 		return
 	}
 
-	if (IsDBUndersized(dbUnique) || IsDBIgnoredBasedOnRecoveryState(dbUnique)) && useConnPooling {
+	if IsDBUndersized(dbUnique) || IsDBIgnoredBasedOnRecoveryState(dbUnique) {
 
-		s := conn.Stats()
-		if s.MaxOpenConnections > 1 {
-			log.Debugf("[%s] Limiting SQL connection pool to max 1 connection due to dormant state ...", dbUnique)
-			conn.SetMaxIdleConns(1)
-			conn.SetMaxOpenConns(1)
+		if useConnPooling {
+			s := conn.Stats()
+			if s.MaxOpenConnections > 1 {
+				log.Debugf("[%s] Limiting SQL connection pool to max 1 connection due to dormant state ...", dbUnique)
+				conn.SetMaxIdleConns(1)
+				conn.SetMaxOpenConns(1)
+			}
 		}
 
 	} else { // removed from config
