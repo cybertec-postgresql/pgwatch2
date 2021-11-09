@@ -191,6 +191,7 @@
     table_io_stats: 300
     table_stats: 300
     wal: 60
+    wait_events: 60
 
 - name: superuser_no_python
   description: like exhaustive, but no PL/Python helpers
