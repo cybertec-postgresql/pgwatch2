@@ -6,12 +6,14 @@ select
   wait_event_type as tag_wait_event_type,
   wait_event as tag_wait_event,
   count(*),
-  case when wait_event_type is not null then avg(abs(1e6* extract(epoch from now() - query_start)))::int8 else null end as avg_query_duration_us,
+  avg(abs(1e6* extract(epoch from now() - query_start)))::int8 as avg_query_duration_us,
+  max(abs(1e6* extract(epoch from now() - query_start)))::int8 as max_query_duration_us,
   (select count(*) from q_sa where state = 'active') as total_active
 from
   q_sa
 where
   state = 'active'
   and wait_event_type is not null
+  and wait_event_type <> 'Timeout'
 group by
   1, 2, 3;
