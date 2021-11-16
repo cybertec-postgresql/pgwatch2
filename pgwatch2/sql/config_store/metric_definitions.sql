@@ -3699,38 +3699,40 @@ $sql$,
 );
 
 
-/* stat_ssl */       -- join with backends?
+/* stat_ssl */
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_sql_su)
 values (
 'stat_ssl',
 9.5,
 $sql$
-SELECT
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  ssl,
-  count(*)
+  count(*) as total,
+  count(*) FILTER (WHERE ssl) as "on",
+  count(*) FILTER (WHERE NOT ssl) as "off"
 FROM
   pg_stat_ssl AS s,
   get_stat_activity() AS a
 WHERE
   a.pid = s.pid
   AND a.datname = current_database()
-GROUP BY
-  1, 2
+  AND a.pid <> pg_backend_pid()
+  AND NOT (a.client_addr = '127.0.0.1' OR client_port = -1);
 $sql$,
 $sql$
-SELECT
-(extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-ssl,
-count(*)
-    FROM
+select /* pgwatch2_generated */
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  count(*) as total,
+  count(*) FILTER (WHERE ssl) as "on",
+  count(*) FILTER (WHERE NOT ssl) as "off"
+FROM
   pg_stat_ssl AS s,
-pg_stat_activity AS a
+  pg_stat_activity AS a
 WHERE
   a.pid = s.pid
   AND a.datname = current_database()
-GROUP BY
-  1, 2;
+  AND a.pid <> pg_backend_pid()
+  AND NOT (a.client_addr = '127.0.0.1' OR client_port = -1);
 $sql$
 );
 
