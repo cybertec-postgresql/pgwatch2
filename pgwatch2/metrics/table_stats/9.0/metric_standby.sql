@@ -1,4 +1,4 @@
-select
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   quote_ident(schemaname) as tag_schema,
   quote_ident(ut.relname) as tag_table_name,

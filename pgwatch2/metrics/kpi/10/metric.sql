@@ -7,7 +7,7 @@ WITH q_stat_tables AS (
 q_stat_activity AS (
   SELECT * FROM get_stat_activity() WHERE pid != pg_backend_pid() AND datname = current_database()
 )
-SELECT
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   case
       when pg_is_in_recovery() = false then

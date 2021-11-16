@@ -1,7 +1,7 @@
 with q_sa as (
     select * from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid()
 )
-select
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   wait_event_type as tag_wait_event_type,
   wait_event as tag_wait_event,

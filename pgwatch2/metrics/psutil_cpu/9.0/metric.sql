@@ -1,4 +1,4 @@
-SELECT
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   round(cpu_utilization::numeric, 2)::float as cpu_utilization,
   round(load_1m_norm::numeric, 2)::float as load_1m_norm,

@@ -4,7 +4,7 @@ WITH sa_snapshot AS (
   and not query like 'autovacuum:%'
   and pid != pg_backend_pid()
 )
-SELECT
+select /* pgwatch2_generated */
     (extract(epoch from now()) * 1e9)::int8 AS epoch_ns,
     waiting.locktype           AS tag_waiting_locktype,
     waiting_stm.usename::text  AS tag_waiting_user,

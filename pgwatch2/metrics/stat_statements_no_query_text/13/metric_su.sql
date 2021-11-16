@@ -1,5 +1,5 @@
 with q_data as (
-  select
+  select /* pgwatch2_generated */
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     '-' as tag_query,
     queryid::text as tag_queryid,

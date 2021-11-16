@@ -1,5 +1,5 @@
 /* "temporarily" disabled triggers might be forgotten about... */
-select
+select /* pgwatch2_generated */
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     'disabled_triggers'::text as tag_reco_topic,
     quote_ident(nspname)||'.'||quote_ident(relname) as tag_object_name,

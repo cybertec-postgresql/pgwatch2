@@ -1,4 +1,4 @@
-SELECT
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   datname as tag_database,
   count(*) * (current_setting('block_size')::int8) as size_b

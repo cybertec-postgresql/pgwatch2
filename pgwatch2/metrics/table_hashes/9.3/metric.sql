@@ -1,4 +1,4 @@
-select
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   quote_ident(table_schema)||'.'||quote_ident(table_name) as tag_table,
   md5((array_agg((c.*)::text order by ordinal_position))::text)

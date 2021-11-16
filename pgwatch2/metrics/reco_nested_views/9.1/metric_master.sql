@@ -37,7 +37,7 @@ UNION ALL
      AND d.deptype = 'n'
      AND v.oid <> views.view  -- avoid loop
 )
-SELECT
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'overly_nested_views'::text AS tag_reco_topic,
   full_name::text as tag_object_name,

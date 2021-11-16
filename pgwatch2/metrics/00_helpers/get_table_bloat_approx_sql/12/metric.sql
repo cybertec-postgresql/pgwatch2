@@ -12,7 +12,7 @@ LANGUAGE sql
 SECURITY DEFINER
 AS $$
 
-SELECT
+select /* pgwatch2_generated */
   quote_ident(schemaname)||'.'||quote_ident(tblname) as full_table_name,
   bloat_ratio as approx_bloat_percent,
   bloat_size as approx_bloat_bytes,

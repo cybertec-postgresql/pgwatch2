@@ -45,7 +45,7 @@ WITH q_data AS (
         GROUP BY
             queryid
 )
-SELECT
+select /* pgwatch2_generated */
     (EXTRACT(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
     b.tag_queryid,
     b.users,
@@ -77,7 +77,7 @@ FROM (
             total_time DESC
         LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -88,7 +88,7 @@ FROM (
         calls DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -101,7 +101,7 @@ FROM (
         shared_blks_read DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -114,7 +114,7 @@ FROM (
         shared_blks_written DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -127,7 +127,7 @@ FROM (
         temp_blks_read DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT

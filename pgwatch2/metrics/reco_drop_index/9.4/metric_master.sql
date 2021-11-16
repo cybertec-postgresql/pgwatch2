@@ -1,5 +1,5 @@
 /* assumes the pg_qualstats extension */
-select
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'drop_index'::text as tag_reco_topic,
   quote_ident(schemaname)||'.'||quote_ident(indexrelname) as tag_object_name,

@@ -1,4 +1,4 @@
-SELECT
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   application_name as tag_application_name,
   concat(coalesce(client_addr::text, client_hostname), '_', client_port::text) as tag_client_info,
