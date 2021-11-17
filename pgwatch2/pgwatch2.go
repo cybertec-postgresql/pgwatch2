@@ -2085,7 +2085,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 			} else {
 				matches := rBouncerAndPgpoolVerMatch.FindStringSubmatch(data[0]["version"].(string))
 				if len(matches) != 1 {
-					log.Errorf("Unexpected PgBouncer version input: %s", data[0]["version"].(string))
+					log.Errorf("[%s] Unexpected PgBouncer version input: %s", dbUnique, data[0]["version"].(string))
 					return ver, fmt.Errorf("Unexpected PgBouncer version input: %s", data[0]["version"].(string))
 				}
 				verNew.VersionStr = matches[0]
@@ -2102,7 +2102,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 			} else {
 				matches := rBouncerAndPgpoolVerMatch.FindStringSubmatch(string(data[0]["pool_version"].([]byte)))
 				if len(matches) != 1 {
-					log.Errorf("Unexpected PgPool version input: %s", data[0]["pool_version"].([]byte))
+					log.Errorf("[%s] Unexpected PgPool version input: %s", dbUnique, data[0]["pool_version"].([]byte))
 					return ver, fmt.Errorf("Unexpected PgPool version input: %s", data[0]["pool_version"].([]byte))
 				}
 				verNew.VersionStr = matches[0]
@@ -2114,7 +2114,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				if noCache {
 					return ver, err
 				} else {
-					log.Info("DBGetPGVersion failed, using old cached value. err:", err)
+					log.Infof("[%s] DBGetPGVersion failed, using old cached value. err: %v", dbUnique, err)
 					return ver, nil
 				}
 			}
