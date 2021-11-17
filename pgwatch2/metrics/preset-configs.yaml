@@ -92,7 +92,7 @@
     wal: 60
     wal_size: 120
     kpi: 120
-#    stat_ssl: 120
+    stat_ssl: 120
     psutil_cpu: 120
     psutil_mem: 120
     psutil_disk: 120
