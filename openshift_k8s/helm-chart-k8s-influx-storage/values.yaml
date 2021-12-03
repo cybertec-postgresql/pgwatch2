@@ -1,0 +1,158 @@
+pgwatch2:
+  service:
+    type: ClusterIP
+    servicePort: 8081 # the health-check / status port
+  ingress:
+    enabled: false
+  testDBEnabled: false
+  datastore: influx
+  retention: 60
+  persistentVolumes:
+    config:
+      enabled: false
+      annotations: {}
+      accessModes:
+        - ReadWriteOnce
+      existingClaim: ""
+      mountPath: /pgwatch2/persistent-config
+      size: 1Gi
+      storageClass: "regional-gce-ssd-delete"
+    influx:
+      enabled: true
+      annotations: {}
+      accessModes:
+        - ReadWriteOnce
+      existingClaim: ""
+      mountPath: /var/lib/influxdb
+      size: 5Gi
+      storageClass: "regional-gce-ssd-delete"
+    grafana:
+      enabled: false
+      annotations: {}
+      accessModes:
+        - ReadWriteOnce
+      existingClaim: ""
+      mountPath: /var/lib/grafana
+      size: 1Gi
+      storageClass: "regional-gce-ssd-delete"
+
+web:
+  service:
+    type: ClusterIP
+    servicePort: 80
+  noAnonymous: false
+  user: admin
+  password:  # password will be auto generated if emtpy
+  ingress:
+    enabled: false
+    annotations: {}
+    host: pgwatch2-web.local
+    tls: []
+    #  - secretName: chart-web-tls
+    #    hosts:
+    #      - pgwatch2-web.local
+
+grafana:
+  service:
+    type: ClusterIP
+    servicePort: 3000
+  noAnonymous: false
+  user: admin
+  password: decathlon # password will be auto generated if emtpy
+  ingress:
+    enabled: false
+    annotations: {}
+    host: myhost
+    tls:
+      - secretName: chart-example-tls
+        hosts:
+          - myhost
+
+# NB! The port only actually listens when datastore=prometheus
+exporter:
+  service:
+    type: ClusterIP
+    servicePort: 9187
+  ingress:
+    enabled: false
+    annotations: {}
+    host: pgwatch2.ig1.dev-01.pmp-sbox-etbd.decathlon.io
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - pw2.ig1.dev-01.pmp-sbox-etbd.decathlon.io
+
+replicaCount: 1
+
+image:
+  repository: cybertec/pgwatch2
+  pullPolicy: Always
+  version: 1.8.4
+
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+monitoredDbs:
+   pg1-db11:
+     host: "pg1-pmp-sbox-etbd.aivencloud.com"
+     port: "12656"
+     username: "avnadmin"
+     password: "------"
+     dbname: "db11"
+   pg1-db12:
+     host: "pg1-pmp-sbox-etbd.aivencloud.com"
+     port: "12656"
+     username: "avnadmin"
+     password: "------"
+     dbname: "db12"
+   pg1-defaultdb:
+     host: "pg1-pmp-sbox-etbd.aivencloud.com"
+     port: "12656"
+     username: "avnadmin"
+     password: "------"
+     dbname: "defaultdb"
+   rdb1-db11:
+     host: "rdb1-pmp-sbox-etbd.aivencloud.com"
+     port: "12656"
+     username: "avnadmin"
+     password: "------"
+     dbname: "db11"
+   rdb1-db12:
+     host: "rdb1-pmp-sbox-etbd.aivencloud.com"
+     port: "12656"
+     username: "avnadmin"
+     password: "------"
+     dbname: "db12"
+monitoredPools:
+   pg1-pool:
+     host: "pg1-pmp-sbox-etbd.aivencloud.com"
+     port: "12657"
+     username: "avnadmin"
+     password: "------"
+     dbname: "pgbouncer"
+
+podSecurityContext: {}
+
+securityContext: {}
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

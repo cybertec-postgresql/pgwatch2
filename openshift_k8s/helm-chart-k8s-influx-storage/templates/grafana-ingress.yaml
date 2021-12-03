@@ -1,0 +1,37 @@
+{{- if .Values.grafana.ingress.enabled -}}
+{{- $fullName := include "pgwatch2.fullname" . -}}
+{{- $svcPort := .Values.grafana.service.servicePort -}}
+{{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1beta1
+{{- else -}}
+apiVersion: extensions/v1beta1
+{{- end }}
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-grafana
+  labels:
+{{ include "pgwatch2.labels" . | indent 4 }}
+  {{- with .Values.grafana.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+{{- if .Values.grafana.ingress.tls }}
+  tls:
+  {{- range .Values.grafana.ingress.tls }}
+    - hosts:
+      {{- range .hosts }}
+        - {{ . | quote }}
+      {{- end }}
+      secretName: {{ .secretName }}
+  {{- end }}
+{{- end }}
+  rules:
+    - host: {{ .Values.grafana.ingress.host | quote }}
+      http:
+        paths:
+          - path: "/"
+            backend:
+              serviceName: {{ $fullName }}-grafana
+              servicePort: {{ $svcPort }}
+{{- end }}
