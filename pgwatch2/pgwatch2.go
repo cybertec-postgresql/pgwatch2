@@ -345,36 +345,42 @@ func IsPostgresDBType(dbType string) bool {
 }
 
 func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
-	var err error
-	var db *sqlx.DB
+	var connStr string
 
 	//log.Debug("Connecting to: ", host, port, dbname, user, password)
 	if len(libPqConnString) > 0 {
-		if strings.Contains(strings.ToLower(libPqConnString), "sslmode") {
-			db, err = sqlx.Open("postgres", libPqConnString)
-		} else {
-			if strings.Contains(libPqConnString, "postgresql://") { // JDBC style
-				if strings.Contains(libPqConnString, "?") { // a bit simplistic, regex would be better
-					//log.Debug("Adding sslmode", libPqConnString+"&sslmode=disable")
-					db, err = sqlx.Open("postgres", libPqConnString+"&sslmode=disable")
+		connStr = libPqConnString
+		if !strings.Contains(strings.ToLower(connStr), "sslmode") {
+			if strings.Contains(connStr, "postgresql://") { // JDBC style
+				if strings.Contains(connStr, "?") { // has some extra params already
+					connStr += "&sslmode=disable" // defaulting to "disable" as Go driver doesn't support "prefer"
 				} else {
-					//log.Debug("Adding sslmode", libPqConnString+"?sslmode=disable")
-					db, err = sqlx.Open("postgres", libPqConnString+"?sslmode=disable")
+					connStr += "?sslmode=disable"
 				}
 			} else { // LibPQ style
-				db, err = sqlx.Open("postgres", libPqConnString+" sslmode=disable")
+				connStr += " sslmode=disable"
+			}
+		}
+		if !strings.Contains(strings.ToLower(connStr), "connect_timeout") {
+			if strings.Contains(connStr, "postgresql://") { // JDBC style
+				if strings.Contains(connStr, "?") { // has some extra params already
+					connStr += "&connect_timeout=5" // 5 seconds
+				} else {
+					connStr += "?connect_timeout=5"
+				}
+			} else { // LibPQ style
+				connStr += " connect_timeout=5"
 			}
 		}
 	} else {
-		conn_str := fmt.Sprintf("host=%s port=%s dbname='%s' sslmode=%s user=%s application_name=%s sslrootcert='%s' sslcert='%s' sslkey='%s'",
+		connStr = fmt.Sprintf("host=%s port=%s dbname='%s' sslmode=%s user=%s application_name=%s sslrootcert='%s' sslcert='%s' sslkey='%s' connect_timeout=5",
 			host, port, dbname, sslmode, user, APPLICATION_NAME, sslrootcert, sslcert, sslkey)
 		if password != "" { // having empty string as password effectively disables .pgpass so include only if password given
-			conn_str += fmt.Sprintf(" password='%s'", password)
+			connStr += fmt.Sprintf(" password='%s'", password)
 		}
-		db, err = sqlx.Open("postgres", conn_str)
 	}
 
-	return db, err
+	return sqlx.Open("postgres", connStr)
 }
 
 func StringToBoolOrFail(boolAsString, inputParamName string) bool {
