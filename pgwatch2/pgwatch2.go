@@ -634,6 +634,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 	var duration time.Duration
 	var exists bool
 	var sqlStmtTimeout string
+	var sqlLockTimeout = "SET lock_timeout TO '5s';"
 
 	if strings.TrimSpace(sql) == "" {
 		return nil, errors.New("empty SQL"), duration
@@ -668,7 +669,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 	}
 
 	t1 := time.Now()
-	data, err := DBExecRead(conn, dbUnique, sqlStmtTimeout+sql, args...)
+	data, err := DBExecRead(conn, dbUnique, sqlLockTimeout+sqlStmtTimeout+sql, args...)
 	t2 := time.Now()
 	if err != nil {
 		atomic.AddUint64(&totalMetricFetchFailuresCounter, 1)
