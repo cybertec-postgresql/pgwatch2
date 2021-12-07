@@ -251,7 +251,7 @@ const METRIC_PSUTIL_DISK_IO_TOTAL = "psutil_disk_io_total"
 const METRIC_PSUTIL_MEM = "psutil_mem"
 const DEFAULT_METRICS_DEFINITION_PATH_PKG = "/etc/pgwatch2/metrics" // prebuilt packages / Docker default location
 const DEFAULT_METRICS_DEFINITION_PATH_DOCKER = "/pgwatch2/metrics"  // prebuilt packages / Docker default location
-const DB_SIZE_CACHING_INTERVAL = 10 * time.Minute
+const DB_SIZE_CACHING_INTERVAL = 30 * time.Minute
 const DB_METRIC_JOIN_STR = "¤¤¤" // just some unlikely string for a DB name to avoid using maps of maps for DB+metric data
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true, DBTYPE_PGPOOL: true, DBTYPE_PATRONI_NAMESPACE_DISCOVERY: true}
@@ -2018,7 +2018,7 @@ func DBGetSizeMB(dbUnique string) (int64, error) {
 	if !ok || lastDBSizeCheckTime.Add(DB_SIZE_CACHING_INTERVAL).Before(time.Now()) {
 
 		log.Debugf("[%s] determining DB size ...", dbUnique)
-		data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 60, sql_db_size) // can take some time on ancient FS, use 60s stmt timeout
+		data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 300, sql_db_size) // can take some time on ancient FS, use 300s stmt timeout
 		if err != nil {
 			log.Errorf("[%s] failed to determine DB size...cannot apply --min-db-size-mb flag. err: %v ...", dbUnique, err)
 			return 0, err
@@ -2970,7 +2970,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 	} else if msg.DBType == DBTYPE_PGPOOL {
 		data, _, duration = FetchMetricsPgpool(msg, vme, mvp)
 	} else {
-		data, err, duration = DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, msg.StmtTimeoutOverride, sql)
+		data, err, duration = DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, mvp.MetricAttrs.StatementTimeoutSeconds, sql)
 
 		if err != nil {
 			// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
