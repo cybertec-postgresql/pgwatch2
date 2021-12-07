@@ -5,7 +5,7 @@ select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   current_setting('server_version') as server_version,
   current_setting('server_version_num')::int8 as server_version_num,
-  (regexp_matches(regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'), E'\\d+\\.?\\d+?'))[1]::float8 as major_version,
+  (regexp_matches(regexp_replace(current_setting('server_version'), '(beta|devel).*', '', 'g'), E'\\d+'))[1]::float8 as major_version,
   current_setting('block_size')::int as block_size,
   current_setting('max_connections')::int as max_connections,
   current_setting('hot_standby') as hot_standby,
