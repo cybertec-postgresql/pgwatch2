@@ -2,6 +2,7 @@ package main
 
 import (
 	"container/list"
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -627,6 +628,50 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 	return ret, err
 }
 
+func DBExecInReadOnlyTX(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
+	ret := make([]map[string]interface{}, 0)
+	var rows *sqlx.Rows
+	var err error
+
+	if conn == nil {
+		return nil, errors.New("nil connection")
+	}
+
+	ctx := context.Background()
+	txOpts := go_sql.TxOptions{ReadOnly: true}
+
+	tx, err := conn.BeginTxx(ctx, &txOpts)
+	if err != nil {
+		return ret, err
+	}
+	defer tx.Commit()
+
+	rows, err = tx.Queryx(sql, args...)
+
+	if err != nil {
+		// connection problems or bad queries etc are quite common so caller should decide if to output something
+		log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		row := make(map[string]interface{})
+		err = rows.MapScan(row)
+		if err != nil {
+			log.Error("failed to MapScan a result row", host_ident, err)
+			return nil, err
+		}
+		ret = append(ret, row)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Error("failed to fully process resultset for", host_ident, "sql:", sql, "err:", err)
+	}
+	return ret, err
+}
+
 func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride int64, sql string, args ...interface{}) ([](map[string]interface{}), error, time.Duration) {
 	var conn *sqlx.DB
 	var md MonitoredDatabase
@@ -634,7 +679,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 	var duration time.Duration
 	var exists bool
 	var sqlStmtTimeout string
-	var sqlLockTimeout = "SET lock_timeout TO '5s';"
+	var sqlLockTimeout = "SET LOCAL lock_timeout TO '100ms';"
 
 	if strings.TrimSpace(sql) == "" {
 		return nil, errors.New("empty SQL"), duration
@@ -660,7 +705,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 			stmtTimeout = stmtTimeoutOverride
 		}
 		if stmtTimeout > 0 { // 0 = don't change, use DB level settings
-			sqlStmtTimeout = fmt.Sprintf("SET statement_timeout TO '%ds';", stmtTimeout) // bundle with SQL to avoid transaction round-trip time
+			sqlStmtTimeout = fmt.Sprintf("SET LOCAL statement_timeout TO '%ds';", stmtTimeout)
 		}
 		if err != nil {
 			atomic.AddUint64(&totalMetricFetchFailuresCounter, 1)
@@ -668,8 +713,10 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 		}
 	}
 
+	sqlToExec := sqlLockTimeout + sqlStmtTimeout + sql // bundle timeouts with actual SQL to reduce round-trip times
+	//log.Debugf("Executing SQL: %s", sqlToExec)
 	t1 := time.Now()
-	data, err := DBExecRead(conn, dbUnique, sqlLockTimeout+sqlStmtTimeout+sql, args...)
+	data, err := DBExecInReadOnlyTX(conn, dbUnique, sqlToExec, args...)
 	t2 := time.Now()
 	if err != nil {
 		atomic.AddUint64(&totalMetricFetchFailuresCounter, 1)
