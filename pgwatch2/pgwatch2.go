@@ -188,6 +188,8 @@ type DBVersionMapEntry struct {
 	SystemIdentifier string
 	IsSuperuser      bool // if true and no helpers are installed, use superuser SQL version of metric if available
 	Extensions       map[string]decimal.Decimal
+	ExecEnv          string
+	ApproxDBSizeB    int64
 }
 
 type ExistingPartitionInfo struct {
@@ -254,6 +256,10 @@ const DEFAULT_METRICS_DEFINITION_PATH_PKG = "/etc/pgwatch2/metrics" // prebuilt 
 const DEFAULT_METRICS_DEFINITION_PATH_DOCKER = "/pgwatch2/metrics"  // prebuilt packages / Docker default location
 const DB_SIZE_CACHING_INTERVAL = 30 * time.Minute
 const DB_METRIC_JOIN_STR = "¤¤¤" // just some unlikely string for a DB name to avoid using maps of maps for DB+metric data
+const EXEC_ENV_UNKNOWN = "UNKNOWN"
+const EXEC_ENV_AZURE_SINGLE = "AZURE_SINGLE"
+const EXEC_ENV_AZURE_FLEXIBLE = "AZURE_FLEXIBLE"
+const EXEC_ENV_GOOGLE = "GOOGLE"
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true, DBTYPE_PGPOOL: true, DBTYPE_PATRONI_NAMESPACE_DISCOVERY: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT, DBTYPE_PATRONI_NAMESPACE_DISCOVERY} // used for informational purposes
@@ -2065,14 +2071,21 @@ func DBGetSizeMB(dbUnique string) (int64, error) {
 	lastDBSizeCheckLock.RUnlock()
 
 	if !ok || lastDBSizeCheckTime.Add(DB_SIZE_CACHING_INTERVAL).Before(time.Now()) {
+		ver, err := DBGetPGVersion(dbUnique, DBTYPE_PG, false)
+		if err != nil || (ver.ExecEnv != EXEC_ENV_AZURE_SINGLE) || (ver.ExecEnv == EXEC_ENV_AZURE_SINGLE && ver.ApproxDBSizeB < 1e12) {
+			log.Debugf("[%s] determining DB size ...", dbUnique)
 
-		log.Debugf("[%s] determining DB size ...", dbUnique)
-		data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 300, sql_db_size) // can take some time on ancient FS, use 300s stmt timeout
-		if err != nil {
-			log.Errorf("[%s] failed to determine DB size...cannot apply --min-db-size-mb flag. err: %v ...", dbUnique, err)
-			return 0, err
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 300, sql_db_size) // can take some time on ancient FS, use 300s stmt timeout
+			if err != nil {
+				log.Errorf("[%s] failed to determine DB size...cannot apply --min-db-size-mb flag. err: %v ...", dbUnique, err)
+				return 0, err
+			}
+			sizeMB = data[0]["pg_database_size"].(int64) / 1048576
+		} else {
+			log.Debugf("[%s] Using approx DB size for the --min-db-size-mb filter ...", dbUnique)
+			sizeMB = ver.ApproxDBSizeB / 1048576
 		}
-		sizeMB = data[0]["pg_database_size"].(int64) / 1048576
+
 		log.Debugf("[%s] DB size = %d MB, caching for %v ...", dbUnique, sizeMB, DB_SIZE_CACHING_INTERVAL)
 
 		lastDBSizeCheckLock.Lock()
@@ -2081,9 +2094,44 @@ func DBGetSizeMB(dbUnique string) (int64, error) {
 		lastDBSizeCheckLock.Unlock()
 
 		return sizeMB, nil
+
 	}
 	log.Debugf("[%s] using cached DBsize %d MB for the --min-db-size-mb filter check", dbUnique, lastDBSize)
 	return lastDBSize, nil
+}
+
+func TryDiscoverExecutionEnv(dbUnique string) string {
+	sqlPGExecEnv := `select /* pgwatch2_generated */
+	case
+	  when exists (select * from pg_settings where name = 'pg_qs.host_database' and setting = 'azure_sys') and version() ~* 'compiled by Visual C' then 'AZURE_SINGLE'
+	  when exists (select * from pg_settings where name = 'pg_qs.host_database' and setting = 'azure_sys') and version() ~* 'compiled by gcc' then 'AZURE_FLEXIBLE'
+	  when exists (select * from pg_settings where name = 'cloudsql.supported_extensions') then 'GOOGLE'
+	else
+	  'UNKNOWN'
+	end as exec_env;
+  `
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sqlPGExecEnv)
+	if err != nil {
+		return ""
+	}
+	return data[0]["exec_env"].(string)
+}
+
+func GetDBTotalApproxSize(dbUnique string) (int64, error) {
+	sqlApproxDBSize := `
+	select /* pgwatch2_generated */
+		current_setting('block_size')::int8 * sum(relpages) as db_size_approx
+	from
+		pg_class c
+		join pg_namespace n on n.oid = c.relnamespace
+	where	/* NB! works only for v9.1+*/
+		c.relpersistence != 't';
+	`
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sqlApproxDBSize)
+	if err != nil {
+		return 0, err
+	}
+	return data[0]["db_size_approx"].(int64), nil
 }
 
 func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapEntry, error) {
@@ -2178,6 +2226,27 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sql_sysid)
 				if err == nil && len(data) > 0 {
 					verNew.SystemIdentifier = data[0]["system_identifier"].(string)
+				}
+			}
+
+			if ver.ExecEnv != "" {
+				verNew.ExecEnv = ver.ExecEnv // carry over as not likely to change ever
+			} else {
+				log.Debugf("[%s] determining the execution env...", dbUnique)
+				execEnv := TryDiscoverExecutionEnv(dbUnique)
+				if execEnv != "" {
+					log.Debugf("[%s] running on execution env: %s", dbUnique, execEnv)
+					verNew.ExecEnv = execEnv
+				}
+			}
+
+			// to work around poor Azure Single Server FS functions performance for some metrics + the --min-db-size-mb filter
+			if verNew.ExecEnv == EXEC_ENV_AZURE_SINGLE {
+				approxSize, err := GetDBTotalApproxSize(dbUnique)
+				if err == nil {
+					verNew.ApproxDBSizeB = approxSize
+				} else {
+					verNew.ApproxDBSizeB = ver.ApproxDBSizeB
 				}
 			}
 
