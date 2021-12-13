@@ -93,11 +93,22 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 					metricStoreMessages, ok = promAsyncMetricCache[md.DBUniqueName][metric]
 					promAsyncMetricCacheLock.RUnlock()
 					if !ok {
-						log.Debugf("[%s:%s] could not find data from the prom cache. maybe gathering interval not yet reached or zero rows returned, ignoring", md.DBUniqueName, metric)
-						fetchedFromCacheCounts[metric] = 0
-					} else {
+						// could be re-mapped metric name
+						metricNameRemapLock.RLock()
+						mappedName, isMapped := metricNameRemaps[metric]
+						metricNameRemapLock.RUnlock()
+						if isMapped {
+							promAsyncMetricCacheLock.RLock()
+							metricStoreMessages, ok = promAsyncMetricCache[md.DBUniqueName][mappedName]
+							promAsyncMetricCacheLock.RUnlock()
+						}
+					}
+					if ok {
 						log.Debugf("[%s:%s] fetched %d rows from the prom cache ...", md.DBUniqueName, metric, len(metricStoreMessages[0].Data))
 						fetchedFromCacheCounts[metric] = len(metricStoreMessages[0].Data)
+					} else {
+						log.Debugf("[%s:%s] could not find data from the prom cache. maybe gathering interval not yet reached or zero rows returned, ignoring", md.DBUniqueName, metric)
+						fetchedFromCacheCounts[metric] = 0
 					}
 				} else {
 					log.Debugf("scraping [%s:%s]...", md.DBUniqueName, metric)

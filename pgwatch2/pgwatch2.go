@@ -340,6 +340,8 @@ var undersizedDBsLock = sync.RWMutex{}
 var recoveryIgnoredDBs = make(map[string]bool) // DBs in recovery state and OnlyIfMaster specified in config
 var recoveryIgnoredDBsLock = sync.RWMutex{}
 var regexSQLHelperFunctionCalled = regexp.MustCompile(`(?m)select.*from\s+get_\w+\(\)`) // SQL helpers expected to follow get_smth() naming
+var metricNameRemaps = make(map[string]string)
+var metricNameRemapLock = sync.RWMutex{}
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
@@ -3701,6 +3703,7 @@ func UpdateMetricDefinitionMap(newMetrics map[string]map[decimal.Decimal]MetricV
 
 func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metric_def_map_new := make(map[string]map[decimal.Decimal]MetricVersionProperties)
+	metricNameRemapsNew := make(map[string]string)
 	sql := `select /* pgwatch2_generated */ m_name, m_pg_version_from::text, m_sql, m_master_only, m_standby_only,
 			  coalesce(m_column_attrs::text, '') as m_column_attrs, coalesce(m_column_attrs::text, '') as m_column_attrs,
 			  coalesce(ma_metric_attrs::text, '') as ma_metric_attrs, m_sql_su
@@ -3742,6 +3745,9 @@ func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decim
 		ma := MetricAttrs{}
 		if row["ma_metric_attrs"].(string) != "" {
 			ma = ParseMetricAttrsFromString(row["ma_metric_attrs"].(string))
+			if ma.MetricStorageName != "" {
+				metricNameRemapsNew[row["m_name"].(string)] = ma.MetricStorageName
+			}
 		}
 		metric_def_map_new[row["m_name"].(string)][d] = MetricVersionProperties{
 			Sql:                  row["m_sql"].(string),
@@ -3753,6 +3759,11 @@ func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decim
 			CallsHelperFunctions: DoesMetricDefinitionCallHelperFunctions(row["m_sql"].(string)),
 		}
 	}
+
+	metricNameRemapLock.Lock()
+	metricNameRemaps = metricNameRemapsNew
+	metricNameRemapLock.Unlock()
+
 	return metric_def_map_new, err
 }
 
@@ -4062,6 +4073,7 @@ func ParseMetricAttrsFromString(jsonAttrs string) MetricAttrs {
 // expected is following structure: metric_name/pg_ver/metric(_master|standby).sql
 func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metrics_map := make(map[string]map[decimal.Decimal]MetricVersionProperties)
+	metricNameRemapsNew := make(map[string]string)
 	rIsDigitOrPunctuation := regexp.MustCompile(`^[\d\.]+$`)
 	metricNamePattern := `^[a-z0-9_\.]+$`
 	rMetricNameFilter := regexp.MustCompile(metricNamePattern)
@@ -4096,6 +4108,9 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 			if _, err = os.Stat(path.Join(folder, f.Name(), "metric_attrs.yaml")); err == nil {
 				metricAttrs = ParseMetricAttrsFromYAML(path.Join(folder, f.Name(), "metric_attrs.yaml"))
 				//log.Debugf("Discovered following metric attributes for metric %s: %v", f.Name(), metricAttrs)
+				if metricAttrs.MetricStorageName != "" {
+					metricNameRemapsNew[f.Name()] = metricAttrs.MetricStorageName
+				}
 			}
 
 			var metricColumnAttrs MetricColumnAttrs
@@ -4166,6 +4181,10 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 			}
 		}
 	}
+
+	metricNameRemapLock.Lock()
+	metricNameRemaps = metricNameRemapsNew
+	metricNameRemapLock.Unlock()
 
 	return metrics_map, nil
 }
