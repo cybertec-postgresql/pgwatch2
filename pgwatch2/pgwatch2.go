@@ -2125,7 +2125,6 @@ func GetDBTotalApproxSize(dbUnique string) (int64, error) {
 		current_setting('block_size')::int8 * sum(relpages) as db_size_approx
 	from
 		pg_class c
-		join pg_namespace n on n.oid = c.relnamespace
 	where	/* NB! works only for v9.1+*/
 		c.relpersistence != 't';
 	`
