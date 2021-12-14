@@ -3035,7 +3035,7 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 			subsMetricName := msg.MetricName + "_approx"
 			mvp_approx, err := GetMetricVersionProperties(subsMetricName, vme, nil)
 			if err == nil && mvp_approx.MetricAttrs.MetricStorageName == msg.MetricName {
-				log.Warningf("[%s:%s] Transparently swapping metric to %s due to hard-coded rules...", msg.DBUniqueName, msg.MetricName, subsMetricName)
+				log.Infof("[%s:%s] Transparently swapping metric to %s due to hard-coded rules...", msg.DBUniqueName, msg.MetricName, subsMetricName)
 				msg.MetricName = subsMetricName
 			}
 		}
