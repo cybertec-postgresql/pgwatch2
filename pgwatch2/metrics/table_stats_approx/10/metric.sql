@@ -148,5 +148,4 @@ select * from (
            join q_root_part qr on qr.oid = qp.root
       group by
            1, 2
-) x
-order by table_size_b desc nulls last limit 300;
+) x;

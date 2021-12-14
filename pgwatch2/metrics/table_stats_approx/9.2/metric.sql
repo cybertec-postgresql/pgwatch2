@@ -8,7 +8,7 @@ with q_tbls_by_total_associated_relpages_approx as (
       coalesce((select coalesce(ct.relpages, 0) + coalesce(cti.relpages, 0) from pg_class ct left join pg_index ti on ti.indrelid = ct.oid left join pg_class cti on cti.oid = ti.indexrelid where ct.oid = c.reltoastrelid), 0) as toast_relpages,
       case when 'autovacuum_enabled=off' = ANY(c.reloptions) then 1 else 0 end as no_autovacuum,
       age(c.relfrozenxid) as tx_freeze_age,
-      c.relpersistence      
+      c.relpersistence
     from
       pg_class c
       join pg_namespace n on n.oid = c.relnamespace
@@ -46,12 +46,11 @@ select /* pgwatch2_generated */
   analyze_count,
   autoanalyze_count,
   tx_freeze_age,
-  relpersistence        
+  relpersistence
 from
   pg_stat_user_tables ut
   join q_tbls_by_total_associated_relpages_approx t on t.oid = ut.relid
   join q_block_size on true
 where
   -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
-  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock')
-order by relpages desc;
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock');
