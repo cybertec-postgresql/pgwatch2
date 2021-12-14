@@ -247,6 +247,8 @@ const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
 const SPECIAL_METRIC_PGBOUNCER_STATS = "pgbouncer_stats"
 const SPECIAL_METRIC_PGPOOL_STATS = "pgpool_stats"
 const SPECIAL_METRIC_INSTANCE_UP = "instance_up"
+const SPECIAL_METRIC_DB_SIZE = "db_size"         // can be transparently switched to db_size_approx on instances with very slow FS access (Azure Single Server)
+const SPECIAL_METRIC_TABLE_STATS = "table_stats" // can be transparently switched to table_stats_approx on instances with very slow FS (Azure Single Server)
 const METRIC_CPU_LOAD = "cpu_load"
 const METRIC_PSUTIL_CPU = "psutil_cpu"
 const METRIC_PSUTIL_DISK = "psutil_disk"
@@ -3027,6 +3029,16 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 	if err != nil {
 		log.Error("failed to fetch pg version for ", msg.DBUniqueName, msg.MetricName, err)
 		return nil, err
+	}
+	if msg.MetricName == SPECIAL_METRIC_DB_SIZE || msg.MetricName == SPECIAL_METRIC_TABLE_STATS {
+		if vme.ExecEnv == EXEC_ENV_AZURE_SINGLE && vme.ApproxDBSizeB > 1e12 { // 1TB
+			subsMetricName := msg.MetricName + "_approx"
+			mvp_approx, err := GetMetricVersionProperties(subsMetricName, vme, nil)
+			if err == nil && mvp_approx.MetricAttrs.MetricStorageName == msg.MetricName {
+				log.Warningf("[%s:%s] Transparently swapping metric to %s due to hard-coded rules...", msg.DBUniqueName, msg.MetricName, subsMetricName)
+				msg.MetricName = subsMetricName
+			}
+		}
 	}
 	db_pg_version = vme.Version
 
