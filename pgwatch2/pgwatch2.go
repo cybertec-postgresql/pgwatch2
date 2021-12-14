@@ -685,6 +685,7 @@ func DBExecInReadOnlyTX(conn *sqlx.DB, host_ident, sql string, args ...interface
 func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride int64, sql string, args ...interface{}) ([](map[string]interface{}), error, time.Duration) {
 	var conn *sqlx.DB
 	var md MonitoredDatabase
+	var data [](map[string]interface{})
 	var err error
 	var duration time.Duration
 	var exists bool
@@ -715,7 +716,12 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 			stmtTimeout = stmtTimeoutOverride
 		}
 		if stmtTimeout > 0 { // 0 = don't change, use DB level settings
-			sqlStmtTimeout = fmt.Sprintf("SET LOCAL statement_timeout TO '%ds';", stmtTimeout)
+			if useConnPooling {
+				sqlStmtTimeout = fmt.Sprintf("SET LOCAL statement_timeout TO '%ds';", stmtTimeout)
+			} else {
+				sqlStmtTimeout = fmt.Sprintf("SET statement_timeout TO '%ds';", stmtTimeout)
+			}
+
 		}
 		if err != nil {
 			atomic.AddUint64(&totalMetricFetchFailuresCounter, 1)
@@ -723,10 +729,18 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 		}
 	}
 
+	if !useConnPooling {
+		sqlLockTimeout = "SET lock_timeout TO '100ms';"
+	}
+
 	sqlToExec := sqlLockTimeout + sqlStmtTimeout + sql // bundle timeouts with actual SQL to reduce round-trip times
 	//log.Debugf("Executing SQL: %s", sqlToExec)
 	t1 := time.Now()
-	data, err := DBExecInReadOnlyTX(conn, dbUnique, sqlToExec, args...)
+	if useConnPooling {
+		data, err = DBExecInReadOnlyTX(conn, dbUnique, sqlToExec, args...)
+	} else {
+		data, err = DBExecRead(conn, dbUnique, sqlToExec, args...)
+	}
 	t2 := time.Now()
 	if err != nil {
 		atomic.AddUint64(&totalMetricFetchFailuresCounter, 1)
