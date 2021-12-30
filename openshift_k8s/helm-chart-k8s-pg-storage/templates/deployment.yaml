@@ -99,6 +99,9 @@ spec:
               mountPath: {{ .Values.pgwatch2.persistentVolumes.database.mountPath }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+    {{- with .Values.extraContainers }}
+      {{ tpl . $ | nindent 8 }}
+    {{- end }}
       volumes:
         - name: config-volume
         {{- if .Values.pgwatch2.persistentVolumes.config.enabled }}
