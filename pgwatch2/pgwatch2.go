@@ -3462,63 +3462,68 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 					}
 					last_error_notification_time = time.Now()
 				}
-			} else if metricStoreMessages != nil && len(metricStoreMessages[0].Data) > 0 {
-
-				// pick up "server restarted" events here to avoid doing extra selects from CheckForPGObjectChangesAndStore code
-				if metricName == "db_stats" {
-					postmaster_uptime_s, ok := (metricStoreMessages[0].Data)[0]["postmaster_uptime_s"]
-					if ok {
-						if last_uptime_s != -1 {
-							if postmaster_uptime_s.(int64) < last_uptime_s { // restart (or possibly also failover when host is routed) happened
-								message := "Detected server restart (or failover) of \"" + dbUniqueName + "\""
-								log.Warning(message)
-								detected_changes_summary := make([](map[string]interface{}), 0)
-								entry := map[string]interface{}{"details": message, "epoch_ns": (metricStoreMessages[0].Data)[0]["epoch_ns"]}
-								detected_changes_summary = append(detected_changes_summary, entry)
-								metricStoreMessages = append(metricStoreMessages,
-									MetricStoreMessage{DBUniqueName: dbUniqueName, DBType: dbType,
-										MetricName: "object_changes", Data: detected_changes_summary, CustomTags: metricStoreMessages[0].CustomTags})
-							}
-						}
-						last_uptime_s = postmaster_uptime_s.(int64)
-					}
+			} else if metricStoreMessages != nil {
+				if opts.Datastore == DATASTORE_PROMETHEUS && promAsyncMode && len(metricStoreMessages[0].Data) == 0 {
+					PurgeMetricsFromPromAsyncCacheIfAny(dbUniqueName, metricName)
 				}
+				if len(metricStoreMessages[0].Data) > 0 {
 
-				if opts.TestdataDays != 0 {
-					orig_msms := deepCopyMetricStoreMessages(metricStoreMessages)
-					log.Warningf("Generating %d days of data for [%s:%s]", opts.TestdataDays, dbUniqueName, metricName)
-					test_metrics_stored := 0
-					simulated_time := t1
-					end_time := t1.Add(time.Hour * time.Duration(opts.TestdataDays*24))
-
-					if opts.TestdataDays < 0 {
-						simulated_time, end_time = end_time, simulated_time
-					}
-
-					for simulated_time.Before(end_time) {
-						log.Debugf("Metric [%s], simulating time: %v", metricName, simulated_time)
-						for host_nr := 1; host_nr <= opts.TestdataMultiplier; host_nr++ {
-							fake_dbname := fmt.Sprintf("%s-%d", dbUniqueName, host_nr)
-							msgs_copy_tmp := deepCopyMetricStoreMessages(orig_msms)
-
-							for i := 0; i < len(msgs_copy_tmp[0].Data); i++ {
-								(msgs_copy_tmp[0].Data)[i][EPOCH_COLUMN_NAME] = (simulated_time.UnixNano() + int64(1000*i))
+					// pick up "server restarted" events here to avoid doing extra selects from CheckForPGObjectChangesAndStore code
+					if metricName == "db_stats" {
+						postmaster_uptime_s, ok := (metricStoreMessages[0].Data)[0]["postmaster_uptime_s"]
+						if ok {
+							if last_uptime_s != -1 {
+								if postmaster_uptime_s.(int64) < last_uptime_s { // restart (or possibly also failover when host is routed) happened
+									message := "Detected server restart (or failover) of \"" + dbUniqueName + "\""
+									log.Warning(message)
+									detected_changes_summary := make([](map[string]interface{}), 0)
+									entry := map[string]interface{}{"details": message, "epoch_ns": (metricStoreMessages[0].Data)[0]["epoch_ns"]}
+									detected_changes_summary = append(detected_changes_summary, entry)
+									metricStoreMessages = append(metricStoreMessages,
+										MetricStoreMessage{DBUniqueName: dbUniqueName, DBType: dbType,
+											MetricName: "object_changes", Data: detected_changes_summary, CustomTags: metricStoreMessages[0].CustomTags})
+								}
 							}
-							msgs_copy_tmp[0].DBUniqueName = fake_dbname
-							//log.Debugf("fake data for [%s:%s]: %v", metricName, fake_dbname, msgs_copy_tmp[0].Data)
-							_, _ = StoreMetrics(msgs_copy_tmp, store_ch)
-							test_metrics_stored += len(msgs_copy_tmp[0].Data)
+							last_uptime_s = postmaster_uptime_s.(int64)
 						}
-						time.Sleep(time.Duration(opts.TestdataMultiplier * 10000000)) // 10ms * multiplier (in nanosec).
-						// would generate more metrics than persister can write and eat up RAM
-						simulated_time = simulated_time.Add(time.Second * time.Duration(interval))
 					}
-					log.Warningf("exiting MetricGathererLoop for [%s], %d total data points generated for %d hosts",
-						metricName, test_metrics_stored, opts.TestdataMultiplier)
-					testDataGenerationModeWG.Done()
-					return
-				} else {
-					_, _ = StoreMetrics(metricStoreMessages, store_ch)
+
+					if opts.TestdataDays != 0 {
+						orig_msms := deepCopyMetricStoreMessages(metricStoreMessages)
+						log.Warningf("Generating %d days of data for [%s:%s]", opts.TestdataDays, dbUniqueName, metricName)
+						test_metrics_stored := 0
+						simulated_time := t1
+						end_time := t1.Add(time.Hour * time.Duration(opts.TestdataDays*24))
+
+						if opts.TestdataDays < 0 {
+							simulated_time, end_time = end_time, simulated_time
+						}
+
+						for simulated_time.Before(end_time) {
+							log.Debugf("Metric [%s], simulating time: %v", metricName, simulated_time)
+							for host_nr := 1; host_nr <= opts.TestdataMultiplier; host_nr++ {
+								fake_dbname := fmt.Sprintf("%s-%d", dbUniqueName, host_nr)
+								msgs_copy_tmp := deepCopyMetricStoreMessages(orig_msms)
+
+								for i := 0; i < len(msgs_copy_tmp[0].Data); i++ {
+									(msgs_copy_tmp[0].Data)[i][EPOCH_COLUMN_NAME] = (simulated_time.UnixNano() + int64(1000*i))
+								}
+								msgs_copy_tmp[0].DBUniqueName = fake_dbname
+								//log.Debugf("fake data for [%s:%s]: %v", metricName, fake_dbname, msgs_copy_tmp[0].Data)
+								_, _ = StoreMetrics(msgs_copy_tmp, store_ch)
+								test_metrics_stored += len(msgs_copy_tmp[0].Data)
+							}
+							time.Sleep(time.Duration(opts.TestdataMultiplier * 10000000)) // 10ms * multiplier (in nanosec).
+							// would generate more metrics than persister can write and eat up RAM
+							simulated_time = simulated_time.Add(time.Second * time.Duration(interval))
+						}
+						log.Warningf("exiting MetricGathererLoop for [%s], %d total data points generated for %d hosts",
+							metricName, test_metrics_stored, opts.TestdataMultiplier)
+						testDataGenerationModeWG.Done()
+						return
+					} else {
+						_, _ = StoreMetrics(metricStoreMessages, store_ch)
+					}
 				}
 			}
 
