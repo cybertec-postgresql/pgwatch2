@@ -4020,6 +4020,45 @@ func DoesFunctionExists(dbUnique, functionName string) bool {
 	return false
 }
 
+// Called once on daemon startup if some commonly wanted extension (most notably pg_stat_statements) is missing.
+// NB! With newer Postgres version can even succeed if the user is not a real superuser due to some cloud-specific
+// whitelisting or "trusted extensions" (a feature from v13). Ignores errors.
+func TryCreateMissingExtensions(dbUnique string, extensionNames []string, existingExtensions map[string]decimal.Decimal) []string {
+	sqlAvailable := `select name::text from pg_available_extensions`
+	extsCreated := make([]string, 0)
+
+	// For security reasons don't allow to execute random strings but check that it's an existing extension
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sqlAvailable)
+	if err != nil {
+		log.Infof("[%s] Failed to get a list of available extensions: %v", dbUnique, err)
+		return extsCreated
+	}
+
+	availableExts := make(map[string]bool)
+	for _, row := range data {
+		availableExts[row["name"].(string)] = true
+	}
+
+	for _, extToCreate := range extensionNames {
+		if _, ok := existingExtensions[extToCreate]; ok {
+			continue
+		}
+		_, ok := availableExts[extToCreate]
+		if !ok {
+			log.Errorf("[%s] Requested extension %s not available on instance, cannot try to create...", dbUnique, extToCreate)
+		} else {
+			sqlCreateExt := `create extension ` + extToCreate
+			_, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sqlCreateExt)
+			if err != nil {
+				log.Errorf("[%s] Failed to create extension %s (based on --try-create-listed-exts-if-missing input): %v", dbUnique, extToCreate, err)
+			}
+			extsCreated = append(extsCreated, extToCreate)
+		}
+	}
+
+	return extsCreated
+}
+
 // Called once on daemon startup to try to create "metric fething helper" functions automatically
 func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 	db_pg_version, err := DBGetPGVersion(dbUnique, DBTYPE_PG, false)
@@ -5148,6 +5187,7 @@ type Options struct {
 	Ping                         bool   `long:"ping" description:"Try to connect to all configured DB-s, report errors and then exit" env:"PW2_PING"`
 	EmergencyPauseTriggerfile    string `long:"emergency-pause-triggerfile" description:"When the file exists no metrics will be temporarily fetched / scraped" env:"PW2_EMERGENCY_PAUSE_TRIGGERFILE" default:"/tmp/pgwatch2-emergency-pause"`
 	NoHelperFunctions            string `long:"no-helper-functions" description:"Ignore metric definitions using helper functions (in form get_smth()) and don't also roll out any helpers automatically" env:"PW2_NO_HELPER_FUNCTIONS" default:"false"`
+	TryCreateListedExtsIfMissing string `long:"try-create-listed-exts-if-missing" description:"Try creating the listed extensions (comma sep.) on first connect for all monitored DBs when missing. Main usage - pg_stat_statements" env:"PW2_TRY_CREATE_LISTED_EXTS_IF_MISSING" default:""`
 }
 
 var opts Options
@@ -5732,6 +5772,12 @@ func main() {
 
 				if wasInstancePreviouslyDormant && !IsDBDormant(db_unique) {
 					RestoreSqlConnPoolLimitsForPreviouslyDormantDB(db_unique)
+				}
+
+				if mainLoopCount == 0 && opts.TryCreateListedExtsIfMissing != "" && !ver.IsInRecovery {
+					extsToCreate := strings.Split(opts.TryCreateListedExtsIfMissing, ",")
+					extsCreated := TryCreateMissingExtensions(db_unique, extsToCreate, ver.Extensions)
+					log.Infof("[%s] %d/%d extensions created based on --try-create-listed-exts-if-missing input %v", db_unique, len(extsCreated), len(extsToCreate), extsCreated)
 				}
 			}
 
