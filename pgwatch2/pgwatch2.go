@@ -638,7 +638,7 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 	return ret, err
 }
 
-func DBExecInReadOnlyTX(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
+func DBExecInExplicitTX(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
 	ret := make([]map[string]interface{}, 0)
 	var rows *sqlx.Rows
 	var err error
@@ -648,7 +648,7 @@ func DBExecInReadOnlyTX(conn *sqlx.DB, host_ident, sql string, args ...interface
 	}
 
 	ctx := context.Background()
-	txOpts := go_sql.TxOptions{ReadOnly: true}
+	txOpts := go_sql.TxOptions{}
 
 	tx, err := conn.BeginTxx(ctx, &txOpts)
 	if err != nil {
@@ -737,7 +737,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 	//log.Debugf("Executing SQL: %s", sqlToExec)
 	t1 := time.Now()
 	if useConnPooling {
-		data, err = DBExecInReadOnlyTX(conn, dbUnique, sqlToExec, args...)
+		data, err = DBExecInExplicitTX(conn, dbUnique, sqlToExec, args...)
 	} else {
 		data, err = DBExecRead(conn, dbUnique, sqlToExec, args...)
 	}
