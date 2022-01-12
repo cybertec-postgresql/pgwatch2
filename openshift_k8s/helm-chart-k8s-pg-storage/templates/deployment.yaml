@@ -99,20 +99,23 @@ spec:
               mountPath: {{ .Values.pgwatch2.persistentVolumes.database.mountPath }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+    {{- with .Values.extraContainers }}
+      {{ tpl . $ | nindent 8 }}
+    {{- end }}
       volumes:
         - name: config-volume
         {{- if .Values.pgwatch2.persistentVolumes.config.enabled }}
           persistentVolumeClaim:
             claimName: {{ if .Values.pgwatch2.persistentVolumes.config.existingClaim }}{{ .Values.pgwatch2.persistentVolumes.config.existingClaim }}{{- else }}{{ include "pgwatch2.fullname" . }}-config{{- end }}
         {{- else }}
-            emptyDir:
+          emptyDir: {}
         {{ end }}
         - name: database-volume
         {{- if .Values.pgwatch2.persistentVolumes.database.enabled }}
           persistentVolumeClaim:
             claimName: {{ if .Values.pgwatch2.persistentVolumes.database.existingClaim }}{{ .Values.pgwatch2.persistentVolumes.database.existingClaim }}{{- else }}{{ include "pgwatch2.fullname" . }}-database{{- end }}
         {{ else }}
-          emptyDir:
+          emptyDir: {}
         {{ end }}
         {{- with .Values.nodeSelector }}
       nodeSelector:
