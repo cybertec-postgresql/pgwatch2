@@ -1,5 +1,5 @@
 with q_data as (
-    select
+    select /* pgwatch2_generated */
         (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
         (regexp_replace(md5(query), E'\\D', '', 'g'))::varchar(10)::int8 as tag_queryid,
         '-' as tag_query,

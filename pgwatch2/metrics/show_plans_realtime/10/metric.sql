@@ -1,5 +1,5 @@
 /* assumes pg_show_plans extension */
-select
+select /* pgwatch2_generated */
   max((extract(epoch from now()) * 1e9)::int8) as epoch_ns,
   max(extract(epoch from now() - query_start))::int as max_s,
   avg(extract(epoch from now() - query_start))::int as avg_s,

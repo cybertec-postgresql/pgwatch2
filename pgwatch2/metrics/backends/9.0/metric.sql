@@ -1,7 +1,7 @@
 with sa_snapshot as (
   select * from get_stat_activity()
 )
-select
+select /* pgwatch2_generated */
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     (select count(*) from sa_snapshot) as total,
     (select count(*) from pg_stat_activity where procpid != pg_backend_pid()) as instance_total,

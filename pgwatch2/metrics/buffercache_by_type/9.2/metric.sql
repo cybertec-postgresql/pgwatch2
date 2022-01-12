@@ -1,4 +1,4 @@
-SELECT
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   CASE
     WHEN relkind = 'r' THEN 'Table'   -- TODO all relkinds covered?

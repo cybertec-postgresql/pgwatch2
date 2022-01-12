@@ -7,7 +7,7 @@ WITH q_stat_tables AS (
 q_stat_activity AS (
   SELECT * FROM pg_stat_activity WHERE procpid != pg_backend_pid() AND datname = current_database()
 )
-SELECT
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   numbackends - 1 as numbackends,
   (select count(*) from q_stat_activity where not current_query in ('<IDLE>', '<IDLE> in transaction')) AS active_backends,

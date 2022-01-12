@@ -1,4 +1,4 @@
-select
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   p.oid::text as tag_oid,
   quote_ident(nspname)||'.'||quote_ident(proname) as tag_sproc,

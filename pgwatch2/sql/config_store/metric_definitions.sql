@@ -783,7 +783,40 @@ values (
 $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  pg_database_size(current_database()) as size_b;
+  pg_database_size(current_database()) as size_b,
+  (select sum(pg_total_relation_size(c.oid))::int8
+   from pg_class c join pg_namespace n on n.oid = c.relnamespace
+   where nspname = 'pg_catalog' and relkind = 'r'
+  ) as catalog_size_b;
+$sql$,
+'{"prometheus_all_gauge_columns": true}'
+);
+
+/* db_size_approx */
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'db_size_approx',
+9.1,
+$sql$
+select /* pgwatch2_generated */
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  current_setting('block_size')::int8 * (
+    select sum(relpages) from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where c.relpersistence != 't'
+  ) as size_b,
+  current_setting('block_size')::int8 * (
+    select sum(c.relpages + coalesce(ct.relpages, 0) + coalesce(cti.relpages, 0))
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    left join pg_class ct on ct.oid = c.reltoastrelid
+    left join pg_index ti on ti.indrelid = ct.oid
+    left join pg_class cti on cti.oid = ti.indexrelid
+    where nspname = 'pg_catalog'
+    and (c.relkind = 'r'
+      or c.relkind = 'i' and not c.relname ~ '^pg_toast')
+  ) as catalog_size_b;
 $sql$,
 '{"prometheus_all_gauge_columns": true}'
 );
@@ -2083,6 +2116,484 @@ order by table_size_b desc nulls last limit 300;
 $sql$,
 '{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}'
 );
+
+/* table_stats_approx */
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
+values (
+'table_stats_approx',
+9.0,
+$sql$
+with q_tbls_by_total_associated_relpages_approx as (
+  select * from (
+    select
+      c.oid,
+      c.relname,
+      c.relpages,
+      coalesce((select sum(relpages) from pg_class ci join pg_index i on i.indexrelid = ci.oid where i.indrelid = c.oid), 0) as index_relpages,
+      coalesce((select coalesce(ct.relpages, 0) + coalesce(cti.relpages, 0) from pg_class ct left join pg_index ti on ti.indrelid = ct.oid left join pg_class cti on cti.oid = ti.indexrelid where ct.oid = c.reltoastrelid), 0) as toast_relpages,
+      case when 'autovacuum_enabled=off' = ANY(c.reloptions) then 1 else 0 end as no_autovacuum,
+      age(c.relfrozenxid) as tx_freeze_age
+    from
+      pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+    where
+      not n.nspname like any (array[E'pg\\_%', 'information_schema'])
+      and c.relkind = 'r'
+      and not relistemp -- and temp tables
+  ) x
+  order by relpages + index_relpages + toast_relpages desc limit 300
+), q_block_size as (
+  select current_setting('block_size')::int8 as bs
+)
+select /* pgwatch2_generated */
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  quote_ident(schemaname)||'.'||quote_ident(ut.relname) as tag_table_full_name,
+  bs * relpages as table_size_b,
+  abs(greatest(ceil(log((bs*relpages+1) / 10^6)), 0))::text as tag_table_size_cardinality_mb, -- i.e. 0=<1MB, 1=<10MB, 2=<100MB,..
+  bs * (relpages + index_relpages + toast_relpages) as total_relation_size_b,
+  bs * toast_relpages as toast_size_b,
+  (extract(epoch from now() - greatest(last_vacuum, last_autovacuum)))::int8 as seconds_since_last_vacuum,
+  (extract(epoch from now() - greatest(last_analyze, last_autoanalyze)))::int8 as seconds_since_last_analyze,
+  no_autovacuum,
+  seq_scan,
+  seq_tup_read,
+  coalesce(idx_scan, 0) as idx_scan,
+  coalesce(idx_tup_fetch, 0) as idx_tup_fetch,
+  n_tup_ins,
+  n_tup_upd,
+  n_tup_del,
+  n_tup_hot_upd,
+  n_live_tup,
+  n_dead_tup,
+  tx_freeze_age
+from
+  pg_stat_user_tables ut
+  join q_tbls_by_total_associated_relpages_approx t on t.oid = ut.relid
+  join q_block_size on true
+where
+  -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock');
+$sql$,
+'{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}',
+true
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_standby_only)
+values (
+'table_stats_approx',
+9.0,
+$sql$
+with q_tbls_by_total_associated_relpages_approx as (
+  select * from (
+    select
+      c.oid,
+      c.relname,
+      c.relpages,
+      coalesce((select sum(relpages) from pg_class ci join pg_index i on i.indexrelid = ci.oid where i.indrelid = c.oid), 0) as index_relpages,
+      coalesce((select coalesce(ct.relpages, 0) + coalesce(cti.relpages, 0) from pg_class ct left join pg_index ti on ti.indrelid = ct.oid left join pg_class cti on cti.oid = ti.indexrelid where ct.oid = c.reltoastrelid), 0) as toast_relpages,
+      case when 'autovacuum_enabled=off' = ANY(c.reloptions) then 1 else 0 end as no_autovacuum
+    from
+      pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+    where
+      not n.nspname like any (array[E'pg\\_%', 'information_schema'])
+      and c.relkind = 'r'
+      and not relistemp -- and temp tables
+  ) x
+  order by relpages + index_relpages + toast_relpages desc limit 300
+), q_block_size as (
+  select current_setting('block_size')::int8 as bs
+)
+select /* pgwatch2_generated */
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  quote_ident(schemaname)||'.'||quote_ident(ut.relname) as tag_table_full_name,
+  bs * relpages as table_size_b,
+  abs(greatest(ceil(log((bs*relpages+1) / 10^6)), 0))::text as tag_table_size_cardinality_mb, -- i.e. 0=<1MB, 1=<10MB, 2=<100MB,..
+  bs * (relpages + index_relpages + toast_relpages) as total_relation_size_b,
+  bs * toast_relpages as toast_size_b,
+  (extract(epoch from now() - greatest(last_vacuum, last_autovacuum)))::int8 as seconds_since_last_vacuum,
+  (extract(epoch from now() - greatest(last_analyze, last_autoanalyze)))::int8 as seconds_since_last_analyze,
+  no_autovacuum,
+  seq_scan,
+  seq_tup_read,
+  coalesce(idx_scan, 0) as idx_scan,
+  coalesce(idx_tup_fetch, 0) as idx_tup_fetch,
+  n_tup_ins,
+  n_tup_upd,
+  n_tup_del,
+  n_tup_hot_upd,
+  n_live_tup,
+  n_dead_tup
+from
+  pg_stat_user_tables ut
+  join q_tbls_by_total_associated_relpages_approx t on t.oid = ut.relid
+  join q_block_size on true
+where
+  -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock');
+$sql$,
+'{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}',
+true
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_master_only)
+values (
+'table_stats_approx',
+9.1,
+$sql$
+with q_tbls_by_total_associated_relpages_approx as (
+  select * from (
+    select
+      c.oid,
+      c.relname,
+      c.relpages,
+      coalesce((select sum(relpages) from pg_class ci join pg_index i on i.indexrelid = ci.oid where i.indrelid = c.oid), 0) as index_relpages,
+      coalesce((select coalesce(ct.relpages, 0) + coalesce(cti.relpages, 0) from pg_class ct left join pg_index ti on ti.indrelid = ct.oid left join pg_class cti on cti.oid = ti.indexrelid where ct.oid = c.reltoastrelid), 0) as toast_relpages,
+      case when 'autovacuum_enabled=off' = ANY(c.reloptions) then 1 else 0 end as no_autovacuum,
+      age(c.relfrozenxid) as tx_freeze_age,
+      c.relpersistence
+    from
+      pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+    where
+      not n.nspname like any (array[E'pg\\_%', 'information_schema'])
+      and c.relkind = 'r'
+      and c.relpersistence != 't'
+  ) x
+  order by relpages + index_relpages + toast_relpages desc limit 300
+), q_block_size as (
+  select current_setting('block_size')::int8 as bs
+)
+select /* pgwatch2_generated */
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  quote_ident(schemaname)||'.'||quote_ident(ut.relname) as tag_table_full_name,
+  bs * relpages as table_size_b,
+  abs(greatest(ceil(log((bs*relpages+1) / 10^6)), 0))::text as tag_table_size_cardinality_mb, -- i.e. 0=<1MB, 1=<10MB, 2=<100MB,..
+  bs * (relpages + index_relpages + toast_relpages) as total_relation_size_b,
+  bs * toast_relpages as toast_size_b,
+  (extract(epoch from now() - greatest(last_vacuum, last_autovacuum)))::int8 as seconds_since_last_vacuum,
+  (extract(epoch from now() - greatest(last_analyze, last_autoanalyze)))::int8 as seconds_since_last_analyze,
+  no_autovacuum,
+  seq_scan,
+  seq_tup_read,
+  coalesce(idx_scan, 0) as idx_scan,
+  coalesce(idx_tup_fetch, 0) as idx_tup_fetch,
+  n_tup_ins,
+  n_tup_upd,
+  n_tup_del,
+  n_tup_hot_upd,
+  n_live_tup,
+  n_dead_tup,
+  vacuum_count,
+  autovacuum_count,
+  analyze_count,
+  autoanalyze_count,
+  tx_freeze_age,
+  relpersistence
+from
+  pg_stat_user_tables ut
+  join q_tbls_by_total_associated_relpages_approx t on t.oid = ut.relid
+  join q_block_size on true
+where
+  -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock');
+$sql$,
+'{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}',
+true
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs, m_standby_only)
+values (
+'table_stats_approx',
+9.1,
+$sql$
+with q_tbls_by_total_associated_relpages_approx as (
+  select * from (
+    select
+      c.oid,
+      c.relname,
+      c.relpages,
+      coalesce((select sum(relpages) from pg_class ci join pg_index i on i.indexrelid = ci.oid where i.indrelid = c.oid), 0) as index_relpages,
+      coalesce((select coalesce(ct.relpages, 0) + coalesce(cti.relpages, 0) from pg_class ct left join pg_index ti on ti.indrelid = ct.oid left join pg_class cti on cti.oid = ti.indexrelid where ct.oid = c.reltoastrelid), 0) as toast_relpages,
+      case when 'autovacuum_enabled=off' = ANY(c.reloptions) then 1 else 0 end as no_autovacuum,
+      c.relpersistence
+    from
+      pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+    where
+      not n.nspname like any (array[E'pg\\_%', 'information_schema'])
+      and c.relkind = 'r'
+      and c.relpersistence != 't'
+  ) x
+  order by relpages + index_relpages + toast_relpages desc limit 300
+), q_block_size as (
+  select current_setting('block_size')::int8 as bs
+)
+select /* pgwatch2_generated */
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  quote_ident(schemaname)||'.'||quote_ident(ut.relname) as tag_table_full_name,
+  bs * relpages as table_size_b,
+  abs(greatest(ceil(log((bs*relpages+1) / 10^6)), 0))::text as tag_table_size_cardinality_mb, -- i.e. 0=<1MB, 1=<10MB, 2=<100MB,..
+  bs * (relpages + index_relpages + toast_relpages) as total_relation_size_b,
+  bs * toast_relpages as toast_size_b,
+  (extract(epoch from now() - greatest(last_vacuum, last_autovacuum)))::int8 as seconds_since_last_vacuum,
+  (extract(epoch from now() - greatest(last_analyze, last_autoanalyze)))::int8 as seconds_since_last_analyze,
+  no_autovacuum,
+  seq_scan,
+  seq_tup_read,
+  coalesce(idx_scan, 0) as idx_scan,
+  coalesce(idx_tup_fetch, 0) as idx_tup_fetch,
+  n_tup_ins,
+  n_tup_upd,
+  n_tup_del,
+  n_tup_hot_upd,
+  n_live_tup,
+  n_dead_tup,
+  vacuum_count,
+  autovacuum_count,
+  analyze_count,
+  autoanalyze_count,
+  relpersistence
+from
+  pg_stat_user_tables ut
+  join q_tbls_by_total_associated_relpages_approx t on t.oid = ut.relid
+  join q_block_size on true
+where
+  -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock');
+$sql$,
+'{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}',
+true
+);
+
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'table_stats_approx',
+9.2,
+$sql$
+with q_tbls_by_total_associated_relpages_approx as (
+  select * from (
+    select
+      c.oid,
+      c.relname,
+      c.relpages,
+      coalesce((select sum(relpages) from pg_class ci join pg_index i on i.indexrelid = ci.oid where i.indrelid = c.oid), 0) as index_relpages,
+      coalesce((select coalesce(ct.relpages, 0) + coalesce(cti.relpages, 0) from pg_class ct left join pg_index ti on ti.indrelid = ct.oid left join pg_class cti on cti.oid = ti.indexrelid where ct.oid = c.reltoastrelid), 0) as toast_relpages,
+      case when 'autovacuum_enabled=off' = ANY(c.reloptions) then 1 else 0 end as no_autovacuum,
+      age(c.relfrozenxid) as tx_freeze_age,
+      c.relpersistence
+    from
+      pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+    where
+      not n.nspname like any (array[E'pg\\_%', 'information_schema'])
+      and c.relkind = 'r'
+      and c.relpersistence != 't'
+  ) x
+  order by relpages + index_relpages + toast_relpages desc limit 300
+), q_block_size as (
+  select current_setting('block_size')::int8 as bs
+)
+select /* pgwatch2_generated */
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  quote_ident(schemaname)||'.'||quote_ident(ut.relname) as tag_table_full_name,
+  bs * relpages as table_size_b,
+  abs(greatest(ceil(log((bs*relpages+1) / 10^6)), 0))::text as tag_table_size_cardinality_mb, -- i.e. 0=<1MB, 1=<10MB, 2=<100MB,..
+  bs * (relpages + index_relpages + toast_relpages) as total_relation_size_b,
+  bs * toast_relpages as toast_size_b,
+  (extract(epoch from now() - greatest(last_vacuum, last_autovacuum)))::int8 as seconds_since_last_vacuum,
+  (extract(epoch from now() - greatest(last_analyze, last_autoanalyze)))::int8 as seconds_since_last_analyze,
+  no_autovacuum,
+  seq_scan,
+  seq_tup_read,
+  coalesce(idx_scan, 0) as idx_scan,
+  coalesce(idx_tup_fetch, 0) as idx_tup_fetch,
+  n_tup_ins,
+  n_tup_upd,
+  n_tup_del,
+  n_tup_hot_upd,
+  n_live_tup,
+  n_dead_tup,
+  vacuum_count,
+  autovacuum_count,
+  analyze_count,
+  autoanalyze_count,
+  tx_freeze_age,
+  relpersistence
+from
+  pg_stat_user_tables ut
+  join q_tbls_by_total_associated_relpages_approx t on t.oid = ut.relid
+  join q_block_size on true
+where
+  -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
+  not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock');
+$sql$,
+'{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}'
+);
+
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_column_attrs)
+values (
+'table_stats_approx',
+10,
+$sql$
+with recursive
+    q_root_part as (
+        select c.oid,
+               c.relkind,
+               n.nspname root_schema,
+               c.relname root_relname
+        from pg_class c
+                 join pg_namespace n on n.oid = c.relnamespace
+        where relkind in ('p', 'r')
+          and relpersistence != 't'
+          and not n.nspname like any (array[E'pg\\_%', 'information_schema', E'\\_timescaledb%'])
+          and not exists(select * from pg_inherits where inhrelid = c.oid)
+          and exists(select * from pg_inherits where inhparent = c.oid)
+    ),
+    q_parts (relid, relkind, level, root) as (
+        select oid, relkind, 1, oid
+        from q_root_part
+        union all
+        select inhrelid, c.relkind, level + 1, q.root
+        from pg_inherits i
+                 join q_parts q on inhparent = q.relid
+                 join pg_class c on c.oid = i.inhrelid
+    ),
+    q_tstats as (
+      with q_tbls_by_total_associated_relpages_approx as (
+        select * from (
+          select
+            c.oid,
+            c.relname,
+            c.relpages,
+            coalesce((select sum(relpages) from pg_class ci join pg_index i on i.indexrelid = ci.oid where i.indrelid = c.oid), 0) as index_relpages,
+            coalesce((select coalesce(ct.relpages, 0) + coalesce(cti.relpages, 0) from pg_class ct left join pg_index ti on ti.indrelid = ct.oid left join pg_class cti on cti.oid = ti.indexrelid where ct.oid = c.reltoastrelid), 0) as toast_relpages,
+            case when 'autovacuum_enabled=off' = ANY(c.reloptions) then 1 else 0 end as no_autovacuum,
+            age(c.relfrozenxid) as tx_freeze_age,
+            c.relpersistence
+          from
+            pg_class c
+            join pg_namespace n on n.oid = c.relnamespace
+          where
+            not n.nspname like any (array[E'pg\\_%', 'information_schema', E'\\_timescaledb%'])
+            and c.relkind = 'r'
+            and c.relpersistence != 't'
+        ) x
+        order by relpages + index_relpages + toast_relpages desc limit 300
+      ), q_block_size as (
+        select current_setting('block_size')::int8 as bs
+      )
+      select /* pgwatch2_generated */
+        (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+        relid,
+        quote_ident(schemaname)||'.'||quote_ident(ut.relname) as tag_table_full_name,
+        bs * relpages as table_size_b,
+        abs(greatest(ceil(log((bs*relpages+1) / 10^6)), 0))::text as tag_table_size_cardinality_mb, -- i.e. 0=<1MB, 1=<10MB, 2=<100MB,..
+        bs * (relpages + index_relpages + toast_relpages) as total_relation_size_b,
+        bs * toast_relpages as toast_size_b,
+        (extract(epoch from now() - greatest(last_vacuum, last_autovacuum)))::int8 as seconds_since_last_vacuum,
+        (extract(epoch from now() - greatest(last_analyze, last_autoanalyze)))::int8 as seconds_since_last_analyze,
+        no_autovacuum,
+        seq_scan,
+        seq_tup_read,
+        coalesce(idx_scan, 0) as idx_scan,
+        coalesce(idx_tup_fetch, 0) as idx_tup_fetch,
+        n_tup_ins,
+        n_tup_upd,
+        n_tup_del,
+        n_tup_hot_upd,
+        n_live_tup,
+        n_dead_tup,
+        vacuum_count,
+        autovacuum_count,
+        analyze_count,
+        autoanalyze_count,
+        tx_freeze_age,
+        relpersistence
+      from
+        pg_stat_user_tables ut
+        join q_tbls_by_total_associated_relpages_approx t on t.oid = ut.relid
+        join q_block_size on true
+      where
+        -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
+        not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock')
+      order by relpages desc
+
+    )
+
+select /* pgwatch2_generated */
+    epoch_ns,
+    tag_table_full_name,
+    0 as is_part_root,
+    table_size_b,
+    tag_table_size_cardinality_mb, -- i.e. 0=<1MB, 1=<10MB, 2=<100MB,..
+    total_relation_size_b,
+    toast_size_b,
+    seconds_since_last_vacuum,
+    seconds_since_last_analyze,
+    no_autovacuum,
+    seq_scan,
+    seq_tup_read,
+    idx_scan,
+    idx_tup_fetch,
+    n_tup_ins,
+    n_tup_upd,
+    n_tup_del,
+    n_tup_hot_upd,
+    n_live_tup,
+    n_dead_tup,
+    vacuum_count,
+    autovacuum_count,
+    analyze_count,
+    autoanalyze_count,
+    tx_freeze_age
+from q_tstats
+where not exists (select * from q_root_part where oid = q_tstats.relid)
+
+union all
+
+select * from (
+    select
+        epoch_ns,
+        quote_ident(qr.root_schema) || '.' || quote_ident(qr.root_relname) as tag_table_full_name,
+        1 as is_part_root,
+        sum(table_size_b)::int8 table_size_b,
+        abs(greatest(ceil(log((sum(table_size_b) + 1) / 10 ^ 6)),
+             0))::text as tag_table_size_cardinality_mb, -- i.e. 0=<1MB, 1=<10MB, 2=<100MB,..
+        sum(total_relation_size_b)::int8 total_relation_size_b,
+        sum(toast_size_b)::int8 toast_size_b,
+        min(seconds_since_last_vacuum)::int8 seconds_since_last_vacuum,
+        min(seconds_since_last_analyze)::int8 seconds_since_last_analyze,
+        sum(no_autovacuum)::int8 no_autovacuum,
+        sum(seq_scan)::int8 seq_scan,
+        sum(seq_tup_read)::int8 seq_tup_read,
+        sum(idx_scan)::int8 idx_scan,
+        sum(idx_tup_fetch)::int8 idx_tup_fetch,
+        sum(n_tup_ins)::int8 n_tup_ins,
+        sum(n_tup_upd)::int8 n_tup_upd,
+        sum(n_tup_del)::int8 n_tup_del,
+        sum(n_tup_hot_upd)::int8 n_tup_hot_upd,
+        sum(n_live_tup)::int8 n_live_tup,
+        sum(n_dead_tup)::int8 n_dead_tup,
+        sum(vacuum_count)::int8 vacuum_count,
+        sum(autovacuum_count)::int8 autovacuum_count,
+        sum(analyze_count)::int8 analyze_count,
+        sum(autoanalyze_count)::int8 autoanalyze_count,
+        max(tx_freeze_age)::int8 tx_freeze_age
+      from
+           q_tstats ts
+           join q_parts qp on qp.relid = ts.relid
+           join q_root_part qr on qr.oid = qp.root
+      group by
+           1, 2
+) x;
+$sql$,
+'{"prometheus_gauge_columns": ["table_size_b", "total_relation_size_b", "toast_size_b", "seconds_since_last_vacuum", "seconds_since_last_analyze", "n_live_tup", "n_dead_tup"]}'
+);
+
 
 /* wal */
 
@@ -3698,38 +4209,40 @@ $sql$,
 );
 
 
-/* stat_ssl */       -- join with backends?
+/* stat_ssl */
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_sql_su)
 values (
 'stat_ssl',
 9.5,
 $sql$
-SELECT
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-  ssl,
-  count(*)
+  count(*) as total,
+  count(*) FILTER (WHERE ssl) as "on",
+  count(*) FILTER (WHERE NOT ssl) as "off"
 FROM
   pg_stat_ssl AS s,
   get_stat_activity() AS a
 WHERE
   a.pid = s.pid
   AND a.datname = current_database()
-GROUP BY
-  1, 2
+  AND a.pid <> pg_backend_pid()
+  AND NOT (a.client_addr = '127.0.0.1' OR client_port = -1);
 $sql$,
 $sql$
-SELECT
-(extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-ssl,
-count(*)
-    FROM
+select /* pgwatch2_generated */
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  count(*) as total,
+  count(*) FILTER (WHERE ssl) as "on",
+  count(*) FILTER (WHERE NOT ssl) as "off"
+FROM
   pg_stat_ssl AS s,
-pg_stat_activity AS a
+  pg_stat_activity AS a
 WHERE
   a.pid = s.pid
   AND a.datname = current_database()
-GROUP BY
-  1, 2;
+  AND a.pid <> pg_backend_pid()
+  AND NOT (a.client_addr = '127.0.0.1' OR client_port = -1);
 $sql$
 );
 
@@ -6832,7 +7345,6 @@ from
 $sql$
 );
 
-
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
 values (
 'wal_stats',
@@ -6850,6 +7362,34 @@ select
     wal_sync_time::int8
 from
     pg_stat_wal;
+$sql$
+);
+
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
+values (
+'wait_events',
+9.6,
+$sql$
+  with q_sa as (
+      select * from pg_stat_activity where datname = current_database() and pid <> pg_backend_pid()
+  )
+  select
+    (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+    wait_event_type as tag_wait_event_type,
+    wait_event as tag_wait_event,
+    count(*),
+    avg(abs(1e6* extract(epoch from now() - query_start)))::int8 as avg_query_duration_us,
+    max(abs(1e6* extract(epoch from now() - query_start)))::int8 as max_query_duration_us,
+    (select count(*) from q_sa where state = 'active') as total_active
+  from
+    q_sa
+  where
+    state = 'active'
+    and wait_event_type is not null
+    and wait_event_type <> 'Timeout'
+  group by
+    1, 2, 3;
 $sql$
 );
 
@@ -6878,6 +7418,16 @@ insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
 select 'db_stats_aurora', '{"metric_storage_name": "db_stats"}'
 on conflict (ma_metric_name)
 do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "db_stats"}', ma_last_modified_on = now();
+
+insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
+select 'db_size_approx', '{"metric_storage_name": "db_size_approx"}'
+on conflict (ma_metric_name)
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "db_size_approx"}', ma_last_modified_on = now();
+
+insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
+select 'table_stats_approx', '{"metric_storage_name": "table_stats"}'
+on conflict (ma_metric_name)
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "table_stats"}', ma_last_modified_on = now();
 
 insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
 select 'reco_add_index', '{"extension_version_based_overrides": [{"target_metric": "reco_add_index_ext_qualstats_2.0", "expected_extension_versions": [{"ext_name": "pg_qualstats", "ext_min_version": "2.0"}] }]}'
