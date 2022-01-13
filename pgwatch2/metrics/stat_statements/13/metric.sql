@@ -1,6 +1,6 @@
 WITH q_data AS (
     SELECT
-        queryid::text AS tag_queryid,
+        coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
          use the stat_statements_no_query_text metric instead, created specifically for this use case.

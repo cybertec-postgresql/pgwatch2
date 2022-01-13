@@ -2941,7 +2941,7 @@ values (
 $sql$
 WITH q_data AS (
     SELECT
-        queryid::text AS tag_queryid,
+        coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
          use the stat_statements_no_query_text metric instead, created specifically for this use case.
@@ -3077,7 +3077,7 @@ $sql$,
 $sql$
 WITH q_data AS (
     SELECT
-        queryid::text AS tag_queryid,
+        coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
          use the stat_statements_no_query_text metric instead, created specifically for this use case.
@@ -3220,7 +3220,7 @@ values (
 $sql$
 WITH q_data AS (
     SELECT
-        queryid::text AS tag_queryid,
+        coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
          use the stat_statements_no_query_text metric instead, created specifically for this use case.
@@ -3363,7 +3363,7 @@ $sql$,
 $sql$
 WITH q_data AS (
     SELECT
-        queryid::text AS tag_queryid,
+        coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
          use the stat_statements_no_query_text metric instead, created specifically for this use case.
@@ -3718,7 +3718,7 @@ $sql$
 with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-    queryid::text as tag_queryid,
+    coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
     '-' as tag_query,
     array_to_string(array_agg(distinct quote_ident(pg_get_userbyid(userid))), ',') as users,
     sum(s.calls)::int8 as calls,
@@ -3816,7 +3816,7 @@ $sql$
 with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-    queryid::text as tag_queryid,
+    coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
     '-' as tag_query,
     array_to_string(array_agg(distinct quote_ident(pg_get_userbyid(userid))), ',') as users,
     sum(s.calls)::int8 as calls,
@@ -3921,7 +3921,7 @@ $sql$
 with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-    queryid::text as tag_queryid,
+    coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
     '-' as tag_query,
     array_to_string(array_agg(distinct quote_ident(pg_get_userbyid(userid))), ',') as users,
     sum(s.calls)::int8 as calls,
@@ -4022,7 +4022,7 @@ $sql$
 with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
-    queryid::text as tag_queryid,
+    coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
     '-' as tag_query,
     array_to_string(array_agg(distinct quote_ident(pg_get_userbyid(userid))), ',') as users,
     sum(s.calls)::int8 as calls,

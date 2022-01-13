@@ -2,7 +2,7 @@ with q_data as (
   select /* pgwatch2_generated */
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     '-' as tag_query,
-    queryid::text as tag_queryid,
+    coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
     array_to_string(array_agg(distinct quote_ident(pg_get_userbyid(userid))), ',') as users,
     sum(s.calls)::int8 as calls,
     round(sum(s.total_exec_time)::numeric, 3)::double precision as total_time,
