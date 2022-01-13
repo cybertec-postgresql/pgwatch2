@@ -37,7 +37,7 @@ select * from (
     total_time > 0
   order by
     total_time desc
-  limit 100
+  limit 10
 ) a
 union
 select * from (
@@ -47,7 +47,7 @@ select * from (
     q_data
   order by
     calls desc
-  limit 100
+  limit 10
 ) a
 union
 select * from (
@@ -59,7 +59,7 @@ select * from (
     shared_blks_read > 0
   order by
     shared_blks_read desc
-  limit 100
+  limit 10
 ) a
 union
 select * from (
@@ -71,7 +71,7 @@ select * from (
     shared_blks_written > 0
   order by
     shared_blks_written desc
-  limit 100
+  limit 10
 ) a
 union
 select * from (
@@ -83,7 +83,7 @@ select * from (
     temp_blks_read > 0
   order by
     temp_blks_read desc
-  limit 100
+  limit 10
 ) a
 union
 select * from (
@@ -95,5 +95,5 @@ select * from (
     temp_blks_written > 0
   order by
     temp_blks_written desc
-  limit 100
+  limit 10
 ) a;
