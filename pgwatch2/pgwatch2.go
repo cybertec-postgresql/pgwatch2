@@ -5452,7 +5452,7 @@ func main() {
 			if opts.GraphiteHost == "" || opts.GraphitePort == "" {
 				log.Fatal("--graphite-host/port needed!")
 			}
-			port, _ := strconv.ParseInt(opts.GraphitePort, 10, 64)
+			port, _ := strconv.ParseInt(opts.GraphitePort, 10, 32)
 			graphite_host = opts.GraphiteHost
 			graphite_port = int(port)
 			InitGraphiteConnection(graphite_host, graphite_port)
