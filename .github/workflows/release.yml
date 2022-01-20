@@ -1,0 +1,30 @@
+name: Release
+on:
+  push:
+    branches-ignore:
+      - '*'
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+*
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: goreleaser
+    steps:
+
+    - name: Set up Golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.14'
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Unshallow
+      run: git fetch --prune --unshallow
+
+    - name: Release via goreleaser
+      uses: goreleaser/goreleaser-action@master
+      with:
+        args: release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  

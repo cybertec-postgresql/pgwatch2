@@ -1,0 +1,50 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Unit Test",
+            "type": "shell",
+            "command": "gotest -failfast -timeout=300s -parallel=1 ./${relativeFileDirname}/... -coverprofile='coverage.out' && go tool cover -func='coverage.out'",
+            "problemMatcher": [
+                "$go"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "echo": true,
+                "focus": true
+            }
+        },
+        {
+            "label": "Coverage Report",
+            "type": "shell",
+            "command": "go tool cover -html='coverage.out'",
+            "problemMatcher": [
+                "$go"
+            ],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },        
+        {
+            "label": "Lint",
+            "type": "shell",
+            "command": "golangci-lint run",
+            "problemMatcher": [
+                "$go"
+            ],
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        }
+    ]
+}
