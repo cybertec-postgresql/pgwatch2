@@ -77,11 +77,11 @@ nfpms:
 
     # Your app's vendor.
     # Default is empty.
-    vendor: Cybertec PostgreSQL Consulting
+    vendor: CYBERTEC PostgreSQL International GmbH
     # Your app's homepage.
     # Default is empty.
     homepage: https://github.com/cybertec-postgresql/pgwatch2
-    maintainer: Kaarel Moppel <open.an.issue@github.com>
+    maintainer: Pavlo Golub <open.an.issue@github.com>
 
     # Your app's description.
     # Default is empty.
