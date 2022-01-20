@@ -4,9 +4,9 @@ before:
   hooks:
     # weirdly goreleaser doesn't all to include outside of the Go build "root" so need to copy
     - cp -r grafana_dashboards ./pgwatch2/
-    - git archive --format tar --output /tmp/webpy.tar master webpy
-    - tar -xf /tmp/webpy.tar -C pgwatch2/
-    - rm /tmp/webpy.tar
+    - git archive --format tar --output webpy.tar master webpy
+    - tar -xf webpy.tar -C pgwatch2/
+    - rm webpy.tar
 
 builds:
   - dir: pgwatch2
