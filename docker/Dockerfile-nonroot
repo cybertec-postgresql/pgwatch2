@@ -13,7 +13,7 @@ RUN cd /pgwatch2 && bash build_gatherer.sh
 FROM ubuntu:16.04
 
 RUN apt-get -q update \
-    && apt-get -qy install wget apt-transport-https vim git postgresql postgresql-plpython3-9.5 postgresql-plpython-9.5 libfontconfig python3-pip libssl-dev libpq-dev \
+    && apt-get -qy install wget apt-transport-https vim git postgresql postgresql-plpython3-9.5 postgresql-plpython-9.5 libfontconfig python3-pip libssl-dev libpq-dev libffi-dev \
     && pip3 install -U "pip < 21.0"
 
 RUN pip3 install supervisor \
