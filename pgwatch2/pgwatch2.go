@@ -347,7 +347,7 @@ var undersizedDBs = make(map[string]bool)    // DBs below the --min-db-size-mb l
 var undersizedDBsLock = sync.RWMutex{}
 var recoveryIgnoredDBs = make(map[string]bool) // DBs in recovery state and OnlyIfMaster specified in config
 var recoveryIgnoredDBsLock = sync.RWMutex{}
-var regexSQLHelperFunctionCalled = regexp.MustCompile(`(?m)select.*from\s+get_\w+\(\)`) // SQL helpers expected to follow get_smth() naming
+var regexSQLHelperFunctionCalled = regexp.MustCompile(`(?si)^\s*(select|with).*\s+get_\w+\(\)[\s,$]+`) // SQL helpers expected to follow get_smth() naming
 var metricNameRemaps = make(map[string]string)
 var metricNameRemapLock = sync.RWMutex{}
 
@@ -5117,7 +5117,7 @@ func DoesMetricDefinitionCallHelperFunctions(sqlDefinition string) bool {
 	if !noHelperFunctions { // save on regex matching --no-helper-functions param not set, information will not be used then anyways
 		return false
 	}
-	return regexSQLHelperFunctionCalled.MatchString(strings.ToLower(sqlDefinition))
+	return regexSQLHelperFunctionCalled.MatchString(sqlDefinition)
 }
 
 type Options struct {
