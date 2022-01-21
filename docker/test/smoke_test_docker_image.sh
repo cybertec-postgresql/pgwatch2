@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ae
 
 if [ -z $1 -o -z $2 ] ; then
   echo "usage1: smoke_test_docker_image.sh TYPE[pg|influx] IMAGE_TAG"
@@ -60,7 +60,7 @@ sleep 180
 
 echo "checking if metrics exists for added DB..."
 if [ $METRICDBTYPE == "pg" ]; then
-    ROWS=$(psql -h $LOCALHOST -p $PGPORT -qXAtc "select count(distinct dbname) from db_stats where dbname like 'smoke%'")
+    ROWS=$(psql -qXAtc "select count(distinct dbname) from db_stats where dbname like 'smoke%'")
 else
   ROWS=$(curl -sG http://$LOCALHOST:$INFLUXPORT/query?pretty=true --data-urlencode "db=pgwatch2" \
   --data-urlencode "q=SELECT count(xlog_location_b) FROM wal WHERE dbname='smoke1'" \
