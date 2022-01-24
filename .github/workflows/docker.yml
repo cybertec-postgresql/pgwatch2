@@ -24,7 +24,8 @@ jobs:
     - id: vartest
       run: |
         echo "$GITHUB_REF_NAME of type $GITHUB_REF_TYPE at commit ${GITHUB_SHA::6}"
-
+        echo ::save-state name=RELEASE_VERSION::$(echo $GITHUB_REF_NAME_${GITHUB_SHA:6})
+        echo ::save-state name=RELEASE_TIME::$(git show -s --format=%cI HEAD)
     # - name: Set up Golang
     #   uses: actions/setup-go@v2
     #   with:
@@ -39,9 +40,6 @@ jobs:
     #     go build
 
     - name: Publish to Registry
-      pre: |
-        echo ::save-state name=RELEASE_VERSION::$(echo $GITHUB_REF_NAME_${GITHUB_SHA:6})
-        echo ::save-state name=RELEASE_TIME::$(git show -s --format=%cI HEAD)
       uses: elgohr/Publish-Docker-Github-Action@master
       env:
         GIT_HASH: ${{ env.STATE_RELEASE_VERSION }}
