@@ -26,8 +26,9 @@ jobs:
     - id: version
       name: version
       run: |
-        echo "::set-output name=RELEASE_VERSION::$(echo "$GITHUB_REF_NAME_${GITHUB_SHA:6}")
-        echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)
+        echo $GITHUB_REF_NAME-${GITHUB_SHA:0:6}
+        echo "::set-output name=RELEASE_VERSION::$(echo $GITHUB_REF_NAME-${GITHUB_SHA:0:6})"
+        echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
     # - name: Set up Golang
     #   uses: actions/setup-go@v2
     #   with:
@@ -35,7 +36,7 @@ jobs:
 
     # despite the fact docker will build binary internally 
     # we want to stop workflow in case of any error before pushing to registry 
-    - name: Get dependencies and Build
+    - name: output version
       run: |
           echo "${{ steps.version.outputs.RELEASE_VERSION }} and ${{ steps.version.outputs.RELEASE_TIME }}"
 
