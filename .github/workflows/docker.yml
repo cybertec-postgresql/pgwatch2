@@ -27,7 +27,7 @@ jobs:
       name: version
       run: |
         echo $GITHUB_REF_NAME-${GITHUB_SHA:0:6}
-        echo "::set-output name=RELEASE_VERSION::$(echo $GITHUB_REF_NAME-${GITHUB_SHA:0:6})"
+        echo "::set-output name=RELEASE_VERSION::$(echo "$GITHUB_REF_NAME #${GITHUB_SHA:0:6}")"
         echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
     # - name: Set up Golang
     #   uses: actions/setup-go@v2
