@@ -1,19 +1,8 @@
-name: Update Docker
-on: 
+name: Docker
+on:
   push:
-    # paths:
-    #   - '**.go'
-    #   - '**.yaml'
-    #   - '**.yml'
-    #   - 'go.mod'
-    #   - 'go.sum'
-    #   - 'Dockerfile'  
-    branches:
-      - '*'
     tags:
-      - v[0-9]+.[0-9]+.[0-9]+*      
-  workflow_dispatch:
-
+      - v[0-9]+.[0-9]+.[0-9]+*
 jobs:
   docker:
     if: true # false to skip job during debug
@@ -28,16 +17,6 @@ jobs:
       run: |
         echo "::set-output name=RELEASE_VERSION::$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")"
         echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
-    # - name: Set up Golang
-    #   uses: actions/setup-go@v2
-    #   with:
-    #     go-version: '1.16'
-
-    # despite the fact docker will build binary internally 
-    # we want to stop workflow in case of any error before pushing to registry 
-    - name: output version
-      run: |
-          printf "RELEASE_VERSION: ${{ steps.version.outputs.RELEASE_VERSION }}\nRELEASE_TIME: ${{ steps.version.outputs.RELEASE_TIME }}"
 
     - name: Publish to Registry
       uses: elgohr/Publish-Docker-Github-Action@master
