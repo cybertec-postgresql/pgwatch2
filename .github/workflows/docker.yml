@@ -51,3 +51,4 @@ jobs:
         dockerfile: docker/Dockerfile-postgres
         buildargs: GIT_HASH,GIT_TIME
         tags: "gha_test"
+        tag_semver: true
