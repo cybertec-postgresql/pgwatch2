@@ -36,11 +36,8 @@ jobs:
     # despite the fact docker will build binary internally 
     # we want to stop workflow in case of any error before pushing to registry 
     - name: Get dependencies and Build
-      env:
-        GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
-        GIT_TIME: ${{ steps.version.outputs.RELEASE_TIME }}
       run: |
-          echo "$GIT_HASH and $GIT_TIME"
+          echo "${{ steps.version.outputs.RELEASE_VERSION }} and ${{ steps.version.outputs.RELEASE_TIME }}"
 
     # - name: Publish to Registry
     #   uses: elgohr/Publish-Docker-Github-Action@master
