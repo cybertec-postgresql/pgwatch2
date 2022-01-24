@@ -12,7 +12,7 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
-    - id: version
+    - id: Version strings
       name: version
       run: |
         echo "::set-output name=RELEASE_VERSION::$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")"
@@ -29,5 +29,4 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         dockerfile: docker/Dockerfile-postgres
         buildargs: GIT_HASH,GIT_TIME
-        tags: "gha_test"
         tag_semver: true
