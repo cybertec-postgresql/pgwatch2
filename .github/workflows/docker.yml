@@ -23,7 +23,7 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
-    - id: vartest
+    - name: vartest
       run: |
         echo "$GITHUB_REF_NAME of type $GITHUB_REF_TYPE at commit ${GITHUB_SHA::6}"
         echo ::save-state name=RELEASE_VERSION::$(echo $GITHUB_REF_NAME_${GITHUB_SHA:6})
@@ -37,8 +37,8 @@ jobs:
     # we want to stop workflow in case of any error before pushing to registry 
     - name: Get dependencies and Build
       env:
-        GIT_HASH: ${{ env.STATE_RELEASE_VERSION }}
-        GIT_TIME: ${{ env.STATE_RELEASE_TIME }}       
+        GIT_HASH: "${{ env.STATE_RELEASE_VERSION }}"
+        GIT_TIME: "${{ env.STATE_RELEASE_TIME }}"
       run: |
           echo "$GIT_HASH and $GIT_TIME"
 
