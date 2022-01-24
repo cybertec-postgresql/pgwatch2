@@ -12,8 +12,8 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
-    - id: Version strings
-      name: version
+    - id: version
+      name: Version strings
       run: |
         echo "::set-output name=RELEASE_VERSION::$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")"
         echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
