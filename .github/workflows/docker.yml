@@ -23,7 +23,7 @@ jobs:
 
     - id: vartest
       run: |
-        echo "${{ GITHUB_REF_NAME}} of type ${{ GITHUB_REF_TYPE }} at commit ${GITHUB_SHA::6}"
+        echo "$GITHUB_REF_NAME of type $GITHUB_REF_TYPE at commit ${GITHUB_SHA::6}"
 
     # - name: Set up Golang
     #   uses: actions/setup-go@v2
