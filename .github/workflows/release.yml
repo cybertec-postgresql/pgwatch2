@@ -62,4 +62,5 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         dockerfile: docker/Dockerfile${{ matrix.image }}
         buildargs: GIT_HASH,GIT_TIME
+        tags: "latest"
         tag_semver: true        
