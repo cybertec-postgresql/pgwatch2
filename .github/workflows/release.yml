@@ -51,7 +51,7 @@ jobs:
         echo "::set-output name=RELEASE_VERSION::$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")"
         echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
 
-    - name Test matrix
+    - name: Test matrix
       env:
         reponame: cybertec/pgwatch2${{ matrix.image }}
         dockerfile: docker/Dockerfile${{ matrix.image }}
