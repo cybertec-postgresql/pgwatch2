@@ -1,17 +1,17 @@
 name: Release
 on:
   push:
-    # ignore Dependabot branches with version strings
-    # branches-ignore:
-    #   - '*'  
+    # ignore all branches
+    branches-ignore:
+      - '*'  
     # run for every tag with version string
-    # tags:
-    #   - v[0-9]+.[0-9]+.[0-9]+*
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+*
       
 jobs:
 
   goreleaser:
-    if: false # false to skip job during debug
+    if: true # false to skip job during debug
     runs-on: ubuntu-latest
     steps:
 
@@ -62,4 +62,4 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         dockerfile: docker/Dockerfile${{ matrix.image }}
         buildargs: GIT_HASH,GIT_TIME
-        # tag_semver: true        
+        tag_semver: true        
