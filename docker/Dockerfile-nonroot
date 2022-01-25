@@ -77,9 +77,6 @@ RUN pip3 install psutil pyyaml
 
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
 
-# For showing all component versions via :8080/versions. Assuming project is cloned from Github here
-COPY .git/refs/heads/master /pgwatch2/build_git_version.txt
-
 # Set up supervisord [https://docs.docker.com/engine/admin/using_supervisord/]
 COPY supervisord-nonroot.conf /etc/supervisor/supervisord.conf
 
