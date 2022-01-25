@@ -49,7 +49,6 @@ RUN echo "${GIT_HASH} ${GIT_TIME}" > /pgwatch2/build_git_version.txt
 RUN cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
     && pip3 install -r /pgwatch2/webpy/requirements_pg_metrics.txt \
     && pip2 install psutil \
-    && echo "$GIT_HASH" > /pgwatch2/build_git_version.txt \
     && grafana-cli plugins install savantly-heatmap-panel \
     && pip3 install supervisor pyyaml && mkdir /var/log/supervisor
 
