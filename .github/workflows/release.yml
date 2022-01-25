@@ -51,22 +51,15 @@ jobs:
         echo "::set-output name=RELEASE_VERSION::$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")"
         echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
 
-    - name: Test matrix
+    - name: Publish to Registry
+      uses: elgohr/Publish-Docker-Github-Action@master
       env:
-        reponame: cybertec/pgwatch2${{ matrix.image }}
+        GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
+        GIT_TIME: ${{ steps.version.outputs.RELEASE_TIME }}     
+      with:
+        name: cybertec/pgwatch2${{ matrix.image }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
         dockerfile: docker/Dockerfile${{ matrix.image }}
-      run: |
-        echo "We're about to build $dockerfile and push it to the $reponame"
-
-    # - name: Publish to Registry
-    #   uses: elgohr/Publish-Docker-Github-Action@master
-    #   env:
-    #     GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
-    #     GIT_TIME: ${{ steps.version.outputs.RELEASE_TIME }}     
-    #   with:
-    #     name: cybertec/pgwatch2${{ matrix.image }}
-    #     username: ${{ secrets.DOCKER_USERNAME }}
-    #     password: ${{ secrets.DOCKER_PASSWORD }}
-    #     dockerfile: docker/Dockerfile${{ matrix.image }}
-    #     buildargs: GIT_HASH,GIT_TIME
-    #     tag_semver: true        
+        buildargs: GIT_HASH,GIT_TIME
+        # tag_semver: true        
