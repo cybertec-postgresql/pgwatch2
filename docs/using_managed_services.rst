@@ -65,3 +65,9 @@ NB! Surprisingly on Azure some file access functions are whitelisted, thus one c
 
 NB2! By default Azure has **pg_stat_statements** not fully activated by default, so you need to enable it manually or via
 the API. Documentation link `here <https://docs.microsoft.com/en-us/azure/postgresql/howto-optimize-query-stats-collection>`_.
+
+
+Aiven for PostgreSQL
+--------------------
+
+The `Aiven developer documentation <https://developer.aiven.io/docs/products/postgresql/howto/monitor-with-pgwatch2.html>`_ contains information on how to monitor PostgreSQL instances running on the Aiven platform with pgwatch2.

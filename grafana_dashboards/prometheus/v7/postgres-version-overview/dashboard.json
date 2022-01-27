@@ -1,0 +1,168 @@
+{
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "target": {
+            "limit": 100,
+            "matchAny": false,
+            "tags": [],
+            "type": "dashboard"
+          },
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "gnetId": null,
+    "graphTooltip": 0,
+    "id": null,
+    "links": [],
+    "panels": [
+      {
+        "datasource": null,
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 21,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 2,
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": false,
+              "displayName": "Value"
+            }
+          ]
+        },
+        "pluginVersion": "8.1.6",
+        "targets": [
+          {
+            "exemplar": true,
+            "expr": "max(pgwatch2_settings_server_version_num{kubernetes_cluster=\"$kubernetes_cluster\"} <= $lte_server_version_num) by (dbname)",
+            "format": "table",
+            "instant": true,
+            "interval": "",
+            "legendFormat": "",
+            "refId": "A"
+          }
+        ],
+        "title": "\"server_version_num\"",
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true
+              },
+              "indexByName": {},
+              "renameByName": {}
+            }
+          }
+        ],
+        "type": "table"
+      }
+    ],
+    "refresh": "",
+    "schemaVersion": 30,
+    "style": "dark",
+    "tags": [
+      "pgwatch2",
+      "postgres"
+    ],
+    "templating": {
+      "list": [
+        {
+          "allValue": null,
+          "datasource": null,
+          "definition": "label_values(pgwatch2_instance_up, kubernetes_cluster)",
+          "description": null,
+          "error": null,
+          "hide": 0,
+          "includeAll": false,
+          "label": null,
+          "multi": false,
+          "name": "kubernetes_cluster",
+          "options": [],
+          "query": {
+            "query": "label_values(pgwatch2_instance_up, kubernetes_cluster)",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 1,
+          "type": "query"
+        },
+        {
+          "allValue": null,
+          "current": {
+            "selected": true,
+            "text": "120007",
+            "value": "120007"
+          },
+          "datasource": null,
+          "definition": "query_result(count_values(\"ver\", pgwatch2_settings_server_version_num))",
+          "description": null,
+          "error": null,
+          "hide": 0,
+          "includeAll": false,
+          "label": null,
+          "multi": false,
+          "name": "lte_server_version_num",
+          "options": [],
+          "query": {
+            "query": "query_result(count_values(\"ver\", pgwatch2_settings_server_version_num))",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 1,
+          "regex": "/.*ver=\"([^\"*]+).*/",
+          "skipUrlSync": false,
+          "sort": 4,
+          "type": "query"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "",
+    "title": "Postgres version overview",
+    "uid": null,
+    "version": 1
+  }

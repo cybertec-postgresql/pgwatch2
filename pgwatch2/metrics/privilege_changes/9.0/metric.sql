@@ -1,4 +1,4 @@
-SELECT
+select /* pgwatch2_generated */
     (extract(epoch FROM now()) * 1e9)::int8 AS epoch_ns,
     *
 FROM (

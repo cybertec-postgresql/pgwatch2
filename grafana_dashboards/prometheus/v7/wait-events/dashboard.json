@@ -1,0 +1,185 @@
+{
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "target": {
+            "limit": 100,
+            "matchAny": false,
+            "tags": [],
+            "type": "dashboard"
+          },
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "gnetId": null,
+    "graphTooltip": 0,
+    "id": null,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+      {
+        "datasource": null,
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 16,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 2,
+        "interval": "5m",
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom"
+          },
+          "tooltip": {
+            "mode": "multi"
+          }
+        },
+        "targets": [
+          {
+            "exemplar": true,
+            "expr": "max(max_over_time(pgwatch2_wait_events_count{dbname='$dbname'}[10m])) by (wait_event)",
+            "interval": "",
+            "legendFormat": "{{wait_event}}",
+            "refId": "A"
+          }
+        ],
+        "title": "Wait event counts",
+        "type": "timeseries"
+      },
+      {
+        "datasource": null,
+        "gridPos": {
+          "h": 7,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        },
+        "id": 4,
+        "options": {
+          "content": "<br>\nExplanations of individual wait_states are explained\n<a target=\"_blank\" href=\"https://www.postgresql.org/docs/13/monitoring-stats.html#WAIT-EVENT-ACTIVITY-TABLE\"> here</a>. NB! Mind the DB versions and switch accordingly!",
+          "mode": "html"
+        },
+        "pluginVersion": "8.2.3",
+        "type": "text"
+      }
+    ],
+    "refresh": "",
+    "schemaVersion": 31,
+    "style": "dark",
+    "tags": [],
+    "templating": {
+      "list": [
+        {
+          "allValue": null,
+          "datasource": null,
+          "definition": "label_values(dbname)",
+          "description": "",
+          "error": null,
+          "hide": 0,
+          "includeAll": false,
+          "label": null,
+          "multi": false,
+          "name": "dbname",
+          "options": [],
+          "query": {
+            "query": "label_values(dbname)",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 1,
+          "type": "query"
+        },
+        {
+          "allValue": null,
+          "datasource": null,
+          "definition": "query_result(max(pgwatch2_settings_server_version_num{dbname=\"$dbname\"}))",
+          "description": null,
+          "error": null,
+          "hide": 0,
+          "includeAll": false,
+          "label": null,
+          "multi": false,
+          "name": "server_version_num",
+          "options": [],
+          "query": {
+            "query": "query_result(max(pgwatch2_settings_server_version_num{dbname=\"$dbname\"}))",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 1,
+          "regex": "/(?<value>\\d+)/",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "",
+    "title": "Wait Events",
+    "uid": null,
+    "version": 1
+  }

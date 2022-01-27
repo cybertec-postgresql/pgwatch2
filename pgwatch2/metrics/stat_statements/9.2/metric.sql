@@ -70,7 +70,7 @@ FROM (
             total_time DESC
         LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -81,7 +81,7 @@ FROM (
         calls DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -94,7 +94,7 @@ FROM (
         shared_blks_read DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -107,7 +107,7 @@ FROM (
         shared_blks_written DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -120,7 +120,7 @@ FROM (
         temp_blks_read DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT

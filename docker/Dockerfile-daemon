@@ -1,4 +1,4 @@
-FROM golang:1.16.3
+FROM golang:1.17
 
 # For showing Git version via 'pgwatch2 --version'
 ARG GIT_HASH
@@ -10,7 +10,7 @@ ADD pgwatch2 /pgwatch2
 RUN cd /pgwatch2 && bash build_gatherer.sh
 
 
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 
 RUN apt-get -q update && apt-get -qy install wget git && apt autoremove -y && mkdir /pgwatch2
 

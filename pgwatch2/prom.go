@@ -20,6 +20,9 @@ type Exporter struct {
 
 const PROM_INSTANCE_UP_STATE_METRIC = "instance_up"
 
+// timestamps older than that will be ignored on the Prom scraper side anyways, so better don't emit at all and just log a notice
+const PROM_SCRAPING_STALENESS_HARD_DROP_LIMIT = time.Minute * time.Duration(10)
+
 func NewExporter() (*Exporter, error) {
 	return &Exporter{
 		lastScrapeErrors: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -50,6 +53,11 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	e.totalScrapes.Add(1)
 	ch <- e.totalScrapes
 
+	isInitialized := atomic.LoadInt32(&mainLoopInitialized)
+	if isInitialized == 0 {
+		log.Warning("Main loop not yet initialized, not scraping DBs")
+		return
+	}
 	monitoredDatabases := getMonitoredDatabasesSnapshot()
 	if len(monitoredDatabases) == 0 {
 		log.Warning("No dbs configured for monitoring. Check config")
@@ -82,14 +90,25 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 				if promAsyncMode {
 					promAsyncMetricCacheLock.RLock()
-					metricStoreMessages, ok = promAsyncMetricCache[md.DBUniqueName+metric]
+					metricStoreMessages, ok = promAsyncMetricCache[md.DBUniqueName][metric]
 					promAsyncMetricCacheLock.RUnlock()
 					if !ok {
-						log.Debugf("[%s:%s] could not find data from the prom cache. maybe gathering interval not yet reached or zero rows returned, ignoring", md.DBUniqueName, metric)
-						fetchedFromCacheCounts[metric] = 0
-					} else {
+						// could be re-mapped metric name
+						metricNameRemapLock.RLock()
+						mappedName, isMapped := metricNameRemaps[metric]
+						metricNameRemapLock.RUnlock()
+						if isMapped {
+							promAsyncMetricCacheLock.RLock()
+							metricStoreMessages, ok = promAsyncMetricCache[md.DBUniqueName][mappedName]
+							promAsyncMetricCacheLock.RUnlock()
+						}
+					}
+					if ok {
 						log.Debugf("[%s:%s] fetched %d rows from the prom cache ...", md.DBUniqueName, metric, len(metricStoreMessages[0].Data))
 						fetchedFromCacheCounts[metric] = len(metricStoreMessages[0].Data)
+					} else {
+						log.Debugf("[%s:%s] could not find data from the prom cache. maybe gathering interval not yet reached or zero rows returned, ignoring", md.DBUniqueName, metric)
+						fetchedFromCacheCounts[metric] = 0
 					}
 				} else {
 					log.Debugf("scraping [%s:%s]...", md.DBUniqueName, metric)
@@ -127,12 +146,11 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 func setInstanceUpDownState(ch chan<- prometheus.Metric, md MonitoredDatabase) {
 	log.Debugf("checking availability of configured DB [%s:%s]...", md.DBUniqueName, PROM_INSTANCE_UP_STATE_METRIC)
-	vme, err := DBGetPGVersion(md.DBUniqueName, md.DBType, true)
+	vme, err := DBGetPGVersion(md.DBUniqueName, md.DBType, !promAsyncMode) // NB! in async mode 2min cache can mask smaller downtimes!
 	data := make(map[string]interface{})
 	if err != nil {
 		data[PROM_INSTANCE_UP_STATE_METRIC] = 0
 		log.Errorf("[%s:%s] could not determine instance version, reporting as 'down': %v", md.DBUniqueName, PROM_INSTANCE_UP_STATE_METRIC, err)
-		//return
 	} else {
 		data[PROM_INSTANCE_UP_STATE_METRIC] = 1
 	}
@@ -175,6 +193,7 @@ func MetricStoreMessageToPromMetrics(msg MetricStoreMessage) []prometheus.Metric
 
 	var epoch_time time.Time
 	var epoch_ns int64
+	var epoch_now time.Time = time.Now()
 
 	if len(msg.Data) == 0 {
 		return promMetrics
@@ -188,6 +207,12 @@ func MetricStoreMessageToPromMetrics(msg MetricStoreMessage) []prometheus.Metric
 		epoch_time = time.Now()
 	} else {
 		epoch_time = time.Unix(0, epoch_ns)
+
+		if promAsyncMode && epoch_time.Before(epoch_now.Add(-1*PROM_SCRAPING_STALENESS_HARD_DROP_LIMIT)) {
+			log.Warningf("[%s][%s] Dropping metric set due to staleness (>%v) ...", msg.DBUniqueName, msg.MetricName, PROM_SCRAPING_STALENESS_HARD_DROP_LIMIT)
+			PurgeMetricsFromPromAsyncCacheIfAny(msg.DBUniqueName, msg.MetricName)
+			return promMetrics
+		}
 	}
 
 	for _, dr := range msg.Data {

@@ -1,6 +1,6 @@
 WITH q_data AS (
     SELECT
-        queryid::text AS tag_queryid,
+        coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
         /*
          NB! if security conscious about exposing query texts replace the below expression with a dash ('-') OR
          use the stat_statements_no_query_text metric instead, created specifically for this use case.
@@ -70,7 +70,7 @@ FROM (
             total_time DESC
         LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -81,7 +81,7 @@ FROM (
         calls DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -94,7 +94,7 @@ FROM (
         shared_blks_read DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -107,7 +107,7 @@ FROM (
         shared_blks_written DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT
@@ -120,7 +120,7 @@ FROM (
         temp_blks_read DESC
     LIMIT 100) a
 UNION
-SELECT
+select /* pgwatch2_generated */
     *
 FROM (
     SELECT

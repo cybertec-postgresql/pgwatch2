@@ -7,7 +7,7 @@ with q_su as (
 q_total as (
   select count(*) from pg_roles where rolcanlogin
 )
-select
+select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   'superuser_count'::text as tag_reco_topic,
   '-'::text as tag_object_name,

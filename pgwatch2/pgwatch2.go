@@ -2,6 +2,7 @@ package main
 
 import (
 	"container/list"
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -129,12 +130,13 @@ type MetricAttrs struct {
 }
 
 type MetricVersionProperties struct {
-	Sql         string
-	SqlSU       string
-	MasterOnly  bool
-	StandbyOnly bool
-	ColumnAttrs MetricColumnAttrs // Prometheus Metric Type (Counter is default) and ignore list
-	MetricAttrs MetricAttrs
+	Sql                  string
+	SqlSU                string
+	MasterOnly           bool
+	StandbyOnly          bool
+	ColumnAttrs          MetricColumnAttrs // Prometheus Metric Type (Counter is default) and ignore list
+	MetricAttrs          MetricAttrs
+	CallsHelperFunctions bool
 }
 
 type ControlMessage struct {
@@ -186,6 +188,8 @@ type DBVersionMapEntry struct {
 	SystemIdentifier string
 	IsSuperuser      bool // if true and no helpers are installed, use superuser SQL version of metric if available
 	Extensions       map[string]decimal.Decimal
+	ExecEnv          string
+	ApproxDBSizeB    int64
 }
 
 type ExistingPartitionInfo struct {
@@ -217,9 +221,8 @@ const DATASTORE_POSTGRES = "postgres"
 const DATASTORE_PROMETHEUS = "prometheus"
 const PRESET_CONFIG_YAML_FILE = "preset-configs.yaml"
 const FILE_BASED_METRIC_HELPERS_DIR = "00_helpers"
-const PG_CONN_RECYCLE_SECONDS = 1800          // applies for monitored nodes
-const APPLICATION_NAME = "pgwatch2"           // will be set on all opened PG connections for informative purposes
-const MAX_PG_CONNECTIONS_PER_MONITORED_DB = 2 // for limiting max concurrent queries on a single DB, sql.DB maxPoolSize cannot be fully trusted
+const PG_CONN_RECYCLE_SECONDS = 1800 // applies for monitored nodes
+const APPLICATION_NAME = "pgwatch2"  // will be set on all opened PG connections for informative purposes
 const GATHERER_STATUS_START = "START"
 const GATHERER_STATUS_STOP = "STOP"
 const METRICDB_IDENT = "metricDb"
@@ -244,6 +247,8 @@ const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
 const SPECIAL_METRIC_PGBOUNCER_STATS = "pgbouncer_stats"
 const SPECIAL_METRIC_PGPOOL_STATS = "pgpool_stats"
 const SPECIAL_METRIC_INSTANCE_UP = "instance_up"
+const SPECIAL_METRIC_DB_SIZE = "db_size"         // can be transparently switched to db_size_approx on instances with very slow FS access (Azure Single Server)
+const SPECIAL_METRIC_TABLE_STATS = "table_stats" // can be transparently switched to table_stats_approx on instances with very slow FS (Azure Single Server)
 const METRIC_CPU_LOAD = "cpu_load"
 const METRIC_PSUTIL_CPU = "psutil_cpu"
 const METRIC_PSUTIL_DISK = "psutil_disk"
@@ -251,7 +256,12 @@ const METRIC_PSUTIL_DISK_IO_TOTAL = "psutil_disk_io_total"
 const METRIC_PSUTIL_MEM = "psutil_mem"
 const DEFAULT_METRICS_DEFINITION_PATH_PKG = "/etc/pgwatch2/metrics" // prebuilt packages / Docker default location
 const DEFAULT_METRICS_DEFINITION_PATH_DOCKER = "/pgwatch2/metrics"  // prebuilt packages / Docker default location
-const DB_SIZE_CACHING_INTERVAL = 10 * time.Minute
+const DB_SIZE_CACHING_INTERVAL = 30 * time.Minute
+const DB_METRIC_JOIN_STR = "¤¤¤" // just some unlikely string for a DB name to avoid using maps of maps for DB+metric data
+const EXEC_ENV_UNKNOWN = "UNKNOWN"
+const EXEC_ENV_AZURE_SINGLE = "AZURE_SINGLE"
+const EXEC_ENV_AZURE_FLEXIBLE = "AZURE_FLEXIBLE"
+const EXEC_ENV_GOOGLE = "GOOGLE"
 
 var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true, DBTYPE_PGPOOL: true, DBTYPE_PATRONI_NAMESPACE_DISCOVERY: true}
 var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT, DBTYPE_PATRONI_NAMESPACE_DISCOVERY} // used for informational purposes
@@ -273,8 +283,6 @@ var monitored_db_cache map[string]MonitoredDatabase
 var monitored_db_cache_lock sync.RWMutex
 var monitored_db_conn_cache map[string]*sqlx.DB = make(map[string]*sqlx.DB)
 var monitored_db_conn_cache_lock = sync.RWMutex{}
-var db_conn_limiting_channel = make(map[string](chan bool))
-var db_conn_limiting_channel_lock = sync.RWMutex{}
 var last_sql_fetch_error sync.Map
 var influx_host_count = 1
 var InfluxConnectStrings [2]string // Max. 2 Influx metrics stores currently supported
@@ -306,6 +314,7 @@ var PGSchemaType string
 var failedInitialConnectHosts = make(map[string]bool) // hosts that couldn't be connected to even once
 var addRealDbname bool
 var addSystemIdentifier bool
+var noHelperFunctions bool
 var forceRecreatePGMetricPartitions = false // to signal override PG metrics storage cache
 var lastMonitoredDBsUpdate time.Time
 var instanceMetricCache = make(map[string]([]map[string]interface{})) // [dbUnique+metric]lastly_fetched_data
@@ -325,12 +334,22 @@ var prevCPULoadTimeStats cpu.TimesStat
 var prevCPULoadTimestamp time.Time
 
 // Async Prom cache
-var promAsyncMetricCache = make(map[string][]MetricStoreMessage) // [dbUnique+metric]lastly_fetched_data
+var promAsyncMetricCache = make(map[string]map[string][]MetricStoreMessage) // [dbUnique][metric]lastly_fetched_data
 var promAsyncMetricCacheLock = sync.RWMutex{}
 var promAsyncMode = false
 var lastDBSizeMB = make(map[string]int64)
 var lastDBSizeFetchTime = make(map[string]time.Time) // cached for DB_SIZE_CACHING_INTERVAL
 var lastDBSizeCheckLock sync.RWMutex
+var mainLoopInitialized int32 // 0/1
+
+var prevLoopMonitoredDBs []MonitoredDatabase // to be able to detect DBs removed from config
+var undersizedDBs = make(map[string]bool)    // DBs below the --min-db-size-mb limit, if set
+var undersizedDBsLock = sync.RWMutex{}
+var recoveryIgnoredDBs = make(map[string]bool) // DBs in recovery state and OnlyIfMaster specified in config
+var recoveryIgnoredDBsLock = sync.RWMutex{}
+var regexSQLHelperFunctionCalled = regexp.MustCompile(`(?si)^\s*(select|with).*\s+get_\w+\(\)[\s,$]+`) // SQL helpers expected to follow get_smth() naming
+var metricNameRemaps = make(map[string]string)
+var metricNameRemapLock = sync.RWMutex{}
 
 func IsPostgresDBType(dbType string) bool {
 	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
@@ -340,36 +359,42 @@ func IsPostgresDBType(dbType string) bool {
 }
 
 func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password, sslmode, sslrootcert, sslcert, sslkey string) (*sqlx.DB, error) {
-	var err error
-	var db *sqlx.DB
+	var connStr string
 
 	//log.Debug("Connecting to: ", host, port, dbname, user, password)
 	if len(libPqConnString) > 0 {
-		if strings.Contains(strings.ToLower(libPqConnString), "sslmode") {
-			db, err = sqlx.Open("postgres", libPqConnString)
-		} else {
-			if strings.Contains(libPqConnString, "postgresql://") { // JDBC style
-				if strings.Contains(libPqConnString, "?") { // a bit simplistic, regex would be better
-					//log.Debug("Adding sslmode", libPqConnString+"&sslmode=disable")
-					db, err = sqlx.Open("postgres", libPqConnString+"&sslmode=disable")
+		connStr = libPqConnString
+		if !strings.Contains(strings.ToLower(connStr), "sslmode") {
+			if strings.Contains(connStr, "postgresql://") { // JDBC style
+				if strings.Contains(connStr, "?") { // has some extra params already
+					connStr += "&sslmode=disable" // defaulting to "disable" as Go driver doesn't support "prefer"
 				} else {
-					//log.Debug("Adding sslmode", libPqConnString+"?sslmode=disable")
-					db, err = sqlx.Open("postgres", libPqConnString+"?sslmode=disable")
+					connStr += "?sslmode=disable"
 				}
 			} else { // LibPQ style
-				db, err = sqlx.Open("postgres", libPqConnString+" sslmode=disable")
+				connStr += " sslmode=disable"
+			}
+		}
+		if !strings.Contains(strings.ToLower(connStr), "connect_timeout") {
+			if strings.Contains(connStr, "postgresql://") { // JDBC style
+				if strings.Contains(connStr, "?") { // has some extra params already
+					connStr += "&connect_timeout=5" // 5 seconds
+				} else {
+					connStr += "?connect_timeout=5"
+				}
+			} else { // LibPQ style
+				connStr += " connect_timeout=5"
 			}
 		}
 	} else {
-		conn_str := fmt.Sprintf("host=%s port=%s dbname='%s' sslmode=%s user=%s application_name=%s sslrootcert='%s' sslcert='%s' sslkey='%s'",
+		connStr = fmt.Sprintf("host=%s port=%s dbname='%s' sslmode=%s user=%s application_name=%s sslrootcert='%s' sslcert='%s' sslkey='%s' connect_timeout=5",
 			host, port, dbname, sslmode, user, APPLICATION_NAME, sslrootcert, sslcert, sslkey)
 		if password != "" { // having empty string as password effectively disables .pgpass so include only if password given
-			conn_str += fmt.Sprintf(" password='%s'", password)
+			connStr += fmt.Sprintf(" password='%s'", password)
 		}
-		db, err = sqlx.Open("postgres", conn_str)
 	}
 
-	return db, err
+	return sqlx.Open("postgres", connStr)
 }
 
 func StringToBoolOrFail(boolAsString, inputParamName string) bool {
@@ -485,6 +510,99 @@ func InitAndTestMetricStoreConnection(connStr string, failOnErr bool) error {
 	return nil
 }
 
+// every DB under monitoring should have exactly 1 sql.DB connection assigned, that will internally limit parallel access
+func InitSqlConnPoolForMonitoredDBIfNil(md MonitoredDatabase) error {
+	monitored_db_conn_cache_lock.Lock()
+	defer monitored_db_conn_cache_lock.Unlock()
+
+	conn, ok := monitored_db_conn_cache[md.DBUniqueName]
+	if ok && conn != nil {
+		return nil
+	}
+
+	if md.DBType == DBTYPE_BOUNCER {
+		md.DBName = "pgbouncer"
+	}
+
+	conn, err := GetPostgresDBConnection(md.LibPQConnStr, md.Host, md.Port, md.DBName, md.User, md.Password,
+		md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
+	if err != nil {
+		return err
+	}
+
+	if useConnPooling {
+		conn.SetMaxIdleConns(opts.MaxParallelConnectionsPerDb)
+	} else {
+		conn.SetMaxIdleConns(0)
+	}
+	conn.SetMaxOpenConns(opts.MaxParallelConnectionsPerDb)
+	// recycling periodically makes sense as long sessions might bloat memory or maybe conn info (password) was changed
+	conn.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
+
+	monitored_db_conn_cache[md.DBUniqueName] = conn
+	log.Debugf("[%s] Connection pool initialized with max %d parallel connections. Conn pooling: %v", md.DBUniqueName, opts.MaxParallelConnectionsPerDb, useConnPooling)
+
+	return nil
+}
+
+func CloseOrLimitSqlConnPoolForMonitoredDBIfAny(dbUnique string) {
+	monitored_db_conn_cache_lock.Lock()
+	defer monitored_db_conn_cache_lock.Unlock()
+
+	conn, ok := monitored_db_conn_cache[dbUnique]
+	if !ok || conn == nil {
+		return
+	}
+
+	if IsDBUndersized(dbUnique) || IsDBIgnoredBasedOnRecoveryState(dbUnique) {
+
+		if useConnPooling {
+			s := conn.Stats()
+			if s.MaxOpenConnections > 1 {
+				log.Debugf("[%s] Limiting SQL connection pool to max 1 connection due to dormant state ...", dbUnique)
+				conn.SetMaxIdleConns(1)
+				conn.SetMaxOpenConns(1)
+			}
+		}
+
+	} else { // removed from config
+		log.Debugf("[%s] Closing SQL connection pool ...", dbUnique)
+		err := conn.Close()
+		if err != nil {
+			log.Error("[%s] Failed to close connection pool to %s nicely. Err: %v", dbUnique, err)
+		}
+		delete(monitored_db_conn_cache, dbUnique)
+	}
+}
+
+func RestoreSqlConnPoolLimitsForPreviouslyDormantDB(dbUnique string) {
+	if !useConnPooling {
+		return
+	}
+	monitored_db_conn_cache_lock.Lock()
+	defer monitored_db_conn_cache_lock.Unlock()
+
+	conn, ok := monitored_db_conn_cache[dbUnique]
+	if !ok || conn == nil {
+		log.Error("DB conn to re-instate pool limits not found, should not happen")
+		return
+	}
+
+	log.Debugf("[%s] Re-instating SQL connection pool max connections ...", dbUnique)
+
+	conn.SetMaxIdleConns(opts.MaxParallelConnectionsPerDb)
+	conn.SetMaxOpenConns(opts.MaxParallelConnectionsPerDb)
+
+}
+
+func InitPGVersionInfoFetchingLockIfNil(md MonitoredDatabase) {
+	db_pg_version_map_lock.Lock()
+	if _, ok := db_get_pg_version_map_lock[md.DBUniqueName]; !ok {
+		db_get_pg_version_map_lock[md.DBUniqueName] = sync.RWMutex{}
+	}
+	db_pg_version_map_lock.Unlock()
+}
+
 func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
 	ret := make([]map[string]interface{}, 0)
 	var rows *sqlx.Rows
@@ -497,21 +615,8 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 	rows, err = conn.Queryx(sql, args...)
 
 	if err != nil {
-		if !(host_ident == METRICDB_IDENT || host_ident == CONFIGDB_IDENT) {
-			if conn != nil {
-				conn.Close()
-			}
-			monitored_db_conn_cache_lock.Lock()
-			defer monitored_db_conn_cache_lock.Unlock()
-			if _, ok := monitored_db_conn_cache[host_ident]; ok {
-				// do not overwrite new already reopened pool (after conn.Close)
-				if monitored_db_conn_cache[host_ident] == conn {
-					monitored_db_conn_cache[host_ident] = nil
-				}
-			}
-			// connection problems or bad queries etc are quite common so caller should decide if to output something
-			log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
-		}
+		// connection problems or bad queries etc are quite common so caller should decide if to output something
+		log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -533,13 +638,59 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 	return ret, err
 }
 
-func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTimeoutOverride int64, sql string, args ...interface{}) ([](map[string]interface{}), error, time.Duration) {
+func DBExecInExplicitTX(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](map[string]interface{}), error) {
+	ret := make([]map[string]interface{}, 0)
+	var rows *sqlx.Rows
+	var err error
+
+	if conn == nil {
+		return nil, errors.New("nil connection")
+	}
+
+	ctx := context.Background()
+	txOpts := go_sql.TxOptions{}
+
+	tx, err := conn.BeginTxx(ctx, &txOpts)
+	if err != nil {
+		return ret, err
+	}
+	defer tx.Commit()
+
+	rows, err = tx.Queryx(sql, args...)
+
+	if err != nil {
+		// connection problems or bad queries etc are quite common so caller should decide if to output something
+		log.Debug("failed to query", host_ident, "sql:", sql, "err:", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		row := make(map[string]interface{})
+		err = rows.MapScan(row)
+		if err != nil {
+			log.Error("failed to MapScan a result row", host_ident, err)
+			return nil, err
+		}
+		ret = append(ret, row)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Error("failed to fully process resultset for", host_ident, "sql:", sql, "err:", err)
+	}
+	return ret, err
+}
+
+func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride int64, sql string, args ...interface{}) ([](map[string]interface{}), error, time.Duration) {
 	var conn *sqlx.DB
-	var libPQConnStr string
-	var exists bool
 	var md MonitoredDatabase
+	var data [](map[string]interface{})
 	var err error
 	var duration time.Duration
+	var exists bool
+	var sqlStmtTimeout string
+	var sqlLockTimeout = "SET LOCAL lock_timeout TO '100ms';"
 
 	if strings.TrimSpace(sql) == "" {
 		return nil, errors.New("empty SQL"), duration
@@ -550,73 +701,13 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 		return nil, err, duration
 	}
 
-	db_conn_limiting_channel_lock.RLock()
-	conn_limit_channel, ok := db_conn_limiting_channel[dbUnique]
-	db_conn_limiting_channel_lock.RUnlock()
-	if !ok {
-		log.Fatal("db_conn_limiting_channel not initialized for ", dbUnique)
-	}
-
-	//log.Debugf("Waiting for SQL token [%s:%s]...", msg.DBUniqueName, msg.MetricName)
-	token := <-conn_limit_channel
-	defer func() {
-		conn_limit_channel <- token
-	}()
-
-	libPQConnStr = md.LibPQConnStr
-	if opts.AdHocConnString != "" {
-		libPQConnStr = opts.AdHocConnString
-	}
-
-	if !useCache {
-		if md.DBType == DBTYPE_BOUNCER {
-			md.DBName = "pgbouncer"
-		}
-
-		conn, err = GetPostgresDBConnection(libPQConnStr, md.Host, md.Port, md.DBName, md.User, md.Password,
-			md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
-		if err != nil {
-			return nil, err, duration
-		}
-		defer conn.Close()
-
-	} else {
-		var dbStats go_sql.DBStats
-		monitored_db_conn_cache_lock.RLock()
-		conn, exists = monitored_db_conn_cache[dbUnique]
-		monitored_db_conn_cache_lock.RUnlock()
-		if conn != nil {
-			dbStats = conn.Stats()
-		}
-
-		if !exists || conn == nil || dbStats.OpenConnections == 0 {
-
-			if md.DBType == DBTYPE_BOUNCER {
-				md.DBName = "pgbouncer"
-			}
-
-			// only one metric can create connection in cache at a time
-			monitored_db_conn_cache_lock.Lock()
-			// recheck after lock acquire, pool can already be created
-			conn, exists = monitored_db_conn_cache[dbUnique]
-			if !exists || conn == nil {
-				conn, err = GetPostgresDBConnection(libPQConnStr, md.Host, md.Port, md.DBName, md.User, md.Password,
-					md.SslMode, md.SslRootCAPath, md.SslClientCertPath, md.SslClientKeyPath)
-				if err != nil {
-					monitored_db_conn_cache_lock.Unlock()
-					return nil, err, duration
-				}
-
-				conn.SetMaxIdleConns(1)
-				conn.SetMaxOpenConns(MAX_PG_CONNECTIONS_PER_MONITORED_DB)
-				// recycling periodically makes sense as long sessions might bloat memory or maybe conn info (password) was changed
-				conn.SetConnMaxLifetime(time.Second * time.Duration(PG_CONN_RECYCLE_SECONDS))
-
-				monitored_db_conn_cache[dbUnique] = conn
-			}
-			monitored_db_conn_cache_lock.Unlock()
-		}
-
+	monitored_db_conn_cache_lock.RLock()
+	// sqlx.DB itself is parallel safe
+	conn, exists = monitored_db_conn_cache[dbUnique]
+	monitored_db_conn_cache_lock.RUnlock()
+	if !exists || conn == nil {
+		log.Errorf("SQL connection for dbUnique %s not found or nil", dbUnique) // Should always be initialized in the main loop DB discovery code ...
+		return nil, errors.New("SQL connection not found or nil"), duration
 	}
 
 	if !adHocMode && IsPostgresDBType(md.DBType) {
@@ -625,7 +716,12 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 			stmtTimeout = stmtTimeoutOverride
 		}
 		if stmtTimeout > 0 { // 0 = don't change, use DB level settings
-			_, err = DBExecRead(conn, dbUnique, fmt.Sprintf("SET statement_timeout TO '%ds'", stmtTimeout))
+			if useConnPooling {
+				sqlStmtTimeout = fmt.Sprintf("SET LOCAL statement_timeout TO '%ds';", stmtTimeout)
+			} else {
+				sqlStmtTimeout = fmt.Sprintf("SET statement_timeout TO '%ds';", stmtTimeout)
+			}
+
 		}
 		if err != nil {
 			atomic.AddUint64(&totalMetricFetchFailuresCounter, 1)
@@ -633,8 +729,18 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, useCache bool, stmtTi
 		}
 	}
 
+	if !useConnPooling {
+		sqlLockTimeout = "SET lock_timeout TO '100ms';"
+	}
+
+	sqlToExec := sqlLockTimeout + sqlStmtTimeout + sql // bundle timeouts with actual SQL to reduce round-trip times
+	//log.Debugf("Executing SQL: %s", sqlToExec)
 	t1 := time.Now()
-	data, err := DBExecRead(conn, dbUnique, sql, args...)
+	if useConnPooling {
+		data, err = DBExecInExplicitTX(conn, dbUnique, sqlToExec, args...)
+	} else {
+		data, err = DBExecRead(conn, dbUnique, sqlToExec, args...)
+	}
 	t2 := time.Now()
 	if err != nil {
 		atomic.AddUint64(&totalMetricFetchFailuresCounter, 1)
@@ -1727,17 +1833,15 @@ func GetMonitoredDatabaseByUniqueName(name string) (MonitoredDatabase, error) {
 }
 
 func UpdateMonitoredDBCache(data []MonitoredDatabase) {
-	if len(data) > 0 {
-		monitored_db_cache_new := make(map[string]MonitoredDatabase)
+	monitored_db_cache_new := make(map[string]MonitoredDatabase)
 
-		for _, row := range data {
-			monitored_db_cache_new[row.DBUniqueName] = row
-		}
-
-		monitored_db_cache_lock.Lock()
-		monitored_db_cache = monitored_db_cache_new
-		monitored_db_cache_lock.Unlock()
+	for _, row := range data {
+		monitored_db_cache_new[row.DBUniqueName] = row
 	}
+
+	monitored_db_cache_lock.Lock()
+	monitored_db_cache = monitored_db_cache_new
+	monitored_db_cache_lock.Unlock()
 }
 
 func ProcessRetryQueue(data_source, conn_str, conn_ident string, retry_queue *list.List, limit int) error {
@@ -1900,9 +2004,7 @@ func MetricsPersister(data_store string, storage_ch <-chan []MetricStoreMessage)
 							continue
 						}
 						msg := msg_arr[0]
-						promAsyncMetricCacheLock.Lock()
-						promAsyncMetricCache[msg.DBUniqueName+msg.MetricName] = msg_arr
-						promAsyncMetricCacheLock.Unlock()
+						PromAsyncCacheAddMetricData(msg.DBUniqueName, msg.MetricName, msg_arr)
 						log.Infof("[%s:%s] Added %d rows to Prom cache", msg.DBUniqueName, msg.MetricName, len(msg.Data))
 					} else if data_store == DATASTORE_INFLUX {
 						err = SendToInflux(InfluxConnectStrings[i], strconv.Itoa(i), msg_arr)
@@ -1985,14 +2087,21 @@ func DBGetSizeMB(dbUnique string) (int64, error) {
 	lastDBSizeCheckLock.RUnlock()
 
 	if !ok || lastDBSizeCheckTime.Add(DB_SIZE_CACHING_INTERVAL).Before(time.Now()) {
+		ver, err := DBGetPGVersion(dbUnique, DBTYPE_PG, false)
+		if err != nil || (ver.ExecEnv != EXEC_ENV_AZURE_SINGLE) || (ver.ExecEnv == EXEC_ENV_AZURE_SINGLE && ver.ApproxDBSizeB < 1e12) {
+			log.Debugf("[%s] determining DB size ...", dbUnique)
 
-		log.Debugf("[%s] determining DB size ...", dbUnique)
-		data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 60, sql_db_size) // can take some time on ancient FS, use 60s stmt timeout
-		if err != nil {
-			log.Errorf("[%s] failed to determine DB size...cannot apply --min-db-size-mb flag. err: %v ...", dbUnique, err)
-			return 0, err
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 300, sql_db_size) // can take some time on ancient FS, use 300s stmt timeout
+			if err != nil {
+				log.Errorf("[%s] failed to determine DB size...cannot apply --min-db-size-mb flag. err: %v ...", dbUnique, err)
+				return 0, err
+			}
+			sizeMB = data[0]["pg_database_size"].(int64) / 1048576
+		} else {
+			log.Debugf("[%s] Using approx DB size for the --min-db-size-mb filter ...", dbUnique)
+			sizeMB = ver.ApproxDBSizeB / 1048576
 		}
-		sizeMB = data[0]["pg_database_size"].(int64) / 1048576
+
 		log.Debugf("[%s] DB size = %d MB, caching for %v ...", dbUnique, sizeMB, DB_SIZE_CACHING_INTERVAL)
 
 		lastDBSizeCheckLock.Lock()
@@ -2001,9 +2110,43 @@ func DBGetSizeMB(dbUnique string) (int64, error) {
 		lastDBSizeCheckLock.Unlock()
 
 		return sizeMB, nil
+
 	}
 	log.Debugf("[%s] using cached DBsize %d MB for the --min-db-size-mb filter check", dbUnique, lastDBSize)
 	return lastDBSize, nil
+}
+
+func TryDiscoverExecutionEnv(dbUnique string) string {
+	sqlPGExecEnv := `select /* pgwatch2_generated */
+	case
+	  when exists (select * from pg_settings where name = 'pg_qs.host_database' and setting = 'azure_sys') and version() ~* 'compiled by Visual C' then 'AZURE_SINGLE'
+	  when exists (select * from pg_settings where name = 'pg_qs.host_database' and setting = 'azure_sys') and version() ~* 'compiled by gcc' then 'AZURE_FLEXIBLE'
+	  when exists (select * from pg_settings where name = 'cloudsql.supported_extensions') then 'GOOGLE'
+	else
+	  'UNKNOWN'
+	end as exec_env;
+  `
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sqlPGExecEnv)
+	if err != nil {
+		return ""
+	}
+	return data[0]["exec_env"].(string)
+}
+
+func GetDBTotalApproxSize(dbUnique string) (int64, error) {
+	sqlApproxDBSize := `
+	select /* pgwatch2_generated */
+		current_setting('block_size')::int8 * sum(relpages) as db_size_approx
+	from
+		pg_class c
+	where	/* NB! works only for v9.1+*/
+		c.relpersistence != 't';
+	`
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sqlApproxDBSize)
+	if err != nil {
+		return 0, err
+	}
+	return data[0]["db_size_approx"].(int64), nil
 }
 
 func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapEntry, error) {
@@ -2022,13 +2165,14 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 	sql_extensions := `select /* pgwatch2_generated */ extname::text, (regexp_matches(extversion, $$\d+\.?\d+?$$))[1]::text as extversion from pg_extension order by 1;`
 	pgpool_version := `SHOW POOL_VERSION` // supported from pgpool2 v3.0
 
-	db_pg_version_map_lock.RLock()
+	db_pg_version_map_lock.Lock()
 	get_ver_lock, ok := db_get_pg_version_map_lock[dbUnique]
 	if !ok {
-		log.Fatal("db_get_pg_version_map_lock uninitialized")
+		db_get_pg_version_map_lock[dbUnique] = sync.RWMutex{}
+		get_ver_lock = db_get_pg_version_map_lock[dbUnique]
 	}
 	ver, ok = db_pg_version_map[dbUnique]
-	db_pg_version_map_lock.RUnlock()
+	db_pg_version_map_lock.Unlock()
 
 	if !noCache && ok && ver.LastCheckedOn.After(time.Now().Add(time.Minute*-2)) { // use cached version for 2 min
 		//log.Debugf("using cached postgres version %s for %s", ver.Version.String(), dbUnique)
@@ -2043,7 +2187,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 		}
 
 		if dbType == DBTYPE_BOUNCER {
-			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, 0, "show version")
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, "show version")
 			if err != nil {
 				return verNew, err
 			}
@@ -2054,14 +2198,14 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 			} else {
 				matches := rBouncerAndPgpoolVerMatch.FindStringSubmatch(data[0]["version"].(string))
 				if len(matches) != 1 {
-					log.Errorf("Unexpected PgBouncer version input: %s", data[0]["version"].(string))
+					log.Errorf("[%s] Unexpected PgBouncer version input: %s", dbUnique, data[0]["version"].(string))
 					return ver, fmt.Errorf("Unexpected PgBouncer version input: %s", data[0]["version"].(string))
 				}
 				verNew.VersionStr = matches[0]
 				verNew.Version, _ = decimal.NewFromString(matches[0])
 			}
 		} else if dbType == DBTYPE_PGPOOL {
-			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, 0, pgpool_version)
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, pgpool_version)
 			if err != nil {
 				return verNew, err
 			}
@@ -2071,19 +2215,19 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 			} else {
 				matches := rBouncerAndPgpoolVerMatch.FindStringSubmatch(string(data[0]["pool_version"].([]byte)))
 				if len(matches) != 1 {
-					log.Errorf("Unexpected PgPool version input: %s", data[0]["pool_version"].([]byte))
+					log.Errorf("[%s] Unexpected PgPool version input: %s", dbUnique, data[0]["pool_version"].([]byte))
 					return ver, fmt.Errorf("Unexpected PgPool version input: %s", data[0]["pool_version"].([]byte))
 				}
 				verNew.VersionStr = matches[0]
 				verNew.Version, _ = decimal.NewFromString(matches[0])
 			}
 		} else {
-			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql)
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sql)
 			if err != nil {
 				if noCache {
 					return ver, err
 				} else {
-					log.Info("DBGetPGVersion failed, using old cached value", err)
+					log.Infof("[%s] DBGetPGVersion failed, using old cached value. err: %v", dbUnique, err)
 					return ver, nil
 				}
 			}
@@ -2094,14 +2238,35 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 
 			if verNew.Version.GreaterThanOrEqual(decimal.NewFromFloat(10)) && addSystemIdentifier {
 				log.Debugf("[%s] determining system identifier version (pg ver: %v)", dbUnique, verNew.VersionStr)
-				data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql_sysid)
+				data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sql_sysid)
 				if err == nil && len(data) > 0 {
 					verNew.SystemIdentifier = data[0]["system_identifier"].(string)
 				}
 			}
 
+			if ver.ExecEnv != "" {
+				verNew.ExecEnv = ver.ExecEnv // carry over as not likely to change ever
+			} else {
+				log.Debugf("[%s] determining the execution env...", dbUnique)
+				execEnv := TryDiscoverExecutionEnv(dbUnique)
+				if execEnv != "" {
+					log.Debugf("[%s] running on execution env: %s", dbUnique, execEnv)
+					verNew.ExecEnv = execEnv
+				}
+			}
+
+			// to work around poor Azure Single Server FS functions performance for some metrics + the --min-db-size-mb filter
+			if verNew.ExecEnv == EXEC_ENV_AZURE_SINGLE {
+				approxSize, err := GetDBTotalApproxSize(dbUnique)
+				if err == nil {
+					verNew.ApproxDBSizeB = approxSize
+				} else {
+					verNew.ApproxDBSizeB = ver.ApproxDBSizeB
+				}
+			}
+
 			log.Debugf("[%s] determining if monitoring user is a superuser...", dbUnique)
-			data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql_su)
+			data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", 0, sql_su)
 			if err == nil {
 				verNew.IsSuperuser = data[0]["rolsuper"].(bool)
 			}
@@ -2109,7 +2274,7 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 
 			if verNew.Version.GreaterThanOrEqual(MinExtensionInfoAvailable) {
 				//log.Debugf("[%s] determining installed extensions info...", dbUnique)
-				data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql_extensions)
+				data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", 0, sql_extensions)
 				if err != nil {
 					log.Errorf("[%s] failed to determine installed extensions info: %v", dbUnique, err)
 				} else {
@@ -2242,14 +2407,14 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "sproc_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "sproc_hashes", mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Error("could not read sproc_hashes from monitored host: ", dbUnique, ", err:", err)
 		return change_counts
 	}
 
 	for _, dr := range data {
-		obj_ident := dr["tag_sproc"].(string) + ":" + dr["tag_oid"].(string)
+		obj_ident := dr["tag_sproc"].(string) + DB_METRIC_JOIN_STR + dr["tag_oid"].(string)
 		prev_hash, ok := host_state["sproc_hashes"][obj_ident]
 		if ok { // we have existing state
 			if prev_hash != dr["md5"].(string) {
@@ -2275,12 +2440,12 @@ func DetectSprocChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		// turn resultset to map => [oid]=true for faster checks
 		current_oid_map := make(map[string]bool)
 		for _, dr := range data {
-			current_oid_map[dr["tag_sproc"].(string)+":"+dr["tag_oid"].(string)] = true
+			current_oid_map[dr["tag_sproc"].(string)+DB_METRIC_JOIN_STR+dr["tag_oid"].(string)] = true
 		}
 		for sproc_ident := range host_state["sproc_hashes"] {
 			_, ok := current_oid_map[sproc_ident]
 			if !ok {
-				splits := strings.Split(sproc_ident, ":")
+				splits := strings.Split(sproc_ident, DB_METRIC_JOIN_STR)
 				log.Info("detected delete of sproc:", splits[0], ", oid:", splits[1])
 				influx_entry := make(map[string]interface{})
 				influx_entry["event"] = "drop"
@@ -2328,7 +2493,7 @@ func DetectTableChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "table_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "table_hashes", mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Error("could not read table_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -2414,7 +2579,7 @@ func DetectIndexChanges(dbUnique string, vme DBVersionMapEntry, storage_ch chan<
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "index_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "index_hashes", mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Error("could not read index_hashes from monitored host:", dbUnique, ", err:", err)
 		return change_counts
@@ -2499,7 +2664,7 @@ func DetectPrivilegeChanges(dbUnique string, vme DBVersionMapEntry, storage_ch c
 	}
 
 	// returns rows of: object_type, tag_role, tag_object, privilege_type
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "privilege_changes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "privilege_changes", mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Errorf("[%s][%s] failed to fetch object privileges info: %v", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, err)
 		return change_counts
@@ -2577,7 +2742,7 @@ func DetectConfigurationChanges(dbUnique string, vme DBVersionMapEntry, storage_
 		return change_counts
 	}
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "configuration_hashes", useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "configuration_hashes", mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 	if err != nil {
 		log.Errorf("[%s][%s] could not read configuration_hashes from monitored host: %v", dbUnique, SPECIAL_METRIC_CHANGE_EVENTS, err)
 		return change_counts
@@ -2648,7 +2813,7 @@ func GetRecommendations(dbUnique string, vme DBVersionMapEntry) ([]map[string]in
 	log.Debugf("Processing %d recommendation metrics for \"%s\"", len(reco_metrics), dbUnique)
 
 	for m, mvp := range reco_metrics {
-		data, err, duration := DBExecReadByDbUniqueName(dbUnique, m, useConnPooling, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
+		data, err, duration := DBExecReadByDbUniqueName(dbUnique, m, mvp.MetricAttrs.StatementTimeoutSeconds, mvp.Sql)
 		total_duration += duration
 		if err != nil {
 			if strings.Contains(err.Error(), "does not exist") { // some more exotic extensions missing is expected, don't pollute the error log
@@ -2774,7 +2939,7 @@ func FetchMetricsPgpool(msg MetricFetchMessage, vme DBVersionMapEntry, mvp Metri
 
 	for _, sql := range sql_lines {
 		if strings.HasPrefix(sql, "SHOW POOL_NODES") {
-			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, 0, sql)
+			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, 0, sql)
 			duration = duration + dur
 			if err != nil {
 				log.Errorf("[%s][%s] Could not fetch PgPool statistics: %v", msg.DBUniqueName, msg.MetricName, err)
@@ -2829,7 +2994,7 @@ func FetchMetricsPgpool(msg MetricFetchMessage, vme DBVersionMapEntry, mvp Metri
 				continue
 			}
 
-			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, 0, sql)
+			data, err, dur := DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, 0, sql)
 			duration = duration + dur
 			if err != nil {
 				log.Errorf("[%s][%s] Could not fetch PgPool statistics: %v", msg.DBUniqueName, msg.MetricName, err)
@@ -2878,6 +3043,16 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 		log.Error("failed to fetch pg version for ", msg.DBUniqueName, msg.MetricName, err)
 		return nil, err
 	}
+	if msg.MetricName == SPECIAL_METRIC_DB_SIZE || msg.MetricName == SPECIAL_METRIC_TABLE_STATS {
+		if vme.ExecEnv == EXEC_ENV_AZURE_SINGLE && vme.ApproxDBSizeB > 1e12 { // 1TB
+			subsMetricName := msg.MetricName + "_approx"
+			mvp_approx, err := GetMetricVersionProperties(subsMetricName, vme, nil)
+			if err == nil && mvp_approx.MetricAttrs.MetricStorageName == msg.MetricName {
+				log.Infof("[%s:%s] Transparently swapping metric to %s due to hard-coded rules...", msg.DBUniqueName, msg.MetricName, subsMetricName)
+				msg.MetricName = subsMetricName
+			}
+		}
+	}
 	db_pg_version = vme.Version
 
 	if msg.DBType == DBTYPE_BOUNCER {
@@ -2886,10 +3061,10 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 
 	mvp, err := GetMetricVersionProperties(msg.MetricName, vme, nil)
 	if err != nil && msg.MetricName != RECO_METRIC_NAME {
-		epoch, ok := last_sql_fetch_error.Load(msg.MetricName + ":" + db_pg_version.String())
+		epoch, ok := last_sql_fetch_error.Load(msg.MetricName + DB_METRIC_JOIN_STR + db_pg_version.String())
 		if !ok || ((time.Now().Unix() - epoch.(int64)) > 3600) { // complain only 1x per hour
 			log.Infof("Failed to get SQL for metric '%s', version '%s': %v", msg.MetricName, vme.VersionStr, err)
-			last_sql_fetch_error.Store(msg.MetricName+":"+db_pg_version.String(), time.Now().Unix())
+			last_sql_fetch_error.Store(msg.MetricName+DB_METRIC_JOIN_STR+db_pg_version.String(), time.Now().Unix())
 		}
 		if strings.Contains(err.Error(), "too old") {
 			return nil, nil
@@ -2909,6 +3084,13 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL if it's defined
 
 	sql = mvp.Sql
+
+	if noHelperFunctions && mvp.CallsHelperFunctions && mvp.SqlSU != "" {
+		log.Debugf("[%s:%s] Using SU SQL instead of normal one due to --no-helper-functions input", msg.DBUniqueName, msg.MetricName)
+		sql = mvp.SqlSU
+		retryWithSuperuserSQL = false
+	}
+
 	if (vme.IsSuperuser || (retryWithSuperuserSQL && firstErr != nil)) && mvp.SqlSU != "" {
 		sql = mvp.SqlSU
 		retryWithSuperuserSQL = false
@@ -2931,7 +3113,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 	} else if msg.DBType == DBTYPE_PGPOOL {
 		data, _, duration = FetchMetricsPgpool(msg, vme, mvp)
 	} else {
-		data, err, duration = DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, useConnPooling, msg.StmtTimeoutOverride, sql)
+		data, err, duration = DBExecReadByDbUniqueName(msg.DBUniqueName, msg.MetricName, mvp.MetricAttrs.StatementTimeoutSeconds, sql)
 
 		if err != nil {
 			// let's soften errors to "info" from functions that expect the server to be a primary to reduce noise
@@ -3034,8 +3216,13 @@ func ClearDBUnreachableStateIfAny(dbUnique string) {
 func PurgeMetricsFromPromAsyncCacheIfAny(dbUnique, metric string) {
 	if promAsyncMode {
 		promAsyncMetricCacheLock.Lock()
-		delete(promAsyncMetricCache, dbUnique+metric)
-		promAsyncMetricCacheLock.Unlock()
+		defer promAsyncMetricCacheLock.Unlock()
+
+		if metric == "" {
+			delete(promAsyncMetricCache, dbUnique) // whole host removed from config
+		} else {
+			delete(promAsyncMetricCache[dbUnique], metric)
+		}
 	}
 }
 
@@ -3275,63 +3462,68 @@ func MetricGathererLoop(dbUniqueName, dbUniqueNameOrig, dbType, metricName strin
 					}
 					last_error_notification_time = time.Now()
 				}
-			} else if metricStoreMessages != nil && len(metricStoreMessages[0].Data) > 0 {
-
-				// pick up "server restarted" events here to avoid doing extra selects from CheckForPGObjectChangesAndStore code
-				if metricName == "db_stats" {
-					postmaster_uptime_s, ok := (metricStoreMessages[0].Data)[0]["postmaster_uptime_s"]
-					if ok {
-						if last_uptime_s != -1 {
-							if postmaster_uptime_s.(int64) < last_uptime_s { // restart (or possibly also failover when host is routed) happened
-								message := "Detected server restart (or failover) of \"" + dbUniqueName + "\""
-								log.Warning(message)
-								detected_changes_summary := make([](map[string]interface{}), 0)
-								entry := map[string]interface{}{"details": message, "epoch_ns": (metricStoreMessages[0].Data)[0]["epoch_ns"]}
-								detected_changes_summary = append(detected_changes_summary, entry)
-								metricStoreMessages = append(metricStoreMessages,
-									MetricStoreMessage{DBUniqueName: dbUniqueName, DBType: dbType,
-										MetricName: "object_changes", Data: detected_changes_summary, CustomTags: metricStoreMessages[0].CustomTags})
-							}
-						}
-						last_uptime_s = postmaster_uptime_s.(int64)
-					}
+			} else if metricStoreMessages != nil {
+				if opts.Datastore == DATASTORE_PROMETHEUS && promAsyncMode && len(metricStoreMessages[0].Data) == 0 {
+					PurgeMetricsFromPromAsyncCacheIfAny(dbUniqueName, metricName)
 				}
+				if len(metricStoreMessages[0].Data) > 0 {
 
-				if opts.TestdataDays != 0 {
-					orig_msms := deepCopyMetricStoreMessages(metricStoreMessages)
-					log.Warningf("Generating %d days of data for [%s:%s]", opts.TestdataDays, dbUniqueName, metricName)
-					test_metrics_stored := 0
-					simulated_time := t1
-					end_time := t1.Add(time.Hour * time.Duration(opts.TestdataDays*24))
-
-					if opts.TestdataDays < 0 {
-						simulated_time, end_time = end_time, simulated_time
-					}
-
-					for simulated_time.Before(end_time) {
-						log.Debugf("Metric [%s], simulating time: %v", metricName, simulated_time)
-						for host_nr := 1; host_nr <= opts.TestdataMultiplier; host_nr++ {
-							fake_dbname := fmt.Sprintf("%s-%d", dbUniqueName, host_nr)
-							msgs_copy_tmp := deepCopyMetricStoreMessages(orig_msms)
-
-							for i := 0; i < len(msgs_copy_tmp[0].Data); i++ {
-								(msgs_copy_tmp[0].Data)[i][EPOCH_COLUMN_NAME] = (simulated_time.UnixNano() + int64(1000*i))
+					// pick up "server restarted" events here to avoid doing extra selects from CheckForPGObjectChangesAndStore code
+					if metricName == "db_stats" {
+						postmaster_uptime_s, ok := (metricStoreMessages[0].Data)[0]["postmaster_uptime_s"]
+						if ok {
+							if last_uptime_s != -1 {
+								if postmaster_uptime_s.(int64) < last_uptime_s { // restart (or possibly also failover when host is routed) happened
+									message := "Detected server restart (or failover) of \"" + dbUniqueName + "\""
+									log.Warning(message)
+									detected_changes_summary := make([](map[string]interface{}), 0)
+									entry := map[string]interface{}{"details": message, "epoch_ns": (metricStoreMessages[0].Data)[0]["epoch_ns"]}
+									detected_changes_summary = append(detected_changes_summary, entry)
+									metricStoreMessages = append(metricStoreMessages,
+										MetricStoreMessage{DBUniqueName: dbUniqueName, DBType: dbType,
+											MetricName: "object_changes", Data: detected_changes_summary, CustomTags: metricStoreMessages[0].CustomTags})
+								}
 							}
-							msgs_copy_tmp[0].DBUniqueName = fake_dbname
-							//log.Debugf("fake data for [%s:%s]: %v", metricName, fake_dbname, msgs_copy_tmp[0].Data)
-							_, _ = StoreMetrics(msgs_copy_tmp, store_ch)
-							test_metrics_stored += len(msgs_copy_tmp[0].Data)
+							last_uptime_s = postmaster_uptime_s.(int64)
 						}
-						time.Sleep(time.Duration(opts.TestdataMultiplier * 10000000)) // 10ms * multiplier (in nanosec).
-						// would generate more metrics than persister can write and eat up RAM
-						simulated_time = simulated_time.Add(time.Second * time.Duration(interval))
 					}
-					log.Warningf("exiting MetricGathererLoop for [%s], %d total data points generated for %d hosts",
-						metricName, test_metrics_stored, opts.TestdataMultiplier)
-					testDataGenerationModeWG.Done()
-					return
-				} else {
-					_, _ = StoreMetrics(metricStoreMessages, store_ch)
+
+					if opts.TestdataDays != 0 {
+						orig_msms := deepCopyMetricStoreMessages(metricStoreMessages)
+						log.Warningf("Generating %d days of data for [%s:%s]", opts.TestdataDays, dbUniqueName, metricName)
+						test_metrics_stored := 0
+						simulated_time := t1
+						end_time := t1.Add(time.Hour * time.Duration(opts.TestdataDays*24))
+
+						if opts.TestdataDays < 0 {
+							simulated_time, end_time = end_time, simulated_time
+						}
+
+						for simulated_time.Before(end_time) {
+							log.Debugf("Metric [%s], simulating time: %v", metricName, simulated_time)
+							for host_nr := 1; host_nr <= opts.TestdataMultiplier; host_nr++ {
+								fake_dbname := fmt.Sprintf("%s-%d", dbUniqueName, host_nr)
+								msgs_copy_tmp := deepCopyMetricStoreMessages(orig_msms)
+
+								for i := 0; i < len(msgs_copy_tmp[0].Data); i++ {
+									(msgs_copy_tmp[0].Data)[i][EPOCH_COLUMN_NAME] = (simulated_time.UnixNano() + int64(1000*i))
+								}
+								msgs_copy_tmp[0].DBUniqueName = fake_dbname
+								//log.Debugf("fake data for [%s:%s]: %v", metricName, fake_dbname, msgs_copy_tmp[0].Data)
+								_, _ = StoreMetrics(msgs_copy_tmp, store_ch)
+								test_metrics_stored += len(msgs_copy_tmp[0].Data)
+							}
+							time.Sleep(time.Duration(opts.TestdataMultiplier * 10000000)) // 10ms * multiplier (in nanosec).
+							// would generate more metrics than persister can write and eat up RAM
+							simulated_time = simulated_time.Add(time.Second * time.Duration(interval))
+						}
+						log.Warningf("exiting MetricGathererLoop for [%s], %d total data points generated for %d hosts",
+							metricName, test_metrics_stored, opts.TestdataMultiplier)
+						testDataGenerationModeWG.Done()
+						return
+					} else {
+						_, _ = StoreMetrics(metricStoreMessages, store_ch)
+					}
 				}
 			}
 
@@ -3610,6 +3802,7 @@ func UpdateMetricDefinitionMap(newMetrics map[string]map[decimal.Decimal]MetricV
 
 func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metric_def_map_new := make(map[string]map[decimal.Decimal]MetricVersionProperties)
+	metricNameRemapsNew := make(map[string]string)
 	sql := `select /* pgwatch2_generated */ m_name, m_pg_version_from::text, m_sql, m_master_only, m_standby_only,
 			  coalesce(m_column_attrs::text, '') as m_column_attrs, coalesce(m_column_attrs::text, '') as m_column_attrs,
 			  coalesce(ma_metric_attrs::text, '') as ma_metric_attrs, m_sql_su
@@ -3651,16 +3844,25 @@ func ReadMetricDefinitionMapFromPostgres(failOnError bool) (map[string]map[decim
 		ma := MetricAttrs{}
 		if row["ma_metric_attrs"].(string) != "" {
 			ma = ParseMetricAttrsFromString(row["ma_metric_attrs"].(string))
+			if ma.MetricStorageName != "" {
+				metricNameRemapsNew[row["m_name"].(string)] = ma.MetricStorageName
+			}
 		}
 		metric_def_map_new[row["m_name"].(string)][d] = MetricVersionProperties{
-			Sql:         row["m_sql"].(string),
-			SqlSU:       row["m_sql_su"].(string),
-			MasterOnly:  row["m_master_only"].(bool),
-			StandbyOnly: row["m_standby_only"].(bool),
-			ColumnAttrs: ca,
-			MetricAttrs: ma,
+			Sql:                  row["m_sql"].(string),
+			SqlSU:                row["m_sql_su"].(string),
+			MasterOnly:           row["m_master_only"].(bool),
+			StandbyOnly:          row["m_standby_only"].(bool),
+			ColumnAttrs:          ca,
+			MetricAttrs:          ma,
+			CallsHelperFunctions: DoesMetricDefinitionCallHelperFunctions(row["m_sql"].(string)),
 		}
 	}
+
+	metricNameRemapLock.Lock()
+	metricNameRemaps = metricNameRemapsNew
+	metricNameRemapLock.Unlock()
+
 	return metric_def_map_new, err
 }
 
@@ -3806,7 +4008,7 @@ retry:
 func DoesFunctionExists(dbUnique, functionName string) bool {
 	log.Debug("Checking for function existence", dbUnique, functionName)
 	sql := fmt.Sprintf("select /* pgwatch2_generated */ 1 from pg_proc join pg_namespace n on pronamespace = n.oid where proname = '%s' and n.nspname = 'public'", functionName)
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sql)
 	if err != nil {
 		log.Error("Failed to check for function existence", dbUnique, functionName, err)
 		return false
@@ -3816,6 +4018,45 @@ func DoesFunctionExists(dbUnique, functionName string) bool {
 		return true
 	}
 	return false
+}
+
+// Called once on daemon startup if some commonly wanted extension (most notably pg_stat_statements) is missing.
+// NB! With newer Postgres version can even succeed if the user is not a real superuser due to some cloud-specific
+// whitelisting or "trusted extensions" (a feature from v13). Ignores errors.
+func TryCreateMissingExtensions(dbUnique string, extensionNames []string, existingExtensions map[string]decimal.Decimal) []string {
+	sqlAvailable := `select name::text from pg_available_extensions`
+	extsCreated := make([]string, 0)
+
+	// For security reasons don't allow to execute random strings but check that it's an existing extension
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sqlAvailable)
+	if err != nil {
+		log.Infof("[%s] Failed to get a list of available extensions: %v", dbUnique, err)
+		return extsCreated
+	}
+
+	availableExts := make(map[string]bool)
+	for _, row := range data {
+		availableExts[row["name"].(string)] = true
+	}
+
+	for _, extToCreate := range extensionNames {
+		if _, ok := existingExtensions[extToCreate]; ok {
+			continue
+		}
+		_, ok := availableExts[extToCreate]
+		if !ok {
+			log.Errorf("[%s] Requested extension %s not available on instance, cannot try to create...", dbUnique, extToCreate)
+		} else {
+			sqlCreateExt := `create extension ` + extToCreate
+			_, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sqlCreateExt)
+			if err != nil {
+				log.Errorf("[%s] Failed to create extension %s (based on --try-create-listed-exts-if-missing input): %v", dbUnique, extToCreate, err)
+			}
+			extsCreated = append(extsCreated, extToCreate)
+		}
+	}
+
+	return extsCreated
 }
 
 // Called once on daemon startup to try to create "metric fething helper" functions automatically
@@ -3847,7 +4088,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 					log.Warning("Could not find query text for", dbUnique, helperName)
 					continue
 				}
-				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", useConnPooling, 0, mvp.Sql)
+				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", 0, mvp.Sql)
 				if err != nil {
 					log.Warning("Failed to create a metric fetching helper for", dbUnique, helperName)
 					log.Warning(err)
@@ -3879,7 +4120,7 @@ func TryCreateMetricsFetchingHelpers(dbUnique string) error {
 					log.Warning("Could not find query text for", dbUnique, metric)
 					continue
 				}
-				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", true, 0, mvp.Sql)
+				_, err, _ = DBExecReadByDbUniqueName(dbUnique, "", 0, mvp.Sql)
 				if err != nil {
 					log.Warning("Failed to create a metric fetching helper for", dbUnique, metric)
 					log.Warning(err)
@@ -3970,6 +4211,7 @@ func ParseMetricAttrsFromString(jsonAttrs string) MetricAttrs {
 // expected is following structure: metric_name/pg_ver/metric(_master|standby).sql
 func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[decimal.Decimal]MetricVersionProperties, error) {
 	metrics_map := make(map[string]map[decimal.Decimal]MetricVersionProperties)
+	metricNameRemapsNew := make(map[string]string)
 	rIsDigitOrPunctuation := regexp.MustCompile(`^[\d\.]+$`)
 	metricNamePattern := `^[a-z0-9_\.]+$`
 	rMetricNameFilter := regexp.MustCompile(metricNamePattern)
@@ -4004,6 +4246,9 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 			if _, err = os.Stat(path.Join(folder, f.Name(), "metric_attrs.yaml")); err == nil {
 				metricAttrs = ParseMetricAttrsFromYAML(path.Join(folder, f.Name(), "metric_attrs.yaml"))
 				//log.Debugf("Discovered following metric attributes for metric %s: %v", f.Name(), metricAttrs)
+				if metricAttrs.MetricStorageName != "" {
+					metricNameRemapsNew[f.Name()] = metricAttrs.MetricStorageName
+				}
 			}
 
 			var metricColumnAttrs MetricColumnAttrs
@@ -4020,7 +4265,7 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 					log.Warningf("Invalid metric structure - version folder names should consist of only numerics/dots, found: %s", pgVer.Name())
 					continue
 				}
-				d, err := decimal.NewFromString(pgVer.Name())
+				dirName, err := decimal.NewFromString(pgVer.Name())
 				if err != nil {
 					log.Errorf("Could not parse \"%s\" to Decimal: %s", pgVer.Name(), err)
 					continue
@@ -4054,11 +4299,11 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 						if !ok {
 							metrics_map[f.Name()] = make(map[decimal.Decimal]MetricVersionProperties)
 						}
-						mvp, ok = mvpVer[d]
+						mvp, ok = mvpVer[dirName]
 						if !ok {
 							mvp = MetricVersionProperties{Sql: string(metric_sql[:]), ColumnAttrs: metricColumnAttrs, MetricAttrs: metricAttrs}
 						}
-
+						mvp.CallsHelperFunctions = DoesMetricDefinitionCallHelperFunctions(mvp.Sql)
 						if strings.Contains(md.Name(), "_master") {
 							mvp.MasterOnly = true
 						}
@@ -4068,12 +4313,16 @@ func ReadMetricsFromFolder(folder string, failOnError bool) (map[string]map[deci
 						if strings.Contains(md.Name(), "_su") {
 							mvp.SqlSU = string(metric_sql[:])
 						}
-						metrics_map[f.Name()][d] = mvp
+						metrics_map[f.Name()][dirName] = mvp
 					}
 				}
 			}
 		}
 	}
+
+	metricNameRemapLock.Lock()
+	metricNameRemaps = metricNameRemapsNew
+	metricNameRemapLock.Unlock()
 
 	return metrics_map, nil
 }
@@ -4617,7 +4866,7 @@ func GetGoPsutilDiskPG(dbUnique string) ([]map[string]interface{}, error) {
 	sqlTS := `select spcname::text as name, pg_catalog.pg_tablespace_location(oid) as location from pg_catalog.pg_tablespace where not spcname like any(array[E'pg\\_%'])`
 	var ddDevice, ldDevice, walDevice uint64
 
-	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", false, 0, sql)
+	data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sql)
 	if err != nil || len(data) == 0 {
 		log.Errorf("Failed to determine relevant PG disk paths via SQL: %v", err)
 		return nil, err
@@ -4705,7 +4954,7 @@ func GetGoPsutilDiskPG(dbUnique string) ([]map[string]interface{}, error) {
 		}
 	}
 
-	data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", false, 0, sqlTS)
+	data, err, _ = DBExecReadByDbUniqueName(dbUnique, "", 0, sqlTS)
 	if err != nil {
 		log.Infof("Failed to determine relevant PG tablespace paths via SQL: %v", err)
 	} else if len(data) > 0 {
@@ -4758,15 +5007,117 @@ func GetLoadAvgLocal() ([]map[string]interface{}, error) {
 }
 
 func shouldDbBeMonitoredBasedOnCurrentState(md MonitoredDatabase) bool {
-	vme, err := DBGetPGVersion(md.DBUniqueName, md.DBType, false)
-	if err == nil && vme.IsInRecovery && md.OnlyIfMaster {
+	return !IsDBDormant(md.DBUniqueName)
+}
+
+func ControlChannelsMapToList(control_channels map[string]chan ControlMessage) []string {
+	control_channel_list := make([]string, len(control_channels))
+	i := 0
+	for key := range control_channels {
+		control_channel_list[i] = key
+		i++
+	}
+	return control_channel_list
+}
+
+func DoCloseResourcesForRemovedMonitoredDBIfAny(dbUnique string) {
+
+	CloseOrLimitSqlConnPoolForMonitoredDBIfAny(dbUnique)
+
+	PurgeMetricsFromPromAsyncCacheIfAny(dbUnique, "")
+}
+
+func CloseResourcesForRemovedMonitoredDBs(currentDBs, prevLoopDBs []MonitoredDatabase, shutDownDueToRoleChange map[string]bool) {
+	var curDBsMap = make(map[string]bool)
+
+	for _, curDB := range currentDBs {
+		curDBsMap[curDB.DBUniqueName] = true
+	}
+
+	for _, prevDB := range prevLoopDBs {
+		if _, ok := curDBsMap[prevDB.DBUniqueName]; !ok { // removed from config
+			DoCloseResourcesForRemovedMonitoredDBIfAny(prevDB.DBUniqueName)
+		}
+	}
+
+	// or to be ignored due to current instance state
+	for roleChangedDB := range shutDownDueToRoleChange {
+		DoCloseResourcesForRemovedMonitoredDBIfAny(roleChangedDB)
+	}
+}
+
+func PromAsyncCacheInitIfRequired(dbUnique, metric string) { // cache structure: [dbUnique][metric]lastly_fetched_data
+	if opts.Datastore == DATASTORE_PROMETHEUS && promAsyncMode {
+		promAsyncMetricCacheLock.Lock()
+		defer promAsyncMetricCacheLock.Unlock()
+		if _, ok := promAsyncMetricCache[dbUnique]; !ok {
+			metricMap := make(map[string][]MetricStoreMessage)
+			promAsyncMetricCache[dbUnique] = metricMap
+		}
+	}
+}
+
+func PromAsyncCacheAddMetricData(dbUnique, metric string, msgArr []MetricStoreMessage) { // cache structure: [dbUnique][metric]lastly_fetched_data
+	promAsyncMetricCacheLock.Lock()
+	defer promAsyncMetricCacheLock.Unlock()
+	if _, ok := promAsyncMetricCache[dbUnique]; ok {
+		promAsyncMetricCache[dbUnique][metric] = msgArr
+	}
+}
+
+func SetUndersizedDBState(dbUnique string, state bool) {
+	undersizedDBsLock.Lock()
+	undersizedDBs[dbUnique] = state
+	undersizedDBsLock.Unlock()
+}
+
+func IsDBUndersized(dbUnique string) bool {
+	undersizedDBsLock.RLock()
+	defer undersizedDBsLock.RUnlock()
+	undersized, ok := undersizedDBs[dbUnique]
+	if ok {
+		return undersized
+	}
+	return false
+}
+
+func SetRecoveryIgnoredDBState(dbUnique string, state bool) {
+	recoveryIgnoredDBsLock.Lock()
+	recoveryIgnoredDBs[dbUnique] = state
+	recoveryIgnoredDBsLock.Unlock()
+}
+
+func IsDBIgnoredBasedOnRecoveryState(dbUnique string) bool {
+	recoveryIgnoredDBsLock.RLock()
+	defer recoveryIgnoredDBsLock.RUnlock()
+	recoveryIgnored, ok := undersizedDBs[dbUnique]
+	if ok {
+		return recoveryIgnored
+	}
+	return false
+}
+
+func IsDBDormant(dbUnique string) bool {
+	return IsDBUndersized(dbUnique) || IsDBIgnoredBasedOnRecoveryState(dbUnique)
+}
+
+func DoesEmergencyTriggerfileExist() bool {
+	// Main idea of the feature is to be able to quickly free monitored DBs / network of any extra "monitoring effect" load.
+	// In highly automated K8s / IaC environments such a temporary change might involve pull requests, peer reviews, CI/CD etc
+	// which can all take too long vs "exec -it pgwatch2-pod -- touch /tmp/pgwatch2-emergency-pause".
+	// NB! After creating the file it can still take up to --servers-refresh-loop-seconds (2min def.) for change to take effect!
+	if opts.EmergencyPauseTriggerfile == "" {
 		return false
 	}
-	dbSize, err := DBGetSizeMB(md.DBUniqueName)
-	if err == nil && dbSize < opts.MinDbSizeMB {
+	_, err := os.Stat(opts.EmergencyPauseTriggerfile)
+	return err == nil
+}
+
+func DoesMetricDefinitionCallHelperFunctions(sqlDefinition string) bool {
+	if !noHelperFunctions { // save on regex matching --no-helper-functions param not set, information will not be used then anyways
 		return false
 	}
-	return true
+	return regexSQLHelperFunctionCalled.MatchString(sqlDefinition)
 }
 
 type Options struct {
@@ -4831,8 +5182,12 @@ type Options struct {
 	ServersRefreshLoopSeconds    int    `long:"servers-refresh-loop-seconds" description:"Sleep time for the main loop" env:"PW2_SERVERS_REFRESH_LOOP_SECONDS" default:"120"`
 	InstanceLevelCacheMaxSeconds int64  `long:"instance-level-cache-max-seconds" description:"Max allowed staleness for instance level metric data shared between DBs of an instance. Affects 'continuous' host types only. Set to 0 to disable" env:"PW2_INSTANCE_LEVEL_CACHE_MAX_SECONDS" default:"30"`
 	MinDbSizeMB                  int64  `long:"min-db-size-mb" description:"Smaller size DBs will be ignored and not monitored until they reach the threshold." env:"PW2_MIN_DB_SIZE_MB" default:"0"`
+	MaxParallelConnectionsPerDb  int    `long:"max-parallel-connections-per-db" description:"Max parallel metric fetches per DB. Note the multiplication effect on multi-DB instances" env:"PW2_MAX_PARALLEL_CONNECTIONS_PER_DB" default:"2"`
 	Version                      bool   `long:"version" description:"Show Git build version and exit" env:"PW2_VERSION"`
 	Ping                         bool   `long:"ping" description:"Try to connect to all configured DB-s, report errors and then exit" env:"PW2_PING"`
+	EmergencyPauseTriggerfile    string `long:"emergency-pause-triggerfile" description:"When the file exists no metrics will be temporarily fetched / scraped" env:"PW2_EMERGENCY_PAUSE_TRIGGERFILE" default:"/tmp/pgwatch2-emergency-pause"`
+	NoHelperFunctions            string `long:"no-helper-functions" description:"Ignore metric definitions using helper functions (in form get_smth()) and don't also roll out any helpers automatically" env:"PW2_NO_HELPER_FUNCTIONS" default:"false"`
+	TryCreateListedExtsIfMissing string `long:"try-create-listed-exts-if-missing" description:"Try creating the listed extensions (comma sep.) on first connect for all monitored DBs when missing. Main usage - pg_stat_statements" env:"PW2_TRY_CREATE_LISTED_EXTS_IF_MISSING" default:""`
 }
 
 var opts Options
@@ -4877,6 +5232,10 @@ func main() {
 
 	if opts.ServersRefreshLoopSeconds <= 1 {
 		log.Fatal("--servers-refresh-loop-seconds must be greater than 1")
+	}
+
+	if opts.MaxParallelConnectionsPerDb < 1 {
+		log.Fatal("--max-parallel-connections-per-db must be >= 1")
 	}
 
 	if len(opts.InfluxSSLSkipVerify) > 0 {
@@ -4967,6 +5326,9 @@ func main() {
 		if opts.SystemIdentifierField == "" {
 			log.Fatal("--system-identifier-field cannot be empty when --add-system-identifier enabled")
 		}
+	}
+	if opts.NoHelperFunctions != "" {
+		noHelperFunctions = StringToBoolOrFail(opts.NoHelperFunctions, "--no-helper-functions")
 	}
 
 	// running in config file based mode?
@@ -5090,7 +5452,7 @@ func main() {
 			if opts.GraphiteHost == "" || opts.GraphitePort == "" {
 				log.Fatal("--graphite-host/port needed!")
 			}
-			port, _ := strconv.ParseInt(opts.GraphitePort, 10, 64)
+			port, _ := strconv.ParseInt(opts.GraphitePort, 10, 32)
 			graphite_host = opts.GraphiteHost
 			graphite_port = int(port)
 			InitGraphiteConnection(graphite_host, graphite_port)
@@ -5172,6 +5534,7 @@ func main() {
 	}
 
 	first_loop := true
+	mainLoopCount := 0
 	var monitored_dbs []MonitoredDatabase
 	var last_metrics_refresh_time int64
 	var metrics map[string]map[decimal.Decimal]MetricVersionProperties
@@ -5180,6 +5543,8 @@ func main() {
 
 	for { //main loop
 		hostsToShutDownDueToRoleChange := make(map[string]bool) // hosts went from master to standby and have "only if master" set
+		var control_channel_name_list []string
+		gatherers_shut_down := 0
 
 		if time.Now().Unix()-last_metrics_refresh_time > METRIC_DEFINITION_REFRESH_TIME {
 			//metrics
@@ -5246,9 +5611,9 @@ func main() {
 					log.Debugf("Found %d databases to monitor from %d config items...", len(monitored_dbs), len(mc))
 				} else {
 					if first_loop {
-						log.Fatalf("Could not read/parse monitoring config from path: %s", opts.Config)
+						log.Fatalf("Could not read/parse monitoring config from path: %s. err: %v", opts.Config, err)
 					} else {
-						log.Errorf("Could not read/parse monitoring config from path: %s", opts.Config)
+						log.Errorf("Could not read/parse monitoring config from path: %s. using last valid config data. err: %v", opts.Config, err)
 					}
 					time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
 					continue
@@ -5260,11 +5625,16 @@ func main() {
 				if first_loop {
 					log.Fatal("could not fetch active hosts - check config!", err)
 				} else {
-					log.Error("could not fetch active hosts:", err)
+					log.Error("could not fetch active hosts, using last valid config data. err:", err)
 					time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
 					continue
 				}
 			}
+		}
+
+		if DoesEmergencyTriggerfileExist() {
+			log.Warningf("Emergency pause triggerfile detected at %s, ignoring currently configured DBs", opts.EmergencyPauseTriggerfile)
+			monitored_dbs = make([]MonitoredDatabase, 0)
 		}
 
 		UpdateMonitoredDBCache(monitored_dbs)
@@ -5297,38 +5667,26 @@ func main() {
 			db_unique_orig := host.DBUniqueNameOrig
 			db_type := host.DBType
 			metric_config = host.Metrics
+			wasInstancePreviouslyDormant := IsDBDormant(db_unique)
 
 			if host.PasswordType == "aes-gcm-256" && len(opts.AesGcmKeyphrase) == 0 && len(opts.AesGcmKeyphraseFile) == 0 {
 				// Warn if any encrypted hosts found but no keyphrase given
 				log.Warningf("Encrypted password type found for host \"%s\", but no decryption keyphrase specified. Use --aes-gcm-keyphrase or --aes-gcm-keyphrase-file params", db_unique)
 			}
 
-			db_conn_limiting_channel_lock.RLock()
-			_, exists := db_conn_limiting_channel[db_unique]
-			db_conn_limiting_channel_lock.RUnlock()
-
-			if !exists { // new host, initialize DB connection limiting structure
-				db_conn_limiting_channel_lock.Lock()
-				db_conn_limiting_channel[db_unique] = make(chan bool, MAX_PG_CONNECTIONS_PER_MONITORED_DB)
-				i := 0
-				for i < MAX_PG_CONNECTIONS_PER_MONITORED_DB {
-					//log.Debugf("initializing db_conn_limiting_channel %d for [%s]", i, db_unique)
-					db_conn_limiting_channel[db_unique] <- true
-					i++
-				}
-				db_conn_limiting_channel_lock.Unlock()
-
-				db_pg_version_map_lock.Lock()
-				db_get_pg_version_map_lock[db_unique] = sync.RWMutex{}
-				db_pg_version_map_lock.Unlock()
+			err := InitSqlConnPoolForMonitoredDBIfNil(host)
+			if err != nil {
+				log.Warningf("Could not init SQL connection pool for %s, retrying on next main loop. Err: %v", db_unique, err)
+				continue
 			}
+
+			InitPGVersionInfoFetchingLockIfNil(host)
 
 			_, connectFailedSoFar := failedInitialConnectHosts[db_unique]
 
-			if !exists || connectFailedSoFar {
+			if connectFailedSoFar { // idea is not to spwan any runners before we've successfully pinged the DB
 				var err error
 				var ver DBVersionMapEntry
-				metric_config = make(map[string]float64)
 
 				if connectFailedSoFar {
 					log.Infof("retrying to connect to uninitialized DB \"%s\"...", db_unique)
@@ -5361,8 +5719,12 @@ func main() {
 				}
 
 				if !opts.Ping && (host.IsSuperuser || (adHocMode && StringToBoolOrFail(opts.AdHocCreateHelpers, "--adhoc-create-helpers"))) && IsPostgresDBType(db_type) && !ver.IsInRecovery {
-					log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
-					_ = TryCreateMetricsFetchingHelpers(db_unique)
+					if noHelperFunctions {
+						log.Infof("[%s] Skipping rollout out helper functions due to the --no-helper-functions flag ...", db_unique)
+					} else {
+						log.Infof("Trying to create helper functions if missing for \"%s\"...", db_unique)
+						_ = TryCreateMetricsFetchingHelpers(db_unique)
+					}
 				}
 
 				if !(opts.Ping || (opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode)) {
@@ -5371,12 +5733,19 @@ func main() {
 			}
 
 			if IsPostgresDBType(host.DBType) {
+				var DBSizeMB int64
+
 				if opts.MinDbSizeMB >= 8 { // an empty DB is a bit less than 8MB
-					DBSizeMB, _ := DBGetSizeMB(db_unique) // ignore errors, i.e. only remove from montoring when we're certain it's under the threshold
-					if DBSizeMB != 0 && DBSizeMB < opts.MinDbSizeMB {
-						log.Infof("[%s] DB will be ignored due to the --min-db-size-mb filter. Current (up to %v cached) DB size = %d MB", db_unique, DB_SIZE_CACHING_INTERVAL, DBSizeMB)
-						hostsToShutDownDueToRoleChange[db_unique] = true // for the case when DB size was previosly above the threshold
-						continue
+					DBSizeMB, _ = DBGetSizeMB(db_unique) // ignore errors, i.e. only remove from montoring when we're certain it's under the threshold
+					if DBSizeMB != 0 {
+						if DBSizeMB < opts.MinDbSizeMB {
+							log.Infof("[%s] DB will be ignored due to the --min-db-size-mb filter. Current (up to %v cached) DB size = %d MB", db_unique, DB_SIZE_CACHING_INTERVAL, DBSizeMB)
+							hostsToShutDownDueToRoleChange[db_unique] = true // for the case when DB size was previosly above the threshold
+							SetUndersizedDBState(db_unique, true)
+							continue
+						} else {
+							SetUndersizedDBState(db_unique, false)
+						}
 					}
 				}
 				ver, err := DBGetPGVersion(db_unique, host.DBType, false)
@@ -5385,6 +5754,7 @@ func main() {
 					if ver.IsInRecovery && host.OnlyIfMaster {
 						log.Infof("[%s] to be removed from monitoring due to 'master only' property and status change", db_unique)
 						hostsToShutDownDueToRoleChange[db_unique] = true
+						SetRecoveryIgnoredDBState(db_unique, true)
 						continue
 					} else if lastKnownStatusInRecovery != ver.IsInRecovery {
 						if ver.IsInRecovery && len(host.MetricsStandby) > 0 {
@@ -5395,16 +5765,30 @@ func main() {
 							log.Warningf("Switching metrics collection for \"%s\" to primary config...", db_unique)
 							metric_config = host.Metrics
 							hostLastKnownStatusInRecovery[db_unique] = false
+							SetRecoveryIgnoredDBState(db_unique, false)
 						}
 					}
 				}
+
+				if wasInstancePreviouslyDormant && !IsDBDormant(db_unique) {
+					RestoreSqlConnPoolLimitsForPreviouslyDormantDB(db_unique)
+				}
+
+				if mainLoopCount == 0 && opts.TryCreateListedExtsIfMissing != "" && !ver.IsInRecovery {
+					extsToCreate := strings.Split(opts.TryCreateListedExtsIfMissing, ",")
+					extsCreated := TryCreateMissingExtensions(db_unique, extsToCreate, ver.Extensions)
+					log.Infof("[%s] %d/%d extensions created based on --try-create-listed-exts-if-missing input %v", db_unique, len(extsCreated), len(extsToCreate), extsCreated)
+				}
 			}
 
-			if (opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode) || opts.Ping {
-				continue // don't launch fetching threads
+			if opts.Ping {
+				continue // don't launch metric fetching threads
 			}
 
 			for metric_name := range metric_config {
+				if opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode {
+					continue // normal (non-async, no background fetching) Prom mode means only per-scrape fetching
+				}
 				metric := metric_name
 				metric_def_ok := false
 
@@ -5421,7 +5805,7 @@ func main() {
 					metric_def_map_lock.RUnlock()
 				}
 
-				var db_metric string = db_unique + ":" + metric
+				var db_metric string = db_unique + DB_METRIC_JOIN_STR + metric
 				_, ch_ok := control_channels[db_metric]
 
 				if metric_def_ok && !ch_ok { // initialize a new per db/per metric control channel
@@ -5429,6 +5813,7 @@ func main() {
 						host_metric_interval_map[db_metric] = interval
 						log.Infof("starting gatherer for [%s:%s] with interval %v s", db_unique, metric, interval)
 						control_channels[db_metric] = make(chan ControlMessage, 1)
+						PromAsyncCacheInitIfRequired(db_unique, metric)
 						if opts.BatchingDelayMs > 0 {
 							go MetricGathererLoop(db_unique, db_unique_orig, db_type, metric, metric_config, control_channels[db_metric], buffered_persist_ch)
 						} else {
@@ -5457,6 +5842,8 @@ func main() {
 			}
 		}
 
+		atomic.StoreInt32(&mainLoopInitialized, 1) // to hold off scraping until metric fetching runners have been initialized
+
 		if opts.Ping {
 			if len(failedInitialConnectHosts) > 0 {
 				log.Errorf("Could not reach %d configured DB host out of %d", len(failedInitialConnectHosts), len(monitored_dbs))
@@ -5464,11 +5851,6 @@ func main() {
 			}
 			log.Infof("All configured %d DB hosts were reachable", len(monitored_dbs))
 			os.Exit(0)
-		}
-		if opts.Datastore == DATASTORE_PROMETHEUS && !promAsyncMode { // special behaviour, no "ahead of time" metric collection
-			log.Debugf("main sleeping %ds...", opts.ServersRefreshLoopSeconds)
-			time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))
-			continue
 		}
 
 		if opts.TestdataDays != 0 {
@@ -5489,22 +5871,21 @@ func main() {
 			}
 		}
 
-		// loop over existing channels and stop workers if DB or metric removed from config
-		log.Debug("checking if any workers need to be shut down...")
-		control_channel_list := make([]string, len(control_channels))
-		i := 0
-		for key := range control_channels {
-			control_channel_list[i] = key
-			i++
+		if mainLoopCount == 0 {
+			goto MainLoopSleep
 		}
-		gatherers_shut_down := 0
 
-		for _, db_metric := range control_channel_list {
+		// loop over existing channels and stop workers if DB or metric removed from config
+		// or state change makes it uninteresting
+		log.Debug("checking if any workers need to be shut down...")
+		control_channel_name_list = ControlChannelsMapToList(control_channels)
+
+		for _, db_metric := range control_channel_name_list {
 			var currentMetricConfig map[string]float64
 			var dbInfo MonitoredDatabase
 			var ok, dbRemovedFromConfig bool
 			singleMetricDisabled := false
-			splits := strings.Split(db_metric, ":")
+			splits := strings.Split(db_metric, DB_METRIC_JOIN_STR)
 			db := splits[0]
 			metric := splits[1]
 			//log.Debugf("Checking if need to shut down worker for [%s:%s]...", db, metric)
@@ -5551,9 +5932,17 @@ func main() {
 				PurgeMetricsFromPromAsyncCacheIfAny(db, metric)
 			}
 		}
+
 		if gatherers_shut_down > 0 {
 			log.Warningf("sent STOP message to %d gatherers (it might take some minutes for them to stop though)", gatherers_shut_down)
 		}
+
+		// Destroy conn pools, Prom async cache
+		CloseResourcesForRemovedMonitoredDBs(monitored_dbs, prevLoopMonitoredDBs, hostsToShutDownDueToRoleChange)
+
+	MainLoopSleep:
+		mainLoopCount++
+		prevLoopMonitoredDBs = monitored_dbs
 
 		log.Debugf("main sleeping %ds...", opts.ServersRefreshLoopSeconds)
 		time.Sleep(time.Second * time.Duration(opts.ServersRefreshLoopSeconds))

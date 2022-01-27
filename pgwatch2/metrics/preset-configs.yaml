@@ -178,22 +178,20 @@
 - name: prometheus-async
   description: tuned for the new async (background collection) Prom feature. NB! Prom tolerates max. 10min time lag, so intervals should be smaller than 600
   metrics:
-    archiver: 60
     backends: 30
     bgwriter: 60
     db_stats: 30
     db_size: 300
-    locks: 30
     locks_mode: 30
     replication: 120
     replication_slots: 120
     settings: 300
-    sequence_health: 300
     sproc_stats: 180
-    stat_statements_calls: 30
+    stat_statements_calls: 60
     table_io_stats: 300
     table_stats: 300
-    wal: 30
+    wal: 60
+    wait_events: 60
 
 - name: superuser_no_python
   description: like exhaustive, but no PL/Python helpers

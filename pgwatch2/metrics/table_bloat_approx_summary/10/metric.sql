@@ -17,7 +17,7 @@ with table_bloat_approx as (
         and c.relpages >= 128 -- tables >1mb
         and not n.nspname != 'information_schema'
 )
-select
+select /* pgwatch2_generated */
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     approx_free_percent,
     approx_free_space as approx_free_space_b,

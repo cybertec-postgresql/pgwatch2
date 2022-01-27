@@ -1,0 +1,10 @@
+---
+prometheus_gauge_columns:
+  - table_size_b
+  - total_relation_size_b
+  - toast_size_b
+  - seconds_since_last_vacuum
+  - seconds_since_last_analyze
+  - n_live_tup
+  - n_dead_tup
+prometheus_ignored_columns:
