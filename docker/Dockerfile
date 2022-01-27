@@ -25,7 +25,7 @@ RUN apt-get -q update \
 # Influxdb [https://portal.influxdata.com/downloads]
 #   latest ver.: curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1
 
-RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_8.3.3_amd64.deb \
+RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_8.3.4_amd64.deb \
     && wget -q -O - https://dl.influxdata.com/influxdb/releases/influxdb_1.8.5_amd64.deb > influxdb_amd64.deb \
     && dpkg -i grafana.deb && rm grafana.deb \
     && dpkg -i influxdb_amd64.deb && rm influxdb_amd64.deb \
