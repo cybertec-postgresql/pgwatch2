@@ -11,7 +11,7 @@ on:
 jobs:
 
   goreleaser:
-    if: true # false to skip job during debug
+    if: false # false to skip job during debug
     runs-on: ubuntu-latest
     steps:
 
@@ -52,14 +52,14 @@ jobs:
         echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
 
     - name: check beta version
-      if: ${{ contains(github.event_name, 'beta') }}
+      if: ${{ contains(github.ref_name, 'beta') }}
       run: |
-        echo "this is beta"
+        echo "this is beta ${{ github.ref_name }}"
 
     - name: check release version
-      if: ${{ !contains(github.event_name, 'beta') }}
+      if: ${{ !contains(github.ref_name, 'beta') }}
       run: |
-        echo "this is official release"
+        echo "this is official release ${{ github.ref_name }}"
 
     # - name: Publish to Registry
     #   uses: elgohr/Publish-Docker-Github-Action@master
