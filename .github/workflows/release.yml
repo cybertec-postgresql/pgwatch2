@@ -6,7 +6,8 @@ on:
       - '*'  
     # run for every tag with version string
     tags:
-      - v[0-9]+.[0-9]+.[0-9]+*
+      - v[0-9]+.[0-9]+.[0-9]+
+      - v[0-9]+.[0-9]+.[0-9]+-beta[0-9]?
       
 jobs:
 
@@ -51,7 +52,22 @@ jobs:
         echo "::set-output name=RELEASE_VERSION::$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")"
         echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
 
-    - name: Publish to Registry
+    - name: Publish beta version to Registry
+      if: ${{ contains(github.ref_name, 'beta') }}
+      uses: elgohr/Publish-Docker-Github-Action@master
+      env:
+        GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
+        GIT_TIME: ${{ steps.version.outputs.RELEASE_TIME }}     
+      with:
+        name: cybertec/pgwatch2${{ matrix.image }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        dockerfile: docker/Dockerfile${{ matrix.image }}
+        buildargs: GIT_HASH,GIT_TIME
+        tags: ${{ github.ref_name }}
+
+    - name: Publish release version to Registry
+      if: ${{ !contains(github.ref_name, 'beta') }}
       uses: elgohr/Publish-Docker-Github-Action@master
       env:
         GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
@@ -63,4 +79,4 @@ jobs:
         dockerfile: docker/Dockerfile${{ matrix.image }}
         buildargs: GIT_HASH,GIT_TIME
         tags: "latest"
-        tag_semver: true        
+        tag_semver: true
