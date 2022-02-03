@@ -12,7 +12,7 @@ on:
 jobs:
 
   goreleaser:
-    if: false # false to skip job during debug
+    if: true # false to skip job during debug
     runs-on: ubuntu-latest
     steps:
 
@@ -51,16 +51,6 @@ jobs:
       run: |
         echo "::set-output name=RELEASE_VERSION::$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")"
         echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
-
-    # - name: check beta version
-    #   if: ${{ contains(github.ref_name, 'beta') }}
-    #   run: |
-    #     echo "this is beta ${{ github.ref_name }}"
-
-    # - name: check release version
-    #   if: ${{ !contains(github.ref_name, 'beta') }}
-    #   run: |
-    #     echo "this is official release ${{ github.ref_name }}"
 
     - name: Publish beta version to Registry
       if: ${{ contains(github.ref_name, 'beta') }}
