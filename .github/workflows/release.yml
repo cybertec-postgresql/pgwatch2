@@ -7,7 +7,7 @@ on:
     # run for every tag with version string
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-beta[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-beta[0-9]*'
       
 jobs:
 
