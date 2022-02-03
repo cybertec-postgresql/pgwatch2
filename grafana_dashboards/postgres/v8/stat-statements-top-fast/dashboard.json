@@ -1,0 +1,1544 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Assumes no pg_stat_statements reset appeared in the selected time frame",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "",
+      "fontSize": "90%",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 16,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "link": false,
+          "linkTargetBlank": true,
+          "linkTooltip": "",
+          "linkUrl": "",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "alias": "Query ID",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
+          "pattern": "queryid",
+          "sanitize": false,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "Total runtime",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "alias": "Query",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": false,
+          "linkTargetBlank": true,
+          "linkTooltip": "Use 'edit' mode to be able to copy the query text",
+          "linkUrl": "",
+          "pattern": "query",
+          "preserveFormat": false,
+          "sanitize": true,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "approx_pct_db_total_time",
+          "thresholds": [],
+          "type": "number",
+          "unit": "percent"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Avg. runtime",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": null,
+          "mappingType": 1,
+          "pattern": "Calls",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "alias": "ass",
+          "dsType": "influxdb",
+          "format": "table",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT top(\"spread\", \"queryid\", \"query\", $top) FROM (SELECT spread(\"total_time\") FROM \"stat_statements\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) ) WHERE spread > 0",
+          "rawQuery": true,
+          "rawSql": "select\n  tt as top,\n  tt / calls as \"Avg. runtime\",\n  calls as \"Calls\",\n  100 * tt / (select sum(tt_agg) from (select tag_data->>'queryid', max((data->'total_time')::float) - min((data->'total_time')::float) as tt_agg from stat_statements where dbname = '$dbname' and  $__timeFilter(time) group by 1 having count(*) > 1) x) as approx_pct_db_total_time,\n  queryid,\n  (select data->>'users' from stat_statements where $__timeFilter(time) and dbname = '$dbname' and tag_data->>'queryid' = queryid order by time desc limit 1) as \"Users\",  \n  case when length(query) > 250 then query::varchar(250) || '...' else query end as query\nfrom (\n\n  select\n    tag_data->>'queryid' as queryid, tag_data->>'query' as query,\n    max((data->>'total_time')::numeric) - min((data->>'total_time')::numeric) as tt,\n    max((data->>'calls')::int8) - min((data->>'calls')::int8) as calls,\n    min(time) as min_time,\n    max(time) as max_time\n  from stat_statements\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n    and case when '$hide_pgwatch_generated' = 'yes' then not tag_data->>'query' ~* E'\\\\(extract\\\\(\\\\$\\\\d+\\\\W*from\\\\W*now\\\\(\\\\)\\\\)\\\\W?\\\\*\\\\W*\\\\$\\\\d+\\\\).*::\\\\w+\\\\W+as\\\\W+epoch_ns\\\\W*,'\n        and not tag_data->>'query' ~* E'/\\\\*\\\\W*pgwatch2_generated\\\\W*\\\\*/'  else true end\n  group by\n    1, 2\n\n) x\nwhere calls > 0 and tt > 0\norder by 1 desc nulls last\nlimit $top\n\n",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Top queries by total runtime",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "",
+      "fontSize": "90%",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "id": 15,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "link": false,
+          "linkTargetBlank": true,
+          "linkTooltip": "",
+          "linkUrl": "",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "alias": "Query ID",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
+          "pattern": "queryid",
+          "sanitize": false,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "Avg. runtime",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "alias": "Query",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": false,
+          "linkTargetBlank": true,
+          "linkTooltip": "Use 'edit' mode to be able to copy the query text",
+          "linkUrl": "",
+          "pattern": "query",
+          "preserveFormat": false,
+          "sanitize": true,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "Total time",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        }
+      ],
+      "targets": [
+        {
+          "alias": "ass",
+          "dsType": "influxdb",
+          "format": "table",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select top(avg, \"queryid\", \"query\", $top) AS top from (select mean(t) / mean(c) AS avg from (SELECT spread(\"total_time\") AS t, spread(\"calls\") AS c FROM \"stat_statements\" WHERE $timeFilter AND dbname = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) )  where $timeFilter AND c > 0 group by time(3650d),  \"queryid\", \"query\" )",
+          "rawQuery": true,
+          "rawSql": "select\n  tt / calls as top,\n  tt as \"Total time\",\n  calls as \"Calls\",\n  queryid,\n  (select data->>'users' from stat_statements where $__timeFilter(time) and dbname = '$dbname' and tag_data->>'queryid' = queryid order by time desc limit 1) as \"Users\",\n  case when length(query) > 200 then query::varchar(200) || '...' else query end as query\nfrom (\n  select\n    tag_data->>'queryid' as queryid, tag_data->>'query' as query,\n    max((data->>'total_time')::numeric) - min((data->>'total_time')::numeric) as tt,\n    max((data->>'calls')::int8) - min((data->>'calls')::int8) as calls\n  from stat_statements\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n    and case when '$hide_pgwatch_generated' = 'yes' then not tag_data->>'query' ~* E'\\\\(extract\\\\(\\\\$\\\\d+\\\\W*from\\\\W*now\\\\(\\\\)\\\\)\\\\W?\\\\*\\\\W*\\\\$\\\\d+\\\\).*::\\\\w+\\\\W+as\\\\W+epoch_ns\\\\W*,'\n        and not tag_data->>'query' ~* E'/\\\\*\\\\W*pgwatch2_generated\\\\W*\\\\*/'  else true end\n  group by\n    1, 2\n) x\nwhere calls > 0 and tt > 0\norder by 1 desc nulls last\nlimit $top\n\n",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Top queries by avg. runtime",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "",
+      "fontSize": "90%",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 14,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "link": false,
+          "linkTargetBlank": true,
+          "linkTooltip": "",
+          "linkUrl": "",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "alias": "Query ID",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
+          "pattern": "queryid",
+          "sanitize": false,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "Calls  ",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        },
+        {
+          "alias": "Query",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": false,
+          "linkTargetBlank": true,
+          "linkTooltip": "Use 'edit' mode to be able to copy the query text",
+          "linkUrl": "",
+          "pattern": "query",
+          "preserveFormat": false,
+          "sanitize": true,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "Total time",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Avg. runtime",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        }
+      ],
+      "targets": [
+        {
+          "alias": "ass",
+          "dsType": "influxdb",
+          "format": "table",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT top(\"spread\", \"queryid\", \"query\", $top) FROM (SELECT spread(\"calls\") FROM \"stat_statements\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) ) WHERE spread > 0",
+          "rawQuery": true,
+          "rawSql": "select\n  calls as top,\n  total_time as \"Total time\",\n  total_time / calls as \"Avg. runtime\",\n  queryid,\n  (select data->>'users' from stat_statements where $__timeFilter(time) and dbname = '$dbname' and tag_data->>'queryid' = queryid order by time desc limit 1) as \"Users\",  \n  case when length(query) > 200 then query::varchar(200) || '...' else query end as query\nfrom (\n  select\n    tag_data->>'queryid' as queryid, tag_data->>'query' as query,\n    max((data->>'calls')::int8) - min((data->>'calls')::int8) as calls,\n    max((data->>'total_time')::numeric) - min((data->>'total_time')::numeric) as total_time\n  from stat_statements\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n    and case when '$hide_pgwatch_generated' = 'yes' then not tag_data->>'query' ~* E'\\\\(extract\\\\(\\\\$\\\\d+\\\\W*from\\\\W*now\\\\(\\\\)\\\\)\\\\W?\\\\*\\\\W*\\\\$\\\\d+\\\\).*::\\\\w+\\\\W+as\\\\W+epoch_ns\\\\W*,'\n        and not tag_data->>'query' ~* E'/\\\\*\\\\W*pgwatch2_generated\\\\W*\\\\*/'  else true end    \n  group by\n    1, 2\n) x\nwhere calls > 0\norder by 1 desc nulls last\nlimit $top\n\n",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Top queries by calls",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "total_time - blk_read_time -blk_write_time. Requires track_io_timing=on",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "id": 13,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "alias": "CPU time",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 1,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "alias": "Query ID",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": true,
+          "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
+          "pattern": "queryid",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "Query",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": false,
+          "linkTargetBlank": true,
+          "linkTooltip": "Use 'edit' mode to be able to copy the query text",
+          "linkUrl": "",
+          "pattern": "query",
+          "sanitize": true,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Avg. runtime",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        }
+      ],
+      "targets": [
+        {
+          "dsType": "influxdb",
+          "format": "table",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT top(\"spread\", \"queryid\", \"query\", $top) FROM (SELECT spread(\"blk_read_time\") + spread(\"blk_write_time\") AS spread FROM \"stat_statements\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) ) WHERE spread > 0",
+          "rawQuery": true,
+          "rawSql": "select\n  (tt - wt - rt)::int8 as top,\n  calls as \"Calls\",\n  tt / calls as \"Avg. runtime\",\n  queryid,\n  (select data->>'users' from stat_statements where $__timeFilter(time) and dbname = '$dbname' and tag_data->>'queryid' = queryid order by time desc limit 1) as \"Users\",  \n  case when length(query) > 200 then query::varchar(200) || '...' else query end as query\nfrom (\n  select\n    tag_data->>'queryid' as queryid, tag_data->>'query' as query,\n    max((data->>'total_time')::float8) - min((data->>'total_time')::float8) as tt,\n    max((data->>'blk_read_time')::float8) - min((data->>'blk_read_time')::float8) as rt,\n    max((data->>'blk_write_time')::float8) - min((data->>'blk_write_time')::float8) as wt,\n    max((data->>'calls')::int8) - min((data->>'calls')::int8) as calls\n  from stat_statements\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n    and case when '$hide_pgwatch_generated' = 'yes' then not tag_data->>'query' ~* E'\\\\(extract\\\\(\\\\$\\\\d+\\\\W*from\\\\W*now\\\\(\\\\)\\\\)\\\\W?\\\\*\\\\W*\\\\$\\\\d+\\\\).*::\\\\w+\\\\W+as\\\\W+epoch_ns\\\\W*,'\n        and not tag_data->>'query' ~* E'/\\\\*\\\\W*pgwatch2_generated\\\\W*\\\\*/'  else true end    \n   group by\n     1, 2\n) x\nwhere tt - wt - rt > 0 and calls > 0\norder by 1 desc nulls last\nlimit $top\n\n",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Top queries by CPU time",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "Does not include Shared Buffer activities. Same as 'By total runtime' if no direct IO was performed. Requires track_io_timing=on",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "id": 12,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "alias": "IO time",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 1,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "alias": "Query ID",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": true,
+          "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
+          "pattern": "queryid",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "Query",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": false,
+          "linkTargetBlank": true,
+          "linkTooltip": "Use 'edit' mode to be able to copy the query text",
+          "linkUrl": "",
+          "pattern": "query",
+          "sanitize": true,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "Total time",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        }
+      ],
+      "targets": [
+        {
+          "dsType": "influxdb",
+          "format": "table",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT top(\"spread\", \"queryid\", \"query\", $top) FROM (SELECT spread(\"blk_read_time\") + spread(\"blk_write_time\") AS spread FROM \"stat_statements\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) ) WHERE spread > 0",
+          "rawQuery": true,
+          "rawSql": "select\n  wt + rt as top,\n  tt as \"Total time\",\n  queryid,\n  (select data->>'users' from stat_statements where $__timeFilter(time) and dbname = '$dbname' and tag_data->>'queryid' = queryid order by time desc limit 1) as \"Users\",  \n  case when length(query) > 200 then query::varchar(200) || '...' else query end as query\nfrom (\n  select\n    tag_data->>'queryid' as queryid, max(tag_data->>'query') as query,\n    max((data->>'blk_read_time')::float8) - min((data->>'blk_read_time')::float8) as rt,\n    max((data->>'blk_write_time')::float8) - min((data->>'blk_write_time')::float8) as wt,\n    max((data->>'total_time')::float8) - min((data->>'total_time')::float8) as tt\n  from stat_statements\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n    and case when '$hide_pgwatch_generated' = 'yes' then not tag_data->>'query' ~* E'\\\\(extract\\\\(\\\\$\\\\d+\\\\W*from\\\\W*now\\\\(\\\\)\\\\)\\\\W?\\\\*\\\\W*\\\\$\\\\d+\\\\).*::\\\\w+\\\\W+as\\\\W+epoch_ns\\\\W*,'\n        and not tag_data->>'query' ~* E'/\\\\*\\\\W*pgwatch2_generated\\\\W*\\\\*/'  else true end    \n  group by\n    1\n) x\nwhere rt + wt > 0.1\norder by 1 desc nulls last\nlimit $top\n\n",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Top queries by direct (backend) IO",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "Shared buffer + temp buffer reading / writing",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 11,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "alias": "Block bandwith",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 1,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "decbytes"
+        },
+        {
+          "alias": "Query ID",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
+          "pattern": "queryid",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "Query",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": false,
+          "linkTargetBlank": true,
+          "linkTooltip": "Use 'edit' mode to be able to copy the query text",
+          "linkUrl": "",
+          "pattern": "query",
+          "sanitize": true,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "Per call",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Avg. runtime",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        }
+      ],
+      "targets": [
+        {
+          "dsType": "influxdb",
+          "format": "table",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT top(\"spread\", \"queryid\", \"query\", $top) FROM (SELECT spread(\"blk_read_time\") + spread(\"blk_write_time\") AS spread FROM \"stat_statements\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) ) WHERE spread > 0",
+          "rawQuery": true,
+          "rawSql": "select\n  (shared_blks_hit + shared_blks_read + shared_blks_dirtied + shared_blks_written)*8192 /*assuming default 8k block size*/ as top,\n  (shared_blks_hit + shared_blks_read + shared_blks_dirtied + shared_blks_written)*8192 / calls as \"Per call\",\n  calls as \"Calls\",\n  total_time / calls as \"Avg. runtime\",\n  queryid,\n  (select data->>'users' from stat_statements where $__timeFilter(time) and dbname = '$dbname' and tag_data->>'queryid' = queryid order by time desc limit 1) as \"Users\",  \n  case when length(query) > 200 then query::varchar(200) || '...' else query end as query\nfrom (\n  select\n    tag_data->>'queryid' as queryid,\n    tag_data->>'query' as query,\n    max((data->>'shared_blks_hit')::int8) - min((data->>'shared_blks_hit')::int8) as shared_blks_hit,\n    max((data->>'shared_blks_read')::int8) - min((data->>'shared_blks_read')::int8) as shared_blks_read,\n    max((data->>'shared_blks_dirtied')::int8) - min((data->>'shared_blks_dirtied')::int8) as shared_blks_dirtied,\n    max((data->>'shared_blks_written')::int8) - min((data->>'shared_blks_written')::int8) as shared_blks_written,\n    max((data->>'calls')::int8) - min((data->>'calls')::int8) as calls,\n    max((data->>'total_time')::float) - min((data->>'total_time')::float) as total_time\n  from stat_statements\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n    and case when '$hide_pgwatch_generated' = 'yes' then not tag_data->>'query' ~* E'\\\\(extract\\\\(\\\\$\\\\d+\\\\W*from\\\\W*now\\\\(\\\\)\\\\)\\\\W?\\\\*\\\\W*\\\\$\\\\d+\\\\).*::\\\\w+\\\\W+as\\\\W+epoch_ns\\\\W*,'\n        and not tag_data->>'query' ~* E'/\\\\*\\\\W*pgwatch2_generated\\\\W*\\\\*/'  else true end\n  group by\n    1, 2\n) x\nwhere calls > 0\norder by 1 desc nulls last\nlimit  $top",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Top by block bandwith (assuming 8K blocks)",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "datasource": null,
+      "description": "Based on pg_stat_statements.temp_blks_written",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "id": 17,
+      "links": [],
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "alias": "Temp blocks written",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 1,
+          "pattern": "top",
+          "thresholds": [],
+          "type": "number",
+          "unit": "decbytes"
+        },
+        {
+          "alias": "Query ID",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": true,
+          "linkTargetBlank": true,
+          "linkTooltip": "Opens  'Single query details' dashboard for that queryid",
+          "linkUrl": "/dashboard/db/single-query-details?orgId=1&var-dbname=$dbname&var-queryid=$__cell&from=$__from&to=$__to",
+          "pattern": "queryid",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "Query",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "link": false,
+          "linkTargetBlank": true,
+          "linkTooltip": "Use 'edit' mode to be able to copy the query text",
+          "linkUrl": "",
+          "pattern": "query",
+          "sanitize": true,
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "Per call",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "/runtime/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "alias": "",
+          "align": "auto",
+          "colorMode": null,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 1,
+          "mappingType": 1,
+          "pattern": "Temp blocks read",
+          "thresholds": [],
+          "type": "number",
+          "unit": "bytes"
+        }
+      ],
+      "targets": [
+        {
+          "dsType": "influxdb",
+          "format": "table",
+          "group": [],
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "metricColumn": "none",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT top(\"spread\", \"queryid\", \"query\", $top) FROM (SELECT spread(\"blk_read_time\") + spread(\"blk_write_time\") AS spread FROM \"stat_statements\" WHERE $timeFilter AND \"dbname\" = '$dbname' GROUP BY time(3650d), \"queryid\", \"query\" fill(none) ) WHERE spread > 0",
+          "rawQuery": true,
+          "rawSql": "select\n  temp_blks_written * 8192 /*assuming default 8k block size*/ as top,\n  (temp_blks_read * 8192) / calls as \"Temp blocks read\",\n  total_time as \"Total runtime\",\n  calls as \"Calls\",\n  total_time / calls as \"Avg. runtime\",\n  queryid,\n  (select data->>'users' from stat_statements where $__timeFilter(time) and dbname = '$dbname' and tag_data->>'queryid' = queryid order by time desc limit 1) as \"Users\",  \n  case when length(query) > 200 then query::varchar(200) || '...' else query end as query\nfrom (\n  select\n    tag_data->>'queryid' as queryid,\n    tag_data->>'query' as query,\n    max((data->>'temp_blks_read')::int8) - min((data->>'temp_blks_read')::int8) as temp_blks_read,\n    max((data->>'temp_blks_written')::int8) - min((data->>'temp_blks_written')::int8) as temp_blks_written,\n    max((data->>'calls')::int8) - min((data->>'calls')::int8) as calls,\n    max((data->>'total_time')::float) - min((data->>'total_time')::float) as total_time\n  from stat_statements\n    where dbname = '$dbname'\n    and $__timeFilter(time)\n    and case when '$hide_pgwatch_generated' = 'yes' then not tag_data->>'query' ~* E'\\\\(extract\\\\(\\\\$\\\\d+\\\\W*from\\\\W*now\\\\(\\\\)\\\\)\\\\W?\\\\*\\\\W*\\\\$\\\\d+\\\\).*::\\\\w+\\\\W+as\\\\W+epoch_ns\\\\W*,'\n        and not tag_data->>'query' ~* E'/\\\\*\\\\W*pgwatch2_generated\\\\W*\\\\*/'  else true end\n  group by\n    1, 2\n) x\nwhere temp_blks_written > 0\norder by 1 desc nulls last\nlimit  $top",
+          "refId": "A",
+          "resultFormat": "table",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Top by temp blocks (assuming 8K blocks)",
+      "transform": "table",
+      "type": "table"
+    },
+    {
+      "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2020/11/CYBERTEC_RGB_300x80px.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "datasource": null,
+      "editable": true,
+      "error": false,
+      "gridPos": {
+        "h": 3,
+        "w": 12,
+        "x": 0,
+        "y": 49
+      },
+      "id": 4,
+      "links": [],
+      "mode": "html",
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": true,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": null,
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 12,
+        "x": 12,
+        "y": 49
+      },
+      "id": 18,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false,
+        "ymax": null,
+        "ymin": null
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "select\n0 as time,\ncoalesce ((\n\nselect 1 from (\nselect\n  (data->'xact_commit')::int8 as xact_commit,\n  lag((data->'xact_commit')::int8) over (order by time) as xact_commit_lag\nfrom\n  db_stats\nwhere\n  $__timeFilter(time)\n  and dbname = '$dbname'\n) x\nwhere xact_commit_lag > xact_commit\nlimit 1\n\n), 0) as was_reset",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "thresholds": "1,1",
+      "title": "",
+      "transparent": true,
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        },
+        {
+          "op": "=",
+          "text": "",
+          "value": "0"
+        },
+        {
+          "op": "=",
+          "text": "WARNING: global stats reset detected for selected time range, results are unreliable - use the slower \"Stat Statements Top\" dashboard",
+          "value": "1"
+        }
+      ],
+      "valueName": "avg"
+    }
+  ],
+  "schemaVersion": 22,
+  "style": "dark",
+  "tags": [
+    "pgwatch2"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": null,
+          "value": null
+        },
+        "datasource": null,
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "index": -1,
+        "label": null,
+        "multi": false,
+        "name": "dbname",
+        "options": [],
+        "query": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics WHERE metric = 'stat_statements' ORDER BY 1;",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": null,
+        "tags": [],
+        "tagsQuery": null,
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "5",
+          "value": "5"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "top",
+        "options": [
+          {
+            "selected": false,
+            "text": "1",
+            "value": "1"
+          },
+          {
+            "selected": false,
+            "text": "3",
+            "value": "3"
+          },
+          {
+            "selected": false,
+            "text": "5",
+            "value": "5"
+          },
+          {
+            "selected": false,
+            "text": "10",
+            "value": "10"
+          },
+          {
+            "selected": false,
+            "text": "15",
+            "value": "15"
+          },
+          {
+            "selected": false,
+            "text": "20",
+            "value": "20"
+          },
+          {
+            "selected": false,
+            "text": "30",
+            "value": "30"
+          },
+          {
+            "selected": false,
+            "text": "40",
+            "value": "40"
+          },
+          {
+            "selected": true,
+            "text": "50",
+            "value": "50"
+          }
+        ],
+        "query": "1,3,5,10,15,20,30,40,50",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "yes",
+          "value": "yes"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "hide_pgwatch_generated",
+        "options": [
+          {
+            "selected": true,
+            "text": "yes",
+            "value": "yes"
+          },
+          {
+            "selected": false,
+            "text": "no",
+            "value": "no"
+          }
+        ],
+        "query": "yes,no",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Stat statements Top (Fast)",
+  "uid": null,
+  "variables": {
+    "list": []
+  },
+  "version": 1
+}
