@@ -52,12 +52,12 @@ jobs:
         echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
 
 
-    - name: check version
+    - name: check beta version
       if: contains(github.event_name, 'beta')
       run: |
         echo "this is beta"
 
-    - name: check version
+    - name: check release version
       if: !contains(github.event_name, 'beta')
       run: |
         echo "this is official release"
