@@ -14,6 +14,8 @@ jobs:
     - uses: actions/stale@v4
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
+        stale-issue-label: 'stale'
+        stale-pr-label: 'stale'
         stale-issue-message: |
           📅 This issue has been automatically marked as stale because lack of recent activity. It will be closed if no further activity occurs.
           ♻️ If you think there is new information allowing us to address the issue, please reopen it and provide us with updated details.
