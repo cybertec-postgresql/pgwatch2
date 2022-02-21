@@ -318,7 +318,7 @@ func MetricStoreMessageToPromMetrics(msg MetricStoreMessage) []prometheus.Metric
 	return promMetrics
 }
 
-func StartPrometheusExporter(port int64) {
+func StartPrometheusExporter() {
 	listenLoops := 0
 	promExporter, err := NewExporter()
 	if err != nil {
