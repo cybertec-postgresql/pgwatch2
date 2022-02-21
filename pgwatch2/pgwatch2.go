@@ -5525,7 +5525,7 @@ func main() {
 				log.Info("starting Prometheus Cache Persister...")
 				go MetricsPersister(DATASTORE_PROMETHEUS, persist_ch)
 			}
-			go StartPrometheusExporter(opts.PrometheusPort)
+			go StartPrometheusExporter()
 		} else {
 			log.Fatal("Unknown datastore. Check the --datastore param")
 		}
