@@ -10,6 +10,7 @@ select /* pgwatch2_generated */
   (select count(*) from sa_snapshot where state = 'idle') as idle,
   (select count(*) from sa_snapshot where state = 'idle in transaction') as idleintransaction,
   (select count(*) from sa_snapshot where wait_event_type in ('LWLockNamed', 'Lock', 'BufferPin')) as waiting,
+  (select coalesce(sum(case when coalesce(array_length(pg_blocking_pids(pid), 1), 0) >= 1 then 1 else 0 end), 0) from sa_snapshot where state = 'active') as blocked,
   (select ceil(extract(epoch from max(now() - query_start)))::int from sa_snapshot where wait_event_type in ('LWLockNamed', 'Lock', 'BufferPin')) as longest_waiting_seconds,
   (select round(avg(abs(extract(epoch from now() - query_start)))::numeric, 3)::float from sa_snapshot where wait_event_type in ('LWLockNamed', 'Lock', 'BufferPin')) as avg_waiting_seconds,
   (select ceil(extract(epoch from (now() - backend_start)))::int from sa_snapshot order by backend_start limit 1) as longest_session_seconds,
