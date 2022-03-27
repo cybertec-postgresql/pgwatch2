@@ -2290,7 +2290,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 as time,\n  count(*)\nFROM\n  configuration_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY 1\n",
+          "rawSql": "SELECT\n  0 as time,\n  count(*)\nFROM\n  configuration_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -2430,7 +2430,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  0 as time,\n  count(*)\nFROM\n  table_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\nGROUP BY 1\n",
+          "rawSql": "SELECT\n  0 as time,\n  count(*)\nFROM\n  table_changes\nWHERE\n  $__timeFilter(time)\n  AND dbname = '$dbname'\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
