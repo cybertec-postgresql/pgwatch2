@@ -11,7 +11,7 @@ import (
 
 	consul_api "github.com/hashicorp/consul/api"
 	"github.com/samuel/go-zookeeper/zk"
-	"go.etcd.io/etcd/client"
+	client "go.etcd.io/etcd/client/v2"
 	"go.etcd.io/etcd/pkg/transport"
 )
 
