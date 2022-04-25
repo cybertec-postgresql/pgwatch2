@@ -1,13 +1,7 @@
 name: Release
 on:
-  push:
-    # ignore all branches
-    branches-ignore:
-      - '*'  
-    # run for every tag with version string
-    tags:
-      - v[0-9]+.[0-9]+.[0-9]+
-      - v[0-9]+.[0-9]+.[0-9]+-beta[0-9]?
+  release:
+    types: [created]
       
 jobs:
 
@@ -17,12 +11,12 @@ jobs:
     steps:
 
     - name: Set up Golang
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: '1.17'
 
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Unshallow
       run: git fetch --prune --unshallow
@@ -44,7 +38,7 @@ jobs:
     steps:
 
     - name: Check out code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Version strings
       id: version
@@ -54,7 +48,7 @@ jobs:
 
     - name: Publish beta version to Registry
       if: ${{ contains(github.ref_name, 'beta') }}
-      uses: elgohr/Publish-Docker-Github-Action@master
+      uses: elgohr/Publish-Docker-Github-Action@v4
       env:
         GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
         GIT_TIME: ${{ steps.version.outputs.RELEASE_TIME }}     
@@ -68,7 +62,7 @@ jobs:
 
     - name: Publish release version to Registry
       if: ${{ !contains(github.ref_name, 'beta') }}
-      uses: elgohr/Publish-Docker-Github-Action@master
+      uses: elgohr/Publish-Docker-Github-Action@v4
       env:
         GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
         GIT_TIME: ${{ steps.version.outputs.RELEASE_TIME }}     
