@@ -5,7 +5,7 @@
 
 # pgwatch2
 
-Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution. Supports monitoring PG versions 9.0 to 13 out of the box.
+Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution. Supports monitoring PG versions 9.0 to 14 out of the box.
 
 # Demo
 
