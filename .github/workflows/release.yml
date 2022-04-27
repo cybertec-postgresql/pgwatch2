@@ -60,7 +60,7 @@ jobs:
         buildargs: GIT_HASH,GIT_TIME
         tags: ${{ github.ref_name }}
 
-    - name: Publish release version to Registry
+    - name: Publish "latest" tag to Registry
       if: ${{ !contains(github.ref_name, 'beta') }}
       uses: elgohr/Publish-Docker-Github-Action@v4
       env:
@@ -73,4 +73,17 @@ jobs:
         dockerfile: docker/Dockerfile${{ matrix.image }}
         buildargs: GIT_HASH,GIT_TIME
         tags: "latest"
-        tag_semver: true
+
+    - name: Publish "X.X.X, X.X, X" tags to Registry
+      if: ${{ !contains(github.ref_name, 'beta') }}
+      uses: elgohr/Publish-Docker-Github-Action@v4
+      env:
+        GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
+        GIT_TIME: ${{ steps.version.outputs.RELEASE_TIME }}     
+      with:
+        name: cybertec/pgwatch2${{ matrix.image }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        dockerfile: docker/Dockerfile${{ matrix.image }}
+        buildargs: GIT_HASH,GIT_TIME
+        tag_semver: true        
