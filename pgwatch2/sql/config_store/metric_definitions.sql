@@ -3521,7 +3521,7 @@ with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     (regexp_replace(md5(query), E'\\D', '', 'g'))::varchar(10)::int8 as tag_queryid,
-    '-' as tag_query,
+    '-'::text as tag_query,
     array_to_string(array_agg(distinct quote_ident(pg_get_userbyid(userid))), ',') as users,
     sum(s.calls)::int8 as calls,
     round(sum(s.total_time)::numeric, 3)::double precision as total_time,
@@ -3619,7 +3619,7 @@ with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     (regexp_replace(md5(query), E'\\D', '', 'g'))::varchar(10)::int8 as tag_queryid,
-    '-' as tag_query,
+    '-'::text as tag_query,
     array_to_string(array_agg(distinct quote_ident(pg_get_userbyid(userid))), ',') as users,
     sum(s.calls)::int8 as calls,
     round(sum(s.total_time)::numeric, 3)::double precision as total_time,
@@ -3723,7 +3723,7 @@ with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
-    '-' as tag_query,
+    '-'::text as tag_query,
     array_to_string(array_agg(distinct quote_ident(pg_get_userbyid(userid))), ',') as users,
     sum(s.calls)::int8 as calls,
     round(sum(s.total_time)::numeric, 3)::double precision as total_time,
@@ -3821,7 +3821,7 @@ with q_data as (
   select
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
-    '-' as tag_query,
+    '-'::text as tag_query,
     array_to_string(array_agg(distinct quote_ident(pg_get_userbyid(userid))), ',') as users,
     sum(s.calls)::int8 as calls,
     round(sum(s.total_time)::numeric, 3)::double precision as total_time,
