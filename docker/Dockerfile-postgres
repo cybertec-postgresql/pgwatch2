@@ -1,4 +1,4 @@
-FROM golang:1.16.3
+FROM golang:1.17
 
 # For showing Git version via 'pgwatch2 --version'
 ARG GIT_HASH
@@ -22,13 +22,7 @@ RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl
     && pg_dropcluster 11 main ; pg_createcluster --locale en_US.UTF-8 11 main \
     && echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/11/main/postgresql.conf
 
-### Download and install external components
-# Grafana [https://grafana.com/grafana/download]
-#   latest ver.: curl -so- https://api.github.com/repos/grafana/grafana/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1
-# Influxdb [https://portal.influxdata.com/downloads]
-#   latest ver.: curl -so- https://api.github.com/repos/influxdata/influxdb/tags | grep -Eo '"v[0-9\.]+"' | grep -Eo '[0-9\.]+' | sort -nr | head -1
-
-RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_6.7.6_amd64.deb \
+RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_8.3.4_amd64.deb \
     && dpkg -i grafana.deb && rm grafana.deb
 
 
@@ -49,13 +43,13 @@ RUN echo "${GIT_HASH} ${GIT_TIME}" > /pgwatch2/build_git_version.txt
 RUN cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
     && pip3 install -r /pgwatch2/webpy/requirements_pg_metrics.txt \
     && pip2 install psutil \
-    && echo "$GIT_HASH" > /pgwatch2/build_git_version.txt \
     && grafana-cli plugins install savantly-heatmap-panel \
     && pip3 install supervisor pyyaml && mkdir /var/log/supervisor
 
 # both Python 2 and 3 only there for the "transition" period, to not brake some people upgrading to a newer image.
 # at some point Python2 should be dropped completely.
-RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get -qy install postgresql-11-pg-qualstats postgresql-plpython3-11 && pip3 install psutil
+RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get -qy install postgresql-11-pg-qualstats \
+    postgresql-plpython3-11 && pip3 install psutil
 
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
 

@@ -365,7 +365,7 @@ func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password
 	if len(libPqConnString) > 0 {
 		connStr = libPqConnString
 		if !strings.Contains(strings.ToLower(connStr), "sslmode") {
-			if strings.Contains(connStr, "postgresql://") { // JDBC style
+			if strings.Contains(connStr, "postgresql://") || strings.Contains(connStr, "postgres://") { // JDBC style
 				if strings.Contains(connStr, "?") { // has some extra params already
 					connStr += "&sslmode=disable" // defaulting to "disable" as Go driver doesn't support "prefer"
 				} else {
@@ -376,7 +376,7 @@ func GetPostgresDBConnection(libPqConnString, host, port, dbname, user, password
 			}
 		}
 		if !strings.Contains(strings.ToLower(connStr), "connect_timeout") {
-			if strings.Contains(connStr, "postgresql://") { // JDBC style
+			if strings.Contains(connStr, "postgresql://") || strings.Contains(connStr, "postgres://") { // JDBC style
 				if strings.Contains(connStr, "?") { // has some extra params already
 					connStr += "&connect_timeout=5" // 5 seconds
 				} else {
@@ -5525,7 +5525,7 @@ func main() {
 				log.Info("starting Prometheus Cache Persister...")
 				go MetricsPersister(DATASTORE_PROMETHEUS, persist_ch)
 			}
-			go StartPrometheusExporter(opts.PrometheusPort)
+			go StartPrometheusExporter()
 		} else {
 			log.Fatal("Unknown datastore. Check the --datastore param")
 		}

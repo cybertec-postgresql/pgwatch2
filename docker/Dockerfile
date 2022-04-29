@@ -1,4 +1,4 @@
-FROM golang:1.16.3
+FROM golang:1.17
 
 # For showing Git version via 'pgwatch2 --version'
 ARG GIT_HASH
@@ -13,7 +13,7 @@ RUN cd /pgwatch2 && bash build_gatherer.sh
 FROM ubuntu:16.04
 
 RUN apt-get -q update \
-    && apt-get -qy install wget apt-transport-https vim git postgresql postgresql-plpython3-9.5 postgresql-plpython-9.5 libfontconfig python3-pip python-pip libssl-dev libpq-dev \
+    && apt-get -qy install wget apt-transport-https vim git postgresql postgresql-plpython3-9.5 postgresql-plpython-9.5 libfontconfig python3-pip python-pip libssl-dev libpq-dev libffi-dev \
     && pip install -U "pip < 21.0" && pip3 install -U "pip < 21.0" \
     && locale-gen "en_US.UTF-8" && apt autoremove -y \
     && pg_dropcluster 9.5 main ; pg_createcluster --locale en_US.UTF-8 9.5 main \

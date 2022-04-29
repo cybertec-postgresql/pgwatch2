@@ -1,4 +1,4 @@
-FROM golang:1.16.3
+FROM golang:1.17
 
 # For showing Git version via 'pgwatch2 --version'
 ARG GIT_HASH
@@ -13,7 +13,7 @@ RUN cd /pgwatch2 && bash build_gatherer.sh
 FROM ubuntu:16.04
 
 RUN apt-get -q update \
-    && apt-get -qy install wget apt-transport-https vim git postgresql postgresql-plpython3-9.5 postgresql-plpython-9.5 libfontconfig python3-pip libssl-dev libpq-dev \
+    && apt-get -qy install wget apt-transport-https vim git postgresql postgresql-plpython3-9.5 postgresql-plpython-9.5 libfontconfig python3-pip libssl-dev libpq-dev libffi-dev \
     && pip3 install -U "pip < 21.0"
 
 RUN pip3 install supervisor \
@@ -76,9 +76,6 @@ RUN cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
 RUN pip3 install psutil pyyaml
 
 ADD grafana_dashboards /pgwatch2/grafana_dashboards
-
-# For showing all component versions via :8080/versions. Assuming project is cloned from Github here
-COPY .git/refs/heads/master /pgwatch2/build_git_version.txt
 
 # Set up supervisord [https://docs.docker.com/engine/admin/using_supervisord/]
 COPY supervisord-nonroot.conf /etc/supervisor/supervisord.conf

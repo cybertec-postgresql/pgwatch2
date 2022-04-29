@@ -1,8 +1,11 @@
+[![Documentation Status](https://readthedocs.org/projects/pgwatch2/badge/?version=latest)](https://pgwatch2.readthedocs.io/en/latest/?badge=latest)
+[![Release](https://img.shields.io/github/v/release/cybertec-postgresql/pgwatch2?include_prereleases)](https://github.com/cybertec-postgresql/pgwatch2/releases)
+[![Github All Releases](https://img.shields.io/github/downloads/cybertec-postgresql/pgwatch2/total?style=flat-square)](https://github.com/cybertec-postgresql/pgwatch2/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/cybertec/pgwatch2-nonroot)](https://hub.docker.com/search?q=cybertec%20pgwatch2&type=image)
 
 # pgwatch2
 
-Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution. Supports monitoring PG versions 9.0 to 13 out of the box.
+Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution. Supports monitoring PG versions 9.0 to 14 out of the box.
 
 # Demo
 

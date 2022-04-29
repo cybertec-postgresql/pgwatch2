@@ -14,8 +14,8 @@ with q_data as (
     sum(temp_blks_written)::int8 as temp_blks_written,
     round(sum(blk_read_time)::numeric, 3)::double precision as blk_read_time,
     round(sum(blk_write_time)::numeric, 3)::double precision as blk_write_time,
-    sum(wal_fpi) as wal_fpi,
-    sum(wal_bytes) as wal_bytes,
+    sum(wal_fpi)::int8 as wal_fpi,
+    sum(wal_bytes)::int8 as wal_bytes,
     round(sum(s.total_plan_time)::numeric, 3)::double precision as total_plan_time
   from
     pg_stat_statements s

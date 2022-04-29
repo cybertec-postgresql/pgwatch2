@@ -29,7 +29,7 @@ FROM (
                 bs * tblpages                  AS real_size,
                 (tblpages - est_tblpages) * bs AS extra_size,
                 CASE
-                    WHEN tblpages - est_tblpages > 0
+                    WHEN tblpages > 0 AND tblpages - est_tblpages > 0
                         THEN 100 * (tblpages - est_tblpages) / tblpages::float
                     ELSE 0
                     END                        AS extra_ratio,
@@ -40,7 +40,7 @@ FROM (
                     ELSE 0
                     END                        AS bloat_size,
                 CASE
-                    WHEN tblpages - est_tblpages_ff > 0
+                    WHEN tblpages > 0 AND tblpages - est_tblpages_ff > 0
                         THEN 100 * (tblpages - est_tblpages_ff) / tblpages::float
                     ELSE 0
                     END                        AS bloat_ratio,

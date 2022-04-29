@@ -15,15 +15,16 @@ fi
 METRICDBTYPE=$1
 IMAGE=$2
 CONTAINER_NAME="smoke_test_$METRICDBTYPE"
-PGHOST=localhost
-PGPORT=$(shuf -i 10000-65000 -n 1)
-PGUSER=pgwatch2
-PGPASSWORD=pgwatch2admin
-PGDATABASE=pgwatch2_metrics
 WEBUIPORT=$(shuf -i 10000-65000 -n 1)
 INFLUXPORT=$(shuf -i 10000-65000 -n 1)
 GRAFANAPORT=$(shuf -i 10000-65000 -n 1)
 LOCALHOST=127.0.0.1
+# these vars are passed to subshell, so export them
+export PGHOST=localhost
+export PGPORT=$(shuf -i 10000-65000 -n 1)
+export PGUSER=pgwatch2
+export PGPASSWORD=pgwatch2admin
+export PGDATABASE=pgwatch2_metrics
 
 echo "starting smoke test of Postgres image $IMAGE ..."
 echo "stopping and removing existing container named $CONTAINER_NAME if any"
@@ -60,7 +61,7 @@ sleep 180
 
 echo "checking if metrics exists for added DB..."
 if [ $METRICDBTYPE == "pg" ]; then
-    ROWS=$(psql -h $LOCALHOST -p $PGPORT -qXAtc "select count(distinct dbname) from db_stats where dbname like 'smoke%'")
+    ROWS=$(psql -qXAtc "SELECT count(distinct dbname) FROM db_stats WHERE dbname LIKE 'smoke%'")
 else
   ROWS=$(curl -sG http://$LOCALHOST:$INFLUXPORT/query?pretty=true --data-urlencode "db=pgwatch2" \
   --data-urlencode "q=SELECT count(xlog_location_b) FROM wal WHERE dbname='smoke1'" \

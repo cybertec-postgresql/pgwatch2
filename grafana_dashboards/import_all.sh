@@ -8,7 +8,7 @@ export PGUSER=postgres
 export PGDATABASE=pgwatch2_grafana
 
 GRAFANA_DB_TYPE=postgres
-GRAFANA_MAJOR_VER=6
+GRAFANA_MAJOR_VER=8
 DASHBOARDS_BASE_PATH="."  # change if executing not from file's original Git location
 DASHBOARD_NAME_SUFFIX=  # adjust if no extra info wanted besides the imported dashboard name
 # DASHBOARD_NAME_SUFFIX=`date +%Y-%m-%d`
