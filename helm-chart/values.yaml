@@ -1,0 +1,111 @@
+storage: influxdb
+
+metrics_preset:
+  name: remotedba
+  description: Metrics used for monitoring of Remote-DBA Databases
+  metrics: '{"kpi": 120, "wal": 60, "locks": 60, "db_size": 300, "archiver": 60, "backends": 60, "bgwriter": 60, "cpu_load": 60, "db_stats": 60, "settings": 7200, "wal_size": 300, "locks_mode": 60, "index_stats": 900, "replication": 120, "sproc_stats": 180, "table_stats": 300, "wal_receiver": 120, "change_events": 300, "table_io_stats": 600, "sequence_health": 3600, "replication_slots": 120}' 
+
+databases:
+- host: pgwatch2-postgresql
+  grafana_preset_metrics: remotedba
+  port: 5432
+  user: pgwatch2
+  password: 'pgwatch2'
+  dbs:
+    - postgres
+    - foo
+    - bar
+- host: pgwatch2-postgresql-hl
+  grafana_preset_metrics: remotedba
+  port: 5432
+  user: pgwatch2
+  password: 'pgwatch2'
+  dbs:
+    - postgres
+    - pgwatch2
+
+daemon:
+  image:
+    repository: cybertec/pgwatch2-daemon
+    tag: latest
+  resources: {}
+
+bootstrap:
+  image:
+    repository: cybertec/pgwatch2-db-bootstrapper
+    tag: latest
+
+postgresql:
+  primary:
+    initdb:
+      scriptsConfigMap: pgwatch2-initdb
+
+pgadmin:
+  enabled: True
+
+influxdb:
+  service:
+    type: LoadBalancer
+
+webui:
+  service:
+    enabled: True
+    port: 80
+    targetPort: 8080
+    type: LoadBalancer
+  image:
+    repository: cybertec/pgwatch2
+    tag: latest
+
+grafana:
+  enabled: True
+  service:
+    type: LoadBalancer
+  noAnonymous: false
+  user: admin
+  password: pgwatch2admin # password will be auto generated if emtpy
+  grafana.ini:
+    dashboards:
+      default_home_dashboard_path: "/var/lib/grafana/dashboards/default/health-check.json"
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+      - name: InfluxDB_v1
+        type: influxdb
+        access: proxy
+        url: http://pgwatch2-influxdb:8086
+        isDefault: true
+        database: pgwatch2
+        user: pgwatch2
+        jsonData:
+          httpMode: GET
+        secureJsonData:
+          password: pgwatch2
+  dashboardProviders:
+   dashboardproviders.yaml:
+     apiVersion: 1
+     providers:
+     - name: 'default'
+       orgId: 1
+       folder: ''
+       type: file
+       disableDeletion: false
+       editable: true
+       options:
+         path: /var/lib/grafana/dashboards/default
+
+  dashboardsConfigMaps:
+    default: "grafana-dashboards"
+  image:
+    repository: grafana/grafana
+    tag: latest
+
+metallb:
+  enabled: true
+  configInline:
+    address-pools:
+     - name: default
+       protocol: layer2
+       addresses:
+       - 192.168.49.10-192.168.49.250

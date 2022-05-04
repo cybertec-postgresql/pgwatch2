@@ -1,0 +1,18 @@
+dependencies:
+- name: pgadmin
+  repository: https://cetic.github.io/helm-charts
+  version: 0.1.12
+- name: grafana
+  repository: https://grafana.github.io/helm-charts
+  version: 6.28.0
+- name: influxdb
+  repository: https://helm.influxdata.com/
+  version: 4.11.0
+- name: metallb
+  repository: https://metallb.github.io/metallb
+  version: 0.12.1
+- name: postgresql
+  repository: https://charts.bitnami.com/bitnami
+  version: 11.1.27
+digest: sha256:a16de352cb4506c19aa798dcc3a2c12cd03c44c59af0f5e800622582ad839b5d
+generated: "2022-05-05T12:21:57.006442456+03:00"
