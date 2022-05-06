@@ -18,6 +18,27 @@ ther pre-built packages) folder. Also it is highly recommended to refresh all th
 For that there's also a refresh_metrics_from_github.sh script provided. YAML based setups don't need any extra actions besides
 refreshing from Git or installing the new RPM / DEB / Tar packages.
 
+## v1.9.0 [2022-04-25]
+
+Main changes:
+
+* upgrade to Go 1.17, closes #440 by @pashagolub in #441
+* Grafana updated to the latest version by @yanchenko-igor in #428
+* bigger upstream merge batch by @kmoppel-cognite in #431
+* Prometheus mode optimization by @kmoppel-cognite in #401
+* metrics: add new metrics for the upcoming Postgres v14 release. by @kmoppel-cognite in #399
+* metrics: also skip tables just waiting for AccessExclusiveLock by @eshkinkot in #404
+* fix file descriptors leak, fix race conditions in opening and closing database pool by @eshkinkot in #411
+* gatherer: improve variable expansion in YAML configs by @kmoppel-cognite in #414
+* gatherer: add a new --min-db-size-mb flag to ignore empty DBs by @kmoppel-cognite in #402
+* gatherer: full redesign of connection pooling, relying on sqlx.DB by @kmoppel-cognite in #418
+* daemon: introduce a 5s connect timeout on opening Postgres connections by @kmoppel-cognite in #419
+* add Aiven as a cloud provider offering managed PostgreSQL by @carobme in #421
+* give possibility to add an extra container by @pmpetit in #429
+* add release GitHub Action by @pashagolub in #437
+* fix incorrect conversion between integer types, fixes #438 by @pashagolub in #439
+* add docker job to the Release workflow, closes #446 by @pashagolub in #448
+* improve release action for beta versions by @pashagolub in #450
 
 ## v1.8.5 [2021-05-03]
 
