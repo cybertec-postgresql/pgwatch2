@@ -16,5 +16,3 @@ dist
 
 # delve debugger file
 debug
-#helm
-helm-chart/charts/*
