@@ -549,6 +549,6 @@
   },
   "timezone": "browser",
   "title": "Stat_statements overview",
-  "uid": null,
+  "uid": "stat-statements-overview",
   "version": 1
 }

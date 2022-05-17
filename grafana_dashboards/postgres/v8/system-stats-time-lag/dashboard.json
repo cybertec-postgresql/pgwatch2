@@ -1139,7 +1139,7 @@
   },
   "timezone": "",
   "title": "Systems stats time lag comparison",
-  "uid": null,
+  "uid": "system-stats-time-lag",
   "variables": {
     "list": []
   },

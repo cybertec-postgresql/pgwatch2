@@ -633,6 +633,6 @@
   },
   "timezone": "browser",
   "title": "Index overview",
-  "uid": null,
+  "uid": "index-overview",
   "version": 1
 }

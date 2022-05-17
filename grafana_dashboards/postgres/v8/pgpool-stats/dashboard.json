@@ -367,7 +367,7 @@
   },
   "timezone": "",
   "title": "Pgpool Stats",
-  "uid": null,
+  "uid": "pgpool-stats",
   "variables": {
     "list": []
   },

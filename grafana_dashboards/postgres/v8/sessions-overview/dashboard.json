@@ -1166,7 +1166,7 @@
   },
   "timezone": "",
   "title": "Sessions overview",
-  "uid": null,
+  "uid": "sessions-overview",
   "variables": {
     "list": []
   },

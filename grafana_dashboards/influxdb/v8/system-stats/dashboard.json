@@ -1698,6 +1698,6 @@
   },
   "timezone": "",
   "title": "System Stats",
-  "uid": null,
+  "uid": "system-stats",
   "version": 1
 }

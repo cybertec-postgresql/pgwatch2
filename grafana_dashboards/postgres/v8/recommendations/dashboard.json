@@ -734,6 +734,6 @@
   },
   "timezone": "",
   "title": "Recommendations",
-  "uid": null,
+  "uid": "recommendations",
   "version": 1
 }

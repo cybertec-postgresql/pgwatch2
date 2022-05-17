@@ -589,6 +589,6 @@
   },
   "timezone": "",
   "title": "Server Log Events",
-  "uid": null,
+  "uid": "server-log-events",
   "version": 1
 }

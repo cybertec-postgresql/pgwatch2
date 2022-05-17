@@ -1844,6 +1844,6 @@
   "timepicker": {},
   "timezone": "",
   "title": "Health-check",
-  "uid": null,
+  "uid": "health-check",
   "version": 1
 }

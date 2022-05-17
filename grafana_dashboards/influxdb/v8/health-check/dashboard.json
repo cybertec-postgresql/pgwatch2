@@ -4681,6 +4681,6 @@
   },
   "timezone": "browser",
   "title": "Health-check",
-  "uid": null,
+  "uid": "health-check",
   "version": 1
 }

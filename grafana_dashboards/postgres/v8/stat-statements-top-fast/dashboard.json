@@ -1536,7 +1536,7 @@
   },
   "timezone": "browser",
   "title": "Stat statements Top (Fast)",
-  "uid": null,
+  "uid": "stat-statements-top-fast",
   "variables": {
     "list": []
   },
