@@ -1312,6 +1312,6 @@
   },
   "timezone": "browser",
   "title": "Single query details",
-  "uid": null,
+  "uid": "single-query-details",
   "version": 1
 }

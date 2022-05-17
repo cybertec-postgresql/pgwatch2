@@ -57,7 +57,7 @@
           {
             "targetBlank": true,
             "title": "Query details",
-            "url": "/dashboard/db/single-query-details?$__all_variables&var-queryid=${__series.name}&${__url_time_range}"
+            "url": "/d/single-query-details?$__all_variables&var-queryid=${__series.name}&${__url_time_range}"
           }
         ]
       },
@@ -178,7 +178,7 @@
           {
             "targetBlank": true,
             "title": "Query details",
-            "url": "/dashboard/db/single-query-details?$__all_variables&var-queryid=${__series.name}&${__url_time_range}"
+            "url": "/d/single-query-details?$__all_variables&var-queryid=${__series.name}&${__url_time_range}"
           }
         ]
       },

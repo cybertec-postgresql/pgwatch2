@@ -962,6 +962,6 @@
   },
   "timezone": "browser",
   "title": "Change events",
-  "uid": null,
+  "uid": "change-events",
   "version": 1
 }

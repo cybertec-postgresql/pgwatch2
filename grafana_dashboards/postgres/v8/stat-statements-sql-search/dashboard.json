@@ -82,7 +82,7 @@
           "link": true,
           "linkTargetBlank": true,
           "linkTooltip": "Go to Query Details dash",
-          "linkUrl": "/dashboard/db/single-query-details?var-dbname=$dbname&var-queryid=$__cell",
+          "linkUrl": "/d/single-query-details?var-dbname=$dbname&var-queryid=$__cell",
           "mappingType": 1,
           "pattern": "/queryid/",
           "thresholds": [],

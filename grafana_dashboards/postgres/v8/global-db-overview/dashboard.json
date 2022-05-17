@@ -2471,7 +2471,7 @@
   },
   "timezone": "browser",
   "title": "Global DB overview",
-  "uid": null,
+  "uid": "global-db-overview",
   "variables": {
     "list": []
   },
