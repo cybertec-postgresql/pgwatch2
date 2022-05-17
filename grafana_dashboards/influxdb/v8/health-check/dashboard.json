@@ -294,7 +294,7 @@
         {
           "targetBlank": true,
           "title": "'Postgres Version Overview' dashboard",
-          "url": "/dashboard/db/postgres-version-overview?orgId=1"
+          "url": "/d/postgres-version-overview?orgId=1"
         }
       ],
       "mappingType": 1,
@@ -416,7 +416,7 @@
         {
           "targetBlank": true,
           "title": "Open 'DB overview :: shared buffers' panel",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=8&fullscreen"
+          "url": "/d/db-overview?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -544,7 +544,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: backends' panel",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=11&fullscreen"
+          "url": "/d/db-overview?$__all_variables&panelId=11&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -671,7 +671,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: backends' panel",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=11&fullscreen"
+          "url": "/d/db-overview?$__all_variables&panelId=11&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -779,7 +779,7 @@
         {
           "targetBlank": true,
           "title": "'Lock details' dashboard",
-          "url": "/dashboard/db/lock-details?$__all_variables"
+          "url": "/d/lock-details?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -907,7 +907,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: Backends' panel",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=11&fullscreen"
+          "url": "/d/db-overview?$__all_variables&panelId=11&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1035,7 +1035,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: Rollback Ratio' panel",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=8&fullscreen"
+          "url": "/d/db-overview?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1157,7 +1157,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview Unprivileged / Developer :: TPS' panel",
-          "url": "/dashboard/db/db-overview-developer?$__all_variables&panelId=15&fullscreen"
+          "url": "/d/db-overview-developer?$__all_variables&panelId=15&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1279,7 +1279,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview Unprivileged / Developer :: QPS' panel",
-          "url": "/dashboard/db/db-overview-developer?$__all_variables&panelId=15&fullscreen"
+          "url": "/d/db-overview-developer?$__all_variables&panelId=15&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1401,7 +1401,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview:: Query runtime' panel",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=12&fullscreen"
+          "url": "/d/db-overview?$__all_variables&panelId=12&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1523,7 +1523,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: DB size' panel",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=10&fullscreen"
+          "url": "/d/db-overview?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1645,7 +1645,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: DB size' panel",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=10&fullscreen"
+          "url": "/d/db-overview?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1767,7 +1767,7 @@
         {
           "targetBlank": true,
           "title": "Open 'System Stats :: Free disk ' panel",
-          "url": "/dashboard/db/system-stats?$__all_variables&panelId=8&fullscreen"
+          "url": "/d/system-stats?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -2015,7 +2015,7 @@
         {
           "targetBlank": true,
           "title": "'DDL / Config change events' dash",
-          "url": "/dashboard/db/change-events?$__all_variables"
+          "url": "/d/change-events?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -2143,7 +2143,7 @@
         {
           "targetBlank": true,
           "title": "'DDL / Config change events' dash",
-          "url": "/dashboard/db/change-events?$__all_variables"
+          "url": "/d/change-events?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -2403,7 +2403,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: WAL' panel",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=10&fullscreen"
+          "url": "/d/db-overview?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -2537,7 +2537,7 @@
         {
           "targetBlank": true,
           "title": "\"Index overview\" dashboard",
-          "url": "/dashboard/db/index-overview"
+          "url": "/d/index-overview"
         }
       ],
       "mappingType": 1,
@@ -2653,7 +2653,7 @@
         {
           "targetBlank": true,
           "title": "'Index overview' dashboard",
-          "url": "/dashboard/db/index-overview?$__all_variables"
+          "url": "/d/index-overview?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -2775,7 +2775,7 @@
         {
           "targetBlank": true,
           "title": "Opens \"Checkpointer / Bgwriter / Block IO Stats :: Checkpoints\" dashboard",
-          "url": "/dashboard/db/checkpointer-bgwriter-stats?$__all_variables"
+          "url": "/d/checkpointer-bgwriter-stats?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -3019,7 +3019,7 @@
         {
           "targetBlank": true,
           "title": "'Tables Top :: Inserts' panel",
-          "url": "/dashboard/db/tables-top?$__all_variables&panelId=6&fullscreen"
+          "url": "/d/tables-top?$__all_variables&panelId=6&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3153,7 +3153,7 @@
         {
           "targetBlank": true,
           "title": "'Tables Top :: Updates' panel",
-          "url": "/dashboard/db/tables-top?$__all_variables&panelId=7&fullscreen"
+          "url": "/d/tables-top?$__all_variables&panelId=7&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3287,7 +3287,7 @@
         {
           "targetBlank": true,
           "title": "'Tables Top :: Deletes' panel",
-          "url": "/dashboard/db/tables-top?$__all_variables&panelId=8&fullscreen"
+          "url": "/d/tables-top?$__all_variables&panelId=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3421,7 +3421,7 @@
         {
           "targetBlank": true,
           "title": "'Tables Top :: Most scans' panel",
-          "url": "/dashboard/db/tables-top?$__all_variables&panelId=4&fullscreen"
+          "url": "/d/tables-top?$__all_variables&panelId=4&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3555,7 +3555,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: CPU load' panel",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=12&fullscreen"
+          "url": "/d/db-overview?$__all_variables&panelId=12&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3677,7 +3677,7 @@
         {
           "targetBlank": true,
           "title": "DB overview",
-          "url": "/dashboard/db/db-overview?$__all_variables&panelId=18&fullscreen"
+          "url": "/d/db-overview?$__all_variables&panelId=18&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -4177,7 +4177,7 @@
         {
           "targetBlank": true,
           "title": "'Replication :: XMIN age' panel",
-          "url": "/dashboard/db/replication?$__all_variables&panelId=10&fullscreen"
+          "url": "/d/replication?$__all_variables&panelId=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -4342,7 +4342,7 @@
         {
           "targetBlank": true,
           "title": "'Replication lag' dashboard",
-          "url": "/dashboard/db/replication?$__all_variables"
+          "url": "/d/replication?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -4464,7 +4464,7 @@
         {
           "targetBlank": true,
           "title": "'Replication lag' dashboard",
-          "url": "/dashboard/db/replication?$__all_variables"
+          "url": "/d/replication?$__all_variables"
         }
       ],
       "mappingType": 1,
@@ -4681,6 +4681,6 @@
   },
   "timezone": "browser",
   "title": "Health-check",
-  "uid": null,
+  "uid": "health-check",
   "version": 1
 }

@@ -1860,6 +1860,6 @@
   },
   "timezone": "browser",
   "title": "AWS CloudWatch overview",
-  "uid": null,
+  "uid": "aws-cloudwatch",
   "version": 1
 }

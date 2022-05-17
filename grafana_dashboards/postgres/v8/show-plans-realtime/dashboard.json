@@ -194,6 +194,6 @@
   },
   "timezone": "",
   "title": "Realtime execution plans",
-  "uid": null,
+  "uid": "show-plans-realtime",
   "version": 1
 }

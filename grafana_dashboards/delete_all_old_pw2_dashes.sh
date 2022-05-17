@@ -8,7 +8,7 @@ export PGUSER=postgres
 export PGDATABASE=pgwatch2_grafana
 
 DRY_RUN=1
-PW2_DASHBOARD_NAMES=`ls -1 postgres/v6/`
+PW2_DASHBOARD_NAMES=`ls -1 postgres/v8/`
 
 if [ "$?" -ne 0 ]; then
   echo "could not list dashboards...are you in the dashboards root dir?"

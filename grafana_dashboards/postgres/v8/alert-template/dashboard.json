@@ -732,7 +732,7 @@
   },
   "timezone": "",
   "title": "Alert Template",
-  "uid": null,
+  "uid": "alert-template",
   "variables": {
     "list": []
   },

@@ -227,6 +227,6 @@
   },
   "timezone": "browser",
   "title": "Lock details",
-  "uid": null,
+  "uid": "lock-details",
   "version": 1
 }

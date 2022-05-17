@@ -894,6 +894,6 @@
   "timepicker": {},
   "timezone": "",
   "title": "Table details",
-  "uid": null,
+  "uid": "table-details",
   "version": 1
 }

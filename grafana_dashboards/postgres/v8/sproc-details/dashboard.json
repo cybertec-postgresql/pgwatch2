@@ -475,6 +475,6 @@
   },
   "timezone": "browser",
   "title": "Sproc details",
-  "uid": null,
+  "uid": "sproc-details",
   "version": 1
 }

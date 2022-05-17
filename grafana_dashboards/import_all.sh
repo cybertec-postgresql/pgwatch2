@@ -30,7 +30,7 @@ if [ "$GRAFANA_MAJOR_VER" -gt 4 ] ; then
 
 GUID=$(echo "$JSON" | md5sum | egrep -o "^.{9}")
 SQL='insert into dashboard (version, org_id, created, updated, updated_by, created_by, gnet_id, slug, title, data, uid) values (0, 1, now(), now(), 1, 1, 0'
-for d in "$slug" "$TITLE" "$JSON" "$GUID" ; do
+for d in "$slug" "$TITLE" "$JSON" "$slug" ; do
   SQL+=",\$SQL\$${d}\$SQL\$"
 done
 

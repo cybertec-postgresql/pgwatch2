@@ -1599,7 +1599,7 @@
   },
   "timezone": "",
   "title": "Table details time lag comparison",
-  "uid": null,
+  "uid": "table-details-time-lag",
   "variables": {
     "list": []
   },

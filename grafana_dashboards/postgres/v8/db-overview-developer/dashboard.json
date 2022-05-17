@@ -2579,6 +2579,6 @@
   },
   "timezone": "browser",
   "title": "DB overview Unprivileged / Developer mode",
-  "uid": null,
+  "uid": "db-overview-developer",
   "version": 1
 }

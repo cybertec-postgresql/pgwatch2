@@ -2476,6 +2476,6 @@
   },
   "timezone": "browser",
   "title": "DB overview",
-  "uid": null,
+  "uid": "db-overview",
   "version": 1
 }

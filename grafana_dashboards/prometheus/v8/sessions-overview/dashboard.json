@@ -937,6 +937,6 @@
   "timepicker": {},
   "timezone": "",
   "title": "Sessions overview",
-  "uid": null,
+  "uid": "sessions-overview",
   "version": 1
 }

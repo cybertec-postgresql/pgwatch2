@@ -1172,6 +1172,6 @@
   },
   "timezone": "",
   "title": "Checkpointer / Bgwriter / Block IO Stats",
-  "uid": null,
+  "uid": "checkpointer-bgwriter-stats",
   "version": 1
 }

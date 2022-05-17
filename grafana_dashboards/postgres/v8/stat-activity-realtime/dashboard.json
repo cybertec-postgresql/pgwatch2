@@ -223,6 +223,6 @@
   },
   "timezone": "",
   "title": "Stat Activity Realtime",
-  "uid": null,
+  "uid": "stat-activity-realtime",
   "version": 1
 }

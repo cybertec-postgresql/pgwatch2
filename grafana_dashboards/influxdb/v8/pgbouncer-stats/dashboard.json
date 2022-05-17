@@ -1644,6 +1644,6 @@
   },
   "timezone": "browser",
   "title": "PgBouncer stats",
-  "uid": null,
+  "uid": "pgbouncer-stats",
   "version": 1
 }
