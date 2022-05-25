@@ -1,7 +1,4 @@
 dependencies:
-- name: pgadmin
-  repository: https://cetic.github.io/helm-charts
-  version: 0.1.12
 - name: grafana
   repository: https://grafana.github.io/helm-charts
   version: 6.28.0
@@ -14,5 +11,5 @@ dependencies:
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
   version: 11.1.27
-digest: sha256:a16de352cb4506c19aa798dcc3a2c12cd03c44c59af0f5e800622582ad839b5d
-generated: "2022-05-05T12:21:57.006442456+03:00"
+digest: sha256:e9bfaa6e31e6cd4342fca59ce0eb4342d8554f93c47ac6da2f9a906a94e76515
+generated: "2022-05-25T13:43:40.575945883+03:00"

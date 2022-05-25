@@ -40,9 +40,6 @@ postgresql:
     initdb:
       scriptsConfigMap: pgwatch2-initdb
 
-pgadmin:
-  enabled: True
-
 influxdb:
   service:
     type: LoadBalancer

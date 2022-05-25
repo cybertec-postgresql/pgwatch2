@@ -23,10 +23,6 @@ version: 0.1.0
 # It is recommended to use it with quotes.
 appVersion: "1.9.0"
 dependencies:
-  - name: pgadmin
-    repository: https://cetic.github.io/helm-charts
-    version: "0.1.12"
-    condition: pgadmin.enabled
   - name: grafana
     repository: https://grafana.github.io/helm-charts
     version: "6.28.0"
