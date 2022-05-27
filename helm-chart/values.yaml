@@ -38,6 +38,8 @@ bootstrap:
 postgresql:
   primary:
     initdb:
+      # This value file assumes that we are installing the helm chart with the name "pgwatch2"
+      # replace pgwatch2 with the name you are installing the chart.
       scriptsConfigMap: pgwatch2-initdb
 
 influxdb:
@@ -99,6 +101,9 @@ grafana:
   noAnonymous: false
   user: admin
   password: pgwatch2admin # password will be auto generated if emtpy
+  ingress:
+    # Use webui.ingress as an example if you want to use ingress for grafana.
+    enabled: false
   ldap:
     enabled: true
     config: |
