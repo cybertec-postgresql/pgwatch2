@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  labels:
+    grafana_dashboard: "1"
+data:
+  {{ range $path, $_ :=  .Files.Glob  (printf "grafana_dashboards/influxdb/v%s/**.json" (substr 0 1 .Subcharts.grafana.Chart.AppVersion)) }}
+  {{ regexReplaceAll ".*/" ($path | replace "/dashboard.json" ".json") "" }}: |{{ printf "\n" }}
+        {{- $.Files.Get $path | indent 4}}
+  {{ end }}

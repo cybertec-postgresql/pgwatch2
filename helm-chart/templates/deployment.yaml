@@ -1,0 +1,193 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pgwatch2.fullname" . }}-daemon
+  labels:
+    {{- include "pgwatch2.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.daemon.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "pgwatch2.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "pgwatch2.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      initContainers:
+      - name: {{ .Chart.Name }}-bootstrap1
+        image: "{{ .Values.bootstrap.image.repository }}:{{ .Values.bootstrap.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.daemon.image.pullPolicy }}
+        env:
+        - name: PGHOST
+          value: {{ include "pgwatch2.fullname" . }}-postgresql
+        - name: PGPORT
+          value: {{ .Values.postgresql.port | default "5432" | quote }}
+        - name: PGDATABASE
+          value: {{ .Values.postgresql.database | default "pgwatch2" }}
+        - name: BOOTSTRAP_DATABASE
+          value: {{ .Values.postgresql.database | default "pgwatch2" }}
+        - name: PGUSER
+          value: {{ .Values.postgresql.user | default "pgwatch2" }}
+        - name: PGPASSWORD
+          value: {{ .Values.postgresql.password | default "pgwatch2" }}
+        - name: PGSSL
+          value: {{ .Values.postgresql.ssl | default "False" | quote }}
+        - name: BOOTSTRAP_TYPE
+          value: {{ .Values.bootstrap.type | default "configdb" | quote }}
+
+      - name: {{ .Chart.Name }}-bootstrap2
+        image: "{{ .Values.bootstrap.image.repository }}:{{ .Values.bootstrap.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.daemon.image.pullPolicy }}
+        command: ["/bin/bash"]
+        args: ["/pgwatch2/bootstrap/custom/run.sh"]
+        volumeMounts:
+        - mountPath: /pgwatch2/bootstrap/custom
+          name: config-volume
+        env:
+        - name: PGHOST
+          value: {{ include "pgwatch2.fullname" . }}-postgresql
+        - name: PGPORT
+          value: {{ .Values.postgresql.port | default "5432" | quote }}
+        - name: PGDATABASE
+          value: {{ .Values.postgresql.database | default "pgwatch2" }}
+        - name: BOOTSTRAP_DATABASE
+          value: {{ .Values.postgresql.database | default "pgwatch2" }}
+        - name: PGUSER
+          value: {{ .Values.postgresql.user | default "pgwatch2" }}
+        - name: PGPASSWORD
+          value: {{ .Values.postgresql.password | default "pgwatch2" }}
+        - name: PGSSL
+          value: {{ .Values.postgresql.ssl | default "False" | quote }}
+        - name: BOOTSTRAP_TYPE
+          value: {{ .Values.bootstrap.type | default "configdb" | quote }}
+      volumes:
+      - name: config-volume
+        configMap:
+          name: pgwatch2-config
+          optional: true
+
+      containers:
+      - name: {{ .Chart.Name }}-daemon
+        image: "{{ .Values.daemon.image.repository }}:{{ .Values.daemon.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.daemon.image.pullPolicy }}
+        env:
+        - name: PW2_PGHOST
+          value: {{ include "pgwatch2.fullname" . }}-postgresql
+        - name: PW2_PGPORT
+          value: {{ .Values.postgresql.port | default "5432" | quote }}
+        - name: PW2_PGDATABASE
+          value: {{ .Values.postgresql.database | default "pgwatch2" }}
+        - name: PW2_PGUSER
+          value: {{ .Values.postgresql.user | default "pgwatch2" }}
+        - name: PW2_PGPASSWORD
+          value: {{ .Values.postgresql.password | default "pgwatch2" }}
+        - name: PW2_PGSSL
+          value: {{ .Values.postgresql.ssl | default "False" | quote }}
+        - name: PW2_IHOST
+          value: {{ include "pgwatch2.fullname" . }}-influxdb
+        - name: PW2_IPORT
+          value: {{ .Values.influxdb.port | default "8086" | quote }}
+        - name: PW2_IDATABASE
+          value: {{ .Values.influxdb.database | default "pgwatch2" }}
+        - name: PW2_IUSER
+          value: {{ .Values.influxdb.user | default "pgwatch2" }}
+        - name: PW2_IPASSWORD
+          value: {{ .Values.influxdb.password | default "pgwatch2" }}
+        - name: PW2_ISSL
+          value: {{ .Values.influxdb.ssl | default "False" | quote }}
+        - name: PW2_INTERNAL_STATS_PORT
+          value: {{ .Values.daemon.port | default "8081" | quote }}
+        - name: PW2_WEBNOANONYMOUS
+          value: {{ .Values.webui.noanonymous | default "False" | quote }}
+        - name: PW2_WEBUSER
+          value: {{ .Values.webui.user | default "pgwatch2" }}
+        - name: PW2_WEBPASSWORD
+          value: {{ .Values.webui.password | default "pgwatch2" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pgwatch2.fullname" . }}-webui
+  labels:
+    {{- include "pgwatch2.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.webui.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "webui.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "webui.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}-webui
+          image: "{{ .Values.webui.image.repository }}:{{ .Values.webui.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.webui.image.pullPolicy }}
+          env:
+          - name: PW2_PGHOST
+            value: {{ include "pgwatch2.fullname" . }}-postgresql
+          - name: PW2_PGPORT
+            value: {{ .Values.postgresql.port | default "5432" | quote }}
+          - name: PW2_PGDATABASE
+            value: {{ .Values.postgresql.database | default "pgwatch2" }}
+          - name: PW2_PGUSER
+            value: {{ .Values.postgresql.user | default "pgwatch2" }}
+          - name: PW2_PGPASSWORD
+            value: {{ .Values.postgresql.password | default "pgwatch2" }}
+          - name: PW2_PGSSL
+            value: {{ .Values.postgresql.ssl | default "False" | quote}}
+          - name: PW2_IHOST
+            value: {{ include "pgwatch2.fullname" . }}-influxdb
+          - name: PW2_IPORT
+            value: {{ .Values.influxdb.port | default "8086" | quote }}
+          - name: PW2_IDATABASE
+            value: {{ .Values.influxdb.database | default "pgwatch2" }}
+          - name: PW2_IUSER
+            value: {{ .Values.influxdb.user | default "pgwatch2" }}
+          - name: PW2_IPASSWORD
+            value: {{ .Values.influxdb.password | default "pgwatch2" }}
+          - name: PW2_ISSL
+            value: {{ .Values.influxdb.ssl | default "False" | quote }}
+          - name: PW2_INTERNAL_STATS_PORT
+            value: {{ .Values.daemon.port | default "8081" | quote }}
+          - name: PW2_WEBNOANONYMOUS
+            value: {{ .Values.webui.noanonymous | default "False" | quote }}
+          - name: PW2_WEBUSER
+            value: {{ .Values.webui.user | default "pgwatch2" }}
+          - name: PW2_WEBPASSWORD
+            value: {{ .Values.webui.password | default "pgwatch2" }}
+          {{- with .Values.daemon.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

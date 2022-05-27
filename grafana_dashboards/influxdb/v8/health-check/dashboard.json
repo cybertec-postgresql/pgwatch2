@@ -267,12 +267,13 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
+        "#C4162A",
+        "#FA6400",
+        "#299c46"
       ],
+      "datasource": null,
       "decimals": 0,
-      "description": "",
+      "description": "\"SHOW server_version_num;\"\n110005 => 11.5",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -288,7 +289,7 @@
         "y": 0
       },
       "hideTimeOverride": true,
-      "id": 46,
+      "id": 44,
       "interval": null,
       "links": [
         {
@@ -332,10 +333,12 @@
       "tableColumn": "",
       "targets": [
         {
+          "format": "time_series",
+          "group": [],
           "groupBy": [
             {
               "params": [
-                "1d"
+                "1m"
               ],
               "type": "time"
             },
@@ -346,18 +349,19 @@
               "type": "fill"
             }
           ],
-          "measurement": "table_stats",
+          "measurement": "replication_slots",
+          "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "select last(\"server_version\") FROM \"settings\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter fill(none)",
           "rawQuery": true,
+          "query": "select last(\"server_version_num\") FROM \"settings\" WHERE \"dbname\" =~ /^$dbname$/ AND $timeFilter fill(none)",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "total_relation_size_b"
+                  "active"
                 ],
                 "type": "field"
               },
@@ -367,12 +371,20 @@
               }
             ]
           ],
-          "tags": []
+          "tags": [],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
         }
       ],
-      "thresholds": "1,2",
+      "thresholds": "90400,90600",
       "timeFrom": "6h",
-      "title": "PG version ",
+      "title": "PG version num.",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -756,6 +768,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": null,
       "decimals": 0,
       "description": "Max number of queries waiting on resources locked by other sessions.  1 Warn / 5 Err thresholds by default",
       "format": "short",
@@ -817,6 +830,8 @@
       "tableColumn": "",
       "targets": [
         {
+          "format": "time_series",
+          "group": [],
           "groupBy": [
             {
               "params": [
@@ -832,10 +847,11 @@
             }
           ],
           "measurement": "backends",
+          "metricColumn": "none",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT last(\"idleintransaction\") FROM \"backends\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(15m) fill(none)",
-          "rawQuery": false,
+          "rawQuery": true,
+          "query": "SELECT mean(\"count\") FROM \"locks_mode\" WHERE (\"dbname\" =~ /^$dbname$/) AND $timeFilter GROUP BY time(15m) fill(none)",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -848,7 +864,7 @@
               },
               {
                 "params": [],
-                "type": "max"
+                "type": "last"
               }
             ]
           ],
@@ -857,6 +873,14 @@
               "key": "dbname",
               "operator": "=~",
               "value": "/^$dbname$/"
+            }
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
             }
           ]
         }
