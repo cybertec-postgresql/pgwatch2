@@ -101,6 +101,9 @@ webui:
 
 
 grafana:
+  sidecar:
+    dashboards:
+      enabled: true
   enabled: True
   service:
     type: LoadBalancer
@@ -153,7 +156,7 @@ grafana:
       email =  "email"
   grafana.ini:
     dashboards:
-      default_home_dashboard_path: "/var/lib/grafana/dashboards/default/health-check.json"
+      default_home_dashboard_path: "/tmp/dashboards/health-check.json"
     auth.ldap:
       enabled: true
       config_file: /etc/grafana/ldap.toml
@@ -188,21 +191,7 @@ grafana:
       #     connMaxLifetime: 14400 # Grafana v5.4+
       #     postgresVersion: 1200 # 903=9.3, 904=9.4, 905=9.5, 906=9.6, 1000=10
       #     timescaledb: false
-  dashboardProviders:
-   dashboardproviders.yaml:
-     apiVersion: 1
-     providers:
-     - name: 'default'
-       orgId: 1
-       folder: ''
-       type: file
-       disableDeletion: false
-       editable: true
-       options:
-         path: /var/lib/grafana/dashboards/default
 
-  dashboardsConfigMaps:
-    default: "grafana-dashboards"
   image:
     repository: grafana/grafana
     tag: latest
