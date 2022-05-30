@@ -3,10 +3,219 @@ kind: ConfigMap
 metadata:
   name: {{ include "pgwatch2.fullname" . }}-initdb
 data:
-  initdb.sql: |
+  00_initdb.sql: |
     CREATE USER {{ .Values.postgresql.user | default "pgwatch2" }} WITH PASSWORD '{{ .Values.postgresql.password | default "pgwatch2" }}';
-    CREATE DATABASE {{ .Values.postgresql.database | default "pgwatch2" }};
+    CREATE DATABASE {{ .Values.postgresql.database | default "pgwatch2" }} OWNER {{ .Values.postgresql.user | default "pgwatch2" }};
     GRANT ALL PRIVILEGES ON DATABASE {{ .Values.postgresql.database | default "pgwatch2" }} TO {{ .Values.postgresql.user | default "pgwatch2" }};
+  {{ if eq .Values.storage "postgres" }}
+  01_create_metrics_db.sql: |
+    CREATE DATABASE {{ .Values.postgres_storage.database | default "pgwatch2_metrics" }} OWNER {{ .Values.postgresql.user | default "pgwatch2" }};
+    \c {{ .Values.postgres_storage.database | default "pgwatch2_metrics" }}
+
+    CREATE SCHEMA IF NOT EXISTS admin AUTHORIZATION {{ .Values.postgresql.user | default "pgwatch2" }};
+
+    GRANT ALL ON SCHEMA public TO {{ .Values.postgresql.user | default "pgwatch2" }};
+
+    DO $SQL$
+    BEGIN
+      EXECUTE format($$ALTER ROLE {{ .Values.postgresql.user | default "pgwatch2" }} IN DATABASE %s SET statement_timeout TO '5min'$$, current_database());
+      RAISE WARNING 'NB! Enabling asynchronous commit for pgwatch2 role - revert if possible data loss on crash is not acceptable!';
+      EXECUTE format($$ALTER ROLE {{ .Values.postgresql.user | default "pgwatch2" }} IN DATABASE %s SET synchronous_commit TO off$$, current_database());
+    END
+    $SQL$;
+
+    CREATE EXTENSION IF NOT EXISTS btree_gin;
+
+    SET ROLE TO {{ .Values.postgresql.user | default "pgwatch2" }};
+
+    create table admin.storage_schema_type (
+      schema_type text not null,
+      initialized_on timestamptz not null default now(),
+      check (schema_type in ('metric', 'metric-time', 'metric-dbname-time', 'custom', 'timescale'))
+    );
+
+    comment on table admin.storage_schema_type is 'identifies storage schema for other pgwatch2 components';
+
+    create unique index max_one_row on admin.storage_schema_type ((1));
+    
+    /* for the Grafana drop-down. managed by the gatherer */
+    create table admin.all_distinct_dbname_metrics (
+      dbname text not null,
+      metric text not null,
+      created_on timestamptz not null default now(),
+      primary key (dbname, metric)
+    );
+    
+    /* currently only used to store TimescaleDB chunk interval */
+    create table admin.config
+    (
+        key   text  not null primary key,
+        value text not null,
+        created_on timestamptz not null default now(),
+        last_modified_on timestamptz
+    );
+    
+    -- to later change the value call the admin.change_timescale_chunk_interval(interval) function!
+    -- as changing the row directly will only be effective for completely new tables (metrics).
+    insert into admin.config select 'timescale_chunk_interval', '2 days';
+    insert into admin.config select 'timescale_compress_interval', '1 day';
+    
+    create or replace function trg_config_modified() returns trigger
+    as $$
+    begin
+      new.last_modified_on = now();
+      return new;
+    end;
+    $$
+    language plpgsql;
+    
+    create trigger config_modified before update on admin.config
+    for each row execute function trg_config_modified();
+    
+    -- DROP FUNCTION IF EXISTS admin.ensure_dummy_metrics_table(text);
+    -- select * from admin.ensure_dummy_metrics_table('wal');
+    CREATE OR REPLACE FUNCTION admin.ensure_dummy_metrics_table(
+        metric text
+    )
+    RETURNS boolean AS
+    /*
+      creates a top level metric table if not already existing (non-existing tables show ugly warnings in Grafana).
+      expects the "metrics_template" table to exist.
+    */
+    $SQL$
+    DECLARE
+      l_schema_type text;
+      l_template_table text := 'admin.metrics_template';
+      l_unlogged text := '';
+    BEGIN
+      SELECT schema_type INTO l_schema_type FROM admin.storage_schema_type;
+    
+        IF NOT EXISTS (SELECT 1
+                        FROM pg_tables
+                        WHERE tablename = metric
+                          AND schemaname = 'public')
+        THEN
+          IF metric ~ 'realtime' THEN
+              l_template_table := 'admin.metrics_template_realtime';
+              l_unlogged := 'UNLOGGED';
+          END IF;
+    
+          IF l_schema_type = 'metric' THEN
+            EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES)$$, l_unlogged, metric, l_template_table);
+          ELSIF l_schema_type = 'metric-time' THEN
+            EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES) PARTITION BY RANGE (time)$$, l_unlogged, metric, l_template_table);
+          ELSIF l_schema_type = 'metric-dbname-time' THEN
+            EXECUTE format($$CREATE %s TABLE public."%s" (LIKE %s INCLUDING INDEXES) PARTITION BY LIST (dbname)$$, l_unlogged, metric, l_template_table);
+          ELSIF l_schema_type = 'timescale' THEN
+              IF metric ~ 'realtime' THEN
+                  EXECUTE format($$CREATE TABLE public."%s" (LIKE %s INCLUDING INDEXES) PARTITION BY RANGE (time)$$, metric, l_template_table);
+              ELSE
+                  PERFORM admin.ensure_partition_timescale(metric);
+              END IF;
+          END IF;
+    
+          EXECUTE format($$COMMENT ON TABLE public."%s" IS 'pgwatch2-generated-metric-lvl'$$, metric);
+    
+          RETURN true;
+    
+        END IF;
+    
+      RETURN false;
+    END;
+    $SQL$ LANGUAGE plpgsql;
+    GRANT EXECUTE ON FUNCTION admin.ensure_dummy_metrics_table(text) TO pgwatch2;
+    
+    /*
+      NB! When possible the partitioned versions ("metric_store_part_time.sql"
+      or "metric_store_part_dbname_time.sql") (assuming PG11+) should be used
+      as much less IO would be then performed when removing old data.
+      NB! A fresh separate DB, only for pgwatch2 metrics storage purposes, is assumed.
+    */
+    
+    
+    create table admin.metrics_template (
+      time timestamptz not null default now(),
+      dbname text not null,
+      data jsonb not null,
+      tag_data jsonb,
+      check (false)
+    );
+    
+    comment on table admin.metrics_template is 'used as a template for all new metric definitions';
+    
+    -- create index on admin.metrics_template using brin (dbname, time);  /* consider BRIN instead for large data amounts */
+    create index on admin.metrics_template (dbname, time);
+    create index on admin.metrics_template using gin (dbname, tag_data, time) where tag_data notnull;
+    
+    /*
+     something like below will be done by the gatherer AUTOMATICALLY:
+    
+    create table public."some-metric"
+      (LIKE admin.metrics_template INCLUDING INDEXES);
+    COMMENT ON TABLE public."some-metric" IS 'pgwatch2-generated-metric-lvl';
+    
+    */
+    
+    
+    /* "realtime" metrics are non-persistent and have 1d retention */
+    
+    -- drop table if exists metrics_template_realtime;
+    create unlogged table admin.metrics_template_realtime (
+        time timestamptz not null default now(),
+        dbname text not null,
+        data jsonb not null,
+        tag_data jsonb,  -- no index!
+        check (false)
+    );
+    
+    comment on table admin.metrics_template_realtime is 'used as a template for all new realtime metric definitions';
+    
+    -- create index on admin.metrics_template using brin (dbname, time) with (pages_per_range=32);  /* consider BRIN instead for large data amounts */
+    create index on admin.metrics_template_realtime (dbname, time);
+    
+    
+    RESET ROLE;
+    
+    insert into admin.storage_schema_type select 'metric';
+
+    -- DROP FUNCTION IF EXISTS public.ensure_partition_metric(text);
+    -- select * from public.ensure_partition_metric('wal');
+    
+    CREATE OR REPLACE FUNCTION admin.ensure_partition_metric(
+        metric text
+    )
+    RETURNS void AS
+    /*
+      creates a top level metric table if not already existing.
+      expects the "metrics_template" table to exist.
+    */
+    $SQL$
+    DECLARE
+        l_template_table text := 'admin.metrics_template';
+        l_unlogged text := '';
+    BEGIN
+    
+      PERFORM pg_advisory_xact_lock(regexp_replace( md5(metric) , E'\\D', '', 'g')::varchar(10)::int8);
+    
+      IF NOT EXISTS (SELECT 1
+                       FROM pg_tables
+                      WHERE tablename = metric
+                        AND schemaname = 'public')
+      THEN
+        --RAISE NOTICE 'creating partition % ...', metric;
+        IF metric ~ 'realtime' THEN
+            l_template_table := 'admin.metrics_template_realtime';
+            l_unlogged := 'UNLOGGED';
+        END IF;
+        EXECUTE format($$CREATE %s TABLE IF NOT EXISTS public.%s (LIKE %s INCLUDING INDEXES)$$, l_unlogged, quote_ident(metric), l_template_table);
+        EXECUTE format($$COMMENT ON TABLE public.%s IS 'pgwatch2-generated-metric-lvl'$$, quote_ident(metric));
+      END IF;
+    
+    END;
+    $SQL$ LANGUAGE plpgsql;
+    
+    GRANT EXECUTE ON FUNCTION admin.ensure_partition_metric(text) TO {{ .Values.postgresql.user | default "pgwatch2" }};
+  {{ end }}
 ---
 apiVersion: v1
 kind: ConfigMap
