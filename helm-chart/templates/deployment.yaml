@@ -110,7 +110,7 @@ spec:
         - name: PW2_DATASTORE
           value: {{ .Values.storage | quote }}
         - name: PW2_PG_METRIC_STORE_CONN_STR
-          value: {{ printf "postgresql://%s:%s@%s-postgresql:%s/%s" (.Values.postgresql.user | default "pgwatch2") (.Values.postgresql.password | default "pgwatch2" ) (include "pgwatch2.fullname" . ) (.Values.postgresql.port | default "5432")  (.Values.postgres_storage.database | default "pgwatch2_metrics" ) }}
+          value: {{ printf "postgresql://%s:%s@%s:%s/%s" (.Values.postgresql.user | default "pgwatch2") (.Values.postgresql.password | default "pgwatch2" ) ( .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .))) (.Values.postgresql.port | default "5432")  (.Values.postgres_storage.database | default "pgwatch2_metrics" ) }}
         - name: PW2_PG_RETENTION_DAYS
           value: {{ .Values.postgres_storage.retention_days | default "14" | quote }}
         {{ end }}
@@ -181,7 +181,7 @@ spec:
           - name: PW2_DATASTORE
             value: {{ .Values.storage | quote }}
           - name: PW2_PG_METRIC_STORE_CONN_STR
-            value: {{ printf "postgresql://%s:%s@%s-postgresql:%s/%s" (.Values.postgresql.user | default "pgwatch2") (.Values.postgresql.password | default "pgwatch2" ) (include "pgwatch2.fullname" . ) (.Values.postgresql.port | default "5432")  (.Values.postgres_storage.database | default "pgwatch2_metrics" ) }}
+            value: {{ printf "postgresql://%s:%s@%s:%s/%s" (.Values.postgresql.user | default "pgwatch2") (.Values.postgresql.password | default "pgwatch2" ) ( .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .))) (.Values.postgresql.port | default "5432")  (.Values.postgres_storage.database | default "pgwatch2_metrics" ) }}
           - name: PW2_PG_RETENTION_DAYS
             value: {{ .Values.postgres_storage.retention_days | default "14" | quote }}
           {{ end }}
