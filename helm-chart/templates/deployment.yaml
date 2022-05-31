@@ -29,7 +29,7 @@ spec:
         imagePullPolicy: {{ .Values.daemon.image.pullPolicy }}
         env:
         - name: PGHOST
-          value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .))
+          value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .)) }}
         - name: PGPORT
           value: {{ .Values.postgresql.port | default "5432" | quote }}
         - name: PGDATABASE
@@ -55,7 +55,7 @@ spec:
           name: config-volume
         env:
         - name: PGHOST
-          value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .))
+          value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .)) }}
         - name: PGPORT
           value: {{ .Values.postgresql.port | default "5432" | quote }}
         - name: PGDATABASE
@@ -82,7 +82,7 @@ spec:
         imagePullPolicy: {{ .Values.daemon.image.pullPolicy }}
         env:
         - name: PW2_PGHOST
-          value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .))
+          value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .)) }}
         - name: PW2_PGPORT
           value: {{ .Values.postgresql.port | default "5432" | quote }}
         - name: PW2_PGDATABASE
@@ -153,7 +153,7 @@ spec:
           imagePullPolicy: {{ .Values.webui.image.pullPolicy }}
           env:
           - name: PW2_PGHOST
-            value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .))
+            value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .)) }}
           - name: PW2_PGPORT
             value: {{ .Values.postgresql.port | default "5432" | quote }}
           - name: PW2_PGDATABASE
