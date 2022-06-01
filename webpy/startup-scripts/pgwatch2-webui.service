@@ -12,7 +12,7 @@ After=network-online.target
 [Service]
 Environment="PW2_WEBPORT=8080"
 Environment="PW2_PGHOST=localhost"
-Environment="PW2_PGDATASTORE=postgres"
+Environment="PW2_DATASTORE=postgres"
 Environment="PW2_PG_METRIC_STORE_CONN_STR=postgresql://pgwatch2@localhost:5432/pgwatch2_metrics"
 
 Type=simple
