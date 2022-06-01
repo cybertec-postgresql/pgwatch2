@@ -7,7 +7,7 @@
 {{- $ingressPath := .Values.webui.ingress.path -}}
 {{- $ingressPathType := .Values.webui.ingress.pathType -}}
 {{- $extraPaths := .Values.webui.ingress.extraPaths -}}
-apiVersion: {{ include "webui.ingress.apiVersion" . }}
+apiVersion: {{ include "pgwatch2.ingress.apiVersion" . }}
 kind: Ingress
 metadata:
   name: {{ $fullName }}

@@ -104,3 +104,12 @@ Return if ingress supports pathType.
 {{- define "pgwatch2.ingress.supportsPathType" -}}
   {{- or (eq (include "pgwatch2.ingress.isStable" .) "true") (and (eq (include "pgwatch2.ingress.apiVersion" .) "networking.k8s.io/v1beta1") (semverCompare ">= 1.18-0" .Capabilities.KubeVersion.Version)) -}}
 {{- end -}}
+
+{{- define "pgwatch2-storage" -}}
+{{- if eq .Values.storage "influx" -}}
+influxdb
+{{- else  -}}
+{{- .Values.storage -}}
+{{- end -}}
+{{- end }}
+

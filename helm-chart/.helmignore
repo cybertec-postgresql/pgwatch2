@@ -22,4 +22,10 @@
 *.tmproj
 .vscode/
 
-grafana_dashboards/postgres
+grafana_dashboards/prometheus
+grafana_dashboards/influxdb/v5
+grafana_dashboards/influxdb/v6
+grafana_dashboards/influxdb/v7
+grafana_dashboards/postgres/v5
+grafana_dashboards/postgres/v6
+grafana_dashboards/postgres/v7

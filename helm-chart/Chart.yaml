@@ -30,7 +30,7 @@ dependencies:
   - name: influxdb
     repository: https://helm.influxdata.com/
     version: "4.11.0"
-    condition: storage == influxdb
+    condition: influxdb.enabled
   - name: metallb
     repository: https://metallb.github.io/metallb
     version: "0.12.1"
