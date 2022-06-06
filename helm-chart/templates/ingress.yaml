@@ -11,9 +11,8 @@ apiVersion: {{ include "pgwatch2.ingress.apiVersion" . }}
 kind: Ingress
 metadata:
   name: {{ $fullName }}
-  namespace: {{ template "webui.namespace" . }}
   labels:
-    {{- include "webui.labels" . | nindent 4 }}
+    {{- include "pgwatch2.labels" . | nindent 4 }}
 {{- if .Values.webui.ingress.labels }}
 {{ toYaml .Values.webui.ingress.labels | indent 4 }}
 {{- end }}

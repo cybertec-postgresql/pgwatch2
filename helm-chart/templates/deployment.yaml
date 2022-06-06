@@ -24,7 +24,7 @@ spec:
       {{- end }}
 
       initContainers:
-      - name: {{ .Chart.Name }}-bootstrap1
+      - name: {{ .Chart.Name }}-bootstrap0
         image: "{{ .Values.bootstrap.image.repository }}:{{ .Values.bootstrap.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.daemon.image.pullPolicy }}
         env:
@@ -45,6 +45,36 @@ spec:
         - name: BOOTSTRAP_TYPE
           value: {{ .Values.bootstrap.type | default "configdb" | quote }}
 
+      {{ if eq .Values.storage "postgres" }}
+      - name: {{ .Chart.Name }}-bootstrap1
+        image: "{{ .Values.bootstrap.image.repository }}:{{ .Values.bootstrap.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.daemon.image.pullPolicy }}
+        env:
+        - name: PGHOST
+          value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .)) }}
+        - name: PGPORT
+          value: {{ .Values.postgresql.port | default "5432" | quote }}
+        - name: PGDATABASE
+          value: {{ .Values.postgresql.database | default "pgwatch2" }}
+        - name: BOOTSTRAP_DATABASE
+          value: {{ .Values.postgres_storage.database | default "pgwatch2_metrics"  }}
+        - name: PGUSER
+          value: {{ .Values.postgresql.superuser | default "postgres" }}
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "pgwatch2.fullname" . }}-postgresql
+              key: postgres-password
+        - name: PGSSL
+          value: {{ .Values.postgresql.ssl | default "False" | quote }}
+        - name: BOOTSTRAP_TYPE
+          value: {{ .Values.bootstrap.type | default "configdb" | quote }}
+        - name: BOOTSTRAP_TYPE
+          value: "metricsdb"
+        - name: BOOTSTRAP_METRICSDB_SCHEMA_TYPE
+          value: {{ .Values.bootstrap.metricsdb_schema_type | default "metric-time" | quote }}
+
+      {{ end }}
       - name: {{ .Chart.Name }}-bootstrap2
         image: "{{ .Values.bootstrap.image.repository }}:{{ .Values.bootstrap.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.daemon.image.pullPolicy }}
