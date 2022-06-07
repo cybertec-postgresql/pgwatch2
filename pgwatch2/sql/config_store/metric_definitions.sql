@@ -7476,6 +7476,20 @@ $sql$
 $sql$
 );
 
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
+values (
+'subscription_stats',
+15,
+$sql$
+select /* pgwatch2_generated */
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  subname::text as tag_subname,
+  apply_error_count,
+  sync_error_count
+from
+  pg_stat_subscription_stats;
+$sql$
+);
 
 /* Metric attributes */
 -- truncate pgwatch2.metric_attribute;
