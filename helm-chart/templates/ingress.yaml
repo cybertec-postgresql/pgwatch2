@@ -1,3 +1,4 @@
+{{- if .Values.webui.enabled -}}
 {{- if .Values.webui.ingress.enabled -}}
 {{- $ingressApiIsStable := eq (include "pgwatch2.ingress.isStable" .) "true" -}}
 {{- $ingressSupportsIngressClassName := eq (include "pgwatch2.ingress.supportsIngressClassName" .) "true" -}}
@@ -74,4 +75,5 @@ spec:
             pathType: {{ $ingressPathType }}
             {{- end }}
   {{- end -}}
+{{- end }}
 {{- end }}

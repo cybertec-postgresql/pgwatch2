@@ -1,3 +1,4 @@
+{{ if .Values.webui.enabled }}
 {{ if .Values.webui.service.enabled }}
 apiVersion: v1
 kind: Service
@@ -47,4 +48,5 @@ spec:
   {{- end }}
   selector:
     {{- include "webui.selectorLabels" . | nindent 4 }}
+{{ end }}
 {{ end }}

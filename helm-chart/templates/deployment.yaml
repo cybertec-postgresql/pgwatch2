@@ -1,3 +1,4 @@
+{{ if .Values.daemon.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -152,7 +153,9 @@ spec:
           value: {{ .Values.webui.user | default "pgwatch2" }}
         - name: PW2_WEBPASSWORD
           value: {{ .Values.webui.password | default "pgwatch2" }}
+{{ end }}
 ---
+{{ if .Values.webui.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -239,3 +242,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{ end }}

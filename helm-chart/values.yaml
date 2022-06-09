@@ -28,6 +28,7 @@ databases:
     - pgwatch2
 
 daemon:
+  enabled: true
   image:
     repository: cybertec/pgwatch2-daemon
     tag: latest
@@ -50,19 +51,20 @@ postgresql:
 influxdb:
   enabled: true
   service:
-    type: LoadBalancer
+    type: ClusterIP
 
 webui:
+  enable: true
   service:
     enabled: True
     port: 80
     targetPort: 8080
-    type: LoadBalancer
+    type: ClusterIP
   image:
     repository: cybertec/pgwatch2
     tag: latest
   ingress:
-    enabled: false
+    enabled: true
     # For Kubernetes >= 1.18 you should specify the ingress-controller via the field ingressClassName
     # See https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#specifying-the-class-of-an-ingress
     # ingressClassName: nginx
@@ -77,7 +79,7 @@ webui:
     pathType: Prefix
 
     hosts:
-      - chart-example.local
+      - webui-pgwatch2.local
     ## Extra paths to prepend to every host configuration. This is useful when working with annotation based services.
     extraPaths: []
     # - path: /*
@@ -106,13 +108,15 @@ grafana:
       enabled: true
   enabled: True
   service:
-    type: LoadBalancer
+    type: ClusterIP
   noAnonymous: false
   user: admin
   password: pgwatch2admin # password will be auto generated if emtpy
   ingress:
     # Use webui.ingress as an example if you want to use ingress for grafana.
-    enabled: false
+    enabled: true
+    hosts:
+      - grafana-pgwatch2.local
   ldap:
     enabled: true
     config: |
