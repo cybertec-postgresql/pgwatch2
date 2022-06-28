@@ -739,7 +739,13 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 	if useConnPooling {
 		data, err = DBExecInExplicitTX(conn, dbUnique, sqlToExec, args...)
 	} else {
-		data, err = DBExecRead(conn, dbUnique, sqlToExec, args...)
+		if IsPostgresDBType(md.DBType) {
+		            data, err = DBExecRead(conn, dbUnique, sqlToExec, args...)
+		} else {
+			for _,sql := range strings.Split(sqlToExec,";") {
+			    data, err = DBExecRead(conn, dbUnique, sql, args...)
+			}
+		}
 	}
 	t2 := time.Now()
 	if err != nil {
