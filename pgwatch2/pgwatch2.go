@@ -745,7 +745,6 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 			for _,sql := range strings.Split(sqlToExec,";") {
 			  if len(sql) > 0 {
 			    data, err = DBExecRead(conn, dbUnique, sql, args...)
-			    log.Debugf("Query '%s' - pgpool data: %s", sql, data)
 			  }
 			}
 		}
