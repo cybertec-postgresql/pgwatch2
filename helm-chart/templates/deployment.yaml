@@ -44,7 +44,7 @@ spec:
         - name: PGSSL
           value: {{ .Values.postgresql.ssl | default "False" | quote }}
         - name: BOOTSTRAP_TYPE
-          value: {{ .Values.bootstrap.type | default "configdb" | quote }}
+          value: {{ .Values.bootstrap.type0 | default "configdb" | quote }}
 
       {{ if eq .Values.storage "postgres" }}
       - name: {{ .Chart.Name }}-bootstrap1
@@ -64,14 +64,12 @@ spec:
         - name: PGPASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "pgwatch2.fullname" . }}-postgresql
+              name: {{ .Values.postgresql.secretname | default (printf "%s-postgresql" (include "pgwatch2.fullname" .)) }}
               key: postgres-password
         - name: PGSSL
           value: {{ .Values.postgresql.ssl | default "False" | quote }}
         - name: BOOTSTRAP_TYPE
-          value: {{ .Values.bootstrap.type | default "configdb" | quote }}
-        - name: BOOTSTRAP_TYPE
-          value: "metricsdb"
+          value: {{ .Values.bootstrap.type1 | default "metricsdb" | quote }}
         - name: BOOTSTRAP_METRICSDB_SCHEMA_TYPE
           value: {{ .Values.bootstrap.metricsdb_schema_type | default "metric-time" | quote }}
 
@@ -153,6 +151,9 @@ spec:
           value: {{ .Values.webui.user | default "pgwatch2" }}
         - name: PW2_WEBPASSWORD
           value: {{ .Values.webui.password | default "pgwatch2" }}
+        envFrom:
+        - configMapRef:
+            name: {{ include "pgwatch2.fullname" . }}-env
 {{ end }}
 ---
 {{ if .Values.webui.enabled }}

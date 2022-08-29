@@ -16,3 +16,12 @@ data:
   influxdb-init.iql: |
     CREATE DATABASE {{ .Values.influxdb.database | default "pgwatch2" }};
     CREATE RETENTION POLICY pgwatch_def_ret ON {{ .Values.influxdb.database | default "pgwatch2" }} DURATION 30d REPLICATION 1 DEFAULT;
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pgwatch2.fullname" . }}-env
+{{- with .Values.daemon.env }}
+data:
+{{ toYaml . | indent 2 }}
+{{- end }}
