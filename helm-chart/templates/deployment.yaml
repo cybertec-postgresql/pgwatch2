@@ -151,6 +151,9 @@ spec:
           value: {{ .Values.webui.user | default "pgwatch2" }}
         - name: PW2_WEBPASSWORD
           value: {{ .Values.webui.password | default "pgwatch2" }}
+        envFrom:
+        - configMapRef:
+            name: {{ include "pgwatch2.fullname" . }}-env
 {{ end }}
 ---
 {{ if .Values.webui.enabled }}
