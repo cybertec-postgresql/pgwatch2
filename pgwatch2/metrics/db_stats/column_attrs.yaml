@@ -2,6 +2,5 @@
 prometheus_gauge_columns:
   - numbackends
   - postmaster_uptime_s
-  - backup_duration_s
   - checksum_last_failure_s
 prometheus_ignored_columns:
