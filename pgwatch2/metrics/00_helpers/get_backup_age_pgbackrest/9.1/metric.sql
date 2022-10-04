@@ -9,7 +9,7 @@ import time
 import json
 import subprocess
 
-PGBACKREST_TIMEOUT = 5
+PGBACKREST_TIMEOUT = 30
 
 def error(message, returncode=1):
   return returncode, 1000000, 'Not OK. '+message
@@ -17,7 +17,7 @@ def error(message, returncode=1):
 pgbackrest_cmd=["pgbackrest", "--output=json", "info"]
 
 try:
-    p = subprocess.Popen(pgbackrest_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE encoding='utf-8', shell=True)
+    p = subprocess.Popen(pgbackrest_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
     stdout, stderr = p.communicate(timeout=PGBACKREST_TIMEOUT)
 except OSError as e:
     return error('Failed to execute pgbackrest: {}'.format(e))
@@ -34,9 +34,9 @@ if p.returncode != 0:
 
 try:
     data = json.loads(stdout)
-    backup_age_seconds = time.time() - data[0]['backup'][-1]['timestamp']['stop']
+    backup_age_seconds = int(time.time()) - data[0]['backup'][-1]['timestamp']['stop']
     return 0, backup_age_seconds, 'OK. Last backup age in seconds: {}'.format(backup_age_seconds)
-except (json.JSONDecoderError, KeyError):
+except (json.JSONDecodeError, KeyError) :
     return error('Failed to parse pgbackrest output')
 $$ LANGUAGE plpython3u VOLATILE;
 
