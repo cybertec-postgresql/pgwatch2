@@ -1,3 +1,4 @@
+/* NB! accessing pgstattuple_approx directly requires superuser or pg_stat_scan_tables/pg_monitor builtin roles */
 WITH q_locked_rels AS (
     select relation from pg_locks where mode = 'AccessExclusiveLock' and granted
 ),
@@ -12,8 +13,6 @@ q_index_details AS (
         end as leaf_fragmentation    
     from
         pg_stat_user_indexes sui
-        join pg_statio_user_indexes io on io.indexrelid = sui.indexrelid
-        join pg_index i on i.indexrelid = sui.indexrelid
     where not sui.schemaname like any (array [E'pg\\_temp%', E'\\_timescaledb%'])
     and not exists (select * from q_locked_rels where relation = sui.relid or relation = sui.indexrelid)
 )
