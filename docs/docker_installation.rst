@@ -150,7 +150,7 @@ Interacting with the Docker container
 
 * For possible troubleshooting needs, logs of the components running inside Docker are by default (if not disabled on container launch) visible under:
   http://127.0.0.1:8080/logs/[pgwatch2|postgres|webui|influxdb|grafana]. It's of course also possible to log into the container
-  and look at log files directly - they're situated under */var/logs/supervisor/*.
+  and look at log files directly - they're situated under */var/log/supervisor/*.
 
   FYI - ``docker logs ...`` command is not really useful after a successful container startup in pgwatch2 case.
 
