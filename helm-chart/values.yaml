@@ -34,8 +34,8 @@ daemon:
     tag: latest
   resources: {}
   env:
-    PW2_PG_RETENTION_DAYS: 14
-    PW2_MIN_DB_SIZE_MB: 0
+    PW2_PG_RETENTION_DAYS: "14"
+    PW2_MIN_DB_SIZE_MB: "0"
 
 bootstrap:
   image:
