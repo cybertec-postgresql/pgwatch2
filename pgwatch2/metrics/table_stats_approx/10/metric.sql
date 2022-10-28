@@ -1,4 +1,4 @@
-with recursive
+with recursive /* pgwatch2_generated */
     q_root_part as (
         select c.oid,
                c.relkind,
@@ -32,7 +32,7 @@ with recursive
             coalesce((select coalesce(ct.relpages, 0) + coalesce(cti.relpages, 0) from pg_class ct left join pg_index ti on ti.indrelid = ct.oid left join pg_class cti on cti.oid = ti.indexrelid where ct.oid = c.reltoastrelid), 0) as toast_relpages,
             case when 'autovacuum_enabled=off' = ANY(c.reloptions) then 1 else 0 end as no_autovacuum,
             age(c.relfrozenxid) as tx_freeze_age,
-            c.relpersistence      
+            c.relpersistence
           from
             pg_class c
             join pg_namespace n on n.oid = c.relnamespace
@@ -71,7 +71,7 @@ with recursive
         analyze_count,
         autoanalyze_count,
         tx_freeze_age,
-        relpersistence        
+        relpersistence
       from
         pg_stat_user_tables ut
         join q_tbls_by_total_associated_relpages_approx t on t.oid = ut.relid

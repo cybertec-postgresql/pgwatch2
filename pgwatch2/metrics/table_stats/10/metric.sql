@@ -1,4 +1,4 @@
-with recursive
+with recursive /* pgwatch2_generated */
     q_root_part as (
         select c.oid,
                c.relkind,
