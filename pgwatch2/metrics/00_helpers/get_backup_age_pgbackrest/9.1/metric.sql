@@ -5,29 +5,39 @@ CREATE EXTENSION IF NOT EXISTS plpython3u;
 */
 CREATE OR REPLACE FUNCTION get_backup_age_pgbackrest(OUT retcode int, OUT backup_age_seconds int, OUT message text) AS
 $$
+import time
+import json
 import subprocess
-retcode=1
-backup_age_seconds=1000000
-message=''
 
-# get latest wal-g backup timestamp
-walg_last_backup_cmd="""pgbackrest --output=json info | jq '.[0] | .backup[-1] | .timestamp.stop'"""
-p = subprocess.run(walg_last_backup_cmd, stdout=subprocess.PIPE, encoding='utf-8', shell=True)
-if p.returncode != 0:
-    # plpy.notice("p.stdout: " + str(p.stderr) + str(p.stderr))
-    return p.returncode, backup_age_seconds, 'Not OK. Failed on "pgbackrest info" call'
+PGBACKREST_TIMEOUT = 30
 
-last_backup_stop_epoch=p.stdout.rstrip('\n\r')
+def error(message, returncode=1):
+  return returncode, 1000000, 'Not OK. '+message
+
+pgbackrest_cmd=["pgbackrest", "--output=json", "info"]
 
 try:
-    plan = plpy.prepare("SELECT (extract(epoch from now()) - $1)::int8 AS backup_age_seconds;", ["int8"])
-    rv = plpy.execute(plan, [last_backup_stop_epoch])
-except Exception as e:
-    return retcode, backup_age_seconds, 'Not OK. Failed to extract seconds difference via Postgres'
-else:
-    backup_age_seconds = rv[0]["backup_age_seconds"]
-    return 0, backup_age_seconds, 'OK. Last backup age in seconds: %s' % backup_age_seconds
+    p = subprocess.Popen(pgbackrest_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+    stdout, stderr = p.communicate(timeout=PGBACKREST_TIMEOUT)
+except OSError as e:
+    return error('Failed to execute pgbackrest: {}'.format(e))
+except subprocess.TimeoutExpired:
+    p.terminate()
+    try:
+        p.wait(0.5)
+    except subprocess.TimeoutExpired:
+        p.kill()
+    return error('pgbackrest failed to respond in {} seconds'.format(PGBACKREST_TIMEOUT))
 
+if p.returncode != 0:
+    return error('Failed on "pgbackrest info" call', returncode=p.returncode)
+
+try:
+    data = json.loads(stdout)
+    backup_age_seconds = int(time.time()) - data[0]['backup'][-1]['timestamp']['stop']
+    return 0, backup_age_seconds, 'OK. Last backup age in seconds: {}'.format(backup_age_seconds)
+except (json.JSONDecodeError, KeyError) :
+    return error('Failed to parse pgbackrest output')
 $$ LANGUAGE plpython3u VOLATILE;
 
 /* contacting S3 could be laggy depending on location */
