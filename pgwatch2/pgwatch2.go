@@ -730,7 +730,11 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 	}
 
 	if !useConnPooling {
-		sqlLockTimeout = "SET lock_timeout TO '100ms';"
+		if md.DBType == DBTYPE_BOUNCER || md.DBType == DBTYPE_PGPOOL {
+			sqlLockTimeout = ""
+		} else {
+			sqlLockTimeout = "SET lock_timeout TO '100ms';"
+		}
 	}
 
 	sqlToExec := sqlLockTimeout + sqlStmtTimeout + sql // bundle timeouts with actual SQL to reduce round-trip times
