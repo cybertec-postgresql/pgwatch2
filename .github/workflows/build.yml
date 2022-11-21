@@ -6,7 +6,7 @@ on:
 jobs:
 
   test-docker-images:
-    if: ${{ secrets.DOCKER_USERNAME != '' }} # allow only local repo PRs
+    if: ${{ github.event.pull_request.head.repo.full_name == 'cybertec-postgresql/pgwatch2' }} # allow only local repo PRs
     name: Test Docker Image on Ubuntu
     runs-on: ubuntu-latest
     steps:
