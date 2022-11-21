@@ -6,7 +6,7 @@ on:
 jobs:
 
   test-docker-images:
-    if: true # false to skip job during debug
+    if: ${{ github.repository == 'cybertec-postgresql/pgwatch2' }} # allow only local repo PRs
     name: Test Docker Image on Ubuntu
     runs-on: ubuntu-latest
     steps:
