@@ -1,3 +1,4 @@
+foo
 [![Documentation Status](https://readthedocs.org/projects/pgwatch2/badge/?version=latest)](https://pgwatch2.readthedocs.io/en/latest/?badge=latest)
 [![Release](https://img.shields.io/github/v/release/cybertec-postgresql/pgwatch2?include_prereleases)](https://github.com/cybertec-postgresql/pgwatch2/releases)
 [![Github All Releases](https://img.shields.io/github/downloads/cybertec-postgresql/pgwatch2/total?style=flat-square)](https://github.com/cybertec-postgresql/pgwatch2/releases)
