@@ -731,10 +731,10 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 	}
 
 	if !useConnPooling {
-		if md.DBType == DBTYPE_BOUNCER || md.DBType == DBTYPE_PGPOOL {
-			sqlLockTimeout = ""
-		} else {
+		if IsPostgresDBType(md.DBType) {
 			sqlLockTimeout = "SET lock_timeout TO '100ms';"
+		} else {
+			sqlLockTimeout = ""
 		}
 	}
 
