@@ -244,7 +244,7 @@ const RECO_PREFIX = "reco_"                                       // special han
 const RECO_METRIC_NAME = "recommendations"
 const SPECIAL_METRIC_CHANGE_EVENTS = "change_events"
 const SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS = "server_log_event_counts"
-const SPECIAL_METRIC_PGBOUNCER_STATS = "pgbouncer_stats"
+const SPECIAL_METRIC_PGBOUNCER = "^pgbouncer_(stats|pools)$"
 const SPECIAL_METRIC_PGPOOL_STATS = "pgpool_stats"
 const SPECIAL_METRIC_INSTANCE_UP = "instance_up"
 const SPECIAL_METRIC_DB_SIZE = "db_size"         // can be transparently switched to db_size_approx on instances with very slow FS access (Azure Single Server)
@@ -324,6 +324,7 @@ var instanceMetricCacheTimestampLock = sync.RWMutex{}
 var MinExtensionInfoAvailable, _ = decimal.NewFromString("9.1")
 var regexIsAlpha = regexp.MustCompile("^[a-zA-Z]+$")
 var rBouncerAndPgpoolVerMatch = regexp.MustCompile(`\d+\.+\d+`) // extract $major.minor from "4.1.2 (karasukiboshi)" or "PgBouncer 1.12.0"
+var regexIsPgbouncerMetrics = regexp.MustCompile(SPECIAL_METRIC_PGBOUNCER)
 var tryDirectOSStats bool
 var unreachableDBsLock sync.RWMutex
 var unreachableDB = make(map[string]time.Time)
@@ -730,7 +731,11 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 	}
 
 	if !useConnPooling {
-		sqlLockTimeout = "SET lock_timeout TO '100ms';"
+		if IsPostgresDBType(md.DBType) {
+			sqlLockTimeout = "SET lock_timeout TO '100ms';"
+		} else {
+			sqlLockTimeout = ""
+		}
 	}
 
 	sqlToExec := sqlLockTimeout + sqlStmtTimeout + sql // bundle timeouts with actual SQL to reduce round-trip times
@@ -1003,7 +1008,7 @@ retry:
 			}
 
 			if epoch_ns == 0 {
-				if !ts_warning_printed && msg.MetricName != SPECIAL_METRIC_PGBOUNCER_STATS {
+				if !ts_warning_printed && !regexIsPgbouncerMetrics.MatchString(msg.MetricName) {
 					log.Warning("No timestamp_ns found, (gatherer) server time will be used. measurement:", msg.MetricName)
 					ts_warning_printed = true
 				}
@@ -1097,7 +1102,7 @@ func SendToPostgres(storeMessages []MetricStoreMessage) error {
 			}
 
 			if epoch_ns == 0 {
-				if !ts_warning_printed && msg.MetricName != SPECIAL_METRIC_PGBOUNCER_STATS {
+				if !ts_warning_printed && !regexIsPgbouncerMetrics.MatchString(msg.MetricName) {
 					log.Warning("No timestamp_ns found, server time will be used. measurement:", msg.MetricName)
 					ts_warning_printed = true
 				}
@@ -3167,7 +3172,7 @@ retry_with_superuser_sql: // if 1st fetch with normal SQL fails, try with SU SQL
 			}
 
 			log.Infof("[%s:%s] fetched %d rows in %.1f ms", msg.DBUniqueName, msg.MetricName, len(data), float64(duration.Nanoseconds())/1000000)
-			if msg.MetricName == SPECIAL_METRIC_PGBOUNCER_STATS { // clean unwanted pgbouncer pool stats here as not possible in SQL
+			if regexIsPgbouncerMetrics.MatchString(msg.MetricName) { // clean unwanted pgbouncer pool stats here as not possible in SQL
 				data = FilterPgbouncerData(data, md.DBName, vme)
 			}
 
