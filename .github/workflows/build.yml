@@ -21,6 +21,9 @@ jobs:
         echo "PR_TIME=$(git show -s --format=%cI HEAD)" >> $GITHUB_OUTPUT
         echo "PR_TAGNAME"=$(echo $GITHUB_REF_NAME | tr // _) >> $GITHUB_OUTPUT
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2        
+
     - name: Publish test version to Registry
       uses: elgohr/Publish-Docker-Github-Action@v4
       env:
@@ -34,3 +37,4 @@ jobs:
         dockerfile: docker/Dockerfile-postgres
         buildargs: GIT_HASH,GIT_TIME
         tags: ${{ steps.version.outputs.PR_TAGNAME }}
+        platforms: linux/amd64,linux/arm64
