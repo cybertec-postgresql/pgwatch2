@@ -43,8 +43,8 @@ jobs:
     - name: Version strings
       id: version
       run: |
-        echo "::set-output name=RELEASE_VERSION::$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")"
-        echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
+        echo "RELEASE_VERSION=$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")" >> $GITHUB_OUTPUT
+        echo "RELEASE_TIME=$(git show -s --format=%cI HEAD)" >> $GITHUB_OUTPUT
 
     - name: Publish beta version to Registry
       if: ${{ contains(github.ref_name, 'beta') }}
