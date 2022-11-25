@@ -14,6 +14,13 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v3
 
+    - name: Check goreleaser configuration
+      uses: goreleaser/goreleaser-action@v3
+      with:
+        args: check
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}      
+
     - name: Version strings
       id: version
       run: |
