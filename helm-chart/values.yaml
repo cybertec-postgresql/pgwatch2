@@ -57,7 +57,7 @@ influxdb:
     type: ClusterIP
 
 webui:
-  enable: true
+  enabled: true
   service:
     enabled: True
     port: 80
