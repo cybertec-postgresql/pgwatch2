@@ -29,7 +29,7 @@
   "liveNow": false,
   "panels": [
     {
-      "datasource": "pgwatch-metrics",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -107,7 +107,7 @@
       },
       "targets": [
         {
-          "datasource": "pgwatch-metrics",
+          "datasource": null,
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
@@ -138,7 +138,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": "pgwatch-metrics",
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -200,7 +200,7 @@
       "pluginVersion": "9.1.4",
       "targets": [
         {
-          "datasource": "pgwatch-metrics",
+          "datasource": null,
           "format": "table",
           "group": [],
           "metricColumn": "none",
@@ -242,7 +242,7 @@
           "text": null,
           "value": null
         },
-        "datasource": "pgwatch-metrics",
+        "datasource": null,
         "definition": "SELECT DISTINCT dbname FROM admin.all_distinct_dbname_metrics WHERE metric = 'stat_activity' ORDER BY 1;",
         "hide": 0,
         "includeAll": false,
