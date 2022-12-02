@@ -1,4 +1,4 @@
-FROM golang:1.17
+FROM golang:1.19
 
 # For showing Git version via 'pgwatch2 --version'
 ARG GIT_HASH
@@ -22,7 +22,8 @@ RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl
     && pg_dropcluster 11 main ; pg_createcluster --locale en_US.UTF-8 11 main \
     && echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/11/main/postgresql.conf
 
-RUN wget -q -O grafana.deb https://dl.grafana.com/oss/release/grafana_8.3.4_amd64.deb \
+RUN arch=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/amd64/) \
+    && wget -q -O grafana.deb "https://dl.grafana.com/oss/release/grafana_8.3.4_${arch}.deb" \
     && dpkg -i grafana.deb && rm grafana.deb
 
 

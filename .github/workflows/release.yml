@@ -13,7 +13,7 @@ jobs:
     - name: Set up Golang
       uses: actions/setup-go@v3
       with:
-        go-version: '1.17'
+        go-version: '1.19'
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v3
@@ -22,7 +22,7 @@ jobs:
       run: git fetch --prune --unshallow
 
     - name: Release via goreleaser
-      uses: goreleaser/goreleaser-action@master
+      uses: goreleaser/goreleaser-action@v3
       with:
         args: release
       env:
@@ -43,8 +43,14 @@ jobs:
     - name: Version strings
       id: version
       run: |
-        echo "::set-output name=RELEASE_VERSION::$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")"
-        echo "::set-output name=RELEASE_TIME::$(git show -s --format=%cI HEAD)"
+        echo "RELEASE_VERSION=$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")" >> $GITHUB_OUTPUT
+        echo "RELEASE_TIME=$(git show -s --format=%cI HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2       
 
     - name: Publish beta version to Registry
       if: ${{ contains(github.ref_name, 'beta') }}
@@ -59,6 +65,7 @@ jobs:
         dockerfile: docker/Dockerfile${{ matrix.image }}
         buildargs: GIT_HASH,GIT_TIME
         tags: ${{ github.ref_name }}
+        platforms: linux/amd64,linux/arm64
 
     - name: Publish "latest" tag to Registry
       if: ${{ !contains(github.ref_name, 'beta') }}
@@ -73,6 +80,7 @@ jobs:
         dockerfile: docker/Dockerfile${{ matrix.image }}
         buildargs: GIT_HASH,GIT_TIME
         tags: "latest"
+        platforms: linux/amd64,linux/arm64
 
     - name: Publish "X.X.X, X.X, X" tags to Registry
       if: ${{ !contains(github.ref_name, 'beta') }}
@@ -86,4 +94,5 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         dockerfile: docker/Dockerfile${{ matrix.image }}
         buildargs: GIT_HASH,GIT_TIME
-        tag_semver: true        
+        tag_semver: true
+        platforms: linux/amd64,linux/arm64  
