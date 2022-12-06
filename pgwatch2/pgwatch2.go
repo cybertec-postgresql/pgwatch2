@@ -292,7 +292,7 @@ var InfluxSkipSSLCertVerify, InfluxSkipSSLCertVerify2 bool
 var fileBasedMetrics = false
 var adHocMode = false
 var preset_metric_def_map map[string]map[string]float64 // read from metrics folder in "file mode"
-/// internal statistics calculation
+// / internal statistics calculation
 var lastSuccessfulDatastoreWriteTimeEpoch int64
 var datastoreWriteFailuresCounter uint64
 var datastoreWriteSuccessCounter uint64
@@ -649,7 +649,7 @@ func DBExecInExplicitTX(conn *sqlx.DB, host_ident, sql string, args ...interface
 	}
 
 	ctx := context.Background()
-	txOpts := go_sql.TxOptions{}
+	txOpts := go_sql.TxOptions{ReadOnly: true}
 
 	tx, err := conn.BeginTxx(ctx, &txOpts)
 	if err != nil {
@@ -745,12 +745,12 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 		data, err = DBExecInExplicitTX(conn, dbUnique, sqlToExec, args...)
 	} else {
 		if IsPostgresDBType(md.DBType) {
-		            data, err = DBExecRead(conn, dbUnique, sqlToExec, args...)
+			data, err = DBExecRead(conn, dbUnique, sqlToExec, args...)
 		} else {
-			for _,sql := range strings.Split(sqlToExec,";") {
-			  if len(sql) > 0 {
-			    data, err = DBExecRead(conn, dbUnique, sql, args...)
-			  }
+			for _, sql := range strings.Split(sqlToExec, ";") {
+				if len(sql) > 0 {
+					data, err = DBExecRead(conn, dbUnique, sql, args...)
+				}
 			}
 		}
 	}
