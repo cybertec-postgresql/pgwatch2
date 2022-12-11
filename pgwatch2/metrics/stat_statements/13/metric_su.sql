@@ -1,4 +1,4 @@
-WITH q_data AS (
+WITH /* pgwatch2_generated */ q_data AS (
     SELECT
         coalesce(queryid::text, 'insufficient-privileges-total') as tag_queryid,
         /*

@@ -1,4 +1,4 @@
-WITH q_data AS (
+WITH /* pgwatch2_generated */ q_data AS (
     SELECT
         (regexp_replace(md5(query::varchar(1000)), E'\\D', '', 'g'))::varchar(10)::text as tag_queryid,
         max(query::varchar(8000)) AS query,

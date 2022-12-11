@@ -1,4 +1,4 @@
-select * from (
+select /* pgwatch2_generated */ * from (
                   with recursive
                       q_root_part as (
                             select c.oid,

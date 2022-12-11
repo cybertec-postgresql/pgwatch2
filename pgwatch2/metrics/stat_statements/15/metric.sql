@@ -1,4 +1,4 @@
-WITH q_data AS (
+WITH /* pgwatch2_generated */ q_data AS (
     SELECT
         queryid::text AS tag_queryid,
         /*
