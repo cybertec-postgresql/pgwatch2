@@ -181,6 +181,7 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "settings": 7200,
     "sequence_health": 3600,
     "sproc_stats": 180,
+    "stat_activity": 30,
     "stat_statements": 180,
     "stat_statements_calls": 60,
     "table_io_stats": 600,

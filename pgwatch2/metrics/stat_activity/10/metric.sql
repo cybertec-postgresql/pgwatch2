@@ -1,4 +1,5 @@
 select /* pgwatch2_generated */
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   s.query as query,
   count(*) as count
 from get_stat_activity() s
