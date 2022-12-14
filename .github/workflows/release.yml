@@ -54,7 +54,7 @@ jobs:
 
     - name: Publish beta version to Registry
       if: ${{ contains(github.ref_name, 'beta') }}
-      uses: elgohr/Publish-Docker-Github-Action@v4
+      uses: elgohr/Publish-Docker-Github-Action@v5
       env:
         GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
         GIT_TIME: ${{ steps.version.outputs.RELEASE_TIME }}     
@@ -69,7 +69,7 @@ jobs:
 
     - name: Publish "latest" tag to Registry
       if: ${{ !contains(github.ref_name, 'beta') }}
-      uses: elgohr/Publish-Docker-Github-Action@v4
+      uses: elgohr/Publish-Docker-Github-Action@v5
       env:
         GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
         GIT_TIME: ${{ steps.version.outputs.RELEASE_TIME }}     
@@ -84,7 +84,7 @@ jobs:
 
     - name: Publish "X.X.X, X.X, X" tags to Registry
       if: ${{ !contains(github.ref_name, 'beta') }}
-      uses: elgohr/Publish-Docker-Github-Action@v4
+      uses: elgohr/Publish-Docker-Github-Action@v5
       env:
         GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
         GIT_TIME: ${{ steps.version.outputs.RELEASE_TIME }}     
