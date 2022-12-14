@@ -748,6 +748,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 			data, err = DBExecRead(conn, dbUnique, sqlToExec, args...)
 		} else {
 			for _, sql := range strings.Split(sqlToExec, ";") {
+				sql = strings.TrimSpace(sql)
 				if len(sql) > 0 {
 					data, err = DBExecRead(conn, dbUnique, sql, args...)
 				}
