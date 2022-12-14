@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        image: ['', '-postgres', '-nonroot', '-daemon', '-db-bootstrapper']    
+        image: ['-postgres', '-daemon', '-db-bootstrapper']    
     runs-on: ubuntu-latest
     steps:
 
