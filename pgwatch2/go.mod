@@ -7,7 +7,7 @@ require (
 	github.com/hashicorp/consul/api v1.12.0
 	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/jmoiron/sqlx v1.3.4
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.4
 	github.com/marpaia/graphite-golang v0.0.0-20190519024811-caf161d2c2b1
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
