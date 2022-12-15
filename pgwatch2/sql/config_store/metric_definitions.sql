@@ -5585,7 +5585,7 @@ WITH q_bloat AS (
                     bs * tblpages                  AS real_size,
                     (tblpages - est_tblpages) * bs AS extra_size,
                     CASE
-                        WHEN tblpages - est_tblpages > 0
+                        WHEN tblpages > 0 AND tblpages - est_tblpages > 0
                             THEN 100 * (tblpages - est_tblpages) / tblpages::float
                         ELSE 0
                         END                        AS extra_ratio,
@@ -5596,7 +5596,7 @@ WITH q_bloat AS (
                         ELSE 0
                         END                        AS bloat_size,
                     CASE
-                        WHEN tblpages - est_tblpages_ff > 0
+                        WHEN tblpages > 0 AND tblpages - est_tblpages_ff > 0
                             THEN 100 * (tblpages - est_tblpages_ff) / tblpages::float
                         ELSE 0
                         END                        AS bloat_ratio,
@@ -5681,7 +5681,7 @@ WITH q_bloat AS (
              -- WHERE NOT is_na
          ) s4
 )
-SELECT
+SELECT /* pgwatch2_generated */
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     (select sum(approx_bloat_bytes) from q_bloat) as approx_table_bloat_b,
     ((select sum(approx_bloat_bytes) from q_bloat) * 100 / pg_database_size(current_database()))::int8 as approx_bloat_percentage;
@@ -5721,7 +5721,7 @@ WITH q_bloat AS (
                     bs * tblpages                  AS real_size,
                     (tblpages - est_tblpages) * bs AS extra_size,
                     CASE
-                        WHEN tblpages - est_tblpages > 0
+                        WHEN tblpages > 0 AND tblpages - est_tblpages > 0
                             THEN 100 * (tblpages - est_tblpages) / tblpages::float
                         ELSE 0
                         END                        AS extra_ratio,
@@ -5732,7 +5732,7 @@ WITH q_bloat AS (
                         ELSE 0
                         END                        AS bloat_size,
                     CASE
-                        WHEN tblpages - est_tblpages_ff > 0
+                        WHEN tblpages > 0 AND tblpages - est_tblpages_ff > 0
                             THEN 100 * (tblpages - est_tblpages_ff) / tblpages::float
                         ELSE 0
                         END                        AS bloat_ratio,
@@ -5818,7 +5818,7 @@ WITH q_bloat AS (
              -- WHERE NOT is_na
          ) s4
 )
-SELECT
+SELECT /* pgwatch2_generated */
     (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
     (select sum(approx_bloat_bytes) from q_bloat) as approx_table_bloat_b,
     ((select sum(approx_bloat_bytes) from q_bloat) * 100 / pg_database_size(current_database()))::int8 as approx_bloat_percentage;
