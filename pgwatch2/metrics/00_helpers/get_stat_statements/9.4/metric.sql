@@ -46,7 +46,7 @@ DO $SQL$
         IF coalesce(l_secure_schemas_from_search_path, '') = '' THEN
             RAISE NOTICE 'search_path = %', current_setting('search_path');
             RAISE EXCEPTION $$get_stat_statements() SECURITY DEFINER helper will not be created as all schemas on search_path are unsecured where all users can create objects -
-              execute 'REVOKE CREATE ON SCHEMA $my_schema FROM public' to tighten security or comment out the DO block to disable the check$$;
+              execute 'REVOKE CREATE ON SCHEMA public FROM PUBLIC' to tighten security or comment out the DO block to disable the check$$;
         ELSE
             RAISE NOTICE '%', format($$ALTER FUNCTION get_stat_statements() SET search_path TO %s$$, l_secure_schemas_from_search_path);
             EXECUTE format($$ALTER FUNCTION get_stat_statements() SET search_path TO %s$$, l_secure_schemas_from_search_path);
