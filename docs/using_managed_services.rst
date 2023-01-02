@@ -4,7 +4,7 @@ Monitoring managed cloud databases
 ==================================
 
 Although all cloud service providers offer some kind of built-in instrumentation and graphs, they're mostly rather conservative
-in this are not to consume extra server resources and not to overflow and confuse beginners with too much information. So
+in this as not to overconsume server resources and not to overflow and confuse beginners with too much information. So
 for advanced troubleshooting it might make sense to gather some additional metrics on your own, especially given that
 you can also easily add custom business metrics to pgwatch2 using plain SQL, for example to track the amount of incoming
 sales orders. Also with pgwatch2 / Grafana you have more freedom on the visual representation side and access to around
@@ -13,8 +13,8 @@ sales orders. Also with pgwatch2 / Grafana you have more freedom on the visual r
 The common denominator for all managed cloud services is that they remove / disallow dangerous or potentially dangerous
 functionalities like file system access and untrusted PL-languages like Python - so you'll lose a small amount of metrics
 and "helper functions" compared to a standard on-site setup described in the :ref:`previous chapter <preparing_databases>`.
-This also means that you will get some errors displayed on some preset dashboards like "DB overview" and thus will be
-better off using a dashboard called "DB overview Unprivileged" tailored specially for such a use case.
+This also means that you will get some errors displayed on some preset dashboards like "System Stats", "DB overview" and thus
+will be better off using "lighter" dashboards like "DB overview Unprivileged" tailored specially for such a use case.
 
 pgwatch2 has been tested to work with the following managed database services:
 
