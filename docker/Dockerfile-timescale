@@ -1,0 +1,87 @@
+FROM golang:1.19
+
+# For showing Git version via 'pgwatch2 --version'
+ARG GIT_HASH
+ARG GIT_TIME
+ENV GIT_HASH=${GIT_HASH}
+ENV GIT_TIME=${GIT_TIME}
+
+ADD pgwatch2 /pgwatch2
+RUN cd /pgwatch2 && bash build_gatherer.sh
+
+
+FROM ubuntu:22.04
+
+RUN apt-get -q update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl wget apt-transport-https vim git postgresql-common gnupg2 python3-pip \
+    && sh /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -qy postgresql-15 postgresql-plpython3-15 python3-psutil \
+    && echo "deb https://packagecloud.io/timescale/timescaledb/ubuntu/ jammy main" | tee /etc/apt/sources.list.d/timescaledb.list \
+    && wget --quiet -O - https://packagecloud.io/timescale/timescaledb/gpgkey | apt-key add - \
+    && apt update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -qy timescaledb-2-postgresql-15 postgresql-15-pg-qualstats \
+    && echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/15/main/postgresql.conf
+
+RUN arch=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/amd64/) \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -qy libfontconfig1 \
+    && wget -q -O grafana.deb "https://dl.grafana.com/oss/release/grafana_8.5.15_${arch}.deb" \
+    && dpkg -i grafana.deb && rm grafana.deb
+
+
+# Add pgwatch2 sources
+ADD pgwatch2 /pgwatch2
+# Copy over the compiled gatherer
+COPY --from=0 /pgwatch2/pgwatch2 /pgwatch2
+ADD webpy /pgwatch2/webpy
+
+# For showing Git versions via :8080/versions or 'pgwatch2 --version'
+ARG GIT_HASH
+ARG GIT_TIME
+ENV GIT_HASH=${GIT_HASH}
+ENV GIT_TIME=${GIT_TIME}
+RUN echo "${GIT_HASH} ${GIT_TIME}" > /pgwatch2/build_git_version.txt
+
+# Grafana config customizations, Web UI requirements, compilation of the Go gatherer
+RUN cp /pgwatch2/bootstrap/grafana_custom_config.ini /etc/grafana/grafana.ini \
+    && pip3 install -r /pgwatch2/webpy/requirements_pg_metrics.txt \
+    && grafana-cli plugins install savantly-heatmap-panel \
+    && pip3 install supervisor pyyaml && mkdir /var/log/supervisor \
+    && apt autoremove -y
+
+
+ADD grafana_dashboards /pgwatch2/grafana_dashboards
+
+
+# Set up supervisord [https://docs.docker.com/engine/admin/using_supervisord/]
+COPY supervisord-timescale.conf /etc/supervisor/supervisord.conf
+
+# NB! When security is a concern one should definitely alter "pgwatch2" password in change_pw.sql and maybe modify pg_hba.conf accordingly
+COPY postgresql_timescale.conf /etc/postgresql/15/main/pgwatch_postgresql.conf
+COPY pg_hba.conf /etc/postgresql/15/main/pg_hba.conf
+COPY docker-launcher-timescale.sh pg_hba.conf /pgwatch2/
+
+ENV PW2_DATASTORE postgres
+ENV PW2_PG_METRIC_STORE_CONN_STR postgresql://pgwatch2:pgwatch2admin@localhost:5432/pgwatch2_metrics
+ENV PW2_PG_SCHEMA_TYPE timescale
+ENV PW2_AES_GCM_KEYPHRASE_FILE /pgwatch2/persistent-config/default-password-encryption-key.txt
+
+# Admin UI for configuring servers to be monitored
+EXPOSE 8080
+# Gatherer healthcheck port / metric statistics (JSON)
+EXPOSE 8081
+# Postgres DB holding the pgwatch2 config DB / metrics
+EXPOSE 5432
+# Grafana UI
+EXPOSE 3000
+# Prometheus scraping port
+EXPOSE 9187
+
+### Volumes for easier updating to newer to newer pgwatch2 containers
+### NB! Backwards compatibility is not 100% guaranteed so a backup
+### using traditional means is still recommended before updating - see "Updating to a newer Docker version" from README
+
+VOLUME /pgwatch2/persistent-config
+VOLUME /var/lib/postgresql
+VOLUME /var/lib/grafana
+
+CMD ["/pgwatch2/docker-launcher-timescale.sh"]
