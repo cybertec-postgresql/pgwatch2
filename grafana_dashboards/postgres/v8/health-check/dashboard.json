@@ -3798,7 +3798,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  sum((scan-scan_lag) * 60 / extract(epoch from (time-time_lag)))\nFROM (\n  SELECT\n    time, lag(time) over w as time_lag,\n    (data->'seq_scan')::int8 as scan, lag((data->'seq_scan')::int8) over w as scan_lag\n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time)\n    AND dbname = '$dbname'\n    AND (data->'table_size_b')::int8 > 100000000\n  WINDOW w AS (partition by tag_data->>'table_full_name' order by time)\n) x\nWHERE scan > scan_lag and time > time_lag\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  time,\n  sum((scan-scan_lag) * 60 / extract(epoch from (time-time_lag)))\nFROM (\n  SELECT\n    time, lag(time) over w as time_lag,\n    (data->'seq_scan')::int8 as scan, lag((data->'seq_scan')::int8) over w as scan_lag\n  FROM\n    table_stats\n  WHERE\n    $__timeFilter(time)\n    AND dbname = '$dbname'\n    AND (data->'table_size_b')::int8 > 100000000\n    AND coalesce((data->'is_part_root')::int8, 0) = 0\n  WINDOW w AS (partition by tag_data->>'table_full_name' order by time)\n) x\nWHERE scan > scan_lag and time > time_lag\nGROUP BY 1\nORDER BY 1",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
