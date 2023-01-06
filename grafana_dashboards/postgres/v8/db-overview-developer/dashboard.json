@@ -2193,7 +2193,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "select\n  time,\n  sum(seq_scan) as seq_scan\nfrom (\n  select\n    $__timeGroup(time, $agg_interval),\n    table_full_name,\n    avg((((scan - scan_lag) * (extract(epoch from '$agg_interval'::interval))) / extract(epoch from time - time_lag))) as seq_scan\n  from (\n          select \n            (data->>'seq_scan')::int8 as scan, lag((data->>'seq_scan')::int8) over w as scan_lag,\n            time, lag(time) over w as time_lag,\n            tag_data->>'table_full_name' as table_full_name\n          from table_stats\n          where dbname = '$dbname' and $__timeFilter(time)\n          and (data->>'table_size_b')::int8  > 10000000\n          window w as (partition by tag_data->>'table_full_name' order by time)        \n    ) x\n    where scan >= scan_lag and time > time_lag\n    group by 1, 2\n) y\ngroup by 1\norder by 1\n",
+          "rawSql": "select\n  time,\n  sum(seq_scan) as seq_scan\nfrom (\n  select\n    $__timeGroup(time, $agg_interval),\n    table_full_name,\n    avg((((scan - scan_lag) * (extract(epoch from '$agg_interval'::interval))) / extract(epoch from time - time_lag))) as seq_scan\n  from (\n          select \n            (data->>'seq_scan')::int8 as scan, lag((data->>'seq_scan')::int8) over w as scan_lag,\n            time, lag(time) over w as time_lag,\n            tag_data->>'table_full_name' as table_full_name\n          from table_stats\n          where dbname = '$dbname' and $__timeFilter(time)\n          and (data->>'table_size_b')::int8  > 1e9\n          and coalesce((data->'is_part_root')::int8, 0) = 0\n          window w as (partition by tag_data->>'table_full_name' order by time)        \n    ) x\n    where scan >= scan_lag and time > time_lag\n    group by 1, 2\n) y\ngroup by 1\norder by 1\n",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -2237,7 +2237,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Seq. scans ($agg_interval rate, >10MB tables)",
+      "title": "Seq. scans ($agg_interval rate, >100MB tables)",
       "tooltip": {
         "shared": true,
         "sort": 2,
