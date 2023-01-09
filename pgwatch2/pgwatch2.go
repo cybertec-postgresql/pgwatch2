@@ -5784,11 +5784,11 @@ func main() {
 						continue
 					} else if lastKnownStatusInRecovery != ver.IsInRecovery {
 						if ver.IsInRecovery && len(host.MetricsStandby) > 0 {
-							log.Warningf("Switching metrics collection for \"%s\" to standby config...", db_unique)
+							log.Debugf("[%s] Switching metrics collection to standby config...", db_unique)
 							metric_config = host.MetricsStandby
 							hostLastKnownStatusInRecovery[db_unique] = true
 						} else {
-							log.Warningf("Switching metrics collection for \"%s\" to primary config...", db_unique)
+							log.Debugf("[%s] Using primary config for metrics collection as no standby config defined for host...", db_unique)
 							metric_config = host.Metrics
 							hostLastKnownStatusInRecovery[db_unique] = false
 							SetRecoveryIgnoredDBState(db_unique, false)
