@@ -87,6 +87,8 @@ elif [ "$BOOTSTRAP_METRICSDB_SCHEMA_TYPE" == "timescale" ] ; then
   psql -d $BOOTSTRAP_DATABASE -f /pgwatch2/sql/metric_store/timescale/change_compression_interval.sql
   psql -d $BOOTSTRAP_DATABASE -f /pgwatch2/sql/metric_store/timescale/ensure_partition_timescale.sql
   psql -d $BOOTSTRAP_DATABASE -f /pgwatch2/sql/metric_store/timescale/metric_store_timescale.sql
+  # timescaledb also requires
+  psql -d $BOOTSTRAP_DATABASE -f /pgwatch2/sql/metric_store/metric-time/ensure_partition_metric_time.sql
 else
   echo "invalid metricsdb schema type (BOOTSTRAP_METRICSDB_SCHEMA_TYPE) specified. supported values: metric-time | metric-dbname-time | timescale"
   exit 1
