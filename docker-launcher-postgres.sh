@@ -44,16 +44,16 @@ fi
 
 if [ ! -f /pgwatch2/persistent-config/db-bootstrap-done-marker ] ; then
 
-if [ ! -d /var/lib/postgresql/11 ]; then
-  mkdir /var/lib/postgresql/11 && chown -R postgres:postgres /var/lib/postgresql/11
-  pg_dropcluster 11 main
-  pg_createcluster --locale en_US.UTF-8 11 main
-  echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/11/main/postgresql.conf
-  cp /pgwatch2/postgresql.conf /etc/postgresql/11/main/pgwatch_postgresql.conf
-  cp /pgwatch2/pg_hba.conf /etc/postgresql/11/main/pg_hba.conf
+if [ ! -d /var/lib/postgresql/15 ]; then
+  mkdir /var/lib/postgresql/15 && chown -R postgres:postgres /var/lib/postgresql/15
+  pg_dropcluster 15 main
+  pg_createcluster --locale en_US.UTF-8 15 main
+  echo "include = 'pgwatch_postgresql.conf'" >> /etc/postgresql/15/main/postgresql.conf
+  cp /pgwatch2/postgresql.conf /etc/postgresql/15/main/pgwatch_postgresql.conf
+  cp /pgwatch2/pg_hba.conf /etc/postgresql/15/main/pg_hba.conf
 fi
 
-pg_ctlcluster 11 main start -- --wait
+pg_ctlcluster 15 main start -- --wait
 
 su -c "psql -d postgres -f /pgwatch2/bootstrap/change_pw.sql" postgres
 su -c "psql -d postgres -f /pgwatch2/bootstrap/grant_monitor_to_pgwatch2.sql" postgres
@@ -77,7 +77,7 @@ su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_statements/9.2/
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_activity/9.2/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_replication/9.2/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_table_bloat_approx/9.5/metric.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_table_bloat_approx_sql/9.0/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_table_bloat_approx_sql/12/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_wal_size/10/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_psutil_cpu/9.1/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_psutil_mem/9.1/metric.sql" postgres
@@ -91,7 +91,7 @@ fi
 
 touch /pgwatch2/persistent-config/db-bootstrap-done-marker
 
-pg_ctlcluster 11 main stop -- --wait
+pg_ctlcluster 15 main stop -- --wait
 
 fi
 
