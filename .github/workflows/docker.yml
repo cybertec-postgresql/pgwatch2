@@ -1,0 +1,51 @@
+name: Update Docker
+on: 
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'screenshots/**'
+      - 'helm-chart/**'
+      - 'openshift_k8s/**'
+    branches:
+      - 'master'
+  workflow_dispatch:
+
+jobs:
+  docker:
+    if: true # false to skip job during debug
+    strategy:
+      fail-fast: true
+      matrix:
+        image: ['-postgres', '-daemon', '-db-bootstrapper', '-webui']        
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Version strings
+      id: version
+      run: |
+        echo "RELEASE_VERSION=$(echo "$GITHUB_REF_NAME#${GITHUB_SHA:0:6}")" >> $GITHUB_OUTPUT
+        echo "RELEASE_TIME=$(git show -s --format=%cI HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2       
+
+    - name: Publish "latest" tag to Registry
+      if: ${{ !contains(github.ref_name, 'beta') }}
+      uses: elgohr/Publish-Docker-Github-Action@v5
+      env:
+        GIT_HASH: ${{ steps.version.outputs.RELEASE_VERSION }}
+        GIT_TIME: ${{ steps.version.outputs.RELEASE_TIME }}     
+      with:
+        name: cybertec/pgwatch2${{ matrix.image }}
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        dockerfile: docker/Dockerfile${{ matrix.image }}
+        buildargs: GIT_HASH,GIT_TIME
+        platforms: linux/amd64,linux/arm64
