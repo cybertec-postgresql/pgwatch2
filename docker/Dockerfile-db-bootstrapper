@@ -1,8 +1,11 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 # WORKDIR /root
 
-RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy postgresql-client-12 wget unzip \
+RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl ca-certificates gnupg \
+  && echo "deb http://apt.postgresql.org/pub/repos/apt jammy-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+  && curl -s https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && apt-get -q update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -qy postgresql-client-15 wget unzip \
   && useradd -m -s /bin/bash postgres
 
 USER postgres
