@@ -2720,7 +2720,7 @@ select
   system_identifier::text as tag_sys_id,
   case
     when pg_is_in_recovery() = false then
-      ltrim(pg_walfile_name(pg_current_wal_lsn())::char(8), '0')::int
+      ('x'||substr(pg_walfile_name(pg_current_wal_lsn()), 1, 8))::bit(32)::int
     else
       (select min_recovery_end_timeline::int from pg_control_recovery())
     end as timeline
@@ -2740,7 +2740,7 @@ select
   system_identifier::text as tag_sys_id,
   case
     when pg_is_in_recovery() = false then
-      ltrim(pg_walfile_name(pg_current_wal_lsn())::char(8), '0')::int
+      ('x'||substr(pg_walfile_name(pg_current_wal_lsn()), 1, 8))::bit(32)::int
     else
       (select min_recovery_end_timeline::int from pg_control_recovery())
     end as timeline
