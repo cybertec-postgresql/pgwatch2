@@ -1,6 +1,7 @@
 #!/bin/bash
 
 mkdir -p /var/run/grafana && chown grafana /var/run/grafana
+chown grafana:grafana /var/lib/grafana
 
 if [ ! -f /pgwatch2/persistent-config/self-signed-ssl.key -o ! -f /pgwatch2/persistent-config/self-signed-ssl.pem ] ; then
     openssl req -x509 -newkey rsa:4096 -keyout /pgwatch2/persistent-config/self-signed-ssl.key -out /pgwatch2/persistent-config/self-signed-ssl.pem -days 3650 -nodes -sha256 -subj '/CN=pw2'
