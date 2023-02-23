@@ -1,6 +1,7 @@
 #!/bin/bash
 
-mkdir /var/run/grafana && chown grafana /var/run/grafana
+mkdir -p /var/run/grafana && chown grafana /var/run/grafana
+chown grafana:grafana /var/lib/grafana
 
 if [ ! -f /pgwatch2/persistent-config/self-signed-ssl.key -o ! -f /pgwatch2/persistent-config/self-signed-ssl.pem ] ; then
     openssl req -x509 -newkey rsa:4096 -keyout /pgwatch2/persistent-config/self-signed-ssl.key -out /pgwatch2/persistent-config/self-signed-ssl.pem -days 3650 -nodes -sha256 -subj '/CN=pw2'
@@ -73,7 +74,7 @@ else
   su -c "psql -d pgwatch2_metrics -f /pgwatch2/sql/metric_store/metric-time/ensure_partition_metric_time.sql" postgres
 fi
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_load_average/9.1/metric.sql" postgres
-su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_statements/9.2/metric.sql" postgres
+su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_statements/9.4/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_activity/9.2/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_stat_replication/9.2/metric.sql" postgres
 su -c "psql -d pgwatch2 -f /pgwatch2/metrics/00_helpers/get_table_bloat_approx/9.5/metric.sql" postgres
