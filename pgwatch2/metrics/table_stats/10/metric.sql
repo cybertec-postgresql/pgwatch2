@@ -30,7 +30,7 @@ with recursive /* pgwatch2_generated */
                pg_table_size(relid)                                                                     as table_size_b,
                abs(greatest(ceil(log((pg_table_size(relid) + 1) / 10 ^ 6)), 0))::text                   as tag_table_size_cardinality_mb, -- i.e. 0=<1MB, 1=<10MB, 2=<100MB,..
                pg_total_relation_size(relid)                                                            as total_relation_size_b,
-               case when reltoastrelid != 0 then pg_total_relation_size(reltoastrelid) else 0::int8 end as toast_size_b,
+               case when c.reltoastrelid != 0 then pg_total_relation_size(c.reltoastrelid) else 0::int8 end as toast_size_b,
                (extract(epoch from now() - greatest(last_vacuum, last_autovacuum)))::int8               as seconds_since_last_vacuum,
                (extract(epoch from now() - greatest(last_analyze, last_autoanalyze)))::int8             as seconds_since_last_analyze,
                case when 'autovacuum_enabled=off' = ANY (c.reloptions) then 1 else 0 end                as no_autovacuum,
@@ -48,14 +48,19 @@ with recursive /* pgwatch2_generated */
                autovacuum_count,
                analyze_count,
                autoanalyze_count,
-               age(relfrozenxid) as tx_freeze_age
+               age(c.relfrozenxid) as tx_freeze_age
         from pg_stat_user_tables ut
-                 join
-             pg_class c on c.oid = ut.relid
+            join pg_class c on c.oid = ut.relid
+            left join pg_class t on t.oid = c.reltoastrelid
+            left join pg_index ti on ti.indrelid = t.oid
+            left join pg_class tir on tir.oid = ti.indexrelid
         where
           -- leaving out fully locked tables as pg_relation_size also wants a lock and would wait
-            not exists(select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock')
+          not exists (select 1 from pg_locks where relation = relid and mode = 'AccessExclusiveLock')
           and c.relpersistence != 't' -- and temp tables
+        order by case when c.relkind = 'p' then 1e9::int else coalesce(c.relpages, 0) + coalesce(t.relpages, 0) + coalesce(tir.relpages, 0) end desc
+        limit 1500 /* NB! When changing the bottom final LIMIT also adjust this limit. Should be at least 5x bigger as approx sizes depend a lot on vacuum frequency.
+                    The general idea is to reduce filesystem "stat"-ing on tables that won't make it to final output anyways based on approximate size */
     )
 
 select /* pgwatch2_generated */
