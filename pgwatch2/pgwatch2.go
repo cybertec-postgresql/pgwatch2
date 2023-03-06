@@ -730,28 +730,28 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 		}
 	}
 
-	if !useConnPooling {
-		if IsPostgresDBType(md.DBType) {
+	if IsPostgresDBType(md.DBType) {
+		if !useConnPooling {
 			sqlLockTimeout = "SET lock_timeout TO '100ms';"
-		} else {
-			sqlLockTimeout = ""
 		}
+	} else {
+		sqlLockTimeout = ""
 	}
 
 	sqlToExec := sqlLockTimeout + sqlStmtTimeout + sql // bundle timeouts with actual SQL to reduce round-trip times
 	//log.Debugf("Executing SQL: %s", sqlToExec)
 	t1 := time.Now()
-	if useConnPooling {
-		data, err = DBExecInExplicitTX(conn, dbUnique, sqlToExec, args...)
-	} else {
-		if IsPostgresDBType(md.DBType) {
-			data, err = DBExecRead(conn, dbUnique, sqlToExec, args...)
+	if IsPostgresDBType(md.DBType) {
+		if useConnPooling {
+			data, err = DBExecInExplicitTX(conn, dbUnique, sqlToExec, args...)
 		} else {
-			for _, sql := range strings.Split(sqlToExec, ";") {
-				sql = strings.TrimSpace(sql)
-				if len(sql) > 0 {
-					data, err = DBExecRead(conn, dbUnique, sql, args...)
-				}
+			data, err = DBExecRead(conn, dbUnique, sqlToExec, args...)
+		}
+	} else {
+		for _, sql := range strings.Split(sqlToExec, ";") {
+			sql = strings.TrimSpace(sql)
+			if len(sql) > 0 {
+				data, err = DBExecRead(conn, dbUnique, sql, args...)
 			}
 		}
 	}
