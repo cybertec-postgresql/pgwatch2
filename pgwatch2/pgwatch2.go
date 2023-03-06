@@ -4526,9 +4526,28 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 	if err != nil {
 		return md, err
 	}
-
 	for _, d := range data {
+		mainConnString := ce.LibPQConnStr
+		var parsedConnString string
+		if len(mainConnString) > 0 {
+			if strings.Contains(mainConnString, "postgres://") || strings.Contains(mainConnString, "postgresql://") {
+				parsedConnString, err = pq.ParseURL(mainConnString)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				parsedConnString = mainConnString
+			}
+			if strings.Contains(parsedConnString, "dbname=") {
+				dbRegex := regexp.MustCompile(`dbname=\'?\w+\'?`)
+				parsedConnString = dbRegex.ReplaceAllString(parsedConnString, fmt.Sprintf("dbname='%s'", d["datname"].(string)))
+			} else {
+				parsedConnString += fmt.Sprintf(" dbname='%s'", d["datname"].(string))
+			}
+		}
+
 		md = append(md, MonitoredDatabase{
+			LibPQConnStr:         parsedConnString,
 			DBUniqueName:         ce.DBUniqueName + "_" + d["datname_escaped"].(string),
 			DBUniqueNameOrig:     ce.DBUniqueName,
 			DBName:               d["datname"].(string),
