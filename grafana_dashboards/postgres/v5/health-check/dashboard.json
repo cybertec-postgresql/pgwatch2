@@ -461,7 +461,7 @@
         {
           "dashboard": "DB overview",
           "includeVars": true,
-          "params": "viewPanel=10&fullscreen",
+          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "DB overview :: WAL panel",
           "type": "dashboard",
@@ -598,7 +598,7 @@
         {
           "dashboard": "DB overview",
           "includeVars": true,
-          "params": "viewPanel=11&fullscreen",
+          "params": "panelId=11&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: backends' panel",
           "type": "dashboard",
@@ -1014,7 +1014,7 @@
         {
           "dashboard": "DB overview",
           "includeVars": true,
-          "params": "viewPanel=11&fullscreen",
+          "params": "panelId=11&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: Backends' panel",
           "type": "dashboard",
@@ -1157,7 +1157,7 @@
         {
           "dashboard": "DB overview",
           "includeVars": true,
-          "params": "viewPanel=8&fullscreen",
+          "params": "panelId=8&fullscreen",
           "targetBlank": true,
           "title": "'DB overview :: Rollback Ratio' panel",
           "type": "dashboard",
@@ -1294,7 +1294,7 @@
         {
           "dashboard": "DB overview Unprivileged / Developer",
           "includeVars": true,
-          "params": "viewPanel=15&fullscreen",
+          "params": "panelId=15&fullscreen",
           "targetBlank": true,
           "title": "'DB overview Unprivileged / Developer :: TPS' panel",
           "type": "dashboard",
@@ -1431,7 +1431,7 @@
         {
           "dashboard": "DB overview Unprivileged / Developer mode",
           "includeVars": true,
-          "params": "viewPanel=15&fullscreen",
+          "params": "panelId=15&fullscreen",
           "targetBlank": true,
           "title": "'DB overview Unprivileged / Developer :: QPS' panel",
           "type": "dashboard",
@@ -1699,7 +1699,7 @@
         {
           "dashboard": "DB overview",
           "includeVars": true,
-          "params": "viewPanel=10&fullscreen",
+          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "DB overview :: DB size panel",
           "type": "dashboard",
@@ -1836,7 +1836,7 @@
         {
           "dashboard": "DB overview",
           "includeVars": true,
-          "params": "viewPanel=10&fullscreen",
+          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "DB overview :: DB size panel",
           "type": "dashboard",
@@ -1973,7 +1973,7 @@
         {
           "dashboard": "System Stats",
           "includeVars": true,
-          "params": "viewPanel=8&fullscreen",
+          "params": "panelId=8&fullscreen",
           "targetBlank": true,
           "title": "Open 'System Stats :: Free disk ' panel",
           "type": "dashboard"
@@ -2115,7 +2115,7 @@
         {
           "dashboard": "DB overview",
           "includeVars": true,
-          "params": "viewPanel=12&fullscreen",
+          "params": "panelId=12&fullscreen",
           "targetBlank": true,
           "title": "'DB overview:: Query runtime' panel",
           "type": "dashboard",
@@ -2536,7 +2536,7 @@
         {
           "dashboard": "Checkpointer / Bgwriter / Block IO Stats",
           "includeVars": true,
-          "params": "viewPanel=2&fullscreen",
+          "params": "panelId=2&fullscreen",
           "targetBlank": true,
           "title": "Checkpointer / Bgwriter / Block IO Stats",
           "type": "dashboard",
@@ -3334,7 +3334,7 @@
         {
           "dashboard": "DB overview",
           "includeVars": true,
-          "params": "viewPanel=10&fullscreen",
+          "params": "panelId=10&fullscreen",
           "targetBlank": true,
           "title": "DB overview :: WAL panel",
           "type": "dashboard",
@@ -3483,7 +3483,7 @@
         {
           "dashboard": "DB overview",
           "includeVars": true,
-          "params": "viewPanel=9&fullscreen",
+          "params": "panelId=9&fullscreen",
           "targetBlank": true,
           "title": "DB overview",
           "type": "dashboard",
@@ -3775,7 +3775,7 @@
         {
           "dashboard": "Tables Top",
           "includeVars": true,
-          "params": "viewPanel=4&fullscreen",
+          "params": "panelId=4&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Most scans' panel",
           "type": "dashboard"
@@ -3923,7 +3923,7 @@
         {
           "dashboard": "Tables Top",
           "includeVars": true,
-          "params": "viewPanel=6&fullscreen",
+          "params": "panelId=6&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Inserts' panel",
           "type": "dashboard"
@@ -4071,7 +4071,7 @@
         {
           "dashboard": "Tables Top",
           "includeVars": true,
-          "params": "viewPanel=6&fullscreen",
+          "params": "panelId=6&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Inserts' panel",
           "type": "dashboard"
@@ -4219,7 +4219,7 @@
         {
           "dashboard": "Tables Top",
           "includeVars": true,
-          "params": "viewPanel=8&fullscreen",
+          "params": "panelId=8&fullscreen",
           "targetBlank": true,
           "title": "'Tables Top :: Deletes' panel",
           "type": "dashboard"
