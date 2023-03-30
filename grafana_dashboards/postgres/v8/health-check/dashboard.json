@@ -587,7 +587,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: backends' panel",
-          "url": "/d/db-overview?$__all_variables&panelId=11&fullscreen"
+          "url": "/d/db-overview?$__all_variables&viewPanel=11&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -727,7 +727,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: backends' panel",
-          "url": "/d/db-overview?$__all_variables&panelId=11&fullscreen"
+          "url": "/d/db-overview?$__all_variables&viewPanel=11&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1007,7 +1007,7 @@
         {
           "targetBlank": true,
           "title": "Open 'DB overview :: share'd buffers ' panel",
-          "url": "/d/db-overview?$__all_variables&panelId=8&fullscreen"
+          "url": "/d/db-overview?$__all_variables&viewPanel=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1147,7 +1147,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: Rollback Ratio' panel",
-          "url": "/d/db-overview?$__all_variables&panelId=8&fullscreen"
+          "url": "/d/db-overview?$__all_variables&viewPanel=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1281,7 +1281,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview Unprivileged / Developer :: TPS' panel",
-          "url": "/d/db-overview-developer?$__all_variables&panelId=15&fullscreen"
+          "url": "/d/db-overview-developer?$__all_variables&viewPanel=15&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1415,7 +1415,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview Unprivileged / Developer :: QPS' panel",
-          "url": "/d/db-overview-developer?$__all_variables&panelId=15&fullscreen"
+          "url": "/d/db-overview-developer?$__all_variables&viewPanel=15&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1549,7 +1549,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview :: Backends' panel",
-          "url": "/d/db-overview?$__all_variables&panelId=11&fullscreen"
+          "url": "/d/db-overview?$__all_variables&viewPanel=11&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1689,7 +1689,7 @@
         {
           "targetBlank": true,
           "title": "DB overview :: DB size panel",
-          "url": "/d/db-overview?$__all_variables&panelId=10&fullscreen"
+          "url": "/d/db-overview?$__all_variables&viewPanel=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1823,7 +1823,7 @@
         {
           "targetBlank": true,
           "title": "DB overview :: DB size panel",
-          "url": "/d/db-overview?$__all_variables&panelId=10&fullscreen"
+          "url": "/d/db-overview?$__all_variables&viewPanel=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -1957,7 +1957,7 @@
         {
           "targetBlank": true,
           "title": "Open 'System Stats :: Free disk ' panel",
-          "url": "/d/system-stats?$__all_variables&panelId=8&fullscreen"
+          "url": "/d/system-stats?$__all_variables&viewPanel=8&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -2097,7 +2097,7 @@
         {
           "targetBlank": true,
           "title": "'DB overview:: Query runtime' panel",
-          "url": "/d/db-overview?$__all_variables&panelId=12&fullscreen"
+          "url": "/d/db-overview?$__all_variables&viewPanel=12&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -2655,7 +2655,7 @@
         {
           "targetBlank": true,
           "title": "DB overview :: WAL panel",
-          "url": "/d/db-overview?$__all_variables&panelId=10&fullscreen"
+          "url": "/d/db-overview?$__all_variables&viewPanel=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3313,7 +3313,7 @@
         {
           "targetBlank": true,
           "title": "DB overview :: WAL panel",
-          "url": "/d/db-overview?$__all_variables&panelId=10&fullscreen"
+          "url": "/d/db-overview?$__all_variables&viewPanel=10&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3459,7 +3459,7 @@
         {
           "targetBlank": true,
           "title": "DB overview",
-          "url": "/d/db-overview?$__all_variables&panelId=19&fullscreen"
+          "url": "/d/db-overview?$__all_variables&viewPanel=19&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3739,7 +3739,7 @@
         {
           "targetBlank": true,
           "title": "'Tables Top :: Most scans' panel",
-          "url": "/d/tables-top?$__all_variables&panelId=4&fullscreen"
+          "url": "/d/tables-top?$__all_variables&viewPanel=4&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -3885,7 +3885,7 @@
         {
           "targetBlank": true,
           "title": "'Tables Top :: Inserts' panel",
-          "url": "/d/tables-top?$__all_variables&panelId=6&fullscreen"
+          "url": "/d/tables-top?$__all_variables&viewPanel=6&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -4031,7 +4031,7 @@
         {
           "targetBlank": true,
           "title": "'Tables Top :: Updates' panel",
-          "url": "/d/tables-top?$__all_variables&panelId=7&fullscreen"
+          "url": "/d/tables-top?$__all_variables&viewPanel=7&fullscreen"
         }
       ],
       "mappingType": 1,
@@ -4177,7 +4177,7 @@
         {
           "targetBlank": true,
           "title": "'Tables Top :: Deletes' panel",
-          "url": "/d/tables-top?$__all_variables&panelId=8&fullscreen"
+          "url": "/d/tables-top?$__all_variables&viewPanel=8&fullscreen"
         }
       ],
       "mappingType": 1,
