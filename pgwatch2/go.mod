@@ -16,7 +16,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.23.3
 	github.com/shopspring/decimal v1.3.1
 	go.etcd.io/etcd v3.3.27+incompatible
-	go.etcd.io/etcd/client/v2 v2.305.7
+	go.etcd.io/etcd/client/v2 v2.305.8
 	golang.org/x/crypto v0.8.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -54,8 +54,8 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	go.etcd.io/etcd/api/v3 v3.5.7 // indirect
-	go.etcd.io/etcd/client/pkg/v3 v3.5.7 // indirect
+	go.etcd.io/etcd/api/v3 v3.5.8 // indirect
+	go.etcd.io/etcd/client/pkg/v3 v3.5.8 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 )
