@@ -154,6 +154,10 @@ spec:
         envFrom:
         - configMapRef:
             name: {{ include "pgwatch2.fullname" . }}-env
+      {{- with .Values.daemon.resources }}
+      resources:
+        {{- toYaml . | nindent 12 }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
