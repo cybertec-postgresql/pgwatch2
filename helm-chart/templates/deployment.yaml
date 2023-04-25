@@ -100,10 +100,13 @@ spec:
         - name: BOOTSTRAP_TYPE
           value: {{ .Values.bootstrap.type | default "configdb" | quote }}
       volumes:
-      - name: config-volume
-        configMap:
-          name: pgwatch2-config
-          optional: true
+        - name: config-volume
+          configMap:
+            name: pgwatch2-config
+            optional: true
+      {{- if .Values.daemon.extraVolumes }}
+        {{- .Values.daemon.extraVolumes | toYaml | nindent 8 }}
+      {{- end }}
 
       containers:
         - name: {{ .Chart.Name }}-daemon
@@ -154,6 +157,9 @@ spec:
           envFrom:
           - configMapRef:
               name: {{ include "pgwatch2.fullname" . }}-env
+          {{- if .Values.daemon.extraVolumeMounts }}
+            {{- .Values.daemon.extraVolumeMounts | toYaml | nindent 12 }}
+          {{- end }}
           {{- with .Values.daemon.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
