@@ -187,11 +187,11 @@ grafana:
       #   type: postgres
       #   url: pgwatch2-postgresql:5432
       #   isDefault: true
-      #   database: *metricsdatabase
       #   user: *postgresuser
       #   secureJsonData:
       #     password: *postgrespassword
       #   jsonData:
+      #     database: *metricsdatabase
       #     sslmode: 'disable' # disable/require/verify-ca/verify-full
       #     maxOpenConns: 0 # Grafana v5.4+
       #     maxIdleConns: 2 # Grafana v5.4+
