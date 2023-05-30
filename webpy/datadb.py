@@ -19,8 +19,12 @@ def setConnectionStringForMetrics(conn_string):
 
 def setConnectionString(host, port, dbname, username, password, require_ssl=False, connect_timeout=10):
     global connection_string
-    connection_string = 'host={} port={} dbname={} user={} password={} connect_timeout={} {}'.format(
-        host, port, dbname, username, password, connect_timeout, '' if not require_ssl else 'sslmode=require')
+    if password == '': # In case of empty password .pgpass lookup will be used
+        connection_string = 'host={} port={} dbname={} user={} connect_timeout={} {}'.format(
+            host, port, dbname, username, connect_timeout, '' if not require_ssl else 'sslmode=require')
+    else:
+        connection_string = 'host={} port={} dbname={} user={} password={} connect_timeout={} {}'.format(
+            host, port, dbname, username, password, connect_timeout, '' if not require_ssl else 'sslmode=require')
 
 
 def getConnection(conn_str=None, autocommit=True):
