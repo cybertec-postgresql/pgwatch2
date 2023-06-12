@@ -365,7 +365,7 @@ if __name__ == '__main__':
     parser.add_argument('-U', '--user', help='Pgwatch2 Config DB username',
                         default=(os.getenv('PW2_PGUSER') or 'pgwatch2'))
     parser.add_argument('--password', help='Pgwatch2 Config DB password',
-                        default=(os.getenv('PW2_PGPASSWORD') or 'pgwatch2admin'))
+                        default=(os.getenv('PW2_PGPASSWORD') or ''))
     parser.add_argument('--pg-require-ssl', help='Pgwatch2 Config DB SSL connection only', action='store_true',
                         default=(str_to_bool_or_fail(os.getenv('PW2_PGSSL')) or False))
 
