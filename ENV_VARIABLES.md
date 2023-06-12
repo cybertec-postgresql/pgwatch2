@@ -85,7 +85,7 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_WEBNOCOMPONENTLOGS** Don't expose Docker component logs. Default: False
 - **PW2_WEBNOSTATSSUMMARY** Don't expose summary metrics and "top queries" on monitored DBs. Default: False
 - **PW2_VERBOSE** Logging vebosity. By default warning and errors are logged. Use [-v|-vv] to include [info|debug]. Default: -
-- **PW2_PGHOST** Config DB host. Default: localhost
+- **PW2_PGHOST** Config DB host(s). Default: localhost
 - **PW2_PGPORT** Config DB port. Default: 5432
 - **PW2_PGDATABASE** Config DB name. Default: pgwatch2
 - **PW2_PGUSER** Config DB user. Default: pgwatch2
