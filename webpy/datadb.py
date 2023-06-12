@@ -17,10 +17,15 @@ def setConnectionStringForMetrics(conn_string):
     connection_string_metrics = conn_string
 
 
-def setConnectionString(host, port, dbname, username, password, target_session_attrs='any', require_ssl=False, connect_timeout=10):
+def setConnectionString(host, port, dbname, username, password, require_ssl=False, connect_timeout=10):
     global connection_string
-    connection_string = 'host={} port={} dbname={} user={} password={} target_session_attrs={} connect_timeout={} {}'.format(
-        host, port, dbname, username, password, target_session_attrs, connect_timeout, '' if not require_ssl else 'sslmode=require')
+    if psycopg2.__libpq_version__ >= 100000:
+        connection_string = 'host={} port={} dbname={} user={} password={} target_session_attrs="read-write" connect_timeout={} {}'.format(
+            host, port, dbname, username, password, connect_timeout, '' if not require_ssl else 'sslmode=require')
+    else:
+        connection_string = 'host={} port={} dbname={} user={} password={} connect_timeout={} {}'.format(
+            host, port, dbname, username, password, connect_timeout, '' if not require_ssl else 'sslmode=require')
+
 
 
 def getConnection(conn_str=None, autocommit=True):

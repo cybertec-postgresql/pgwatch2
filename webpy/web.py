@@ -368,8 +368,6 @@ if __name__ == '__main__':
                         default=(os.getenv('PW2_PGPASSWORD') or 'pgwatch2admin'))
     parser.add_argument('--pg-require-ssl', help='Pgwatch2 Config DB SSL connection only', action='store_true',
                         default=(str_to_bool_or_fail(os.getenv('PW2_PGSSL')) or False))
-    parser.add_argument('--target-session-attrs', help='Pgwatch2 Config DB Target Session attrs',
-                        default=(os.getenv('PW2_TARGET_SESSION_ATTRS') or 'any'))
 
     # Postgres metrics DB
     parser.add_argument('--pg-metric-store-conn-str', help='PG Metric Store connection string',
@@ -399,7 +397,7 @@ if __name__ == '__main__':
     logging.debug(cmd_args)
 
     datadb.setConnectionString(
-        cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password, cmd_args.target_session_attrs, cmd_args.pg_require_ssl)
+        cmd_args.host, cmd_args.port, cmd_args.database, cmd_args.user, cmd_args.password, cmd_args.pg_require_ssl)
     err = datadb.isDataStoreConnectionOK()
     if err:
         logging.warning("config DB connection test failed: %s", err)
