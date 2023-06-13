@@ -19,12 +19,20 @@ def setConnectionStringForMetrics(conn_string):
 
 def setConnectionString(host, port, dbname, username, password, require_ssl=False, connect_timeout=10):
     global connection_string
-    if psycopg2.__libpq_version__ >= 100000:
-        connection_string = 'host={} port={} dbname={} user={} password={} target_session_attrs="read-write" connect_timeout={} {}'.format(
-            host, port, dbname, username, password, connect_timeout, '' if not require_ssl else 'sslmode=require')
+    if password == '':
+        if psycopg2.__libpq_version__ >= 100000:
+            connection_string = 'host={} port={} dbname={} user={} target_session_attrs="read-write" connect_timeout={} {}'.format(
+                host, port, dbname, username, connect_timeout, '' if not require_ssl else 'sslmode=require')
+        else:
+            connection_string = 'host={} port={} dbname={} user={} connect_timeout={} {}'.format(
+                    host, port, dbname, username, connect_timeout, '' if not require_ssl else 'sslmode=require')
     else:
-        connection_string = 'host={} port={} dbname={} user={} password={} connect_timeout={} {}'.format(
-            host, port, dbname, username, password, connect_timeout, '' if not require_ssl else 'sslmode=require')
+        if psycopg2.__libpq_version__ >= 100000:
+            connection_string = 'host={} port={} dbname={} user={} password={} target_session_attrs="read-write" connect_timeout={} {}'.format(
+                host, port, dbname, username, password, connect_timeout, '' if not require_ssl else 'sslmode=require')
+        else:
+            connection_string = 'host={} port={} dbname={} user={} password={} connect_timeout={} {}'.format(
+                    host, port, dbname, username, password, connect_timeout, '' if not require_ssl else 'sslmode=require')
 
 
 

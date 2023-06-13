@@ -123,6 +123,7 @@ type MetricAttrs struct {
 	IsInstanceLevel           bool                 `yaml:"is_instance_level"`
 	MetricStorageName         string               `yaml:"metric_storage_name"`
 	ExtensionVersionOverrides []ExtensionOverrides `yaml:"extension_version_based_overrides"`
+	PrerequisiteExtensions    []string             `yaml:"prerequisite_extensions"`
 	IsPrivate                 bool                 `yaml:"is_private"`                // used only for extension overrides currently and ignored otherwise
 	DisabledDays              string               `yaml:"disabled_days"`             // Cron style, 0 = Sunday. Ranges allowed: 0,2-4
 	DisableTimes              []string             `yaml:"disabled_times"`            // "11:00-13:00"
@@ -3096,6 +3097,17 @@ func FetchMetrics(msg MetricFetchMessage, host_state map[string]map[string]strin
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	for _, prereqExt := range mvp.MetricAttrs.PrerequisiteExtensions {
+		if _, ok := vme.Extensions[prereqExt]; !ok {
+			epoch, ok2 := last_sql_fetch_error.Load(msg.MetricName + DB_METRIC_JOIN_STR + "prereq")
+			if !ok2 || ((time.Now().Unix() - epoch.(int64)) > 3600) { // complain only 1x per hour instead of 10m
+				log.Warningf("[%s:%s] Skipping actual fetch as prerequisite extension '%s' not present", msg.DBUniqueName, msg.MetricName, prereqExt)
+				last_sql_fetch_error.Store(msg.MetricName+DB_METRIC_JOIN_STR+"prereq", time.Now().Unix())
+			}
+			return nil, nil
+		}
 	}
 
 	isCacheable = IsCacheableMetric(msg, mvp)
