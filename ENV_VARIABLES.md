@@ -70,7 +70,6 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_NO_HELPER_FUNCTIONS** Ignore metric definitions using helper functions (in form get_smth()) and don't also roll out any helpers automatically. Default: false
 - **PW2_TRY_CREATE_LISTED_EXTS_IF_MISSING** Try creating the listed extensions (comma sep.) on first connect for all monitored DBs when missing. Main usage - pg_stat_statements. Default: ""
 
-
 ## Web UI
 
 - **PW2_WEBHOST** Network interface to listen on. Default: 0.0.0.0
@@ -85,11 +84,11 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_WEBNOCOMPONENTLOGS** Don't expose Docker component logs. Default: False
 - **PW2_WEBNOSTATSSUMMARY** Don't expose summary metrics and "top queries" on monitored DBs. Default: False
 - **PW2_VERBOSE** Logging vebosity. By default warning and errors are logged. Use [-v|-vv] to include [info|debug]. Default: -
-- **PW2_PGHOST** Config DB host. Default: localhost
+- **PW2_PGHOST** Config DB host(s). Default: localhost
 - **PW2_PGPORT** Config DB port. Default: 5432
 - **PW2_PGDATABASE** Config DB name. Default: pgwatch2
 - **PW2_PGUSER** Config DB user. Default: pgwatch2
-- **PW2_PGPASSWORD** Config DB password. Default: pgwatch2admin
+- **PW2_PGPASSWORD** Config DB password. Default: -
 - **PW2_PGSSL** Config DB SSL connection only. Default: False
 - **PW2_IHOST** InfluxDB host. Default: localhost
 - **PW2_IPORT** InfluxDB port. Default: 8086
@@ -103,7 +102,6 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_DATASTORE** Backend for metric storage - [influx|postgres|graphite]. Default: influx
 - **PW2_PG_METRIC_STORE_CONN_STR** Postgres metric store connection string. Required when PW2_DATASTORE=postgres. Default: -
 
-
 ## Grafana
 
 - **PW2_GRAFANANOANONYMOUS** Can be set to require login even for viewing dashboards. Default: -
@@ -111,7 +109,6 @@ NB! Some variables influence multiple components. Command line parameters overri
 - **PW2_GRAFANAPASSWORD** Administrative user password. Default: pgwatch2admin
 - **PW2_GRAFANASSL** Use SSL. Default: -
 - **PW2_GRAFANA_BASEURL** For linking to Grafana "Query details" dashboard from "Stat_stmt. overview". Default: http://0.0.0.0:3000
-
 
 ## InfluxDB
 

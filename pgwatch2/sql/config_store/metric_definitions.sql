@@ -8072,9 +8072,19 @@ do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"
 
 -- dynamic re-routing of metric names
 insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
-select 'stat_statements_no_query_text', '{"metric_storage_name": "stat_statements"}'
+select 'stat_statements_no_query_text', '{"metric_storage_name": "stat_statements", "prerequisite_extensions": ["pg_stat_statements"]}'
 on conflict (ma_metric_name)
-do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "stat_statements"}', ma_last_modified_on = now();
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"metric_storage_name": "stat_statements", "prerequisite_extensions": ["pg_stat_statements"]}', ma_last_modified_on = now();
+
+insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
+select 'stat_statements', '{"prerequisite_extensions": ["pg_stat_statements"]}'
+on conflict (ma_metric_name)
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"prerequisite_extensions": ["pg_stat_statements"]}', ma_last_modified_on = now();
+
+insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
+select 'stat_statements_calls', '{"prerequisite_extensions": ["pg_stat_statements"]}'
+on conflict (ma_metric_name)
+do update set ma_metric_attrs = pgwatch2.metric_attribute.ma_metric_attrs || '{"prerequisite_extensions": ["pg_stat_statements"]}', ma_last_modified_on = now();
 
 insert into pgwatch2.metric_attribute (ma_metric_name, ma_metric_attrs)
 select 'db_stats_aurora', '{"metric_storage_name": "db_stats"}'

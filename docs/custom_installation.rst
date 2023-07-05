@@ -170,6 +170,9 @@ All examples here assume Ubuntu as OS - but it's basically the same for RedHat f
 
       Default port for the Web UI: **8080**. See ``web.py --help`` for all options.
 
+      ``target_session_attrs`` is set to ``read-write`` by default. 
+      This allows connecting to rw node when multiple (comma separated) hosts on ``-H / --host / PW2_PGHOST`` (i.e. config DB being PG cluster)
+
    #. Configure a SystemD auto-start service (optional)
 
       Sample startup scripts can be found at */etc/pgwatch2/webpy/startup-scripts/pgwatch2-webui.service* or online
