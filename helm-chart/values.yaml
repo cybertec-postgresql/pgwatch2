@@ -9,23 +9,23 @@ metrics_preset:
   metrics: '{"kpi": 120, "wal": 60, "locks": 60, "db_size": 300, "archiver": 60, "backends": 60, "bgwriter": 60, "cpu_load": 60, "db_stats": 60, "settings": 7200, "wal_size": 300, "locks_mode": 60, "index_stats": 900, "replication": 120, "sproc_stats": 180, "table_stats": 300, "wal_receiver": 120, "change_events": 300, "table_io_stats": 600, "sequence_health": 3600, "replication_slots": 120}'
 
 databases:
-- host: pgwatch2-postgresql
-  grafana_preset_metrics: remotedba
-  port: 5432
-  user: pgwatch2
-  password: 'pgwatch2'
-  dbs:
-    - postgres
-    - foo
-    - bar
-- host: pgwatch2-postgresql-hl
-  grafana_preset_metrics: remotedba
-  port: 5432
-  user: pgwatch2
-  password: 'pgwatch2'
-  dbs:
-    - postgres
-    - pgwatch2
+  - host: pgwatch2-postgresql
+    grafana_preset_metrics: remotedba
+    port: 5432
+    user: pgwatch2
+    password: "pgwatch2"
+    dbs:
+      - postgres
+      - foo
+      - bar
+  - host: pgwatch2-postgresql-hl
+    grafana_preset_metrics: remotedba
+    port: 5432
+    user: pgwatch2
+    password: "pgwatch2"
+    dbs:
+      - postgres
+      - pgwatch2
 
 daemon:
   enabled: true
@@ -36,6 +36,9 @@ daemon:
   env:
     PW2_PG_RETENTION_DAYS: "14"
     PW2_MIN_DB_SIZE_MB: "0"
+
+  extraVolumes: {}
+  extraVolumeMounts: {}
 
 bootstrap:
   image:
@@ -72,7 +75,8 @@ webui:
     # See https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#specifying-the-class-of-an-ingress
     # ingressClassName: nginx
     # Values can be templated
-    annotations: {}
+    annotations:
+      {}
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
     labels: {}
@@ -98,12 +102,10 @@ webui:
     #       port:
     #         name: use-annotation
 
-
     tls: []
     #  - secretName: chart-example-tls
     #    hosts:
     #      - chart-example.local
-
 
 grafana:
   sidecar:
@@ -171,27 +173,27 @@ grafana:
     datasources.yaml:
       apiVersion: 1
       datasources:
-      - name: InfluxDB_v1
-        type: influxdb
-        access: proxy
-        url: http://pgwatch2-influxdb:8086
-        isDefault: true
-        database: pgwatch2
-        user: pgwatch2
-        jsonData:
-          httpMode: GET
-        secureJsonData:
-          password: pgwatch2
+        - name: InfluxDB_v1
+          type: influxdb
+          access: proxy
+          url: http://pgwatch2-influxdb:8086
+          isDefault: true
+          database: pgwatch2
+          user: pgwatch2
+          jsonData:
+            httpMode: GET
+          secureJsonData:
+            password: pgwatch2
       ## Postgresql
       # - name: Postgres
       #   type: postgres
       #   url: pgwatch2-postgresql:5432
       #   isDefault: true
-      #   database: *metricsdatabase
       #   user: *postgresuser
       #   secureJsonData:
       #     password: *postgrespassword
       #   jsonData:
+      #     database: *metricsdatabase
       #     sslmode: 'disable' # disable/require/verify-ca/verify-full
       #     maxOpenConns: 0 # Grafana v5.4+
       #     maxIdleConns: 2 # Grafana v5.4+
@@ -207,7 +209,7 @@ metallb:
   enabled: true
   configInline:
     address-pools:
-     - name: default
-       protocol: layer2
-       addresses:
-       - 192.168.49.10-192.168.49.250
+      - name: default
+        protocol: layer2
+        addresses:
+          - 192.168.49.10-192.168.49.250

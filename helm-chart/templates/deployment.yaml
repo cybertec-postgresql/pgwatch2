@@ -100,60 +100,82 @@ spec:
         - name: BOOTSTRAP_TYPE
           value: {{ .Values.bootstrap.type | default "configdb" | quote }}
       volumes:
-      - name: config-volume
-        configMap:
-          name: pgwatch2-config
-          optional: true
+        - name: config-volume
+          configMap:
+            name: pgwatch2-config
+            optional: true
+      {{- if .Values.daemon.extraVolumes }}
+        {{- .Values.daemon.extraVolumes | toYaml | nindent 8 }}
+      {{- end }}
 
       containers:
-      - name: {{ .Chart.Name }}-daemon
-        image: "{{ .Values.daemon.image.repository }}:{{ .Values.daemon.image.tag | default .Chart.AppVersion }}"
-        imagePullPolicy: {{ .Values.daemon.image.pullPolicy }}
-        env:
-        - name: PW2_PGHOST
-          value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .)) }}
-        - name: PW2_PGPORT
-          value: {{ .Values.postgresql.port | default "5432" | quote }}
-        - name: PW2_PGDATABASE
-          value: {{ .Values.postgresql.database | default "pgwatch2" }}
-        - name: PW2_PGUSER
-          value: {{ .Values.postgresql.user | default "pgwatch2" }}
-        - name: PW2_PGPASSWORD
-          value: {{ .Values.postgresql.password | default "pgwatch2" }}
-        - name: PW2_PGSSL
-          value: {{ .Values.postgresql.ssl | default "False" | quote }}
-        {{ if eq .Values.storage "influx" }}
-        - name: PW2_IHOST
-          value: {{ include "pgwatch2.fullname" . }}-influxdb
-        - name: PW2_IPORT
-          value: {{ .Values.influxdb.port | default "8086" | quote }}
-        - name: PW2_IDATABASE
-          value: {{ .Values.influxdb.database | default "pgwatch2" }}
-        - name: PW2_IUSER
-          value: {{ .Values.influxdb.user | default "pgwatch2" }}
-        - name: PW2_IPASSWORD
-          value: {{ .Values.influxdb.password | default "pgwatch2" }}
-        - name: PW2_ISSL
-          value: {{ .Values.influxdb.ssl | default "False" | quote }}
-        {{ else if eq .Values.storage "postgres" }}
-        - name: PW2_DATASTORE
-          value: {{ .Values.storage | quote }}
-        - name: PW2_PG_METRIC_STORE_CONN_STR
-          value: {{ printf "postgresql://%s:%s@%s:%s/%s" (.Values.postgresql.user | default "pgwatch2") (.Values.postgresql.password | default "pgwatch2" ) ( .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .))) (.Values.postgresql.port | default "5432")  (.Values.postgres_storage.database | default "pgwatch2_metrics" ) }}
-        - name: PW2_PG_RETENTION_DAYS
-          value: {{ .Values.postgres_storage.retention_days | default "14" | quote }}
-        {{ end }}
-        - name: PW2_INTERNAL_STATS_PORT
-          value: {{ .Values.daemon.port | default "8081" | quote }}
-        - name: PW2_WEBNOANONYMOUS
-          value: {{ .Values.webui.noanonymous | default "False" | quote }}
-        - name: PW2_WEBUSER
-          value: {{ .Values.webui.user | default "pgwatch2" }}
-        - name: PW2_WEBPASSWORD
-          value: {{ .Values.webui.password | default "pgwatch2" }}
-        envFrom:
-        - configMapRef:
-            name: {{ include "pgwatch2.fullname" . }}-env
+        - name: {{ .Chart.Name }}-daemon
+          image: "{{ .Values.daemon.image.repository }}:{{ .Values.daemon.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.daemon.image.pullPolicy }}
+          env:
+          - name: PW2_PGHOST
+            value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .)) }}
+          - name: PW2_PGPORT
+            value: {{ .Values.postgresql.port | default "5432" | quote }}
+          - name: PW2_PGDATABASE
+            value: {{ .Values.postgresql.database | default "pgwatch2" }}
+          - name: PW2_PGUSER
+            value: {{ .Values.postgresql.user | default "pgwatch2" }}
+          - name: PW2_PGPASSWORD
+            value: {{ .Values.postgresql.password | default "pgwatch2" }}
+          - name: PW2_PGSSL
+            value: {{ .Values.postgresql.ssl | default "False" | quote }}
+          {{ if eq .Values.storage "influx" }}
+          - name: PW2_IHOST
+            value: {{ include "pgwatch2.fullname" . }}-influxdb
+          - name: PW2_IPORT
+            value: {{ .Values.influxdb.port | default "8086" | quote }}
+          - name: PW2_IDATABASE
+            value: {{ .Values.influxdb.database | default "pgwatch2" }}
+          - name: PW2_IUSER
+            value: {{ .Values.influxdb.user | default "pgwatch2" }}
+          - name: PW2_IPASSWORD
+            value: {{ .Values.influxdb.password | default "pgwatch2" }}
+          - name: PW2_ISSL
+            value: {{ .Values.influxdb.ssl | default "False" | quote }}
+          {{ else if eq .Values.storage "postgres" }}
+          - name: PW2_DATASTORE
+            value: {{ .Values.storage | quote }}
+          - name: PW2_PG_METRIC_STORE_CONN_STR
+            value: {{ printf "postgresql://%s:%s@%s:%s/%s" (.Values.postgresql.user | default "pgwatch2") (.Values.postgresql.password | default "pgwatch2" ) ( .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .))) (.Values.postgresql.port | default "5432")  (.Values.postgres_storage.database | default "pgwatch2_metrics" ) }}
+          - name: PW2_PG_RETENTION_DAYS
+            value: {{ .Values.postgres_storage.retention_days | default "14" | quote }}
+          {{ end }}
+          - name: PW2_INTERNAL_STATS_PORT
+            value: {{ .Values.daemon.port | default "8081" | quote }}
+          - name: PW2_WEBNOANONYMOUS
+            value: {{ .Values.webui.noanonymous | default "False" | quote }}
+          - name: PW2_WEBUSER
+            value: {{ .Values.webui.user | default "pgwatch2" }}
+          - name: PW2_WEBPASSWORD
+            value: {{ .Values.webui.password | default "pgwatch2" }}
+          envFrom:
+          - configMapRef:
+              name: {{ include "pgwatch2.fullname" . }}-env
+          {{- if .Values.daemon.extraVolumeMounts }}
+            {{- .Values.daemon.extraVolumeMounts | toYaml | nindent 12 }}
+          {{- end }}
+          {{- with .Values.daemon.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{ end }}
 ---
 {{ if .Values.webui.enabled }}
