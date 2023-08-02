@@ -179,7 +179,7 @@
         }
       ],
       "timeFrom": "15m",
-      "title": "Duplicate indexes",
+      "title": "Duplicated indexes",
       "transform": "table",
       "type": "table"
     },
@@ -752,7 +752,7 @@
         }
       ],
       "timeFrom": "15m",
-      "title": "Top 5 Fragmentation indexes",
+      "title": "Top 5 fragmented indexes",
       "transform": "table",
       "type": "table-old"
     },
