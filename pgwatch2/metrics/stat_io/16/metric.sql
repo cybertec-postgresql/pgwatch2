@@ -1,5 +1,6 @@
  SELECT /* pgwatch2_generated */
-    backend_type as tag_backend_type,
+    (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+    coalesce(backend_type, 'total') as tag_backend_type,
     sum(coalesce(reads, 0))::int8  as reads,
     (sum(coalesce(reads, 0) * op_bytes) / 1e6)::int8 as read_bytes_mb,
     sum(coalesce(read_time, 0))::int8 as read_time_ms,
@@ -15,4 +16,4 @@
 FROM
     pg_stat_io
 GROUP BY
-   backend_type;
+   ROLLUP (backend_type);
