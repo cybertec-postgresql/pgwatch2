@@ -25,7 +25,7 @@ def setConnectionString(host, port, dbname, username, password, require_ssl=Fals
         dbname, 
         username, 
         '' if password == '' else f'password={password}', 
-        '' if psycopg2.__libpq_version__ < 100000 else 'target_session_attrs="read-write"', 
+        '' if psycopg2.__libpq_version__ < 100000 else 'target_session_attrs=read-write', 
         connect_timeout, 
         '' if not require_ssl else 'sslmode=require')
 
