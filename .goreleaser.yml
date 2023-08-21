@@ -17,28 +17,13 @@ builds:
       - amd64
 
 archives:
-  -
-    # Archive name template.
-    # Defaults:
-    # - if format is `tar.gz`, `gz` or `zip`:
-    #   - `{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}`
-    # - if format is `binary`:
-    #   - `{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}`
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-
-    # Replacements for GOOS and GOARCH in the archive name.
-    # Keys should be valid GOOSs or GOARCHs.
-    # Values are the respective replacements.
-    # Default is empty.
-    replacements:
-      amd64: 64-bit
-
-    # Set to true, if you want all files in the archive to be in a single directory.
-    # If set to true and you extract the archive 'goreleaser_Linux_arm64.tar.gz',
-    # you get a folder 'goreleaser_Linux_arm64'.
-    # If set to false, all files are extracted separately.
-    # You can also set it to a custom folder name (templating is supported).
-    # Default is false.
+  - name_template: >-
+        {{ .ProjectName }}_
+        {{ .Version }}_
+        {{- title .Os }}_
+        {{- if eq .Arch "amd64" }}x86_64
+        {{- else if eq .Arch "386" }}i386
+        {{- else }}{{ .Arch }}{{ end }}
     wrap_in_directory: true
 
     # Archive format. Valid options are `tar.gz`, `gz`, `zip` and `binary`.
@@ -62,16 +47,13 @@ archives:
 
 nfpms:
   -
-    # You can change the name of the package.
-    # Default: `{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}`
-    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-
-    # Replacements for GOOS and GOARCH in the package name.
-    # Keys should be valid GOOSs or GOARCHs.
-    # Values are the respective replacements.
-    # Default is empty.
-    replacements:
-      amd64: 64-bit
+    file_name_template: >-
+      {{ .ProjectName }}_
+      {{ .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
 
     # Your app's vendor.
     # Default is empty.
