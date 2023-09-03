@@ -239,6 +239,7 @@ const DBTYPE_PGPOOL = "pgpool"
 const DBTYPE_PATRONI = "patroni"
 const DBTYPE_PATRONI_CONT = "patroni-continuous-discovery"
 const DBTYPE_PATRONI_NAMESPACE_DISCOVERY = "patroni-namespace-discovery"
+const DBTYPE_REDSHIFT = "redshift"
 const MONITORED_DBS_DATASTORE_SYNC_INTERVAL_SECONDS = 600         // write actively monitored DBs listing to metrics store after so many seconds
 const MONITORED_DBS_DATASTORE_SYNC_METRIC_NAME = "configured_dbs" // FYI - for Postgres datastore there's also the admin.all_unique_dbnames table with all recent DB unique names with some metric data
 const RECO_PREFIX = "reco_"                                       // special handling for metrics with such prefix, data stored in RECO_METRIC_NAME
@@ -264,8 +265,8 @@ const EXEC_ENV_AZURE_SINGLE = "AZURE_SINGLE"
 const EXEC_ENV_AZURE_FLEXIBLE = "AZURE_FLEXIBLE"
 const EXEC_ENV_GOOGLE = "GOOGLE"
 
-var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true, DBTYPE_PGPOOL: true, DBTYPE_PATRONI_NAMESPACE_DISCOVERY: true}
-var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT, DBTYPE_PATRONI_NAMESPACE_DISCOVERY} // used for informational purposes
+var dbTypeMap = map[string]bool{DBTYPE_PG: true, DBTYPE_PG_CONT: true, DBTYPE_BOUNCER: true, DBTYPE_PATRONI: true, DBTYPE_PATRONI_CONT: true, DBTYPE_PGPOOL: true, DBTYPE_PATRONI_NAMESPACE_DISCOVERY: true, DBTYPE_REDSHIFT: true}
+var dbTypes = []string{DBTYPE_PG, DBTYPE_PG_CONT, DBTYPE_BOUNCER, DBTYPE_PATRONI, DBTYPE_PATRONI_CONT, DBTYPE_PATRONI_NAMESPACE_DISCOVERY, DBTYPE_REDSHIFT} // used for informational purposes
 var specialMetrics = map[string]bool{RECO_METRIC_NAME: true, SPECIAL_METRIC_CHANGE_EVENTS: true, SPECIAL_METRIC_SERVER_LOG_EVENT_COUNTS: true}
 var directlyFetchableOSMetrics = map[string]bool{METRIC_PSUTIL_CPU: true, METRIC_PSUTIL_DISK: true, METRIC_PSUTIL_DISK_IO_TOTAL: true, METRIC_PSUTIL_MEM: true, METRIC_CPU_LOAD: true}
 var configDb *sqlx.DB
@@ -325,6 +326,7 @@ var instanceMetricCacheTimestampLock = sync.RWMutex{}
 var MinExtensionInfoAvailable, _ = decimal.NewFromString("9.1")
 var regexIsAlpha = regexp.MustCompile("^[a-zA-Z]+$")
 var rBouncerAndPgpoolVerMatch = regexp.MustCompile(`\d+\.+\d+`) // extract $major.minor from "4.1.2 (karasukiboshi)" or "PgBouncer 1.12.0"
+var rRedshiftVerMatch = regexp.MustCompile(`Redshift (\d+\.+\d+)`)
 var regexIsPgbouncerMetrics = regexp.MustCompile(SPECIAL_METRIC_PGBOUNCER)
 var tryDirectOSStats bool
 var unreachableDBsLock sync.RWMutex
@@ -354,7 +356,7 @@ var metricNameRemaps = make(map[string]string)
 var metricNameRemapLock = sync.RWMutex{}
 
 func IsPostgresDBType(dbType string) bool {
-	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL {
+	if dbType == DBTYPE_BOUNCER || dbType == DBTYPE_PGPOOL || dbType == DBTYPE_REDSHIFT {
 		return false
 	}
 	return true
@@ -630,6 +632,14 @@ func DBExecRead(conn *sqlx.DB, host_ident, sql string, args ...interface{}) ([](
 			log.Error("failed to MapScan a result row", host_ident, err)
 			return nil, err
 		}
+		// known sqlx issue: it casts []byte data to json as base64 for some DB types
+		// To avoid it we are explicitly converting []byte to string
+		for i, encoded := range row {
+			switch encoded.(type) {
+			case []byte:
+				row[i] = strings.TrimSpace(string(encoded.([]byte)))
+			}
+		}
 		ret = append(ret, row)
 	}
 
@@ -740,7 +750,7 @@ func DBExecReadByDbUniqueName(dbUnique, metricName string, stmtTimeoutOverride i
 	}
 
 	sqlToExec := sqlLockTimeout + sqlStmtTimeout + sql // bundle timeouts with actual SQL to reduce round-trip times
-	//log.Debugf("Executing SQL: %s", sqlToExec)
+	log.Debugf("Executing SQL: %s", sqlToExec)
 	t1 := time.Now()
 	if IsPostgresDBType(md.DBType) {
 		if useConnPooling {
@@ -2247,6 +2257,28 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				}
 				verNew.VersionStr = matches[0]
 				verNew.Version, _ = decimal.NewFromString(matches[0])
+			}
+		} else if dbType == DBTYPE_REDSHIFT {
+			log.Debugf("[%s] redshift db", dbUnique)
+			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, "select version();")
+			if err != nil {
+				return verNew, err
+			}
+			if len(data) == 0 {
+				// surprisingly pgbouncer 'show version' outputs in pre v1.12 is emitted as 'NOTICE' which cannot be accessed from Go lib/pg
+				verNew.Version, _ = decimal.NewFromString("0")
+				verNew.VersionStr = "0"
+			} else {
+				log.Debugf("[%s] redshift version: %q", dbUnique, data[0]["version"].(string))
+				matches := rRedshiftVerMatch.FindStringSubmatch(data[0]["version"].(string))
+
+				if len(matches) != 2 {
+					log.Errorf("[%s] Unexpected Redshift version input: %s", dbUnique, data[0]["version"].(string))
+					return ver, fmt.Errorf("Unexpected Redshift version input: %s", data[0]["version"].(string))
+				}
+				log.Debugf("Redshift version: %q", matches[1])
+				verNew.VersionStr = matches[1]
+				verNew.Version, _ = decimal.NewFromString(matches[1])
 			}
 		} else {
 			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, sql)
@@ -4590,6 +4622,7 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 // Resolves regexes if exact DBs were not specified exact
 func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []MonitoredDatabase {
 	md := make([]MonitoredDatabase, 0)
+	log.Debugf("Preved")
 	if len(mc) == 0 {
 		return md
 	}
@@ -4618,13 +4651,17 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 			log.Warningf("Ignoring host \"%s\" as \"dbname\" attribute not specified but required by dbtype=postgres", e.DBUniqueName)
 			continue
 		}
+		if e.DBType == DBTYPE_REDSHIFT && e.DBName == "" {
+			log.Warningf("Ignoring host \"%s\" as \"dbname\" attribute not specified but required by dbtype=redshift", e.DBUniqueName)
+			continue
+		}
 		if len(e.DBName) == 0 || e.DBType == DBTYPE_PG_CONT || e.DBType == DBTYPE_PATRONI || e.DBType == DBTYPE_PATRONI_CONT || e.DBType == DBTYPE_PATRONI_NAMESPACE_DISCOVERY {
 			if e.DBType == DBTYPE_PG_CONT {
 				log.Debugf("Adding \"%s\" (host=%s, port=%s) to continuous monitoring ...", e.DBUniqueName, e.Host, e.Port)
 			}
 			var found_dbs []MonitoredDatabase
-			var err error
 
+			var err error
 			if e.DBType == DBTYPE_PATRONI || e.DBType == DBTYPE_PATRONI_CONT || e.DBType == DBTYPE_PATRONI_NAMESPACE_DISCOVERY {
 				found_dbs, err = ResolveDatabasesFromPatroni(e)
 			} else {
@@ -4914,7 +4951,7 @@ func getPathUnderlyingDeviceId(path string) (uint64, error) {
 		return 0, err
 	}
 	stat := fi.Sys().(*syscall.Stat_t)
-	return stat.Dev, nil
+	return uint64(stat.Dev), nil
 }
 
 // connects actually to the instance to determine PG relevant disk paths / mounts
