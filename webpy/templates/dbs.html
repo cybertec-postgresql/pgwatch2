@@ -56,7 +56,7 @@
 
 <div class="container-fluid">
 
-{% if messages %}
+    {% if messages %}
     {% for message in messages: %}
     <div class="row">
         <div class="col alert alert-warning alert-dismissible fade show" role="alert">
@@ -67,13 +67,13 @@
         </div>
     </div>
     {% endfor %}
-{% endif %}
+    {% endif %}
 
-<h3>Databases under monitoring</h3>
+    <h3>Databases under monitoring</h3>
 
-<div class="table-responsive">
-    <table class="table table-striped">
-        <thead>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
             <tr>
                 <td>ID</td>
                 <td title="NB! Choose a good name as this shouldn't be changed later (cannot easily update InfluxDB data). Will be used as prefix during DB discovery mode">Unique name</td>
@@ -105,8 +105,8 @@
                 <td></td>
                 <td></td>
             </tr>
-        </thead>
-        <tbody>
+            </thead>
+            <tbody>
             {% for row in data: %}
             <tr>
                 <form action="/dbs" method="post">
@@ -121,7 +121,6 @@
                             <option value="patroni"{% if row['md_dbtype'] == "patroni" %}selected{% endif %}>patroni</option>
                             <option value="patroni-continuous-discovery"{% if row['md_dbtype'] == "patroni-continuous-discovery" %}selected{% endif %}>patroni-continuous-discovery</option>
                             <option value="patroni-namespace-discovery"{% if row['md_dbtype'] == "patroni-namespace-discovery" %}selected{% endif %}>patroni-namespace-discovery</option>
-                            <option value="redshift"{% if row['md_dbtype'] == "redshift" %}selected{% endif %}>redshift</option>
                         </select>
                     </td>
                     <td><input type="text" name="md_hostname" value="{{row['md_hostname']|e}}" size="10"></td>
@@ -198,7 +197,6 @@
                             <option value="patroni">patroni</option>
                             <option value="patroni-continuous-discovery">patroni-continuous-discovery</option>
                             <option value="patroni-namespace-discovery">patroni-namespace-discovery</option>
-                            <option value="redshift">redshift</option>
                         </select>
                     </td>
                     <td><input type="text" name="md_hostname" id="md_hostname" value="" size="10"></td>
@@ -261,78 +259,78 @@
                     <td></td>
                 </form>
             </tr>
-        </tbody>
-    </table>
-</div>  <!-- table -->
+            </tbody>
+        </table>
+    </div>  <!-- table -->
 </div>  <!-- row -->
 
 <div class="row" style="margin-left: 10px">
     <div class="col">
-    <h3>Bulk database management</h3>
+        <h3>Bulk database management</h3>
         <form action="/dbs" method="post">
-        <input type="submit" id="disable_all" name="disable_all" value="Disable all DBs">
-        <input type="submit" id="enable_all" name="enable_all" value="Enable all DBs">
-        <br />
-        <br />
-        <select name="bulk_preset_config_name" id="bulk_preset_config_name">
-            <option value="" title="Empty. 'Custom config' must be filled" ></option>
-            {% for pc in preset_configs %}
-            <option value="{{pc['pc_name']|e}}" title="{{pc['pc_description']|e}}">{{pc['pc_name']|e}}</option>
-            {% endfor %}
-        </select>
-        <input type="submit" id="set_bulk_config" name="set_bulk_config" value="Set a preset config for all DBs">
-        <br />
-        <br />
-        <input type="text" name="bulk_timeout_seconds" value="" size="10" title="default: 5">
-        <input type="submit" id="set_bulk_timeout" name="set_bulk_timeout" value="Set statement timeout for all DBs (in seconds)">
-        <br />
-        <br />
-        <input type="password" name="bulk_password" value="" size="10">
-        <select name="bulk_password_type" title="NO KEY means password encryption cannot be used. Use the --aes-gcm-keyphrase or --aes-gcm-keyphrase-file parameter to set encryption key">
-            <option value="plain-text">plain-text</option>
-            <option value="aes-gcm-256">aes-gcm-256{%if not aes_gcm_enabled %} [NO KEY]{% endif %}</option>
-        </select>
-        <input type="submit" id="set_bulk_password" name="set_bulk_password" value="Set new password for all DBs">
+            <input type="submit" id="disable_all" name="disable_all" value="Disable all DBs">
+            <input type="submit" id="enable_all" name="enable_all" value="Enable all DBs">
+            <br />
+            <br />
+            <select name="bulk_preset_config_name" id="bulk_preset_config_name">
+                <option value="" title="Empty. 'Custom config' must be filled" ></option>
+                {% for pc in preset_configs %}
+                <option value="{{pc['pc_name']|e}}" title="{{pc['pc_description']|e}}">{{pc['pc_name']|e}}</option>
+                {% endfor %}
+            </select>
+            <input type="submit" id="set_bulk_config" name="set_bulk_config" value="Set a preset config for all DBs">
+            <br />
+            <br />
+            <input type="text" name="bulk_timeout_seconds" value="" size="10" title="default: 5">
+            <input type="submit" id="set_bulk_timeout" name="set_bulk_timeout" value="Set statement timeout for all DBs (in seconds)">
+            <br />
+            <br />
+            <input type="password" name="bulk_password" value="" size="10">
+            <select name="bulk_password_type" title="NO KEY means password encryption cannot be used. Use the --aes-gcm-keyphrase or --aes-gcm-keyphrase-file parameter to set encryption key">
+                <option value="plain-text">plain-text</option>
+                <option value="aes-gcm-256">aes-gcm-256{%if not aes_gcm_enabled %} [NO KEY]{% endif %}</option>
+            </select>
+            <input type="submit" id="set_bulk_password" name="set_bulk_password" value="Set new password for all DBs">
         </form>
     </div>
 </div>
 
 <div class="row" style="margin-left: 10px">
     <div class="col">
-    <h3>Active metrics listing</h3>
-    <ul style="margin-left: 0; padding-left: 0;">
-    {% for m in metrics_list: %}
-        <li style="display: inline;"><b>{{m['m_name']}}</b> [ver: {{m['versions']}}]</li>
-    {% endfor %}
+        <h3>Active metrics listing</h3>
+        <ul style="margin-left: 0; padding-left: 0;">
+            {% for m in metrics_list: %}
+            <li style="display: inline;"><b>{{m['m_name']}}</b> [ver: {{m['versions']}}]</li>
+            {% endfor %}
 
-    </ul>
+        </ul>
     </div>
 </div>
 
 <div class="row" style="margin-left: 10px">
     <div class="col">
-    <h3>Metrics data cleanup ({{datastore}})</h3>
-    <br />
-    <p>Nr. of unique hosts found: {{active_dbnames|length}}</p>
-    <form action="/dbs" method="post">
-        <span style="font-weight: bold">DB "Unique name"</span> (NB! It could take up to 3min for background gatherers to stop so no point to click directly after removing a host from monitoring):
+        <h3>Metrics data cleanup ({{datastore}})</h3>
         <br />
-        <input type="text" name="single_unique_name" id="single_unique_name" list="active_dbnames" autocomplete="off" title="Start typing to get autocomplete">
-        <br />
-        <input type="submit" id="delete_single" name="delete_single" value="Delete single DB metrics">
-        <br />
-        <br />
-        <input type="submit" id="delete_all" name="delete_all" value="Delete all metrics for all non-active DBs">
-        <br />
-        <br />
-        <br />
-    </form>
+        <p>Nr. of unique hosts found: {{active_dbnames|length}}</p>
+        <form action="/dbs" method="post">
+            <span style="font-weight: bold">DB "Unique name"</span> (NB! It could take up to 3min for background gatherers to stop so no point to click directly after removing a host from monitoring):
+            <br />
+            <input type="text" name="single_unique_name" id="single_unique_name" list="active_dbnames" autocomplete="off" title="Start typing to get autocomplete">
+            <br />
+            <input type="submit" id="delete_single" name="delete_single" value="Delete single DB metrics">
+            <br />
+            <br />
+            <input type="submit" id="delete_all" name="delete_all" value="Delete all metrics for all non-active DBs">
+            <br />
+            <br />
+            <br />
+        </form>
 
-    <datalist id="active_dbnames">
-      {% for db in active_dbnames: %}
-      <option value="{{db}}">
-      {% endfor %}
-    </datalist>
+        <datalist id="active_dbnames">
+            {% for db in active_dbnames: %}
+            <option value="{{db}}">
+                {% endfor %}
+        </datalist>
     </div>
 </div>
 
