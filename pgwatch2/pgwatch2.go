@@ -2259,7 +2259,6 @@ func DBGetPGVersion(dbUnique string, dbType string, noCache bool) (DBVersionMapE
 				verNew.Version, _ = decimal.NewFromString(matches[0])
 			}
 		} else if dbType == DBTYPE_REDSHIFT {
-			log.Debugf("[%s] redshift db", dbUnique)
 			data, err, _ := DBExecReadByDbUniqueName(dbUnique, "", 0, "select version();")
 			if err != nil {
 				return verNew, err
@@ -4622,7 +4621,6 @@ func ResolveDatabasesFromConfigEntry(ce MonitoredDatabase) ([]MonitoredDatabase,
 // Resolves regexes if exact DBs were not specified exact
 func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []MonitoredDatabase {
 	md := make([]MonitoredDatabase, 0)
-	log.Debugf("Preved")
 	if len(mc) == 0 {
 		return md
 	}
@@ -4660,7 +4658,6 @@ func GetMonitoredDatabasesFromMonitoringConfig(mc []MonitoredDatabase) []Monitor
 				log.Debugf("Adding \"%s\" (host=%s, port=%s) to continuous monitoring ...", e.DBUniqueName, e.Host, e.Port)
 			}
 			var found_dbs []MonitoredDatabase
-
 			var err error
 			if e.DBType == DBTYPE_PATRONI || e.DBType == DBTYPE_PATRONI_CONT || e.DBType == DBTYPE_PATRONI_NAMESPACE_DISCOVERY {
 				found_dbs, err = ResolveDatabasesFromPatroni(e)

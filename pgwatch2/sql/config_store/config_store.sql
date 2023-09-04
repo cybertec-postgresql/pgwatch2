@@ -50,7 +50,7 @@ create table if not exists pgwatch2.monitored_db (
     UNIQUE (md_unique_name),
     CONSTRAINT no_colon_on_unique_name CHECK (md_unique_name !~ ':'),
     CHECK (md_sslmode in ('disable', 'require', 'verify-ca', 'verify-full')),
-    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery', 'patroni', 'patroni-continuous-discovery', 'patroni-namespace-discovery', 'pgpool')),
+    CHECK (md_dbtype in ('postgres', 'pgbouncer', 'postgres-continuous-discovery', 'patroni', 'patroni-continuous-discovery', 'patroni-namespace-discovery', 'pgpool', 'redshift')),
     CHECK (md_group ~ E'\\w+'),
     CHECK (md_password_type in ('plain-text', 'aes-gcm-256'))
 );

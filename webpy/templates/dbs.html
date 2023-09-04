@@ -121,6 +121,7 @@
                             <option value="patroni"{% if row['md_dbtype'] == "patroni" %}selected{% endif %}>patroni</option>
                             <option value="patroni-continuous-discovery"{% if row['md_dbtype'] == "patroni-continuous-discovery" %}selected{% endif %}>patroni-continuous-discovery</option>
                             <option value="patroni-namespace-discovery"{% if row['md_dbtype'] == "patroni-namespace-discovery" %}selected{% endif %}>patroni-namespace-discovery</option>
+                            <option value="redshift"{% if row['md_dbtype'] == "redshift" %}selected{% endif %}>redshift</option>
                         </select>
                     </td>
                     <td><input type="text" name="md_hostname" value="{{row['md_hostname']|e}}" size="10"></td>
@@ -197,6 +198,7 @@
                             <option value="patroni">patroni</option>
                             <option value="patroni-continuous-discovery">patroni-continuous-discovery</option>
                             <option value="patroni-namespace-discovery">patroni-namespace-discovery</option>
+                            <option value="redshift">redshift</option>
                         </select>
                     </td>
                     <td><input type="text" name="md_hostname" id="md_hostname" value="" size="10"></td>
