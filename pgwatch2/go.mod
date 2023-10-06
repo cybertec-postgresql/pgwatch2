@@ -17,7 +17,7 @@ require (
 	github.com/shopspring/decimal v1.3.1
 	go.etcd.io/etcd v3.3.27+incompatible
 	go.etcd.io/etcd/client/v2 v2.305.9
-	golang.org/x/crypto v0.13.0
+	golang.org/x/crypto v0.14.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -57,6 +57,6 @@ require (
 	go.etcd.io/etcd/api/v3 v3.5.9 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.9 // indirect
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
