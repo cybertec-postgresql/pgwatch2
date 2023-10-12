@@ -5084,7 +5084,48 @@ $sql$
 select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   coalesce(sum(calls), 0)::int8 as calls,
-  coalesce(round(sum(total_time)::numeric, 3), 0)::float8 as total_time
+  coalesce(round(sum(total_time)::numeric, 3), 0)::float8 as total_time,
+  coalesce(sum(shared_blks_hit), 0)::int8 as shared_blks_hit,
+  coalesce(sum(shared_blks_read), 0)::int8 as shared_blks_read,
+  coalesce(sum(shared_blks_dirtied), 0)::int8 as shared_blks_dirtied,
+  coalesce(sum(shared_blks_written), 0)::int8 as shared_blks_written,
+  coalesce(sum(local_blks_hit), 0)::int8 as local_blks_hit,
+  coalesce(sum(local_blks_read), 0)::int8 as local_blks_read,
+  coalesce(sum(local_blks_dirtied), 0)::int8 as local_blks_dirtied,
+  coalesce(sum(local_blks_written), 0)::int8 as local_blks_written,
+  coalesce(sum(temp_blks_read), 0)::int8 as temp_blks_read,
+  coalesce(sum(temp_blks_written), 0)::int8 as temp_blks_written,
+  coalesce(sum(blk_read_time), 0)::int8 as blk_read_time,
+  coalesce(sum(blk_write_time), 0)::int8 as blk_write_time
+from
+  pg_stat_statements
+where
+  dbid = (select oid from pg_database where datname = current_database())
+;
+$sql$
+);
+
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql)
+values (
+'stat_statements_calls',
+9.5,
+$sql$
+select
+  (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
+  coalesce(sum(calls), 0)::int8 as calls,
+  coalesce(round(sum(total_time)::numeric, 3), 0)::float8 as total_time,
+  coalesce(sum(shared_blks_hit), 0)::int8 as shared_blks_hit,
+  coalesce(sum(shared_blks_read), 0)::int8 as shared_blks_read,
+  coalesce(sum(shared_blks_dirtied), 0)::int8 as shared_blks_dirtied,
+  coalesce(sum(shared_blks_written), 0)::int8 as shared_blks_written,
+  coalesce(sum(local_blks_hit), 0)::int8 as local_blks_hit,
+  coalesce(sum(local_blks_read), 0)::int8 as local_blks_read,
+  coalesce(sum(local_blks_dirtied), 0)::int8 as local_blks_dirtied,
+  coalesce(sum(local_blks_written), 0)::int8 as local_blks_written,
+  coalesce(sum(temp_blks_read), 0)::int8 as temp_blks_read,
+  coalesce(sum(temp_blks_written), 0)::int8 as temp_blks_written,
+  coalesce(sum(blk_read_time), 0)::int8 as blk_read_time,
+  coalesce(sum(blk_write_time), 0)::int8 as blk_write_time
 from
   pg_stat_statements
 where
@@ -5102,7 +5143,19 @@ select
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   coalesce(sum(calls), 0)::int8 as calls,
   coalesce(round(sum(total_exec_time)::numeric, 3), 0)::float8 as total_time,
-  round(sum(total_plan_time)::numeric, 3)::double precision as total_plan_time
+  round(sum(total_plan_time)::numeric, 3)::double precision as total_plan_time,
+  coalesce(sum(shared_blks_hit), 0)::int8 as shared_blks_hit,
+  coalesce(sum(shared_blks_read), 0)::int8 as shared_blks_read,
+  coalesce(sum(shared_blks_dirtied), 0)::int8 as shared_blks_dirtied,
+  coalesce(sum(shared_blks_written), 0)::int8 as shared_blks_written,
+  coalesce(sum(local_blks_hit), 0)::int8 as local_blks_hit,
+  coalesce(sum(local_blks_read), 0)::int8 as local_blks_read,
+  coalesce(sum(local_blks_dirtied), 0)::int8 as local_blks_dirtied,
+  coalesce(sum(local_blks_written), 0)::int8 as local_blks_written,
+  coalesce(sum(temp_blks_read), 0)::int8 as temp_blks_read,
+  coalesce(sum(temp_blks_written), 0)::int8 as temp_blks_written,
+  coalesce(sum(blk_read_time), 0)::int8 as blk_read_time,
+  coalesce(sum(blk_write_time), 0)::int8 as blk_write_time
 from
   pg_stat_statements
 where
