@@ -3,56 +3,81 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
   },
   "description": "Depends on the \"Heatmap\" plugin. Based on latest \"table/index_stats\" data",
   "editable": true,
-  "gnetId": null,
+  "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
+  "iteration": 1703497578925,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
-      "chartId": "chart_3",
-      "colors": [
-        "rgba(245, 54, 54, 1)",
-        "rgba(241, 255, 0, 1)",
-        "#508642"
-      ],
-      "description": "NB! Depends on the \"Heatmap\" plugin.\nFYI - shown sizes are in MB i.e. 10^6, Postgres 'psql' client reports them in MiB (1048576 B)",
-      "format": "none",
+      "datasource": {
+        "type": "postgres"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "separator": "."
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
       "gridPos": {
-        "h": 7,
+        "h": 10,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 3,
-      "legend": {
-        "avg": false,
-        "current": true,
-        "max": false,
-        "min": false,
-        "show": false,
-        "total": false
-      },
       "links": [],
-      "mappingType": 1,
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "seriesOverrides": [],
+      "options": {
+        "sizeField": "total_relation_size_b",
+        "textField": "table_name",
+        "tiling": "treemapSquarify"
+      },
       "targets": [
         {
           "alias": "$tag_table_name",
-          "dsType": null,
-          "format": "time_series",
+          "datasource": {
+            "type": "postgres"
+          },
+          "format": "table",
           "group": [],
           "groupBy": [
             {
@@ -72,7 +97,7 @@
           "orderByTime": "ASC",
           "policy": "default",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  (data->'total_relation_size_b')::int8 as total_relation_size_b,\n  tag_data->>'table_full_name' as table_name\nFROM\n  table_stats\nWHERE\n  time = (select max(time) from table_stats WHERE dbname = '$dbname' AND $__timeFilter(time))\n  AND dbname = '$dbname'\nORDER BY\n  2 DESC NULLS LAST\nLIMIT 100",
+          "rawSql": "SELECT\n  time,\n  (data->'total_relation_size_b')::int8 as total_relation_size_b,\n  tag_data->>'table_full_name'::text as table_name\nFROM\n  table_stats\nWHERE\n  time = (select max(time) from table_stats WHERE dbname = '$dbname' AND $__timeFilter(time))\n  AND dbname = '$dbname'\nORDER BY\n  2 DESC NULLS LAST\nLIMIT 100",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -100,68 +125,57 @@
           ]
         }
       ],
-      "thresholds": "",
-      "timeFrom": null,
       "title": "Biggest by total relation size",
-      "treeMap": {
-        "aggregationFunction": "mean",
-        "colorByFunction": "current",
-        "debug": false,
-        "depth": "0",
-        "enableGrouping": true,
-        "enableTimeBlocks": false,
-        "groups": [],
-        "ids": [
-          "alias"
-        ],
-        "mode": "squarify",
-        "nodeSizeProperty": "value",
-        "showLegend": false,
-        "sizeByFunction": "current"
-      },
-      "type": "savantly-heatmap-panel",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ]
+      "type": "marcusolsson-treemap-panel"
     },
     {
-      "chartId": "chart_1",
-      "colors": [
-        "rgba(245, 54, 54, 1)",
-        "rgba(241, 255, 0, 1)",
-        "#3f6833"
-      ],
-      "description": "NB! Depends on the \"Heatmap\" plugin.\nFYI - shown sizes are in MB i.e. 10^6, Postgres 'psql' client reports them in MiB (1048576 B)",
-      "format": "none",
+      "datasource": {
+        "type": "postgres"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "separator": "."
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
       "gridPos": {
-        "h": 7,
+        "h": 12,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 10
       },
       "id": 1,
-      "legend": {
-        "avg": false,
-        "current": true,
-        "max": false,
-        "min": false,
-        "show": false,
-        "total": false
-      },
       "links": [],
-      "mappingType": 1,
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "seriesOverrides": [],
+      "options": {
+        "sizeField": "table_size_b",
+        "textField": "table_name",
+        "tiling": "treemapSquarify"
+      },
       "targets": [
         {
           "alias": "$tag_table_name",
-          "dsType": null,
-          "format": "time_series",
+          "datasource": {
+            "type": "postgres"
+          },
+          "format": "table",
           "group": [],
           "groupBy": [
             {
@@ -222,67 +236,57 @@
           ]
         }
       ],
-      "thresholds": "",
       "title": "Biggest tables (w/o indexes)",
-      "treeMap": {
-        "aggregationFunction": "mean",
-        "colorByFunction": "current",
-        "debug": false,
-        "depth": "0",
-        "enableGrouping": true,
-        "enableTimeBlocks": false,
-        "groups": [],
-        "ids": [
-          "alias"
-        ],
-        "mode": "squarify",
-        "nodeSizeProperty": "value",
-        "showLegend": false,
-        "sizeByFunction": "current"
-      },
-      "type": "savantly-heatmap-panel",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ]
+      "type": "marcusolsson-treemap-panel"
     },
     {
-      "chartId": "chart_2",
-      "colors": [
-        "rgba(245, 54, 54, 1)",
-        "rgba(241, 255, 0, 1)",
-        "#508642"
-      ],
-      "description": "NB! Depends on the \"Heatmap\" plugin.\nFYI - shown sizes are in MB i.e. 10^6, Postgres 'psql' client reports them in MiB (1048576 B)",
-      "format": "none",
+      "datasource": {
+        "type": "postgres"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "separator": "."
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 22
       },
       "id": 2,
-      "legend": {
-        "avg": false,
-        "current": true,
-        "max": false,
-        "min": false,
-        "show": false,
-        "total": false
-      },
       "links": [],
-      "mappingType": 1,
       "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "seriesOverrides": [],
+      "options": {
+        "sizeField": "index_size_b",
+        "textField": "index_full_name",
+        "tiling": "treemapSquarify"
+      },
       "targets": [
         {
           "alias": "$tag_index_name",
-          "dsType": null,
-          "format": "time_series",
+          "datasource": {
+            "type": "postgres"
+          },
+          "format": "table",
           "group": [],
           "groupBy": [
             {
@@ -330,52 +334,34 @@
           ]
         }
       ],
-      "thresholds": "",
       "title": "Biggest indexes",
-      "treeMap": {
-        "aggregationFunction": "mean",
-        "colorByFunction": "current",
-        "debug": false,
-        "depth": "0",
-        "enableGrouping": true,
-        "enableTimeBlocks": false,
-        "groups": [],
-        "ids": [
-          "alias"
-        ],
-        "mode": "squarify",
-        "nodeSizeProperty": "value",
-        "showLegend": false,
-        "sizeByFunction": "current"
-      },
-      "type": "savantly-heatmap-panel",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ]
+      "type": "marcusolsson-treemap-panel"
     },
     {
-      "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2020/11/CYBERTEC_RGB_300x80px.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "datasource": {
+        "type": "postgres"
+      },
       "editable": true,
       "error": false,
       "gridPos": {
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 29
       },
       "id": 4,
       "links": [],
-      "mode": "html",
-      "title": "",
+      "options": {
+        "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2020/11/CYBERTEC_RGB_300x80px.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+        "mode": "html"
+      },
+      "pluginVersion": "8.5.20",
       "transparent": true,
       "type": "text"
     }
   ],
-  "schemaVersion": 18,
+  "refresh": "1m",
+  "schemaVersion": 36,
   "style": "dark",
   "tags": [
     "pgwatch2"
@@ -383,16 +369,13 @@
   "templating": {
     "list": [
       {
-        "allValue": null,
-        "current": {
-          "text": null,
-          "value": null
+        "current": {},
+        "datasource": {
+          "type": "postgres"
         },
-        "datasource": null,
         "definition": "",
         "hide": 0,
         "includeAll": false,
-        "label": null,
         "multi": false,
         "name": "dbname",
         "options": [],
@@ -402,7 +385,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
-        "tags": [],
         "tagsQuery": "",
         "type": "query",
         "useTags": false
@@ -410,7 +392,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -441,5 +423,6 @@
   "timezone": "",
   "title": "Biggest relations treemap",
   "uid": "biggest-relations",
-  "version": 1
+  "version": 1,
+  "weekStart": ""
 }
