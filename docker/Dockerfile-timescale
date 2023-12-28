@@ -1,4 +1,4 @@
-FROM golang:1.20
+FROM golang:1.21
 
 # For showing Git version via 'pgwatch2 --version'
 ARG GIT_HASH
