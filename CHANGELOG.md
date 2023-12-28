@@ -18,6 +18,29 @@ ther pre-built packages) folder. Also it is highly recommended to refresh all th
 For that there's also a refresh_metrics_from_github.sh script provided. YAML based setups don't need any extra actions besides
 refreshing from Git or installing the new RPM / DEB / Tar packages.
 
+## v1.12.0 [2023-12-28]
+What's Changed
+
+* [!] bump Go to v1.21 by @pashagolub in #729
+* [!] update "Biggest relations treemap" dashboard plugin, fixes #579 #496 #293 #197 by @pashagolub in #727
+* [+] add `sent_lag` and `confirmed_flush_lsn_lag` fields to replication metrics by @bukem in #700
+* [+] add new metrics for invalid and unused indexes by @kmoppel-cognite in #691
+* [+] bump `actions/checkout` from 3 to 4 by @dependabot in #680
+* [+] bump `actions/setup-go` from 4 to 5 by @dependabot in #721
+* [+] bump `actions/stale` from 8 to 9 by @dependabot in #723
+* [+] bump `docker/setup-buildx-action` from 2 to 3 by @dependabot in #684
+* [+] bump `docker/setup-qemu-action` from 2 to 3 by @dependabot in #683
+* [+] bump `github/codeql-action` from 2 to 3 by @dependabot in #724
+* [+] bump `go.etcd.io/etcd/client/v2` from 2.305.9 to 2.305.11 by @dependabot in #704 #722
+* [+] bump `golang.org/x/crypto` from 0.12.0 to 0.17.0 by @dependabot in #681 #697 #708 #715 #726
+* [+] bump `goreleaser/goreleaser-action` from 4 to 5 by @dependabot in #685
+* [+] bump `hashicorp/consul/api` from 1.24.0 to 1.26.1 by @dependabot in #686 #688 #706
+* [+] bump `prometheus/client_golang` from 1.16.0 to 1.18.0 by @dependabot in #692 #728
+* [+] bump `shirou/gopsutil/v3` from 3.23.7 to 3.23.11 by @dependabot in #678 #693 #705 #718
+
+New Contributors
+    @bukem made their first contribution in #700
+
 ## v1.11.0 [2023-08-18]
 What's Changed
 
