@@ -16,7 +16,7 @@ RUN apt-get -q update && apt-get -qy install wget git python3 python3-psycopg2 p
 
 ADD pgwatch2/metrics /pgwatch2/metrics
 ADD pgwatch2/config /pgwatch2/config
-ADD pgwatch2/entrypoint.sh /pgwatch2/entrypoint.sh
+ADD docker-launcher-scalefield.sh /pgwatch2/entrypoint.sh
 RUN chmod +x /pgwatch2/entrypoint.sh
 
 # Copy over the compiled gatherer
