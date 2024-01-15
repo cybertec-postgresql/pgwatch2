@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        image: ['-postgres', '-daemon', '-db-bootstrapper', '-webui']        
+        image: ['-postgres', '-daemon', '-db-bootstrapper', '-webui', '-scalefield']
     runs-on: ubuntu-latest
     steps:
 

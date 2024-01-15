@@ -1,0 +1,35 @@
+FROM golang:1.21
+
+# For showing Git version via 'pgwatch2 --version'
+ARG GIT_HASH
+ARG GIT_TIME
+ENV GIT_HASH=${GIT_HASH}
+ENV GIT_TIME=${GIT_TIME}
+
+ADD pgwatch2 /pgwatch2
+RUN cd /pgwatch2 && bash build_gatherer.sh
+
+
+FROM ubuntu:22.04
+
+RUN apt-get -q update && apt-get -qy install wget git python3 python3-psycopg2 python3-yaml && apt autoremove -y && mkdir /pgwatch2
+
+ADD pgwatch2/metrics /pgwatch2/metrics
+ADD pgwatch2/config /pgwatch2/config
+ADD docker-launcher-scalefield.sh /pgwatch2/entrypoint.sh
+RUN chmod +x /pgwatch2/entrypoint.sh
+
+# Copy over the compiled gatherer
+COPY --from=0 /pgwatch2/pgwatch2 /pgwatch2
+
+RUN chgrp -R 0 /pgwatch2 \
+    && chmod -R g=u /pgwatch2
+
+# pgwatch2 internal status endpoint
+EXPOSE 8081
+# Prometheus metrics scraping port
+EXPOSE 9189
+
+USER 10001
+
+ENTRYPOINT ["/pgwatch2/entrypoint.sh"]

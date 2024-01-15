@@ -1,0 +1,24 @@
+- unique_name: %NAME%
+  dbtype: postgres
+  host: 127.0.0.1
+  dbname: postgres
+  user: %USER%
+  password: %PASSWORD%
+  sslmode: require    # supported options: disable, require, verify-ca, verify-full
+  stmt_timeout: 5 # in seconds
+  is_superuser: true
+  preset_metrics: remotedba
+  custom_metrics:    # if both preset and custom are specified, custom wins
+  preset_metrics_standby: # optional metrics configuration for standby / replica state, v1.8.1+
+  custom_metrics_standby:
+  dbname_include_pattern: # regex to filter databases to actually monitor for the "continuous" modes
+  dbname_exclude_pattern:
+  is_enabled: true
+  custom_tags:
+    support_plan: %SUPPORT_PLAN%
+    customer: %CUSTOMER%
+    cluster_name: %CLUSTER_NAME%
+  group: default # just for logical grouping of DB hosts or for "sharding", i.e. splitting the workload between many gatherer daemons
+  sslrootcert: ''
+  sslcert: ''
+  sslkey: ''
