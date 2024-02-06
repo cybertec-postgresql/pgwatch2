@@ -200,7 +200,7 @@ def get_monitored_dbs_from_yaml_config():   # active entries ("is_enabled": true
                 with open(os.path.join(root, f), 'r') as fp:
                     config = fp.read()
                 try:
-                    monitored_dbs = yaml.load(config)
+                    monitored_dbs = yaml.full_load(config)
                 except:
                     logging.error("skipping config file %s as could not parse YAML")
                     continue
