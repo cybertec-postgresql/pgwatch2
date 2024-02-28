@@ -41,7 +41,7 @@ Log parsing
 -----------
 
 As of v1.7.0 the metrics collector daemon, when running on a DB server (controlled best over a YAML config), has capabilities
-to parse the database server logs for errors. Out-of-the-box it will though only work when logs are written in **CVSLOG** format. For other
+to parse the database server logs for errors. Out-of-the-box it will though only work when logs are written in **CSVLOG** format. For other
 formats user needs to specify a regex that parses out named groups of following fields: *database_name*, *error_severity*.
 See `here <https://github.com/cybertec-postgresql/pgwatch2/blob/master/pgwatch2/logparse.go#L27>`__ for an example regex.
 
