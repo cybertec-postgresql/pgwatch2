@@ -207,6 +207,11 @@ spec:
         - name: {{ .Chart.Name }}-webui
           image: "{{ .Values.webui.image.repository }}:{{ .Values.webui.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.webui.image.pullPolicy }}
+          {{- if .Values.webui.command }}
+          command: [{{- range $index, $cmd := .Values.webui.command }}
+            "{{ $cmd }}"{{- if lt $index (sub (len $.Values.webui.command) 1) }},{{ end }}
+          {{- end }}]
+          {{- end }}
           env:
           - name: PW2_PGHOST
             value: {{ .Values.postgresql.host | default (printf "%s-postgresql" (include "pgwatch2.fullname" .)) }}
