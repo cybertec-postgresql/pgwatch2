@@ -173,7 +173,7 @@
                 <tbody>
                   {% for d in data %}
                   <tr>
-                    <td><a href="{{grafana_baseurl}}/dashboard/db/single-query-details?var-queryid={{d['queryid']}}&var-dbname={{dbname}}" target="_blank">{{d['queryid']}}</td>
+                    <td><a href="{{grafana_baseurl}}/d/single-query-details/single-query-details?var-queryid={{d['queryid']}}&var-dbname={{dbname}}" target="_blank">{{d['queryid']}}</td>
                     <td>{{d['query']}}</td>
                     <td>{{d['total_time']}}</td>
                     <td>{{d['mean_time']}}</td>
