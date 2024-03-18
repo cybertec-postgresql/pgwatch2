@@ -5,8 +5,6 @@ on:
       - '**.md'
       - 'docs/**'
       - 'screenshots/**'
-      - 'helm-chart/**'
-      - 'openshift_k8s/**'
     branches:
       - 'master'
   workflow_dispatch:
