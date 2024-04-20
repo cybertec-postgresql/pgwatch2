@@ -1,0 +1,27 @@
+FROM grafana/grafana-enterprise:10.4.0
+
+# Grafana config customizations
+RUN grafana-cli plugins install savantly-heatmap-panel \
+    && grafana-cli plugins install marcusolsson-treemap-panel \
+    && grafana-cli plugins update-all
+
+ARG GRAFANA_DASHBOARDS_PROVISIONING_PATH=/etc/grafana/provisioning/dashboards
+ARG GRAFANA_DATASOURCES_PROVISIONING_PATH=/etc/grafana/provisioning/datasources
+
+
+# Grafana dashboards provisioning
+ADD grafana_dashboards/postgres_heroku/v10 ${GRAFANA_DASHBOARDS_PROVISIONING_PATH}/pgwatch2_postgres_grafana_dashboards
+ADD grafana_dashboards/pgwatch2-V10.yaml ${GRAFANA_DASHBOARDS_PROVISIONING_PATH}/
+ADD grafana_datasources/pgwatch2-V10.yaml ${GRAFANA_DATASOURCES_PROVISIONING_PATH}/
+
+COPY docker/launch-wrapper-grafanaV10-heroku.sh /pgwatch2/launch-wrapper-grafanaV10-heroku.sh
+
+EXPOSE 3000
+
+# to reset the parent ENTRYPOINT that would otherwise be called on Heroku
+ENTRYPOINT []
+
+CMD ["/pgwatch2/launch-wrapper-grafanaV10-heroku.sh"]
+
+
+

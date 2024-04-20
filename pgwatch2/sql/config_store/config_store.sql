@@ -2,7 +2,9 @@ create schema if not exists pgwatch2 authorization pgwatch2;
 
 set search_path to pgwatch2, public;
 
-alter database pgwatch2 set search_path to public, pgwatch2;
+-- to select the current db whatever name it has
+select current_database() \gset
+alter database :current_database set search_path to public, pgwatch2;
 
 set role to pgwatch2; -- NB! Role/db create script is in bootstrap/create_db_pgwatch.sql
 
@@ -386,6 +388,12 @@ insert into pgwatch2.preset_config (pc_name, pc_description, pc_config)
     "wal": 60,
     "wal_receiver": 120
     }'),
+    ('heroku_postgres', 'compatible with Heroku Postgres',
+    '{
+    "locks": 60, "db_size": 300, "archiver": 60, "backends": 60, "bgwriter": 60, "db_stats": 60, "settings": 7200, "locks_mode": 60, "index_stats": 900, "replication": 120, "sproc_stats": 180, 
+    "table_stats": 300, "wal_receiver": 120, "change_events": 300, "stat_activity": 30, "table_io_stats": 600, "recommendations": 43200, "sequence_health": 3600, 
+    "stat_statements": 180, "replication_slots": 120, "stat_statements_calls": 60, "stat_activity_realtime": 30, "table_bloat_approx_summary_sql": 7200, "instance_up": 60
+    }'),    
     ('gce', 'similar to ''exhaustive'' with stuff not accessible on GCE managed PostgreSQL engine removed',
      '{
        "archiver": 60,

@@ -8,6 +8,9 @@ CREATE SCHEMA IF NOT EXISTS admin AUTHORIZATION pgwatch2;
 
 GRANT ALL ON SCHEMA public TO pgwatch2;
 
+-- On Heroku setting a timeout and the synchronous_commit is required to be executed as pgwatch2 user
+SET ROLE TO pgwatch2;
+
 DO $SQL$
 BEGIN
   EXECUTE format($$ALTER ROLE pgwatch2 IN DATABASE %s SET statement_timeout TO '5min'$$, current_database());
@@ -15,8 +18,6 @@ BEGIN
   EXECUTE format($$ALTER ROLE pgwatch2 IN DATABASE %s SET synchronous_commit TO off$$, current_database());
 END
 $SQL$;
-
-SET ROLE TO pgwatch2;
 
 -- drop table if exists public.storage_schema_type;
 

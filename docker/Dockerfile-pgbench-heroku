@@ -1,0 +1,10 @@
+FROM postgres:15
+
+
+RUN mkdir -p /pgwatch2
+ADD docker/launch-wrapper-pgbench-heroku.sh /pgwatch2
+
+# to reset the parent ENTRYPOINT that would otherwise be called on Heroku
+ENTRYPOINT []
+
+CMD ["/pgwatch2/launch-wrapper-pgbench-heroku.sh"]

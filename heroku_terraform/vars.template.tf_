@@ -1,0 +1,149 @@
+variable "heroku_email" {    // required by the Heroku Provider
+    default = "<YOUR_EMAIL>"
+}
+
+variable "heroku_api_key" {    
+    default = "<YOUR_HEROKU_API_KEY>"
+}
+
+variable "heroku_team_name" {
+  default = "<YOUR_HEROKU_TEAM>"
+}
+
+// Set this variable to the Private Space where apps will be created or set it to null to create apps in the Common Runtime
+variable "heroku_private_space" {
+  default = "<YOUR_HEROKU_PRIVATE_SPACE_NAME>"
+}
+
+
+// Variables to create apps in the Common Runtime
+variable "heroku_region_cr" {
+  default = "us"
+}
+
+variable "pgw2_collector_postgres_plan_cr" {
+  default = "heroku-postgresql:standard-0"
+}
+
+variable "pgw2_monitoreddb_postgres_plan_cr" {
+  default = "heroku-postgresql:standard-0"
+}
+
+variable "pgw2_grafana_app_dynosize_cr" {
+  default = "Standard-2x"
+}
+
+variable "pgw2_collector_app_dynosize_cr" {
+  default = "Standard-2x"
+}
+
+variable "pgw2_collector_webui_app_dynosize_cr" {
+  default = "Standard-2x"
+}
+
+variable "pgw2_monitoreddb_app_dynosize_cr" {
+  default = "Standard-2x"
+}
+
+// Variables to create apps in a Private Space
+variable "heroku_region_ps" {
+  default = "virginia"
+}
+
+variable "pgw2_collector_postgres_plan_ps" {
+  default = "heroku-postgresql:private-0"
+}
+
+variable "pgw2_monitoreddb_postgres_plan_ps" {
+  default = "heroku-postgresql:private-0"
+}
+
+variable "pgw2_grafana_app_dynosize_ps" {
+  default = "Private-S"
+}
+
+variable "pgw2_collector_app_dynosize_ps" {
+  default = "Private-S"
+}
+
+variable "pgw2_collector_webui_app_dynosize_ps" {
+  default = "Private-S"
+}
+
+variable "pgw2_monitoreddb_app_dynosize_ps" {
+  default = "Private-S"
+}
+
+
+
+
+variable "pgw2_collector_app_name" {
+  default = "<YOUR_HEROKU_COLLECTOR_APP_NAME>"
+}
+
+variable "pgw2_collector_proc_name" {
+  default = "collector"
+}
+
+variable "pgw2_collector_webui_webnoanonymous" {
+  default = "true"
+}
+
+variable "pgw2_collector_webui_webpassword" {
+  default = "<YOUR_COLLECTOR_WEBUI_ADMIN_PASSWORD>"
+}
+
+variable "pgw2_collector_webui_webuser" {
+  default = "<YOUR_COLLECTOR_WEBUI_ADMIN_USERNAME>"
+}
+
+variable "pgw2_collector_webui_aes_gcm_keyphrase" {
+  default = "<YOUR_AESGCM_KEYPHRASE>"
+}
+
+variable "pgw2_grafana-db-bootstrapper_proc_name" {
+  default = "grafana-db-bootstrapper"
+}
+
+variable "gf_auth_anonymous_enabled" {
+  default = "false"
+}
+
+variable "gf_security_admin_password" {
+  default = "<YOUR_GRAFANA_ADMIN_PASSWORD>"
+}
+
+variable "gf_security_admin_user" {
+  default = "<YOUR_GRAFANA_ADMIN_USERNAME>"
+}
+
+variable "pgw2_monitoreddb_app_name" {
+  default = "<YOUR_HEROKU_MONITOREDDB_APP_NAME>"
+}
+
+variable "pgw2_grafana_app_name" {
+  default = "<YOUR_HEROKU_GRAFANA_APP_NAME>"
+}
+
+// used for running local docker build commands, it's the absolute path to pgwatch2 root folder
+variable "pgw2_repo_local_path" {    
+  default = "<YOUR_LOCAL_PGWATCH2_FOLDER_PATH>"
+}
+
+variable "pgw2_db-bootstrapper_proc_name" {
+  default = "db-bootstrapper"
+}
+
+variable "pgw2_monitored-db-bootstrapper_proc_name" {
+  default = "monitored-db-bootstrapper"
+}
+
+variable "pgw2_monitored_db_pgbench_proc_name" {
+  default = "monitored-db-pgbench"
+}
+
+
+
+
+
+

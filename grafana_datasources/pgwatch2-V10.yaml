@@ -1,0 +1,18 @@
+apiVersion: 1
+
+datasources:
+  - name: Heroku Postgres - PGWATCH2 metrics
+    type: postgres
+    isDefault: true # this is required as pgwatch2 dashboards use "datasource: null" then the default datasource is used
+    url: $GF_DATABASE_HOST:$GF_DATABASE_PORT
+    user: $GF_DATABASE_USER
+    secureJsonData:
+      password: $GF_DATABASE_PASSWORD
+    jsonData:
+      database: $GF_DATABASE_NAME
+      sslmode: 'require' # disable/require/verify-ca/verify-full
+      maxOpenConns: 5 # Grafana v5.4+
+      maxIdleConns: 1 # Grafana v5.4+
+      maxIdleConnsAuto: true # Grafana v9.5.1+
+      connMaxLifetime: 14400 # Grafana v5.4+
+      timescaledb: false

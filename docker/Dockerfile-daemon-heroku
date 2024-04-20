@@ -1,0 +1,41 @@
+FROM golang:1.21
+
+# For showing Git version via 'pgwatch2 --version'
+ARG GIT_HASH
+ARG GIT_TIME
+ENV GIT_HASH=${GIT_HASH}
+ENV GIT_TIME=${GIT_TIME}
+
+ADD pgwatch2 /pgwatch2
+RUN cd /pgwatch2 && bash build_gatherer.sh
+
+
+FROM ubuntu:22.04
+
+RUN apt-get -q update && DEBIAN_FRONTEND=noninteractive apt-get install -qy curl ca-certificates gnupg \
+  && echo "deb http://apt.postgresql.org/pub/repos/apt jammy-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+  && curl -s https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && apt-get -q update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -qy postgresql-client-15 wget unzip git && apt autoremove -y \
+  && useradd -m -s /bin/bash postgres
+
+#RUN apt-get -q update && apt-get -qy install wget git && apt autoremove -y && mkdir /pgwatch2
+
+ADD pgwatch2/metrics /pgwatch2/metrics
+ADD pgwatch2/config /pgwatch2/config
+
+COPY docker/launch-wrapper-daemon-heroku.sh /pgwatch2/launch-wrapper-daemon-heroku.sh
+
+# Copy over the compiled gatherer
+COPY --from=0 /pgwatch2/pgwatch2 /pgwatch2
+
+RUN chgrp -R 0 /pgwatch2 \
+    && chmod -R g=u /pgwatch2
+
+# pgwatch2 internal status endpoint
+EXPOSE 8081
+# Prometheus metrics scraping port
+EXPOSE 9187
+
+USER 10001
+
+CMD ["/pgwatch2/launch-wrapper-daemon-heroku.sh"]
