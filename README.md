@@ -211,6 +211,13 @@ helm install -f chart-values-k8s-pg-storage.yml pgwatch2 helm-chart-k8s-pg-stora
 
 Please have a look at the according (K8s or OpenShift) `values.yaml` files to get additional information of configurable options.
 
+# Heroku
+
+It's easy to install pgwatch2 to Heroku and run it on both Common Runtime and Private Spaces - there is a set Terraform scripts that can be used to install and configure all the required components.
+
+Refer to the [documentation](https://pgwatch2.readthedocs.io/en/latest/heroku.html) for details.
+
+
 # Contributing
 
 Feedback, suggestions, problem reports and pull requests are very much appreciated.
