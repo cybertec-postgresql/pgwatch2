@@ -97,7 +97,7 @@ resource "null_resource" "pgw2_collector_db-bootstrapper_run_config_db_init" {
 
   // the following provisioners are executed sequentially from the local computer
   provisioner "local-exec" {
-    command = "cd ${var.pgw2_repo_local_path} && heroku run db-bootstrapper -a ${var.pgw2_collector_app_name} --type=${var.pgw2_db-bootstrapper_proc_name} -e \"BOOTSTRAP_TYPE=configdb;BOOTSTRAP_ADD_TEST_MONITORING_ENTRY=false\""
+    command = "heroku run db-bootstrapper -a ${var.pgw2_collector_app_name} --type=${var.pgw2_db-bootstrapper_proc_name} -e \"BOOTSTRAP_TYPE=configdb;BOOTSTRAP_ADD_TEST_MONITORING_ENTRY=false\""
   }
 
   // to ensure provisioners are executed once the db-bootstrapper docker image has been created and 
@@ -113,7 +113,7 @@ resource "null_resource" "pgw2_collector_db-bootstrapper_run_metrics_db_init" {
 
   // the following provisioners are executed sequentially from the local computer
   provisioner "local-exec" {
-    command = "cd ${var.pgw2_repo_local_path} && heroku run db-bootstrapper -a ${var.pgw2_collector_app_name} --type=${var.pgw2_db-bootstrapper_proc_name} -e \"BOOTSTRAP_TYPE=metricsdb;BOOTSTRAP_ADD_TEST_MONITORING_ENTRY=false\""
+    command = "heroku run db-bootstrapper -a ${var.pgw2_collector_app_name} --type=${var.pgw2_db-bootstrapper_proc_name} -e \"BOOTSTRAP_TYPE=metricsdb;BOOTSTRAP_ADD_TEST_MONITORING_ENTRY=false\""
   }
 
   // to ensure provisioners are executed once the db-bootstrapper docker image has been created and 
@@ -307,7 +307,7 @@ resource "null_resource" "pgw2_monitored-db-bootstrapper_run_db_init" {
 
   // the following provisioners are executed sequentially from the local computer
   provisioner "local-exec" {
-    command = "cd ${var.pgw2_repo_local_path} && heroku run monitored-db-bootstrapper -a ${var.pgw2_monitoreddb_app_name} --type=${var.pgw2_monitored-db-bootstrapper_proc_name}"
+    command = "heroku run monitored-db-bootstrapper -a ${var.pgw2_monitoreddb_app_name} --type=${var.pgw2_monitored-db-bootstrapper_proc_name}"
   }
 
   // to ensure provisioners are executed once the db-bootstrapper docker image has been created 
@@ -395,7 +395,7 @@ resource "null_resource" "pgw2_grafana-db-bootstrapper_run_db_init" {
 
   // the following provisioners are executed sequentially from the local computer
   provisioner "local-exec" {
-    command = "cd ${var.pgw2_repo_local_path} && heroku run grafana-db-bootstrapper -a ${var.pgw2_collector_app_name} --type=${var.pgw2_grafana-db-bootstrapper_proc_name}"
+    command = "heroku run grafana-db-bootstrapper -a ${var.pgw2_collector_app_name} --type=${var.pgw2_grafana-db-bootstrapper_proc_name}"
   }
 
   // to ensure provisioners are executed once the grafana-db-bootstrapper docker image has been created
