@@ -1,7 +1,7 @@
 [![Documentation Status](https://readthedocs.org/projects/pgwatch2/badge/?version=latest)](https://pgwatch2.readthedocs.io/en/latest/?badge=latest)
 [![Release](https://img.shields.io/github/v/release/cybertec-postgresql/pgwatch2?include_prereleases)](https://github.com/cybertec-postgresql/pgwatch2/releases)
 [![Github All Releases](https://img.shields.io/github/downloads/cybertec-postgresql/pgwatch2/total?style=flat-square)](https://github.com/cybertec-postgresql/pgwatch2/releases)
-[![Docker Pulls](https://img.shields.io/docker/pulls/cybertec/pgwatch2-nonroot)](https://hub.docker.com/search?q=cybertec%20pgwatch2&type=image)
+[![Docker Pulls](https://img.shields.io/docker/pulls/cybertec/pgwatch2)](https://hub.docker.com/search?q=cybertec%20pgwatch2&type=image)
 
 # pgwatch2
 
@@ -200,10 +200,9 @@ There's also a separate "Preset Config" named "prometheus". More [details](https
 # Kubernetes / OpenShift / Helm
 
 Cloud deployments of pgwatch2 should be no problem - there are some simple deployment templates provided and also some
-Helm charts in the "openshift_k8s" [folder](https://github.com/cybertec-postgresql/pgwatch2/tree/master/openshift_k8s).
+Helm charts in the "pgwatch2-charts" [repository](https://github.com/cybertec-postgresql/pgwatch2-charts).
 
-NB! Helm setup values should always be reviewed / edited as the defaults are rather for testing purposes. Installation
-is done by the following command:
+Helm setup values should always be reviewed / edited as the defaults are rather for testing purposes. Installation is done by the following command:
 
 ```shell script
 cd openshift_k8s
