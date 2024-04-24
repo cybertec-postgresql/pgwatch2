@@ -50,7 +50,6 @@ Collector DB  Collector     default           DATABASE                          
 Collector DB  Collector     pgwatch2          PGWATCH2                          Collector Web UI / Collector
 Collector DB  Grafana       pgwatch2_grafana  PGWATCH2_GRAFANA                  Grafana DB bootstrapper / Grafana Web UI
 Monitored DB  Collector     pgwatch2          PGWATCH2_MONITOREDDB_MYTARGETDB   Collector
-Monitored DB  Monitored DB  pgwatch2          PGWATCH2   
 Monitored DB  Monitored DB  default           DATABASE                          Monitored DB pgbench / Monitored DB bootstrapper
 ============  ============  ================  ================================  =================================================
 
@@ -71,7 +70,7 @@ Installation
 
 1. Open a terminal and log in via the Heroku CLI. You must be logged in the Heroku CLI on the terminal used to execute the Terraform commands
 2. Go to the Terraform folder `heroku_terraform` under the pgwatch root directory
-3. Fill in the **vars.template.tf_** variables file and rename it to **vars.tf** (mv vars.template.tf_ vars.tf). To create the apps in a Private Space set the variables ending with "_ps" and the "heroku_private_space" variable, otherwise leave this latter empty and set the variables ending with "_cr" to create your apps in the Common Runtime. According to the :ref:`Sizing recommendations <sizing_recommendations>` a minimal dyno size for the Collector should be standard-2x / private-s / shield-s
+3. Fill in the **vars.template.tf_** variables file and rename it to **vars.tf** (mv vars.template.tf_ vars.tf). To create the apps in a Private Space set the variables ending with "_ps" and the "heroku_private_space" variable, otherwise leave this latter empty and set the variables ending with "_cr" to create your apps in the Common Runtime. According to the :ref:`Sizing recommendations <sizing_recommendations>` a minimal dyno size for the Collector should be standard-2x / private-s
 4. Execute **terraform init** and then **terraform apply** and type "yes" when prompted `"Do you want to perform these actions?"` to proceed with the apps creation - the whole process will take dozens of minutes to complete
 5. When Terraform execution ends without errors, it is possible to login to Grafana and see the metrics being collected
 
