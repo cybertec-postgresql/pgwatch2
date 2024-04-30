@@ -3,6 +3,9 @@
 [![Github All Releases](https://img.shields.io/github/downloads/cybertec-postgresql/pgwatch2/total?style=flat-square)](https://github.com/cybertec-postgresql/pgwatch2/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/cybertec/pgwatch2)](https://hub.docker.com/search?q=cybertec%20pgwatch2&type=image)
 
+> [!IMPORTANT] 
+🚨pgwatch2 is now in maintenance mode, accepting only bug fixes. Check out the WIP [pgwatch3](https://github.com/cybertec-postgresql/pgwatch3/) repository for new features and enhancements!
+
 # pgwatch2
 
 Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution. Supports monitoring PG versions 9.0 to 16 out of the box.
