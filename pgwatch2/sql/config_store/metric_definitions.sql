@@ -6840,6 +6840,16 @@ values (
 false
 );
 
+/* pgbouncer_clients - assumes also that monitored DB has type 'pgbouncer' */
+insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
+values (
+'pgbouncer_clients',
+0,
+'show clients',
+'pgbouncer clients',
+false
+);
+
 /* pgpool_stats - assumes also that monitored DB has type 'pgpool' */
 insert into pgwatch2.metric(m_name, m_pg_version_from, m_sql, m_comment, m_is_helper)
 values (
@@ -8479,7 +8489,6 @@ and not exists (select * from pg_locks where relation = indexrelid and mode = 'A
 order by index_size_b desc
 limit 100;
 $sql$);
-
 
 /* Metric attributes */
 -- truncate pgwatch2.metric_attribute;

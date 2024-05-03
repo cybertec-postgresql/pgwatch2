@@ -54,3 +54,19 @@
   dbname_exclude_pattern:
   is_enabled: false
   only_if_master: true # don't gather metrics from standby servers
+
+- unique_name: pgbouncer
+  dbtype: pgbouncer
+  host: 127.0.0.1
+  port: 6432
+  dbname: postgres 
+  user: pgwatch2
+  sslmode: disable    
+  is_superuser: false 
+  custom_metrics: 
+    pgbouncer_stats: 10
+    pgbouncer_clients: 10
+  is_enabled: true
+  sslrootcert: ''
+  sslcert: ''
+  sslkey: ''
