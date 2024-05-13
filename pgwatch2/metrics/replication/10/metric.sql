@@ -1,6 +1,7 @@
 select /* pgwatch2_generated */
   (extract(epoch from now()) * 1e9)::int8 as epoch_ns,
   application_name as tag_application_name,
+  usename AS tag_usename,
   concat(coalesce(client_addr::text, client_hostname), '_', client_port::text) as tag_client_info,
   coalesce(pg_wal_lsn_diff(case when pg_is_in_recovery() then pg_last_wal_receive_lsn() else pg_current_wal_lsn() end, sent_lsn)::int8, 0) as sent_lag_b,
   coalesce(pg_wal_lsn_diff(case when pg_is_in_recovery() then pg_last_wal_receive_lsn() else pg_current_wal_lsn() end, write_lsn)::int8, 0) as write_lag_b,
