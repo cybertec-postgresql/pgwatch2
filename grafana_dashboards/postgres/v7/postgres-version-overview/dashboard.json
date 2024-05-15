@@ -119,7 +119,7 @@
       "type": "table"
     },
     {
-      "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2020/11/CYBERTEC_RGB_300x80px.png\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
+      "content": "Brought to you by: <a href=\"https://www.cybertec-postgresql.com/en/\"><img src=\"https://www.cybertec-postgresql.com/wp-content/uploads/2017/11/CYBERTEC-LOGO-GREY-BLUE-SVG.svg\" alt=\"Cybertec – The PostgreSQL Database Company\"></a>",
       "datasource": null,
       "gridPos": {
         "h": 8,
