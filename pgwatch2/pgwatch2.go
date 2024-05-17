@@ -5963,7 +5963,7 @@ func main() {
 				verInfo, ok := db_pg_version_map[db]
 				db_pg_version_map_lock.RUnlock()
 				if !ok {
-					log.Warningf("Could not find PG version info for DB %s, skipping shutdown check of metric worker process for %s", db, metric)
+					log.Debugf("Could not find PG version info for already removed DB %s, skipping shutdown check of metric worker process for %s", db, metric)
 					continue
 				}
 
