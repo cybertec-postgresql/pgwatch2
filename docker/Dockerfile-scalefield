@@ -12,7 +12,7 @@ RUN cd /pgwatch2 && bash build_gatherer.sh
 FROM alpine
 
 RUN apk update && \
-    apk add --no-cache wget git python3 py3-psycopg2 py3-yaml && \
+    apk add --no-cache git python3 py3-psycopg2 py3-yaml && \
     apk add --no-cache --virtual .build-deps && \
     apk add --no-cache gettext && \
     apk add --no-cache libc6-compat && \
