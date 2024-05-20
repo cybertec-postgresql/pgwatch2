@@ -1,9 +1,9 @@
-- unique_name: %NAME%
+- unique_name: ${NAME}
   dbtype: postgres
   host: 127.0.0.1
   dbname: postgres
-  user: %USER%
-  password: %PASSWORD%
+  user: ${USER}
+  password: ${PASSWORD}
   sslmode: require    # supported options: disable, require, verify-ca, verify-full
   stmt_timeout: 5 # in seconds
   is_superuser: true
@@ -15,9 +15,9 @@
   dbname_exclude_pattern:
   is_enabled: true
   custom_tags:
-    support_plan: %SUPPORT_PLAN%
-    customer: %CUSTOMER%
-    cluster_name: %CLUSTER_NAME%
+    support_plan: ${SUPPORT_PLAN}
+    customer: ${CUSTOMER}
+    cluster_name: ${CLUSTER_NAME}
   group: default # just for logical grouping of DB hosts or for "sharding", i.e. splitting the workload between many gatherer daemons
   sslrootcert: ''
   sslcert: ''
