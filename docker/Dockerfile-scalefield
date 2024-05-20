@@ -9,10 +9,14 @@ ENV GIT_TIME=${GIT_TIME}
 ADD pgwatch2 /pgwatch2
 RUN cd /pgwatch2 && bash build_gatherer.sh
 
+FROM alpine
 
-FROM ubuntu:22.04
-
-RUN apt-get -q update && apt-get -qy install wget git python3 python3-psycopg2 python3-yaml && apt autoremove -y && mkdir /pgwatch2
+RUN apk update && \
+    apk add --no-cache wget git python3 py3-psycopg2 py3-yaml && \
+    apk add --no-cache --virtual .build-deps && \
+    apk add --no-cache gettext && \
+    apk add --no-cache libc6-compat && \
+    mkdir /pgwatch2
 
 ADD pgwatch2/metrics /pgwatch2/metrics
 ADD pgwatch2/config /pgwatch2/config
