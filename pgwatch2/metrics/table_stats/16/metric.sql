@@ -48,7 +48,7 @@ with recursive /* pgwatch2_generated */
                autovacuum_count,
                analyze_count,
                autoanalyze_count,
-               age(c.relfrozenxid) as tx_freeze_age,
+               case when c.relkind != 'p' then age(c.relfrozenxid) else 0 end as tx_freeze_age,
                extract(epoch from now() - last_seq_scan)::int8 as last_seq_scan_s
         from pg_stat_user_tables ut
             join pg_class c on c.oid = ut.relid
