@@ -22,7 +22,7 @@ jobs:
       run: git fetch --prune --unshallow
 
     - name: Release via goreleaser
-      uses: goreleaser/goreleaser-action@v5
+      uses: goreleaser/goreleaser-action@v6
       with:
         args: release
       env:
