@@ -38,6 +38,7 @@ SQL scripts (see below for explanation) accordingly, as in those by default the 
   GRANT CONNECT ON DATABASE mydb TO pgwatch2;
   GRANT USAGE ON SCHEMA public TO pgwatch2; -- NB! pgwatch doesn't necessarily require using the public schema though!
   GRANT EXECUTE ON FUNCTION pg_stat_file(text) to pgwatch2; -- needed by the wal_size metric
+  GRANT EXECUTE ON FUNCTION pg_stat_file(text, boolean) to pgwatch2; -- some sqls are calling pg_stat_file('postmaster.pid', true) 
 
 For most monitored databases it's extremely beneficial (to troubleshooting performance issues) to also activate the
 `pg\_stat\_statements <https://www.postgresql.org/docs/current/pgstatstatements.html>`__ extension which will give us exact "per query" performance aggregates and also enables to calculate
