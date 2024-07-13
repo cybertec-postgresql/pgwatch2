@@ -13,6 +13,7 @@
     archiver: 60
     backends: 60
     bgwriter: 60
+    checkpointer: 60
     change_events: 300
     cpu_load: 60
     db_stats: 60
@@ -69,6 +70,7 @@
     archiver: 60
     backends: 60
     bgwriter: 60
+    checkpointer: 60
     change_events: 300
     cpu_load: 60
     db_stats: 60
@@ -108,6 +110,7 @@
     archiver: 60
     backends: 60
     bgwriter: 60
+    checkpointer: 60
     change_events: 300
     cpu_load: 60
     db_stats: 60
@@ -143,6 +146,7 @@
   metrics:
     archiver: 60
     bgwriter: 60
+    checkpointer: 60
     change_events: 300
     db_stats: 60
     db_size: 300
@@ -182,6 +186,7 @@
   metrics:
     backends: 30
     bgwriter: 60
+    checkpointer: 60
     db_stats: 30
     db_size: 300
     locks_mode: 30
@@ -201,6 +206,7 @@
     archiver: 60
     backends: 60
     bgwriter: 60
+    checkpointer: 60
     change_events: 300
     db_stats: 60
     db_size: 300
@@ -228,6 +234,7 @@
     archiver: 60
     backends: 60
     bgwriter: 60
+    checkpointer: 60
     change_events: 300
     db_stats_aurora: 60
     db_size: 300
@@ -251,6 +258,7 @@
     archiver: 60
     backends: 60
     bgwriter: 60
+    checkpointer: 60
     change_events: 300
     db_stats: 60
     db_size: 300
@@ -279,6 +287,7 @@
     archiver: 60
     backends: 60
     bgwriter: 60
+    checkpointer: 60
     change_events: 300
     db_stats: 60
     db_size: 300
@@ -310,6 +319,7 @@
     archiver: 60
     backends: 60
     bgwriter: 60
+    checkpointer: 60
     db_stats: 60
     settings: 7200
     stat_ssl: 60
@@ -332,6 +342,7 @@
     archiver: 60
     backends: 60
     bgwriter: 60
+    checkpointer: 60
     change_events: 300
     db_stats: 60
     db_size: 300
@@ -361,6 +372,7 @@
     archiver: 60
     backends: 60
     bgwriter: 60
+    checkpointer: 60
     cpu_load: 60
     db_stats: 60
     settings: 7200
