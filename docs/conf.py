@@ -17,10 +17,15 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'pgwatch2'
-copyright = '2020, Cybertec PostgreSQL Consulting'
-author = 'Cybertec PostgreSQL Consulting'
-
+project = 'pgwatch v2'
+copyright = '2020, CYBERTEC PostgreSQL International GmBh'
+author = 'CYBERTEC PostgreSQL International GmBh'
+rst_prolog = """.. attention::
+    This documentation pertains to older v2.x releases. 
+    Many features and functions have since been updated or replaced. 
+    Please refer to the `current version <https://pgwat.ch/>`_ 
+    for the latest information.
+"""
 
 # -- General configuration ---------------------------------------------------
 
