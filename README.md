@@ -1,10 +1,10 @@
-[![Documentation Status](https://readthedocs.org/projects/pgwatch2/badge/?version=latest)](https://pgwatch2.readthedocs.io/en/latest/?badge=latest)
+[![Documentation](https://img.shields.io/badge/Documentation-pgwat.ch/v2-brightgreen)](https://pgwat.ch/v2/)
 [![Release](https://img.shields.io/github/v/release/cybertec-postgresql/pgwatch2?include_prereleases)](https://github.com/cybertec-postgresql/pgwatch2/releases)
 [![Github All Releases](https://img.shields.io/github/downloads/cybertec-postgresql/pgwatch2/total?style=flat-square)](https://github.com/cybertec-postgresql/pgwatch2/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/cybertec/pgwatch2)](https://hub.docker.com/search?q=cybertec%20pgwatch2&type=image)
 
 > [!IMPORTANT] 
-🚨pgwatch2 is now in maintenance mode, accepting only bug fixes. Check out the WIP [pgwatch3](https://github.com/cybertec-postgresql/pgwatch3/) repository for new features and enhancements!
+🚨pgwatch2 is now in an archived mode! Check out the latest [pgwatch](https://github.com/cybertec-postgresql/pgwatch/) repository for new features and enhancements!
 
 # pgwatch2
 
@@ -16,12 +16,12 @@ Flexible self-contained PostgreSQL metrics monitoring/dashboarding solution. Sup
 
 # Documentation
 
-[https://pgwatch2.readthedocs.io/en/latest/](https://pgwatch2.readthedocs.io/en/latest/)
+[https://pgwat.ch/v2/](https://pgwat.ch/v2/)
 
 # Quick Start
 
 For the fastest setup experience [Docker images](https://hub.docker.com/search?q=cybertec%20pgwatch2&type=image) are provided via Docker Hub (for a Docker quickstart see
-[here](https://docs.docker.com/get-started/)). For custom setups see the according [chapter](https://pgwatch2.readthedocs.io/en/latest/custom_installation.html)
+[here](https://docs.docker.com/get-started/)). For custom setups see the according [chapter](https://pgwat.ch/v2/custom_installation.html)
 from documentation or turn to the "Releases" tab for pre-built DEB / RPM / Tar packages directly.
 
 ```
@@ -62,7 +62,7 @@ variables see [ENV_VARIABLES.md](https://github.com/cybertec-postgresql/pgwatch2
 # Component diagram for the default Docker setup
 
 pgwatch2 can be deployed in various configurations, as all components are "loosely coupled". This means that you can very
-well reuse your existing PostgreSQL or Grafana installations, adding only pgwatch2 specific components - see [here](https://pgwatch2.readthedocs.io/en/latest/components.html)
+well reuse your existing PostgreSQL or Grafana installations, adding only pgwatch2 specific components - see [here](https://pgwat.ch/v2/components.html)
 for more information.
 
 Two most common deployment options are:
@@ -85,13 +85,13 @@ For storing metrics collected by the pgwatch2 daemon there are quite some option
 * Prometheus - here the pgwatch2 daemon would not store anything directly but just expose an endpoint for remote scraping / storage via Prometheus.
 * Graphite - legacy support for Graphite. Not recommended anymore for new installations as it does not support the "tag" system.
 
-See the [documentation](https://pgwatch2.readthedocs.io/en/latest/components.html?highlight=timescale#metrics-storage-db) for more details.
+See the [documentation](https://pgwat.ch/v2/components.html?highlight=timescale#metrics-storage-db) for more details.
 
 # Steps to configure your database for monitoring
 
 As a base requirement you'll need a login user (non-superuser suggested) for connecting to your PostgreSQL servers and fetching metrics queries.
 Using a user named "pgwatch2" is recommended though, as otherwise your might need to adjust some scripts for advanced monitoring options,
-in case an unpriveleged monitoring account is used.  More documentation on that can be found [here](https://pgwatch2.readthedocs.io/en/latest/preparing_databases.html).
+in case an unpriveleged monitoring account is used.  More documentation on that can be found [here](https://pgwat.ch/v2/preparing_databases.html).
 
 ```sql
 CREATE ROLE pgwatch2 WITH LOGIN PASSWORD 'secret';
@@ -172,7 +172,7 @@ A sample custom metric looks like that:
 
 From v1.4.0 one can also deploy pgwatch2 gatherer daemons de-centrally without a configuration database, based on YAML config files.
 This means a more resilient setup (the only point of failure will be the metrics storage DB) and more security, so that
-even superuser roles can be used on the agents running locally on monitored database. See [here](https://pgwatch2.readthedocs.io/en/latest/custom_installation.html#yaml-based-setup)
+even superuser roles can be used on the agents running locally on monitored database. See [here](https://pgwat.ch/v2/custom_installation.html#yaml-based-setup)
 for details.
 
 # Ad-hoc operation
@@ -180,7 +180,7 @@ for details.
 From v1.4.0 it's also possible to run the gatherer daemon in ad-hoc / test mode, by giving a single standard connection
 string as input, and optionally also specifying the metrics to monitor (a Preset Config name or a custom JSON string).
 In that case there is no need for the central Postgres "Config DB", nor any YAML files, i.e. the setup can be based purely on
-environment variables, which can be beneficial for Cloud setups. Details [here](https://pgwatch2.readthedocs.io/en/latest/installation_options.html#ad-hoc-mode).
+environment variables, which can be beneficial for Cloud setups. Details [here](https://pgwat.ch/v2/installation_options.html#ad-hoc-mode).
 
 ```
 # launching in ad-hoc / test mode
@@ -198,7 +198,7 @@ listens on port 9187 (changeable) for scrape requests configured and performed o
 
 In this mode the pgwatch2 agents should be running on all database hosts separately, not centrally. While technically
 possible though, it would counter the core idea of Prometheus and would make scrapes also longer, risking timeouts.
-There's also a separate "Preset Config" named "prometheus". More [details](https://pgwatch2.readthedocs.io/en/latest/installation_options.html#prometheus-mode).
+There's also a separate "Preset Config" named "prometheus". More [details](https://pgwat.ch/v2/installation_options.html#prometheus-mode).
 
 # Kubernetes / OpenShift / Helm
 
