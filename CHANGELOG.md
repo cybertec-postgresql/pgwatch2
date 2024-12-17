@@ -18,6 +18,41 @@ ther pre-built packages) folder. Also it is highly recommended to refresh all th
 For that there's also a refresh_metrics_from_github.sh script provided. YAML based setups don't need any extra actions besides
 refreshing from Git or installing the new RPM / DEB / Tar packages.
 
+## v1.13.0 [2024-10-28]
+
+## What's Changed
+
+* `[!]` bump Go to v1.22 by @pashagolub in #787
+* `[+]` bump `shopspring/decimal` from 1.3.1 to 1.4.0 by @dependabot in #765
+* `[+]` bump `shirou/gopsutil/v3` from 3.23.11 to 3.24.4 by @dependabot in #730 #737 #747 #762 #773
+* `[+]` bump `prometheus/client_golang` from 1.18.0 to 1.19.1 by @dependabot in #745 #777
+* `[+]` bump `jmoiron/sqlx` from 1.3.5 to 1.4.0 by @dependabot in #767
+* `[+]` bump `hashicorp/consul/api` from 1.26.1 to 1.28.3 by @dependabot in #734 #780 #748 #746
+* `[+]` bump `google.golang.org/protobuf` from 1.32.0 to 1.33.0 by @dependabot in #753
+* `[+]` bump `golang.org/x/crypto` from 0.17.0 to 0.23.0 by @dependabot in #731 #775 #763 #749 #743 #740
+* `[+]` bump `go.etcd.io/etcd/client/v2` from 2.305.11 to 2.305.13 by @dependabot in #736 #761
+* `[+]` allow setting arbitrary configs to the webui pod by @alexmozejko in #754
+* `[+]` add `usename` to `replication` metric, closes #751 by @pashagolub in #778
+* `[+]` add `pgwatch2-scalefield` Docker image by @yanchenko-igor in #732
+* `[+]` add `pgbouncer_clients` metric by @AndrewJackson2020 in #774
+* `[*]` optimize Scalefield image and enable async mode for prometheus by @ermajn in #785
+* `[*]` move chart templates to `cybertec-postgresql/pgwatch2-charts` by @pashagolub in #756
+* `[*]` move ansible playbooks to `cybertec-postgresql/pgwatch2-charts` by @pashagolub in #758
+* `[*]` change nasty warning into debug message, closes #764 by @pashagolub in #784
+* `[-]` fix warning about `yaml.load()` is deprecated, closes #738 by @AndrewJackson2020 in #739
+* `[-]` fix typo in documentation by @AndrewJackson2020 in #744
+* `[-]` fix replication slots metrics for replica instances by @marcelorauldiaz in #768
+* `[-]` fix FREEZE age for partitioned tables in `table_stats`, fixes #760 by @pashagolub in #783
+* `[-]` fix broken logo links in Grafana dashboards, fixes #770 by @pashagolub in #779
+* `[-]` fix `readthedocs` deployment by @pashagolub in #757
+* `[-]` change `StatActivity` dashboard identifier value to `null`, closes #741 by @jcarnu in #742
+
+## New Contributors
+* @AndrewJackson2020 made their first contribution in #739
+* @jcarnu made their first contribution in #742
+* @alexmozejko made their first contribution in #754
+* @ermajn made their first contribution in #785
+
 ## v1.12.0 [2023-12-28]
 What's Changed
 
@@ -189,7 +224,7 @@ Main changes:
 * New PG dashboard - DB overview time lag comparison, enables to visually compare 2 time ranges.
 * New PG dashboard - Systems stats time lag comparison, enables to visually compare 2 time ranges.
 * Metrics - introduce a new metrics attribute "statement_timeout_seconds" to override per host "statement_timeout".
-* Documentation - add separate "docs" section backed by readthedocs: https://pgwatch2.readthedocs.io/.
+* Documentation - add separate "docs" section backed by pgwat.ch: https://pgwat.ch/v2/.
 * Gatherer improvement - allow "adhoc" mode to monitor all DB-s of an instance.
 * Gatherer improvement - make startup connection check to config/metricsDB more resilient.
 * Gatherer improvement - append instead of overwrite when using JSON-file metrics persistence.
